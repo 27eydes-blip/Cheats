@@ -44,7 +44,7 @@ export function AuthorLine({ author, createdAt, editedAt, big }: { author: UserM
 }
 
 function Gone({ kind }: { kind: NonNullable<PostView["gone"]> }) {
-  const text = kind === "deleted" ? "This take was deleted by its author." : kind === "removed" ? "This take was removed for breaking the Community Guidelines." : "This take is unavailable.";
+  const text = kind === "deleted" ? "This dispatch was deleted by its author." : kind === "removed" ? "This dispatch was removed for breaking the Community Guidelines." : "This dispatch is unavailable.";
   return <p className="border-l-2 border-rule-strong bg-paper-2 px-3.5 py-3 text-[14px] text-ink-3 italic">{text}</p>;
 }
 
@@ -144,7 +144,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
       if (!res.ok) {
         setPost((p) => shift(p, !on, on ? -1 : 1));
         toast(res.error, "error");
-      } else toast(kind === "reposted" ? (on ? "Amplified to your Rundown" : "No longer amplified") : on ? "Saved to your Rundown" : "Removed from your Rundown");
+      } else toast(kind === "reposted" ? (on ? "Relayed" : "Relay removed") : on ? "Added to your Vault" : "Removed from your Vault");
     });
   }
 
@@ -165,30 +165,30 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
 
   const isAuthor = post.viewer.isAuthor;
   const menu: MenuItem[] = [
-    { label: "Quote this take", icon: <QuoteIcon size={18} />, onSelect: () => !needLogin() && openComposer({ quote: post }) },
+    { label: "Quote this dispatch", icon: <QuoteIcon size={18} />, onSelect: () => !needLogin() && openComposer({ quote: post }) },
     { label: "Copy link", icon: <LinkIcon size={18} />, onSelect: () => navigator.clipboard?.writeText(link()).then(() => toast("Link copied")) },
   ];
   if (isAuthor) {
     if (post.viewer.canEdit) menu.push({ label: "Edit", hint: "15 min", icon: <EditIcon size={18} />, onSelect: () => (setDraft(post.body), setEditing(true)) });
     if (!post.replyTo)
       menu.push({
-        label: "Pin to your byline",
+        label: "Pin / unpin on your profile",
         icon: <PinIcon size={18} />,
         onSelect: () => start(async () => {
           const r = await pinPostAction(post.id);
-          toast(r.ok ? "Pinned to your byline" : r.error, r.ok ? "ok" : "error");
+          toast(r.ok ? (r.data ? "Pinned to your profile" : "Unpinned") : r.error, r.ok ? "ok" : "error");
         }),
       });
     menu.push("divider", {
-      label: "Delete take",
+      label: "Delete dispatch",
       danger: true,
       icon: <TrashIcon size={18} />,
       onSelect: async () => {
-        if (!(await confirm({ title: "Delete this take?", body: "This can't be undone. Answers stay, with a note that the take was deleted.", confirm: "Delete", danger: true }))) return;
+        if (!(await confirm({ title: "Delete this dispatch?", body: "This can't be undone. Responses stay, with a note that the dispatch was deleted.", confirm: "Delete", danger: true }))) return;
         start(async () => {
           const r = await deletePostAction(post.id);
           if (!r.ok) return toast(r.error, "error");
-          toast("Take deleted");
+          toast("Dispatch deleted");
           setHidden(true);
           onGone?.(post.id);
           if (focus) router.push("/");
@@ -204,7 +204,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
         if (r.ok && !focus) setHidden(true);
       }) },
       { label: `Block @${h}`, icon: <BlockIcon size={18} />, onSelect: async () => {
-        if (!(await confirm({ title: `Block @${h}?`, body: "They won't see your takes and you won't see theirs. Follows between you are removed.", confirm: "Block", danger: true }))) return;
+        if (!(await confirm({ title: `Block @${h}?`, body: "They won't see your dispatches and you won't see theirs. Follows between you are removed.", confirm: "Block", danger: true }))) return;
         start(async () => {
           const r = await blockAction(post.author.id, true);
           toast(r.ok ? `Blocked @${h}` : r.error, r.ok ? "ok" : "error");
@@ -212,7 +212,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
         });
       } },
       "divider",
-      { label: "Report take", danger: true, icon: <FlagIcon size={18} />, onSelect: () => setReporting(true) },
+      { label: "Report dispatch", danger: true, icon: <FlagIcon size={18} />, onSelect: () => setReporting(true) },
     );
   }
 
@@ -237,7 +237,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
     >
       {repostedBy && (
         <p className="folio mb-2 flex items-center gap-1.5 !text-[10px] text-ink-3">
-          <AmplifyIcon size={13} className="text-gold-ink" /> Amplified by{" "}
+          <AmplifyIcon size={13} className="text-gold-ink" /> Relayed by{" "}
           <Link href={`/u/${repostedBy.handle}`} className="text-ink-2 hover:underline" onClick={(e) => e.stopPropagation()}>{viewer?.id === repostedBy.id ? "you" : repostedBy.displayName}</Link>
         </p>
       )}
@@ -253,7 +253,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
             <div id={`post-${post.id}-author`} className="min-w-0 leading-tight">
               <AuthorLine author={post.author} createdAt={post.createdAt} editedAt={post.editedAt} big={focus} />
             </div>
-            {!post.gone && !compact && <div className="-mt-1 -mr-2"><Menu label="Take options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-8 w-8 items-center justify-center rounded-[10px] text-ink-3 hover:bg-paper-2 hover:text-ink-1" /></div>}
+            {!post.gone && !compact && <div className="-mt-1 -mr-2"><Menu label="Dispatch options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-8 w-8 items-center justify-center rounded-[10px] text-ink-3 hover:bg-paper-2 hover:text-ink-1" /></div>}
           </div>
 
           {(post.stance || (post.story && !hideStory) || post.replyTo) && (
@@ -265,7 +265,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
                 </Link>
               )}
               {post.replyTo && !focus && !post.story && (
-                <span className="text-[12.5px] text-ink-3">Answering <Link className="font-semibold text-navy-ink hover:underline" href={`/u/${post.replyTo.handle}`} onClick={(e) => e.stopPropagation()}>@{post.replyTo.handle}</Link></span>
+                <span className="text-[12.5px] text-ink-3">Responding to <Link className="font-semibold text-navy-ink hover:underline" href={`/u/${post.replyTo.handle}`} onClick={(e) => e.stopPropagation()}>@{post.replyTo.handle}</Link></span>
               )}
             </div>
           )}
@@ -275,7 +275,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
               <Gone kind={post.gone} />
             ) : editing ? (
               <div onClick={(e) => e.stopPropagation()}>
-                <label htmlFor={`edit-${post.id}`} className="sr-only">Edit take</label>
+                <label htmlFor={`edit-${post.id}`} className="sr-only">Edit dispatch</label>
                 <textarea id={`edit-${post.id}`} value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} className="input" autoFocus />
                 <div className="mt-2 flex items-center justify-end gap-2">
                   <span className={`mono mr-auto text-[12px] ${[...draft].length > LIMITS.postChars ? "text-disagree" : "text-ink-3"}`}>{LIMITS.postChars - [...draft].length} left</span>
@@ -285,7 +285,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
                     if (!r.ok) return toast(r.error, "error");
                     setPost(r.data);
                     setEditing(false);
-                    toast("Take updated");
+                    toast("Dispatch updated");
                   })}>Save</Button>
                 </div>
               </div>
@@ -294,6 +294,11 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
                 {post.body && <Expandable long={!focus && post.body.length > 240} big={focus}><RichText text={post.body} /></Expandable>}
                 {!compact && post.media.length > 0 && <MediaGrid media={post.media} />}
                 {!compact && post.link && <LinkCard link={post.link} />}
+                {post.source && (
+                  <a href={post.source.url} target="_blank" rel="noopener noreferrer nofollow" onClick={(e) => e.stopPropagation()} className="mt-2 inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-[8px] bg-[rgb(34_211_238/0.08)] px-2 text-[12.5px] font-semibold text-[var(--wn-cyan-ink)] ring-1 ring-[rgb(34_211_238/0.3)] hover:ring-[var(--wn-cyan)]" title={post.source.url}>
+                    <LinkIcon size={13} /> <span className="truncate">Source: {post.source.domain}</span>
+                  </a>
+                )}
                 {post.poll && !compact && <Poll poll={post.poll} postId={post.id} isAuthor={post.viewer.isAuthor} createdAt={post.createdAt} />}
                 {post.quote && !compact && <div className="mt-3"><QuoteEmbed post={post.quote} /></div>}
               </>
@@ -312,17 +317,17 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
               <StanceMeter type="post" id={post.id} initial={post.split} />
               <span className="flex-1" />
               <button type="button" data-action="reply" onClick={(e) => (e.stopPropagation(), !needLogin() && openComposer({ replyTo: post }))} className={`${action} text-ink-2 hover:bg-navy-soft hover:text-navy-ink`}>
-                <AnswerIcon size={17} /> <span className="hidden sm:inline">Answer</span><AnimatedNumber value={post.counts.replies} hideZero className="mono text-[11.5px]" />
-                <span className="sr-only sm:hidden">Answer</span>
+                <AnswerIcon size={17} /> <span className="hidden sm:inline">Respond</span><AnimatedNumber value={post.counts.replies} hideZero className="mono text-[11.5px]" />
+                <span className="sr-only sm:hidden">Respond</span>
               </button>
-              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("reposted"))} aria-pressed={post.viewer.reposted} className={`${action} ${post.viewer.reposted ? "text-gold-ink" : "text-ink-2"} hover:bg-gold-soft hover:text-gold-ink`} title="Amplify: pin to your Rundown">
+              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("reposted"))} aria-pressed={post.viewer.reposted} className={`${action} ${post.viewer.reposted ? "text-gold-ink" : "text-ink-2"} hover:bg-gold-soft hover:text-gold-ink`} title="Relay to your followers">
                 <span key={String(post.viewer.reposted)} className={post.viewer.reposted ? "animate-pop" : ""}><AmplifyIcon size={17} /></span>
-                <span className="sr-only">{post.viewer.reposted ? "Amplified" : "Amplify"}</span>
+                <span className="sr-only">{post.viewer.reposted ? "Relayed" : "Relay"}</span>
                 <AnimatedNumber value={post.counts.reposts} hideZero className="mono text-[11.5px]" />
               </button>
-              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("bookmarked"))} aria-pressed={post.viewer.bookmarked} className={`${action} ${post.viewer.bookmarked ? "text-navy-ink" : "text-ink-2"} hover:bg-navy-soft hover:text-navy-ink`} title="Save to Rundown">
+              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("bookmarked"))} aria-pressed={post.viewer.bookmarked} className={`${action} ${post.viewer.bookmarked ? "text-navy-ink" : "text-ink-2"} hover:bg-navy-soft hover:text-navy-ink`} title="Add to Vault">
                 <span key={String(post.viewer.bookmarked)} className={post.viewer.bookmarked ? "animate-pop" : ""}><SaveIcon size={17} filled={post.viewer.bookmarked} /></span>
-                <span className="sr-only">{post.viewer.bookmarked ? "Saved" : "Save to Rundown"}</span>
+                <span className="sr-only">{post.viewer.bookmarked ? "Saved" : "Add to Vault"}</span>
               </button>
               <button type="button" onClick={(e) => (e.stopPropagation(), share())} className={`${action} text-ink-2 hover:bg-paper-2 hover:text-ink-1`}>
                 <ShareIcon size={17} /><span className="sr-only">Share</span>

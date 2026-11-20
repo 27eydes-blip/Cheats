@@ -22,7 +22,7 @@ export default async function HotStoriesPage() {
   const fights = debates(vid, 2);
   return (
     <Frame width="wide">
-      <PageTitle folio={<Kicker tone="gold">Ranked by take velocity</Kicker>} title="Hot Stories" dek="Where the argument is happening right now: new takes in the last six hours, the split, and the trend." />
+      <PageTitle folio={<Kicker tone="gold">Ranked by dispatch velocity</Kicker>} title="Hot Stories" dek="Where the argument is happening right now: new dispatches in the last six hours, the split, and the trend." />
       <div className="grid gap-10 px-4 pt-6 sm:px-6 lg:grid-cols-12">
         <ol className="lg:col-span-8">
           {hot.map((s, i) => (

@@ -11,7 +11,7 @@ export default async function Page() {
   return (
     <Frame>
       <PageHeader title="Edit profile" back compact />
-      <ProfileForm initial={{ displayName: u.display_name, bio: u.bio, links: JSON.parse(u.links), avatarUrl: mediaUrl(u.avatar_media_id), bannerUrl: mediaUrl(u.banner_media_id) }} />
+      <ProfileForm initial={{ displayName: u.display_name, bio: u.bio, links: JSON.parse(u.links), avatarUrl: mediaUrl(u.avatar_media_id), bannerUrl: mediaUrl(u.banner_media_id), location: (u as { location?: string }).location ?? "", beats: JSON.parse((u as { beats?: string }).beats || "[]"), accent: (u as { accent?: string }).accent || "blue" }} />
     </Frame>
   );
 }

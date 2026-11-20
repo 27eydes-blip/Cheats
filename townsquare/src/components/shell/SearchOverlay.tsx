@@ -78,7 +78,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
           node: (
             <span className="flex w-full items-center gap-3">
               <span className="min-w-0 flex-1">
-                <span className="folio block !text-[10px] text-ink-3">{s.status === "live" ? <span className="text-live-bg dark:text-live">● Live · </span> : null}{s.section} · {s.takes} takes</span>
+                <span className="folio block !text-[10px] text-ink-3">{s.status === "live" ? <span className="text-live-bg dark:text-live">● Live · </span> : null}{s.section} · {s.takes} dispatches</span>
                 <span className="block truncate font-display text-[17px] font-semibold">{s.title}</span>
               </span>
               <MiniSplit split={s.split} />
@@ -107,7 +107,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
         out.push({ id: `d-${d.slug}`, group: "Desks", href: `/c/${d.slug}`, node: <span className="min-w-0"><span className="block font-semibold">{d.name}</span><span className="block truncate text-[12.5px] text-ink-3">{d.description}</span></span> });
     if (res && want("takes"))
       for (const t of res.takes)
-        out.push({ id: `t-${t.id}`, group: "Takes", href: `/p/${t.id}`, node: <span className="min-w-0"><span className="flex items-center gap-2 text-[12.5px] text-ink-3">{t.stance && <StanceChip stance={t.stance} />}{t.author}</span><span className="line-clamp-1 block">{t.body}</span></span> });
+        out.push({ id: `t-${t.id}`, group: "Dispatches", href: `/p/${t.id}`, node: <span className="min-w-0"><span className="flex items-center gap-2 text-[12.5px] text-ink-3">{t.stance && <StanceChip stance={t.stance} />}{t.author}</span><span className="line-clamp-1 block">{t.body}</span></span> });
     if (q.trim() && (filter === "all" || filter === "takes")) out.push({ id: "all", group: "Search", href: `/search?q=${encodeURIComponent(q.trim())}`, node: <span className="flex items-center gap-3"><SearchIcon size={18} className="text-ink-3" />See all results for “{q.trim()}”</span> });
     return out;
   }, [q, res, filter, viewer]);
@@ -121,7 +121,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
     else if (e.key === "ArrowUp") (e.preventDefault(), setSel((s) => Math.max(0, s - 1)));
     else if (e.key === "Enter") (e.preventDefault(), rows[sel] && go(rows[sel].href));
   };
-  const FILTERS: [Filter, string][] = [["all", "All"], ["stories", "Stories"], ["voices", "Voices"], ["desks", "Desks"], ["takes", "Takes"]];
+  const FILTERS: [Filter, string][] = [["all", "All"], ["stories", "Stories"], ["voices", "Voices"], ["desks", "Desks"], ["takes", "Dispatches"]];
   let last = "";
 
   return (
@@ -134,7 +134,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
               ref={input}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search stories, voices, desks, takes"
+              placeholder="Search stories, voices, desks, dispatches"
               className="min-w-0 flex-1 bg-transparent font-display text-[clamp(1.4rem,1.1rem+1.4vw,2.2rem)] font-semibold tracking-[-0.02em] placeholder:font-normal placeholder:text-ink-3 focus:outline-none"
               role="combobox"
               aria-expanded="true"
@@ -149,7 +149,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
               <button key={f} type="button" role="radio" aria-checked={filter === f} onClick={() => setFilter(f)} className={`inline-flex min-h-9 shrink-0 items-center rounded-[10px] px-3 text-[13px] font-semibold ${filter === f ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "text-ink-2 ring-1 ring-rule hover:ring-rule-strong"}`}>{l}</button>
             ))}
             {viewer && (
-              <button type="button" onClick={() => (onClose(), onCompose())} className="btn-gold ml-auto !min-h-9 !px-3 !text-[13px]"><TakeIcon size={15} /> Take it</button>
+              <button type="button" onClick={() => (onClose(), onCompose())} className="btn-gold ml-auto !min-h-9 !px-3 !text-[13px]"><TakeIcon size={15} /> Dispatch</button>
             )}
           </div>
           <ul id="search-list" role="listbox" className="flex-1 overflow-y-auto overscroll-contain pb-10">

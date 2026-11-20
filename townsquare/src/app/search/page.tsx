@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/ui/States";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Search" };
 
-const TYPES = [["all", "All"], ["stories", "Stories"], ["voices", "Voices"], ["desks", "Desks"], ["takes", "Takes"]] as const;
+const TYPES = [["all", "All"], ["stories", "Stories"], ["voices", "Voices"], ["desks", "Desks"], ["takes", "Dispatches"]] as const;
 
 /** Full search results, grouped: Stories, Voices, Desks, Takes. */
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string }> }) {
@@ -49,7 +49,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         )}
       </div>
       {!q ? (
-        <EmptyState art="search" title="What are you looking for?" body="Search stories, Voices, Desks, and takes. Tip: press ⌘K anywhere." />
+        <EmptyState art="search" title="What are you looking for?" body="Search stories, Voices, Desks, and dispatches. Tip: press ⌘K anywhere." />
       ) : (
         <div className="pb-6">
           {want("stories") && stories.length > 0 && (
@@ -84,9 +84,9 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             </section>
           )}
           {want("takes") && takes && (
-            <section className="pt-6" aria-label="Takes">
-              <h2 className="folio mx-4 border-b-2 border-navy-ink pb-1.5 text-navy-ink sm:mx-6">Takes</h2>
-              <Feed initial={takes} source={{ tab: "search", q }} empty={<p className="px-6 py-8 text-center text-ink-3">No takes match.</p>} />
+            <section className="pt-6" aria-label="Dispatches">
+              <h2 className="folio mx-4 border-b-2 border-navy-ink pb-1.5 text-navy-ink sm:mx-6">Dispatches</h2>
+              <Feed initial={takes} source={{ tab: "search", q }} empty={<p className="px-6 py-8 text-center text-ink-3">No dispatches match.</p>} />
             </section>
           )}
           {!stories.length && !teams.length && !people.length && !desks.length && !takes?.items.length && <EmptyState art="search" title="Nothing on the wire" body={`No stories, Voices, Desks, or takes match “${q}”.`} />}

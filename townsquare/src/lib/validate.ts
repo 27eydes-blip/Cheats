@@ -1,3 +1,4 @@
+import { BEATS, isAccent, MAX_BEATS, type Beat } from "./profile-theme";
 import { z } from "zod";
 import { LIMITS } from "@/config";
 import { cleanText, safeHttpUrl } from "./text";
@@ -57,6 +58,9 @@ export const profileSchema = z.object({
   displayName: displayNameSchema,
   bio: z.string().transform(cleanText).pipe(z.string().max(LIMITS.bioChars, `Bio can be at most ${LIMITS.bioChars} characters.`)),
   links: z.array(linkSchema).max(LIMITS.links),
+  location: z.string().transform(cleanText).pipe(z.string().max(60, "Location can be at most 60 characters.")).optional().default(""),
+  beats: z.array(z.string()).optional().default([]).transform((b) => [...new Set(b.filter((x): x is Beat => x in BEATS))].slice(0, MAX_BEATS)),
+  accent: z.string().optional().default("blue").transform((a) => (isAccent(a) ? a : "blue")),
 });
 
 export const pollSchema = z.object({

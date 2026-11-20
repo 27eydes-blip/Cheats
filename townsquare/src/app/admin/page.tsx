@@ -42,7 +42,7 @@ export default async function Admin() {
       <PageTitle folio={<Kicker tone="gold">Trust & Safety</Kicker>} title="Control Room" dek="Report queue, the Live Wire, and the health of the network." />
       <div role="note" className="mx-4 mt-6 mb-6 flex items-start gap-3 border-l-[3px] border-gold bg-gold-soft px-4 py-3 text-[14px] sm:mx-6">
         <ShieldIcon size={20} className="mt-0.5 shrink-0 text-gold-ink" />
-        <p><b>The same rules apply to every account,</b> public figures and staff included. Act on what the content does, never on who posted it or which side it takes.</p>
+        <p><b>The same rules apply to every account,</b> public figures and staff included. Act on what the content does, never on who posted it or which side it dispatches.</p>
       </div>
 
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-x-6 gap-y-6 px-4 sm:px-6 lg:grid-cols-4">

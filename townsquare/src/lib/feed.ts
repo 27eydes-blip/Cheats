@@ -132,11 +132,15 @@ export function profileFeed(userId: string, tab: ProfileTab, viewerId: string | 
   const [at, k] = parseCursor(cursor);
   let rows: Row[];
   if (tab === "likes") {
+    // "Boosted": dispatches this person reacted to (reactions, plus legacy likes).
     rows = all<Row>(
-      `SELECT l.post_id, l.created_at sort_at, l.post_id k, NULL reposter_id FROM likes l JOIN posts p ON p.id = l.post_id
-       WHERE l.user_id = ? AND ${LIVE} AND (l.created_at < ? OR (l.created_at = ? AND l.post_id < ?))
-       ORDER BY l.created_at DESC, l.post_id DESC LIMIT ?`,
-      [userId, at, at, k, limit],
+      `SELECT * FROM (
+         SELECT l.post_id, max(l.created_at) sort_at, l.post_id k, NULL reposter_id FROM (
+           SELECT post_id, created_at FROM likes WHERE user_id = ? UNION ALL SELECT post_id, created_at FROM reactions WHERE user_id = ?
+         ) l JOIN posts p ON p.id = l.post_id WHERE ${LIVE} GROUP BY l.post_id
+       ) f WHERE (f.sort_at < ? OR (f.sort_at = ? AND f.k < ?))
+       ORDER BY f.sort_at DESC, f.k DESC LIMIT ?`,
+      [userId, userId, at, at, k, limit],
     );
   } else if (tab === "posts") {
     rows = all<Row>(

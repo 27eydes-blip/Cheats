@@ -5,7 +5,8 @@ import { requireViewerPage } from "@/lib/session";
 import { Avatar } from "@/components/ui/Avatar";
 import { ChipLink, ChipRow } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/States";
-import { AgreeIcon, AmplifyIcon, AnswerIcon, QuoteIcon, ShieldIcon, UserIcon } from "@/components/icons";
+import { AgreeIcon, AmplifyIcon, AnswerIcon, FlameIcon, QuoteIcon, ShieldIcon, SparkIcon, UserIcon } from "@/components/icons";
+import { RequestButtons } from "./RequestButtons";
 import { Kicker } from "@/components/ui/Badge";
 import { Frame, PageTitle } from "@/components/ui/Frame";
 import { all } from "@/lib/db";
@@ -15,7 +16,7 @@ import { MarkRead } from "./MarkRead";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notifications" };
 
-const LABELS: Record<keyof typeof NOTIFICATION_FILTERS, string> = { all: "Everything", mentions: "Answers & mentions", likes: "Stances", reposts: "Amplified", follows: "Followers", account: "Standards" };
+const LABELS: Record<keyof typeof NOTIFICATION_FILTERS, string> = { all: "Everything", mentions: "Responses & mentions", likes: "Reactions", reposts: "Relays", follows: "Followers", account: "Standards" };
 
 type Group = { key: string; type: NotificationView["type"]; actors: NonNullable<NotificationView["actor"]>[]; first: NotificationView; read: boolean };
 
@@ -24,7 +25,7 @@ function group(items: NotificationView[]): Group[] {
   const out: Group[] = [];
   const map = new Map<string, Group>();
   for (const n of items) {
-    const groupable = n.type === "like" || n.type === "repost" || n.type === "follow";
+    const groupable = n.type === "like" || n.type === "reaction" || n.type === "repost" || n.type === "follow";
     const key = groupable ? `${n.type}:${n.postId ?? ""}:${n.read ? "r" : "u"}` : n.id;
     let g = map.get(key);
     if (!g) {
@@ -37,13 +38,18 @@ function group(items: NotificationView[]): Group[] {
   return out;
 }
 
-const VERB: Partial<Record<NotificationView["type"], string>> = { like: "sided with your take", repost: "amplified your take", follow: "started following your byline", reply: "answered you", quote: "quoted your take", mention: "mentioned you" };
+const VERB: Partial<Record<NotificationView["type"], string>> = {
+  like: "boosted your dispatch", reaction: "reacted to your dispatch", repost: "relayed your dispatch", follow: "started following you", reply: "responded to you",
+  quote: "quoted your dispatch", mention: "mentioned you", follow_request: "asked to follow you", follow_accept: "approved your follow request",
+};
 
 function Icon({ type }: { type: NotificationView["type"] }) {
   const wrap = (cls: string, node: React.ReactNode) => <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${cls}`}>{node}</span>;
   if (type === "like") return wrap("bg-agree/10 text-agree", <AgreeIcon size={18} />);
   if (type === "repost") return wrap("bg-gold-soft text-gold-ink", <AmplifyIcon size={18} />);
-  if (type === "follow") return wrap("bg-navy-soft text-navy-ink", <UserIcon size={18} />);
+  if (type === "follow" || type === "follow_request" || type === "follow_accept") return wrap("bg-navy-soft text-navy-ink", <UserIcon size={18} />);
+  if (type === "reaction") return wrap("bg-[rgb(245_158_11/0.14)] text-[#fbbf24]", <SparkIcon size={18} />);
+  if (type === "achievement") return wrap("bg-[rgb(34_211_238/0.14)] text-[var(--wn-cyan-ink)]", <FlameIcon size={18} />);
   if (type === "quote") return wrap("bg-navy-soft text-navy-ink", <QuoteIcon size={18} />);
   if (type === "warning" || type === "system") return wrap("bg-danger-soft text-disagree", <ShieldIcon size={18} />);
   return wrap("bg-navy-soft text-navy-ink", <AnswerIcon size={18} />);
@@ -51,6 +57,18 @@ function Icon({ type }: { type: NotificationView["type"] }) {
 
 function Row({ g }: { g: Group }) {
   const n = g.first;
+  if (g.type === "follow_request" && g.actors[0]) {
+    const a = g.actors[0];
+    return (
+      <li className={`flex gap-3 px-4 py-3.5 sm:px-6 ${g.read ? "" : "bg-gold-soft/60 shadow-[inset_3px_0_0_var(--gold)]"}`}>
+        <Icon type={g.type} />
+        <div className="min-w-0 flex-1">
+          <Link href={`/u/${a.handle}`} className="flex items-center gap-2"><Avatar url={a.avatarUrl} name={a.displayName} handle={a.handle} size={28} /><span className="text-[15px]"><b>{a.displayName}</b> {VERB.follow_request}</span></Link>
+          <RequestButtons requesterId={a.id} />
+        </div>
+      </li>
+    );
+  }
   const href = n.postId ? `/p/${n.postId}` : g.actors[0] ? `/u/${g.actors[0].handle}` : "#";
   const names = g.actors.length === 0 ? null : g.actors.length === 1 ? <b>{g.actors[0].displayName}</b> : <><b>{g.actors[0].displayName}</b> and {g.actors.length - 1} other{g.actors.length > 2 ? "s" : ""}</>;
   return (
@@ -64,7 +82,7 @@ function Row({ g }: { g: Group }) {
             </div>
           )}
           <p className="text-[15px] leading-snug">
-            {names ? <>{names} {VERB[g.type]}</> : <b>{g.type === "warning" ? "Standards desk" : APP_SHORT}</b>}
+            {names ? <>{names} {VERB[g.type]}</> : <b>{g.type === "warning" ? "Standards desk" : g.type === "achievement" ? "Milestone" : APP_SHORT}</b>}
             <span className="mono text-[11px] text-ink-3"> · <Time ms={n.createdAt} /></span>
           </p>
           {n.message && <p className="mt-1 text-[14.5px] text-ink-2">{n.message}</p>}
@@ -92,7 +110,7 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
   for (const g of groups) {
     const st = g.first.postId ? storyOf.get(g.first.postId) : undefined;
     const k = st?.key ?? "_byline";
-    if (!desks.has(k)) desks.set(k, { title: st?.title ?? "Your byline", key: st?.key ?? null, items: [] });
+    if (!desks.has(k)) desks.set(k, { title: st?.title ?? "You", key: st?.key ?? null, items: [] });
     desks.get(k)!.items.push(g);
   }
   const fresh = groups.filter((g) => !g.read);
@@ -106,7 +124,7 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
         </ChipRow>
       </div>
       {groups.length === 0 ? (
-        <EmptyState art="notifications" title="Quiet on the desk" body="When people answer you, side with your takes, or follow your byline, it lands here, filed by story." />
+        <EmptyState art="notifications" title="Quiet on the desk" body="When people respond to you, side with your dispatches, or follow your byline, it lands here, filed by story." />
       ) : (
         [...desks.values()].map((d) => (
           <section key={d.key ?? "byline"} aria-label={d.title} className="mt-6">

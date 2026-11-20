@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { changePasswordAction, deleteAccountAction, updateAccountAction, updateProfileAction } from "@/actions/settings";
 import type { Result } from "@/actions/result";
 import { LIMITS } from "@/config";
+import { ACCENTS, BEATS, MAX_BEATS } from "@/lib/profile-theme";
+import { changeEmailAction, notificationPrefsAction } from "@/actions/settings";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 function Status({ state, ok }: { state: Result | null; ok: string }) {
@@ -23,9 +25,11 @@ function useRefreshOnOk(state: Result | null) {
   }, [state, router]);
 }
 
-export function ProfileForm({ initial }: { initial: { displayName: string; bio: string; links: { label: string; url: string }[]; avatarUrl: string | null; bannerUrl: string | null } }) {
+export function ProfileForm({ initial }: { initial: { displayName: string; bio: string; links: { label: string; url: string }[]; avatarUrl: string | null; bannerUrl: string | null; location: string; beats: string[]; accent: string } }) {
   const [state, action, pending] = useActionState(updateProfileAction, null);
   const [bio, setBio] = useState(initial.bio);
+  const [beats, setBeats] = useState<string[]>(initial.beats);
+  const [accent, setAccent] = useState(initial.accent);
   const [avatarPreview, setAvatarPreview] = useState(initial.avatarUrl);
   const [bannerPreview, setBannerPreview] = useState(initial.bannerUrl);
   useRefreshOnOk(state);
@@ -64,6 +68,36 @@ export function ProfileForm({ initial }: { initial: { displayName: string; bio: 
         <textarea id="bio" name="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={LIMITS.bioChars} rows={3} className="input" />
         <p className="text-right text-xs text-ink-3">{bio.length}/{LIMITS.bioChars}</p>
       </div>
+      <div>
+        <label htmlFor="location" className="label">Location</label>
+        <input id="location" name="location" defaultValue={initial.location} maxLength={60} placeholder="City, state or country" className="input" />
+      </div>
+      <fieldset>
+        <legend className="label">Your Beat <span className="font-normal text-ink-3">({beats.length}/{MAX_BEATS}): the topics you cover</span></legend>
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(BEATS) as (keyof typeof BEATS)[]).map((b) => {
+            const on = beats.includes(b);
+            return (
+              <label key={b} className={`inline-flex min-h-10 cursor-pointer items-center rounded-[10px] px-3 text-[13px] font-bold transition-all ${on ? "beat-chip" : "text-ink-3 ring-1 ring-rule"}`} style={{ ["--c" as string]: BEATS[b].color }}>
+                <input type="checkbox" name="beats" value={b} checked={on} className="sr-only" onChange={() => setBeats(on ? beats.filter((x) => x !== b) : beats.length < MAX_BEATS ? [...beats, b] : beats)} />
+                {BEATS[b].label}
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend className="label">Profile accent</legend>
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map((a) => (
+            <label key={a} className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[10px] px-3 text-[13px] font-semibold ring-1 transition-all ${accent === a ? "ring-2" : "ring-rule"}`} style={accent === a ? { boxShadow: `0 0 0 2px ${ACCENTS[a].color}`, color: ACCENTS[a].ink } : undefined}>
+              <input type="radio" name="accent" value={a} checked={accent === a} onChange={() => setAccent(a)} className="sr-only" />
+              <span className="h-4 w-4 rounded-full" style={{ background: ACCENTS[a].color }} />
+              {ACCENTS[a].label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <fieldset>
         <legend className="label">Links</legend>
         <div className="space-y-2">
@@ -135,7 +169,7 @@ export function DeleteForm({ hasPassword }: { hasPassword: boolean }) {
     <form action={action} className="space-y-4 px-4 py-5 sm:px-6">
       <h2 className="font-display text-h3 font-semibold text-danger">Delete account</h2>
       <p className="text-sm text-ink-3">
-        This erases your profile, posts, images, likes, follows, and bookmarks. It can&apos;t be undone. Download your data first from Privacy and safety.
+        This erases your profile, posts, images, likes, follows, and Vault. It can&apos;t be undone. Download your data first from Privacy and safety.
       </p>
       {hasPassword && (
         <div>
@@ -180,5 +214,45 @@ export function DisplayForm({ textSize }: { theme: string; textSize: string }) {
       </fieldset>
       <p className="text-[13px] text-ink-3">Language options and auto-translate come in a later stage.</p>
     </div>
+  );
+}
+
+export function EmailForm({ email, hasPassword }: { email: string; hasPassword: boolean }) {
+  const [state, action, pending] = useActionState(changeEmailAction, null);
+  useRefreshOnOk(state);
+  return (
+    <form action={action} className="space-y-4 px-4 py-5 sm:px-6">
+      <h2 className="font-display text-h3 font-semibold">Email</h2>
+      <div><label htmlFor="email" className="label">Email address</label><input id="email" name="email" type="email" defaultValue={email} required autoComplete="email" className="input" /></div>
+      {hasPassword && <div><label htmlFor="emailpw" className="label">Current password</label><input id="emailpw" name="password" type="password" required autoComplete="current-password" className="input" /></div>}
+      <Status state={state} ok="Email updated." />
+      <button className="btn-outline" disabled={pending}>{pending ? "Saving…" : "Change email"}</button>
+    </form>
+  );
+}
+
+const PREF_LABELS: [string, string, string][] = [
+  ["follows", "New followers", "When someone follows you or accepts your request"],
+  ["requests", "Follow requests", "When someone asks to follow your private account"],
+  ["mentions", "Mentions", "When someone @mentions you"],
+  ["replies", "Responses and quotes", "When someone responds to or quotes your dispatch"],
+  ["reactions", "Reactions", "When someone reacts to your dispatch"],
+  ["relays", "Relays", "When someone relays your dispatch"],
+  ["milestones", "Streaks and milestones", "Achievements, streaks and follower milestones"],
+];
+
+export function NotificationPrefsForm({ prefs }: { prefs: Record<string, boolean> }) {
+  const [state, action, pending] = useActionState(notificationPrefsAction, null);
+  return (
+    <form action={action} className="space-y-1 px-4 py-4 sm:px-6">
+      {PREF_LABELS.map(([k, label, hint]) => (
+        <label key={k} className="flex min-h-14 cursor-pointer items-center justify-between gap-4 border-b border-line py-2">
+          <span><span className="block font-semibold">{label}</span><span className="block text-[13px] text-ink-3">{hint}</span></span>
+          <input type="checkbox" name={k} defaultChecked={prefs[k]} className="h-5 w-5 accent-[var(--wn-blue)]" />
+        </label>
+      ))}
+      <div className="pt-3"><Status state={state} ok="Notification settings saved." /></div>
+      <button className="btn-primary mt-2" disabled={pending}>{pending ? "Saving…" : "Save"}</button>
+    </form>
   );
 }

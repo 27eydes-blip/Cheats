@@ -75,7 +75,7 @@ export function Masthead({ unread }: { unread: number }) {
                 <Badge n={unread} />
               </Link>
               <button type="button" onClick={() => openComposer()} className="btn ml-1 hidden !min-h-10 bg-white !px-4 font-bold text-[#1f4fd6] shadow-[0_6px_18px_rgb(4_10_30/0.35)] hover:shadow-[0_0_0_2px_var(--wn-cyan),0_8px_24px_rgb(34_211_238/0.4)] lg:inline-flex">
-                <TakeIcon size={17} /> Take it
+                <TakeIcon size={17} /> Dispatch
               </button>
               <div className="ml-1 hidden lg:block">
                 <Menu label="Account" button={<span className="flex items-center gap-2 pr-2"><Avatar url={viewer.avatarUrl} name={viewer.displayName} handle={viewer.handle} size={30} /><span className="hidden max-w-[120px] truncate text-[13px] font-semibold text-white 2xl:block">{viewer.displayName}</span></span>} buttonClassName="flex h-10 items-center rounded-[10px] pl-1 hover:bg-white/15" items={account} />

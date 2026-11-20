@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireViewer } from "@/lib/session";
-import { setBlock, setBookmark, setFollow, setLike, setMute, setRepost } from "@/lib/social";
+import { answerFollowRequest, setBlock, setBookmark, setFollow, setLike, setMute, setRepost, togglePin } from "@/lib/social";
 import { markAllRead } from "@/lib/notifications";
 import { attempt } from "./result";
 
@@ -42,5 +42,20 @@ export async function markNotificationsReadAction() {
   return attempt(async () => {
     markAllRead((await requireViewer()).id);
     revalidatePath("/", "layout");
+  });
+}
+
+export async function answerFollowRequestAction(requesterId: string, approve: boolean) {
+  return attempt(async () => {
+    answerFollowRequest(await requireViewer(), requesterId, approve);
+    revalidatePath("/notifications");
+  });
+}
+
+export async function pinAction(postId: string) {
+  return attempt(async () => {
+    const on = togglePin(await requireViewer(), postId);
+    revalidatePath("/u/[handle]", "page");
+    return on;
   });
 }

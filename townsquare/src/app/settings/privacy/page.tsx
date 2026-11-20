@@ -1,7 +1,8 @@
 import { Frame } from "@/components/ui/Frame";
 import Link from "next/link";
 import { requireViewerPage } from "@/lib/session";
-import { listBlockedAndMuted } from "@/lib/social";
+import { listBlockedAndMuted, listFollowRequests } from "@/lib/social";
+import { FollowRequests, PrivateToggle } from "./PrivacyControls";
 import { Avatar } from "@/components/ui/Avatar";
 import { PageHeader } from "@/components/PageHeader";
 import { Unblock } from "./Unblock";
@@ -34,8 +35,16 @@ export default async function Page() {
     <Frame>
       <PageHeader title="Privacy and safety" back compact />
       <section className="border-b border-line px-4 py-5 sm:px-6">
+        <h2 className="font-display text-h3 font-semibold">Account privacy</h2>
+        <PrivateToggle initial={!!(u as { is_private?: number }).is_private} />
+      </section>
+      <section className="border-b border-line px-4 py-5 sm:px-6">
+        <h2 className="font-display text-h3 font-semibold">Follow requests</h2>
+        <FollowRequests initial={listFollowRequests(u.id)} />
+      </section>
+      <section className="border-b border-line px-4 py-5 sm:px-6">
         <h2 className="font-display text-h3 font-semibold">Your data</h2>
-        <p className="mt-1 text-sm text-ink-3">Download everything we store about you as a JSON file: profile, posts, edits, likes, follows, bookmarks, reports, and notifications.</p>
+        <p className="mt-1 text-sm text-ink-3">Download everything we store about you as a JSON file: profile, posts, edits, likes, follows, Vault, reports, and notifications.</p>
         <a href="/api/export" className="btn-outline mt-3" download>Download my data</a>
       </section>
       <section className="border-b border-line px-4 py-5 sm:px-6">

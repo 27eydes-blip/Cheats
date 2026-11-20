@@ -8,7 +8,7 @@ export function StoryActions({ storyKey, title }: { storyKey: string; title: str
   const toast = useToast();
   return (
     <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-      <button type="button" onClick={() => openComposer({ storyKey })} className="btn-primary"><TakeIcon size={16} /> Take it</button>
+      <button type="button" onClick={() => openComposer({ storyKey })} className="btn-primary"><TakeIcon size={16} /> Dispatch</button>
       <button
         type="button"
         aria-label="Share story"

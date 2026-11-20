@@ -364,3 +364,9 @@ dialog[open] { animation: scale-in var(--dur-std) var(--ease-out); }
 /* Team badge outline: visible on both themes */
 .team-badge-ring { stroke: var(--ring-d); }
 html.light .team-badge-ring { stroke: var(--ring-l); }
+
+/* Profile accent + Beat chips: bright on dark, deepened on light for contrast */
+.beat-chip { color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent); }
+html.light .beat-chip { color: color-mix(in srgb, var(--c) 45%, #000); }
+.accent-ink { color: var(--accent-ink); }
+html.light .accent-ink { color: color-mix(in srgb, var(--accent-c) 50%, #000); }

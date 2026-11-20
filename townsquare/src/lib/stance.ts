@@ -56,7 +56,7 @@ export function castStance(user: UserRow, type: StanceTarget, id: string, value:
     if (!get("SELECT 1 FROM stories WHERE key = ?", [id])) throw new AppError("Story not found.", "not_found");
   } else {
     const p = get<{ author_id: string; deleted_at: number | null; removed_at: number | null }>("SELECT author_id, deleted_at, removed_at FROM posts WHERE id = ?", [id]);
-    if (!p || p.deleted_at || p.removed_at) throw new AppError("That take is no longer available.", "not_found");
+    if (!p || p.deleted_at || p.removed_at) throw new AppError("That dispatch is no longer available.", "not_found");
     if (get("SELECT 1 FROM blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)", [p.author_id, user.id, user.id, p.author_id])) {
       throw new AppError("You can't interact with this account.", "blocked");
     }

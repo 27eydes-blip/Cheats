@@ -126,8 +126,8 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
               <p className="mt-1 text-[13.5px] text-ink-3">Cast your stance. You can change it any time.</p>
               <div className="mt-4"><StanceMeter type="story" id={story.key} initial={story.split} variant="large" /></div>
               <div className="mt-4 flex items-center justify-between border-t border-rule pt-3">
-                <span className="folio !text-[10px] text-ink-3">Takes, last 24h</span>
-                <Sparkline values={story.series} width={120} height={28} color="var(--gold)" label="Takes per two hours" />
+                <span className="folio !text-[10px] text-ink-3">Dispatches, last 24h</span>
+                <Sparkline values={story.series} width={120} height={28} color="var(--gold)" label="Dispatches per two hours" />
               </div>
               <StoryActions storyKey={story.key} title={story.title} />
             </section>
@@ -154,7 +154,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
 
       <section aria-labelledby="takes" className="mt-12 lg:px-8">
         <div className="flex items-end justify-between px-4 lg:px-0">
-          <h2 id="takes" className="font-display text-display font-semibold">The Takes</h2>
+          <h2 id="takes" className="font-display text-display font-semibold">The Dispatches</h2>
           <span className="mono pb-2 text-[12px] text-ink-3">{takes.length} TAKES</span>
         </div>
         <NewTakes storyKey={key} />

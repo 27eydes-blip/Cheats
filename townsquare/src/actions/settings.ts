@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { deleteFiles, saveImage } from "@/lib/media";
 import { endSession, requireViewer } from "@/lib/session";
-import { assertCanAct, changePassword, deleteAccount, updateAccount, updateProfile } from "@/lib/users";
+import { assertCanAct, changeEmail, changePassword, deleteAccount, setNotificationPrefs, setPrivate, updateAccount, updateProfile, NOTIFICATION_PREF_KEYS } from "@/lib/users";
 import { AppError } from "@/lib/errors";
 import { attempt, type Result } from "./result";
 
@@ -25,7 +25,14 @@ export async function updateProfileAction(_: Result | null, form: FormData): Pro
       .filter((l) => l.url.trim());
     updateProfile(
       user.id,
-      { displayName: String(form.get("displayName") ?? ""), bio: String(form.get("bio") ?? ""), links },
+      {
+        displayName: String(form.get("displayName") ?? ""),
+        bio: String(form.get("bio") ?? ""),
+        links,
+        location: String(form.get("location") ?? ""),
+        beats: form.getAll("beats").map(String),
+        accent: String(form.get("accent") ?? "blue"),
+      },
       {
         avatarId: avatar ? await saveImage(user.id, avatar, "avatar") : form.get("removeAvatar") ? null : undefined,
         bannerId: banner ? await saveImage(user.id, banner, "banner") : form.get("removeBanner") ? null : undefined,
@@ -60,4 +67,27 @@ export async function deleteAccountAction(_: Result | null, form: FormData): Pro
   });
   if (res.ok) redirect("/login?deleted=1");
   return res;
+}
+
+export async function changeEmailAction(_: Result | null, form: FormData): Promise<Result> {
+  return attempt(async () => {
+    const user = await requireViewer();
+    await changeEmail(user.id, String(form.get("email") ?? ""), String(form.get("password") ?? ""));
+    revalidatePath("/settings/account");
+  });
+}
+
+export async function setPrivateAction(on: boolean) {
+  return attempt(async () => {
+    const user = await requireViewer();
+    setPrivate(user.id, !!on);
+    revalidatePath("/", "layout");
+  });
+}
+
+export async function notificationPrefsAction(_: Result | null, form: FormData): Promise<Result> {
+  return attempt(async () => {
+    const user = await requireViewer();
+    setNotificationPrefs(user.id, Object.fromEntries(NOTIFICATION_PREF_KEYS.map((k) => [k, form.get(k) === "on"])));
+  });
 }

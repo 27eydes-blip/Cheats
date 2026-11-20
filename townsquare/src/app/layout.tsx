@@ -23,7 +23,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: `${APP_NAME} — ${TAGLINE}`, template: `%s · ${APP_NAME}` },
-  description: "The national front page where every story has a split. Take a side, read the takes, settle the debate.",
+  description: "The national front page where every story has a split. Take a side, read the dispatches, settle the debate.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

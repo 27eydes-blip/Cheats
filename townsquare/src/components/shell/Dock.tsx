@@ -26,9 +26,9 @@ export function Dock({ liveCount }: { liveCount: number }) {
         <li><Link href="/" aria-current={path === "/" ? "page" : undefined} className={item(path === "/")}>{dot(path === "/")}<EditionIcon size={22} />Front</Link></li>
         <li><Link href="/markets" aria-current={markets ? "page" : undefined} className={item(markets)}>{dot(markets)}<TrendIcon size={22} />Markets</Link></li>
         <li className="flex items-center justify-center">
-          <button type="button" onClick={() => openComposer()} aria-label="Take it: write a take" className="-mt-5 flex h-14 w-14 flex-col items-center justify-center rounded-[18px] bg-[var(--wn-blue-fill)] text-white shadow-[0_0_0_4px_var(--wn-bg),0_8px_24px_rgb(47_107_255/0.7)] ring-1 ring-[rgb(127_163_255/0.6)] transition-transform active:scale-95">
+          <button type="button" onClick={() => openComposer()} aria-label="Dispatch: write a dispatch" className="-mt-5 flex h-14 w-14 flex-col items-center justify-center rounded-[18px] bg-[var(--wn-blue-fill)] text-white shadow-[0_0_0_4px_var(--wn-bg),0_8px_24px_rgb(47_107_255/0.7)] ring-1 ring-[rgb(127_163_255/0.6)] transition-transform active:scale-95">
             <TakeIcon size={22} strokeWidth={2} />
-            <span className="sr-only">Take it</span>
+            <span className="sr-only">Dispatch</span>
           </button>
         </li>
         <li>

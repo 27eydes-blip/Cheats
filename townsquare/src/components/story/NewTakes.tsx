@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useLiveEvents } from "../live";
 
-/** "3 new takes" pill on a Story page, fed by the live stream. Tap to load them. */
+/** "3 new dispatches" pill on a Story page, fed by the live stream. Tap to load them. */
 export function NewTakes({ storyKey }: { storyKey: string }) {
   const [ids, setIds] = useState<string[]>([]);
   const [pending, start] = useTransition();
@@ -22,7 +22,7 @@ export function NewTakes({ storyKey }: { storyKey: string }) {
         aria-live="polite"
       >
         <span className="h-2 w-2 animate-live rounded-full bg-live" aria-hidden="true" />
-        {pending ? "Loading…" : `${ids.length} new take${ids.length > 1 ? "s" : ""} · Show`}
+        {pending ? "Loading…" : `${ids.length} new dispatch${ids.length > 1 ? "s" : ""} · Show`}
       </button>
     </div>
   );

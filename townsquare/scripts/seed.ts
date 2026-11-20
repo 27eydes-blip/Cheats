@@ -13,7 +13,7 @@ import sharp from "sharp";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { get, newId, run, tx } from "../src/lib/db";
+import { all, get, newId, run, tx } from "../src/lib/db";
 import { seedTeams } from "../src/lib/sports/teams";
 import { hashPassword } from "../src/lib/passwords";
 import { extractHashtags, extractMentions } from "../src/lib/text";
@@ -535,6 +535,24 @@ async function main() {
     ]);
   });
 
+  // Profiles: location, Beat and accent for the sample Voices; sources on some of their dispatches.
+  const EXTRA: Record<string, [string, string[], string]> = {
+    maria_lopez: ["Washington, D.C.", ["politics", "courts"], "rose"], markets_mike: ["New York, NY", ["markets", "energy"], "emerald"],
+    tom_on_policy: ["Arlington, VA", ["politics", "national"], "blue"], dr_amina: ["Columbus, OH", ["health", "science"], "cyan"],
+    defense_dana: ["Norfolk, VA", ["world", "politics"], "violet"], the_real_nina: ["New Orleans, LA", ["national", "world"], "amber"],
+    priya_codes: ["San Jose, CA", ["tech", "courts"], "violet"], coach_dave: ["Seattle, WA", ["sports"], "amber"], astro_omar: ["Houston, TX", ["science", "tech"], "cyan"],
+    thegreenthumb: ["Boulder, CO", ["science", "energy"], "emerald"], jess_votes: ["Phoenix, AZ", ["politics"], "rose"], bookish_beth: ["Madison, WI", ["culture", "media"], "blue"],
+  };
+  tx(() => {
+    for (const [h, [loc, beats, accent]] of Object.entries(EXTRA)) run("UPDATE users SET location = ?, beats = ?, accent = ? WHERE handle = ?", [loc, JSON.stringify(beats), accent, h]);
+    const sourced = all<{ id: string; url: string }>(
+      `SELECT p.id, (SELECT n.url FROM news_items n WHERE n.story_key = p.story_key ORDER BY n.published_at LIMIT 1) url FROM posts p JOIN users u ON u.id = p.author_id
+       WHERE u.verified = 1 AND p.story_key IS NOT NULL AND p.reply_to_id IS NULL`,
+    );
+    sourced.forEach((r, i) => {
+      if (r.url && i % 2 === 0) run("UPDATE posts SET source_url = ?, source_domain = ? WHERE id = ?", [r.url, new URL(r.url).hostname.replace(/^www\./, ""), r.id]);
+    });
+  });
   seedTeams();
   const counts = Object.fromEntries(["users", "stories", "story_updates", "posts", "stances", "communities", "news_items", "live_events", "teams"].map((t) => [t, get<{ n: number }>(`SELECT count(*) n FROM ${t}`)!.n]));
   console.log("Done:", counts);

@@ -49,16 +49,16 @@ export function TakesBoard({ takes }: { takes: PostView[] }) {
     <div className="min-w-0">
       <div className={`flex items-center justify-between border-t-[3px] pt-2 pb-1 ${tone}`}>
         <h3 className="folio flex items-center gap-1.5"><Icon size={14} strokeWidth={2} /> {label}</h3>
-        <span className="mono text-[12px] text-ink-3">{list.length} takes</span>
+        <span className="mono text-[12px] text-ink-3">{list.length} dispatches</span>
       </div>
-      {list.length ? list.map((p) => <PostCard key={p.id} post={p} hideStory />) : <p className="py-8 text-center text-[14px] text-ink-3">No takes on this side yet. Be the first.</p>}
+      {list.length ? list.map((p) => <PostCard key={p.id} post={p} hideStory />) : <p className="py-8 text-center text-[14px] text-ink-3">No dispatches on this side yet. Be the first.</p>}
     </div>
   );
 
   return (
     <div>
       {/* Phone toggle */}
-      <div role="tablist" aria-label="Takes by stance" className="grid grid-cols-4 border-b border-rule lg:hidden">
+      <div role="tablist" aria-label="Dispatches by stance" className="grid grid-cols-4 border-b border-rule lg:hidden">
         {tabs.map(([k, l, n, Icon]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`relative flex min-h-12 flex-col items-center justify-center gap-0.5 text-[12px] font-bold ${tab === k ? "text-ink-1" : "text-ink-3"}`}>
             <span className="flex items-center gap-1"><Icon size={14} strokeWidth={2} />{l}</span><span className="mono text-[10.5px] font-normal">{n}</span>
@@ -81,7 +81,7 @@ export function TakesBoard({ takes }: { takes: PostView[] }) {
         {(questions.length > 0 || other.length > 0) && (
           <div className="mt-10 grid grid-cols-2 gap-10">
             {questions.length > 0 && column("Open questions", questions, "border-navy-ink text-navy-ink", QuestionIcon)}
-            {other.length > 0 && column("Other takes", other, "border-rule-strong text-ink-2", ContextIcon)}
+            {other.length > 0 && column("Other dispatches", other, "border-rule-strong text-ink-2", ContextIcon)}
           </div>
         )}
       </div>

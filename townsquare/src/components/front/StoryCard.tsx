@@ -48,7 +48,7 @@ export function StoryTile({ s, big }: { s: StorySummary; big?: boolean }) {
       </Link>
       <div className="flex items-center justify-between gap-3 border-t border-rule px-4 py-2.5">
         <MiniSplit split={s.split} />
-        <span className="mono text-[11.5px] text-ink-3">{s.takes} takes</span>
+        <span className="mono text-[11.5px] text-ink-3">{s.takes} dispatches</span>
       </div>
     </article>
   );

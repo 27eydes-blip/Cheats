@@ -1,7 +1,10 @@
 import { all, get, newId, now, run } from "./db";
 import { toMini, type UserMini } from "./users";
 
-export type NotificationType = "like" | "reply" | "repost" | "quote" | "follow" | "mention" | "warning" | "system";
+export type NotificationType = "like" | "reply" | "repost" | "quote" | "follow" | "mention" | "warning" | "system" | "reaction" | "follow_request" | "follow_accept" | "achievement";
+
+/** Which notification setting silences which type (warnings and system notices always arrive). */
+const PREF_FOR: Partial<Record<NotificationType, string>> = { follow: "follows", follow_accept: "follows", follow_request: "requests", mention: "mentions", reply: "replies", quote: "replies", like: "reactions", reaction: "reactions", repost: "relays", achievement: "milestones" };
 
 export type NotificationView = {
   id: string;
@@ -17,6 +20,11 @@ export type NotificationView = {
 /** Record a notification unless it is to yourself or the two accounts block/mute each other. */
 export function notify(userId: string, actorId: string | null, type: NotificationType, postId: string | null = null, message: string | null = null) {
   if (actorId && userId === actorId) return;
+  const pref = PREF_FOR[type];
+  if (pref) {
+    const row = get<Record<string, number>>("SELECT * FROM notification_prefs WHERE user_id = ?", [userId]);
+    if (row && row[pref] === 0) return;
+  }
   if (actorId) {
     const silenced = get(
       `SELECT 1 FROM blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)
@@ -45,9 +53,9 @@ export function unnotify(userId: string, actorId: string, type: NotificationType
 export const NOTIFICATION_FILTERS = {
   all: null,
   mentions: ["mention", "reply", "quote"],
-  likes: ["like"],
+  likes: ["like", "reaction"],
   reposts: ["repost", "quote"],
-  follows: ["follow"],
+  follows: ["follow", "follow_request", "follow_accept"],
   account: ["warning", "system"],
 } as const satisfies Record<string, readonly NotificationType[] | null>;
 

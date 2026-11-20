@@ -43,12 +43,12 @@ export const useRundown = () => useContext(RundownCtx);
 export const POSTED_EVENT = "ts:posted";
 
 const SHORTCUTS: [string, string][] = [
-  ["j / k", "Next / previous take"],
-  ["a", "Agree with the selected take"],
-  ["d", "Disagree with the selected take"],
-  ["r", "Answer the selected take"],
-  ["Enter", "Open the selected take"],
-  ["n", "New take"],
+  ["j / k", "Next / previous dispatch"],
+  ["a", "Agree with the selected dispatch"],
+  ["d", "Disagree with the selected dispatch"],
+  ["r", "Respond to the selected dispatch"],
+  ["Enter", "Open the selected dispatch"],
+  ["n", "New dispatch"],
   ["⌘K / Ctrl K", "Search and jump anywhere"],
   ["?", "Show these shortcuts"],
 ];
@@ -125,7 +125,7 @@ export function Providers({ viewer, children }: { viewer: ClientViewer; children
     return () => window.removeEventListener("keydown", onKey);
   }, [openComposer]);
 
-  const title = composer?.replyTo ? "Answer" : composer?.quote ? "Quote this take" : composer?.communityName ? `Post to ${composer.communityName}` : "Take it";
+  const title = composer?.replyTo ? "Respond" : composer?.quote ? "Quote this dispatch" : composer?.communityName ? `Post to ${composer.communityName}` : "Dispatch";
   const composerEl = composer && (
     <Composer autoFocus replyTo={composer.replyTo} quote={composer.quote} communityId={composer.communityId} prefill={composer.prefill} storyKey={composer.storyKey} onPosted={() => setComposer(null)} />
   );

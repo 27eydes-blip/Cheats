@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError } from "./errors";
 import { all, get, newId, now, run, tx } from "./db";
 import { hashPassword, randomToken, sha256, verifyPassword } from "./passwords";
-import { handleSchema, profileSchema, signupSchema } from "./validate";
+import { emailSchema, handleSchema, profileSchema, signupSchema } from "./validate";
 
 export type UserRow = {
   id: string;
@@ -50,8 +50,17 @@ export type ProfileView = UserMini & {
   following: number | null;
   postCount: number;
   status: UserRow["status"];
-  viewer: { isSelf: boolean; follows: boolean; followsYou: boolean; blocked: boolean; muted: boolean; blockedBy: boolean };
+  location: string;
+  beats: string[];
+  accent: string;
+  isPrivate: boolean;
+  /** Mutual follows ("Friends"); null when follow lists are hidden. */
+  friends: number | null;
+  viewer: { isSelf: boolean; follows: boolean; followsYou: boolean; blocked: boolean; muted: boolean; blockedBy: boolean; requested: boolean };
 };
+
+/** Can this viewer see the account's dispatches? (Private accounts: followers only.) */
+export const canSeeDispatches = (p: ProfileView) => !p.isPrivate || p.viewer.isSelf || p.viewer.follows;
 
 export const mediaUrl = (id: string | null) => (id ? `/api/media/${id}` : null);
 
@@ -152,7 +161,7 @@ export function destroySession(token: string) {
 
 // ---------- profile ----------
 export function getProfile(handle: string, viewerId: string | null): ProfileView | null {
-  const u = userByHandle(handle);
+  const u = userByHandle(handle) as (UserRow & { location: string; beats: string; accent: string; is_private: number }) | undefined;
   if (!u) return null;
   const count = (sql: string) => get<{ n: number }>(sql, [u.id])?.n ?? 0;
   const isSelf = viewerId === u.id;
@@ -169,6 +178,11 @@ export function getProfile(handle: string, viewerId: string | null): ProfileView
     following: hidden ? null : count("SELECT count(*) n FROM follows WHERE follower_id = ?"),
     postCount: count("SELECT count(*) n FROM posts WHERE author_id = ? AND deleted_at IS NULL AND removed_at IS NULL"),
     status: u.status,
+    location: u.location ?? "",
+    beats: JSON.parse(u.beats || "[]"),
+    accent: u.accent || "blue",
+    isPrivate: !!u.is_private,
+    friends: hidden ? null : count("SELECT count(*) n FROM follows a JOIN follows b ON b.follower_id = a.followee_id AND b.followee_id = a.follower_id WHERE a.follower_id = ?"),
     viewer: {
       isSelf,
       follows: rel("SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?", viewerId, u.id),
@@ -176,20 +190,66 @@ export function getProfile(handle: string, viewerId: string | null): ProfileView
       blocked: rel("SELECT 1 FROM blocks WHERE blocker_id = ? AND blocked_id = ?", viewerId, u.id),
       blockedBy: viewerId ? !!get("SELECT 1 FROM blocks WHERE blocker_id = ? AND blocked_id = ?", [u.id, viewerId]) : false,
       muted: rel("SELECT 1 FROM mutes WHERE muter_id = ? AND muted_id = ?", viewerId, u.id),
+      requested: rel("SELECT 1 FROM follow_requests WHERE requester_id = ? AND target_id = ?", viewerId, u.id),
     },
   };
 }
 
 export function updateProfile(userId: string, input: z.input<typeof profileSchema>, media?: { avatarId?: string | null; bannerId?: string | null }) {
   const p = profileSchema.parse(input);
-  run("UPDATE users SET display_name = ?, bio = ?, links = ? WHERE id = ?", [
+  run("UPDATE users SET display_name = ?, bio = ?, links = ?, location = ?, beats = ?, accent = ? WHERE id = ?", [
     p.displayName,
     p.bio,
     JSON.stringify(p.links.filter((l) => l.url)),
+    p.location,
+    JSON.stringify(p.beats),
+    p.accent,
     userId,
   ]);
   if (media?.avatarId !== undefined) run("UPDATE users SET avatar_media_id = ? WHERE id = ?", [media.avatarId, userId]);
   if (media?.bannerId !== undefined) run("UPDATE users SET banner_media_id = ? WHERE id = ?", [media.bannerId, userId]);
+}
+
+/** Change the sign-in email (password accounts must confirm with their password). */
+export async function changeEmail(userId: string, newEmail: string, password: string | null) {
+  const email = emailSchema.parse(newEmail);
+  const u = userById(userId);
+  if (!u) throw new AppError("Account not found.", "not_found");
+  if (u.password_hash && !(await verifyPassword(password ?? "", u.password_hash))) throw new AppError("Your current password is incorrect.");
+  const taken = get<{ id: string }>("SELECT id FROM users WHERE email = ?", [email]);
+  if (taken && taken.id !== userId) throw new AppError("That email is already in use.");
+  run("UPDATE users SET email = ? WHERE id = ?", [email, userId]);
+}
+
+/** Private accounts: only approved followers see dispatches. Going public approves pending requests. */
+export function setPrivate(userId: string, on: boolean) {
+  tx(() => {
+    run("UPDATE users SET is_private = ? WHERE id = ?", [on ? 1 : 0, userId]);
+    if (!on) {
+      const t = now();
+      run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) SELECT requester_id, target_id, ? FROM follow_requests WHERE target_id = ?", [t, userId]);
+      run("DELETE FROM follow_requests WHERE target_id = ?", [userId]);
+    }
+  });
+}
+
+export const NOTIFICATION_PREF_KEYS = ["follows", "mentions", "replies", "reactions", "relays", "requests", "milestones"] as const;
+export type NotificationPrefs = Record<(typeof NOTIFICATION_PREF_KEYS)[number], boolean>;
+
+export function getNotificationPrefs(userId: string): NotificationPrefs {
+  const r = get<Record<string, number>>("SELECT * FROM notification_prefs WHERE user_id = ?", [userId]);
+  return Object.fromEntries(NOTIFICATION_PREF_KEYS.map((k) => [k, r ? !!r[k] : true])) as NotificationPrefs;
+}
+
+export function setNotificationPrefs(userId: string, prefs: Partial<NotificationPrefs>) {
+  const cur = getNotificationPrefs(userId);
+  const next = { ...cur, ...Object.fromEntries(Object.entries(prefs).filter(([k]) => (NOTIFICATION_PREF_KEYS as readonly string[]).includes(k)).map(([k, v]) => [k, !!v])) } as NotificationPrefs;
+  run(
+    `INSERT INTO notification_prefs (user_id, ${NOTIFICATION_PREF_KEYS.join(", ")}) VALUES (?, ${NOTIFICATION_PREF_KEYS.map(() => "?").join(", ")})
+     ON CONFLICT(user_id) DO UPDATE SET ${NOTIFICATION_PREF_KEYS.map((k) => `${k} = excluded.${k}`).join(", ")}`,
+    [userId, ...NOTIFICATION_PREF_KEYS.map((k) => (next[k] ? 1 : 0))],
+  );
+  return next;
 }
 
 export function updateAccount(userId: string, input: { handle: string; hideFollows: boolean }) {

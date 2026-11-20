@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   id         TEXT PRIMARY KEY,
   user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   actor_id   TEXT REFERENCES users(id) ON DELETE CASCADE,
-  type       TEXT NOT NULL CHECK (type IN ('like','reply','repost','quote','follow','mention','warning','system')),
+  type       TEXT NOT NULL CHECK (type IN ('like','reply','repost','quote','follow','mention','warning','system','reaction','follow_request','follow_accept','achievement')),
   post_id    TEXT REFERENCES posts(id) ON DELETE CASCADE,
   message    TEXT,
   created_at INTEGER NOT NULL,

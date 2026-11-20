@@ -17,7 +17,7 @@ export function DemoControls() {
   const [sheet, setSheet] = useState(false);
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button variant="secondary" onClick={() => toast("Saved to bookmarks", "ok", "#")}>Toast</Button>
+      <Button variant="secondary" onClick={() => toast("Saved to Vault", "ok", "#")}>Toast</Button>
       <Button variant="secondary" onClick={() => toast("Something went wrong", "error")}>Error toast</Button>
       <Button variant="secondary" onClick={() => setSheet(true)}>Sheet</Button>
       <Button variant="secondary" onClick={async () => toast((await confirm({ title: "Delete this post?", body: "This can't be undone.", confirm: "Delete", danger: true })) ? "Confirmed" : "Cancelled")}>Confirm dialog</Button>

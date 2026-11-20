@@ -68,24 +68,103 @@ export function setBookmark(user: UserRow, postId: string, on: boolean): boolean
   return on;
 }
 
-export function setFollow(user: UserRow, targetId: string, on: boolean): boolean {
+export type FollowState = "none" | "following" | "requested";
+
+export function followState(viewerId: string, targetId: string): FollowState {
+  if (get("SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?", [viewerId, targetId])) return "following";
+  if (get("SELECT 1 FROM follow_requests WHERE requester_id = ? AND target_id = ?", [viewerId, targetId])) return "requested";
+  return "none";
+}
+
+/**
+ * Follow / unfollow. Following a private account sends a request instead;
+ * unfollowing also cancels a pending request. Returns the new state.
+ */
+export function setFollow(user: UserRow, targetId: string, on: boolean): FollowState {
   assertCanAct(user);
   if (targetId === user.id) throw new AppError("You can't follow yourself.");
-  const target = userById(targetId);
+  const target = userById(targetId) as (UserRow & { is_private?: number }) | undefined;
   if (!target || target.status === "deleted") throw new AppError("Account not found.", "not_found");
   if (on) {
     if (isBlockedEitherWay(user.id, targetId)) throw new AppError("You can't follow this account.", "blocked");
+    const cur = followState(user.id, targetId);
+    if (cur !== "none") return cur;
     rateLimit("follow", user.id);
-    if (run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [user.id, targetId, now()]).changes) {
-      notify(targetId, user.id, "follow");
+    if (target.is_private) {
+      run("INSERT OR IGNORE INTO follow_requests (requester_id, target_id, created_at) VALUES (?, ?, ?)", [user.id, targetId, now()]);
+      notify(targetId, user.id, "follow_request");
+      return "requested";
     }
-  } else {
-    run("DELETE FROM follows WHERE follower_id = ? AND followee_id = ?", [user.id, targetId]);
-    unnotify(targetId, user.id, "follow", null);
+    run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [user.id, targetId, now()]);
+    notify(targetId, user.id, "follow");
+    safeSignal(() => signalAuthor(user.id, targetId, "follow"));
+    return "following";
   }
-  if (on) safeSignal(() => signalAuthor(user.id, targetId, "follow"));
-  return on;
+  run("DELETE FROM follows WHERE follower_id = ? AND followee_id = ?", [user.id, targetId]);
+  run("DELETE FROM follow_requests WHERE requester_id = ? AND target_id = ?", [user.id, targetId]);
+  unnotify(targetId, user.id, "follow", null);
+  unnotify(targetId, user.id, "follow_request", null);
+  return "none";
 }
+
+export function listFollowRequests(userId: string): UserListItem[] {
+  return all<MiniRow>(
+    `SELECT u.id, u.handle, u.display_name, u.avatar_media_id, u.verified, u.bio FROM follow_requests r JOIN users u ON u.id = r.requester_id
+     WHERE r.target_id = ? AND u.status = 'active' ORDER BY r.created_at DESC LIMIT 200`,
+    [userId],
+  ).map((r) => ({ ...toMini(r), bio: r.bio, viewerFollows: false }));
+}
+
+/** Approve or decline someone's request to follow your private account. */
+export function answerFollowRequest(user: UserRow, requesterId: string, approve: boolean) {
+  if (!get("SELECT 1 FROM follow_requests WHERE requester_id = ? AND target_id = ?", [requesterId, user.id])) throw new AppError("That request is gone.", "not_found");
+  tx(() => {
+    run("DELETE FROM follow_requests WHERE requester_id = ? AND target_id = ?", [requesterId, user.id]);
+    run("DELETE FROM notifications WHERE user_id = ? AND actor_id = ? AND type = 'follow_request'", [user.id, requesterId]);
+    if (approve) {
+      run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [requesterId, user.id, now()]);
+      notify(requesterId, user.id, "follow_accept");
+    }
+  });
+}
+
+/** Mutual follows count as Friends. */
+export function isFriend(a: string, b: string) {
+  return !!get(
+    "SELECT 1 FROM follows x JOIN follows y ON y.follower_id = x.followee_id AND y.followee_id = x.follower_id WHERE x.follower_id = ? AND x.followee_id = ?",
+    [a, b],
+  );
+}
+
+export function listFriends(userId: string, viewerId: string | null): UserListItem[] {
+  return all<MiniRow & { vf: number }>(
+    `SELECT u.id, u.handle, u.display_name, u.avatar_media_id, u.verified, u.bio,
+       EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = ? AND f.followee_id = u.id) vf
+     FROM follows a JOIN follows b ON b.follower_id = a.followee_id AND b.followee_id = a.follower_id
+     JOIN users u ON u.id = a.followee_id WHERE a.follower_id = ? AND u.status = 'active' ORDER BY u.display_name LIMIT 500`,
+    [viewerId ?? "", userId],
+  ).map((r) => ({ ...toMini(r), bio: r.bio, viewerFollows: !!r.vf }));
+}
+
+/** Pin up to three dispatches to your profile (toggle). */
+export const MAX_PINS = 3;
+export function togglePin(user: UserRow, postId: string): boolean {
+  const p = get<{ author_id: string; reply_to_id: string | null; deleted_at: number | null }>("SELECT author_id, reply_to_id, deleted_at FROM posts WHERE id = ?", [postId]);
+  if (!p || p.deleted_at || p.author_id !== user.id) throw new AppError("You can only pin your own dispatches.");
+  if (get("SELECT 1 FROM profile_pins WHERE user_id = ? AND post_id = ?", [user.id, postId])) {
+    run("DELETE FROM profile_pins WHERE user_id = ? AND post_id = ?", [user.id, postId]);
+    run("UPDATE users SET pinned_post_id = (SELECT post_id FROM profile_pins WHERE user_id = ? ORDER BY position, created_at LIMIT 1) WHERE id = ?", [user.id, user.id]);
+    return false;
+  }
+  const n = get<{ n: number }>("SELECT count(*) n FROM profile_pins WHERE user_id = ?", [user.id])?.n ?? 0;
+  if (n >= MAX_PINS) throw new AppError(`You can pin up to ${MAX_PINS} dispatches. Unpin one first.`);
+  run("INSERT INTO profile_pins (user_id, post_id, position, created_at) VALUES (?, ?, ?, ?)", [user.id, postId, n, now()]);
+  run("UPDATE users SET pinned_post_id = COALESCE(pinned_post_id, ?) WHERE id = ?", [postId, user.id]);
+  return true;
+}
+
+export const pinnedIds = (userId: string) =>
+  all<{ post_id: string }>("SELECT pp.post_id FROM profile_pins pp JOIN posts p ON p.id = pp.post_id WHERE pp.user_id = ? AND p.deleted_at IS NULL AND p.removed_at IS NULL ORDER BY pp.position, pp.created_at", [userId]).map((r) => r.post_id);
 
 /** Blocking removes follows both ways, and hides each account from the other. */
 export function setBlock(user: UserRow, targetId: string, on: boolean): boolean {

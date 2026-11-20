@@ -1,4 +1,5 @@
 "use server";
+import { togglePin } from "@/lib/social";
 import { revalidatePath } from "next/cache";
 import { LIMITS } from "@/config";
 import { AppError } from "@/lib/errors";
@@ -26,6 +27,7 @@ export async function createPostAction(form: FormData) {
       communityId: (form.get("communityId") as string) || null,
       storyKey: (form.get("storyKey") as string) || null,
       stance: ((form.get("stance") as string) || null) as never,
+      sourceUrl: (form.get("sourceUrl") as string) || null,
       mediaIds,
       alts,
       poll: form.get("hasPoll") === "1" ? { options: pollOptions, durationHours: Number(form.get("pollHours") ?? 24) } : null,
@@ -53,11 +55,13 @@ export async function deletePostAction(postId: string) {
   });
 }
 
-export async function pinPostAction(postId: string | null) {
+/** Pin / unpin a dispatch on your profile (up to three). Returns true when now pinned. */
+export async function pinPostAction(postId: string) {
   return attempt(async () => {
     const user = await requireViewer();
-    pinPost(user, postId);
+    const on = togglePin(user, postId);
     revalidatePath(`/u/${user.handle}`);
+    return on;
   });
 }
 

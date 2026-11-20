@@ -30,7 +30,7 @@ function Item({ it, now, compact }: { it: RundownItem; now: number | null }  & {
       <div className="min-w-0 border-l border-rule pl-3">
         {it.kind === "story" && (
           <Link href={`/news/story/${it.story.key}`} className="group block">
-            <span className="folio flex items-center gap-2 !text-[10px] text-ink-3">{it.story.status === "live" && <LiveBadge label="LIVE" />}{it.story.section} · {it.story.takes} takes</span>
+            <span className="folio flex items-center gap-2 !text-[10px] text-ink-3">{it.story.status === "live" && <LiveBadge label="LIVE" />}{it.story.section} · {it.story.takes} dispatches</span>
             <span className="mt-0.5 block font-display text-[18px] leading-snug font-semibold group-hover:underline">{it.story.title}</span>
             <MiniSplit split={it.story.split} className="mt-1.5" />
           </Link>
@@ -47,7 +47,7 @@ function Item({ it, now, compact }: { it: RundownItem; now: number | null }  & {
         {(it.kind === "take" || it.kind === "saved") && (
           <>
             {it.kind === "saved" && <p className="folio flex items-center gap-1 !text-[10px] text-navy-ink"><SaveIcon size={12} /> Saved for later</p>}
-            {it.kind === "take" && it.amplifiedBy && <p className="folio !text-[10px] text-gold-ink">Amplified by {it.amplifiedBy}</p>}
+            {it.kind === "take" && it.amplifiedBy && <p className="folio !text-[10px] text-gold-ink">Relayed by {it.amplifiedBy}</p>}
             <PostCard post={it.post} compact={compact} />
           </>
         )}

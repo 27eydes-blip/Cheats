@@ -7,7 +7,7 @@ import type { PostView } from "@/lib/posts";
 import { createPostAction } from "@/actions/posts";
 import { Avatar } from "./ui/Avatar";
 import { StanceChip, type TakeStance } from "./ui/Stance";
-import { AgreeIcon, CloseIcon, ContextIcon, DisagreeIcon, ImageIcon, PollIcon, QuestionIcon } from "./icons";
+import { AgreeIcon, CloseIcon, ContextIcon, DisagreeIcon, ImageIcon, LinkIcon, PollIcon, QuestionIcon } from "./icons";
 import { POSTED_EVENT, useToast, useViewer } from "./providers";
 import { QuoteEmbed } from "./PostCard";
 
@@ -41,6 +41,7 @@ export function Composer({
   const [stories, setStories] = useState<StoryOpt[]>([]);
   const [storyKey, setStoryKey] = useState<string>(presetStory ?? "");
   const [stance, setStance] = useState<TakeStance | null>(null);
+  const [source, setSource] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -93,6 +94,7 @@ export function Composer({
     if (communityId) form.set("communityId", communityId);
     if (storyKey && !replyTo) form.set("storyKey", storyKey);
     if (stance) form.set("stance", stance);
+    if (source?.trim()) form.set("sourceUrl", source.trim());
     for (const p of pics) (form.append("images", p.file), form.append("alts", p.alt));
     if (poll) {
       form.set("hasPoll", "1");
@@ -109,7 +111,7 @@ export function Composer({
       setStance(null);
       if (compact) setExpanded(false);
       window.dispatchEvent(new CustomEvent(POSTED_EVENT, { detail: res.data.post }));
-      toast(replyTo ? "Answer filed" : "Take filed", "ok", `/p/${res.data.id}`);
+      toast(replyTo ? "Response filed" : "Dispatch filed", "ok", `/p/${res.data.id}`);
       onPosted?.(res.data.post);
       router.refresh();
     });
@@ -124,18 +126,18 @@ export function Composer({
     <div ref={rootRef} onBlur={collapseIfEmpty} className={compact ? "px-4 py-3 sm:px-5" : "px-4 pt-1 pb-4 sm:px-6"}>
       {replyTo && !compact && (
         <div className="mb-3 border-l-[3px] border-gold bg-paper-2 px-3.5 py-2.5 text-[14px]">
-          <span className="folio !text-[10px] text-ink-3">Answering</span> <b>@{replyTo.author.handle}</b>
+          <span className="folio !text-[10px] text-ink-3">Responding to</span> <b>@{replyTo.author.handle}</b>
           {replyTo.stance && <span className="ml-2"><StanceChip stance={replyTo.stance} /></span>}
           {replyTo.body && <p className="mt-1 line-clamp-2 text-ink-2">{replyTo.body}</p>}
         </div>
       )}
-      {viewer.suspended && <p className="mb-3 border-l-2 border-disagree bg-danger-soft p-3 text-[14px] text-disagree">Your account is suspended, so you can&apos;t file takes right now.</p>}
+      {viewer.suspended && <p className="mb-3 border-l-2 border-disagree bg-danger-soft p-3 text-[14px] text-disagree">Your account is suspended, so you can&apos;t file dispatches right now.</p>}
 
       {canPickStory && expanded && (
         <label className="mb-3 block">
           <span className="folio !text-[10px] text-ink-3">Story</span>
           <select value={storyKey} onChange={(e) => (setStoryKey(e.target.value), !e.target.value && setStance(null))} className="input mt-1 !py-2 !text-[14px]">
-            <option value="">No story: a general take</option>
+            <option value="">No story: a general dispatch</option>
             {stories.map((s) => <option key={s.key} value={s.key}>{s.section} · {s.title}</option>)}
           </select>
         </label>
@@ -163,7 +165,7 @@ export function Composer({
       <div className="flex gap-3">
         <Avatar url={viewer.avatarUrl} name={viewer.displayName} handle={viewer.handle} size={compact && !expanded ? 38 : 42} stance={stance === "agree" || stance === "disagree" || stance === "context" ? stance : null} />
         <div className="min-w-0 flex-1">
-          <label htmlFor={idBase} className="sr-only">{replyTo ? "Write your answer" : "Write your take"}</label>
+          <label htmlFor={idBase} className="sr-only">{replyTo ? "Write your response" : "Write your dispatch"}</label>
           <textarea
             id={idBase}
             ref={taRef}
@@ -172,7 +174,7 @@ export function Composer({
             onFocus={() => setExpanded(true)}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === "Enter" && canPost && submit()}
-            placeholder={replyTo ? `Answer @${replyTo.author.handle}…` : poll ? "Ask the question…" : communityId ? "Start a discussion…" : storyKey ? "What's your read?" : "Take it: what's your read on the news?"}
+            placeholder={replyTo ? `Respond to @${replyTo.author.handle}…` : poll ? "Ask the question…" : communityId ? "Start a discussion…" : storyKey ? "What's your read?" : "Dispatch: what's your read on the news?"}
             rows={1}
             className={`w-full resize-none bg-transparent leading-snug placeholder:text-ink-3 focus:outline-none ${expanded ? "min-h-[3.4em] py-1.5 text-[18px]" : "py-2 text-[16px]"}`}
           />
@@ -211,6 +213,15 @@ export function Composer({
             </fieldset>
           )}
 
+          {source !== null && (
+            <div className="mt-2 flex animate-scale-in items-center gap-2 rounded-[10px] bg-white/[0.03] p-2 ring-1 ring-rule">
+              <LinkIcon size={16} className="shrink-0 text-[var(--wn-cyan-ink)]" />
+              <label className="sr-only" htmlFor="src-url">Source link</label>
+              <input id="src-url" value={source} onChange={(e) => setSource(e.target.value)} placeholder="Source link (https://…) — raises your Credibility" inputMode="url" maxLength={500} className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-ink-3" />
+              <button type="button" onClick={() => setSource(null)} className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-ink-3 hover:bg-white/5" aria-label="Remove source"><CloseIcon size={15} /></button>
+            </div>
+          )}
+
           {quote && <div className="mt-2"><QuoteEmbed post={quote} /></div>}
           {error && <p role="alert" className="mt-2 text-[14px] font-medium text-disagree">{error}</p>}
 
@@ -220,6 +231,7 @@ export function Composer({
                 <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => fileRef.current?.click()} disabled={pics.length >= LIMITS.imagesPerPost || !!poll} aria-label="Add images" title="Add images" tabIndex={expanded ? 0 : -1}><ImageIcon size={20} /></button>
                 {!replyTo && <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => setPoll(poll ? null : ["", ""])} disabled={pics.length > 0} aria-label="Add a poll" aria-pressed={!!poll} title="Add a poll" tabIndex={expanded ? 0 : -1}><PollIcon size={20} /></button>}
+                <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft" onClick={() => setSource(source === null ? "" : null)} aria-label="Add a source link" aria-pressed={source !== null} title="Add a source" tabIndex={expanded ? 0 : -1}><LinkIcon size={20} /></button>
                 <div className="ml-auto flex items-center gap-3">
                   {needsStance && !stance && <span className="text-[12.5px] text-ink-3">Pick a stance</span>}
                   {used > 0 && (
@@ -233,7 +245,7 @@ export function Composer({
                     </span>
                   )}
                   <button type="button" className="btn-primary !min-h-10 !px-5" disabled={!canPost || viewer.suspended} onClick={submit} tabIndex={expanded ? 0 : -1}>
-                    {pending ? "Filing…" : replyTo ? "Answer" : "Take it"}
+                    {pending ? "Filing…" : replyTo ? "Respond" : "Dispatch"}
                   </button>
                 </div>
               </div>

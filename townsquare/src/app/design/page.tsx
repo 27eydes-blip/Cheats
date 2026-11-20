@@ -56,7 +56,7 @@ function Gallery({ viewerId }: { viewerId: string | null }) {
   const debate = debates(viewerId, 1)[0];
   const live = liveEvents().find((e) => e.isLive);
   const people = voices(viewerId, 2);
-  const icons: [string, typeof TakeIcon][] = [["Take it", TakeIcon], ["Agree", AgreeIcon], ["Disagree", DisagreeIcon], ["Context", ContextIcon], ["Question", QuestionIcon], ["Answer", AnswerIcon], ["Amplify", AmplifyIcon], ["Save", SaveIcon], ["Rundown", RundownIcon], ["Newsdesk", InboxIcon], ["Desk", DeskIcon], ["Studio", StudioIcon], ["Edition", EditionIcon], ["Split", SplitIcon]];
+  const icons: [string, typeof TakeIcon][] = [["Dispatch", TakeIcon], ["Agree", AgreeIcon], ["Disagree", DisagreeIcon], ["Context", ContextIcon], ["Question", QuestionIcon], ["Respond", AnswerIcon], ["Relay", AmplifyIcon], ["Save", SaveIcon], ["Rundown", RundownIcon], ["Newsdesk", InboxIcon], ["Desk", DeskIcon], ["Studio", StudioIcon], ["Edition", EditionIcon], ["Split", SplitIcon]];
   return (
     <div className="bg-paper text-ink-1">
       <Section title="Brand">
@@ -74,7 +74,7 @@ function Gallery({ viewerId }: { viewerId: string | null }) {
         <p className="font-display text-display font-semibold">Display — Newsreader</p>
         <p className="font-display text-h1 font-semibold">Heading 1</p>
         <p className="font-display text-[22px] font-bold uppercase text-ink-2">Condensed label / kicker</p>
-        <p className="mt-2 text-[16px]">Take text and UI — Inter. Plain, fast, readable.</p>
+        <p className="mt-2 text-[16px]">Dispatch text and UI — Inter. Plain, fast, readable.</p>
         <p className="mono mt-1 text-[12.5px] text-ink-3">MONO · TIMESTAMPS 1:56 AM · STANCES 61/35</p>
         <p className="folio mt-2 text-navy-ink">Folio · small caps section label</p>
         <p className="drop-cap mt-3 max-w-prose text-[16px] text-ink-2">Drop cap paragraph. Fourteen senators crossed party lines to send the roads, rail, and broadband bill to the House, where leaders expect a vote next week.</p>
@@ -117,7 +117,7 @@ function Gallery({ viewerId }: { viewerId: string | null }) {
         <DemoTabs />
         <div className="mt-5 flex flex-wrap items-center gap-6">
           <DemoVote />
-          {hot[0] && <Sparkline values={hot[0].series} width={140} height={40} color="var(--gold)" label="Take velocity" />}
+          {hot[0] && <Sparkline values={hot[0].series} width={140} height={40} color="var(--gold)" label="Dispatch velocity" />}
           <CountdownRing progress={0.62} size={36} stroke={3.5} color="var(--gold)" label="62% of time left" />
         </div>
       </Section>
@@ -134,7 +134,7 @@ function Gallery({ viewerId }: { viewerId: string | null }) {
       <Section title="Hot Stories and Voices">
         <div className="grid gap-8 sm:grid-cols-2"><HotStories stories={hot} /><VoicesTile voices={people} /></div>
       </Section>
-      <Section title="Takes (media · stance · poll)">
+      <Section title="Dispatches (media · stance · poll)">
         <div className="-mx-4 ring-1 ring-rule sm:-mx-6">{takes.map((p) => p && <PostCard key={p.id} post={p} />)}</div>
       </Section>
       {debate && <Section title="Debate card"><DebateCard d={debate} /></Section>}

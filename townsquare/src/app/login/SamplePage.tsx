@@ -30,7 +30,7 @@ export function SamplePage() {
           ))}
         </ul>
       </div>
-      <p className="mt-4 border-t border-rule pt-3 text-[13px] text-ink-3">Every story has a split. Pick a side, write a take, and see who answers.</p>
+      <p className="mt-4 border-t border-rule pt-3 text-[13px] text-ink-3">Every story has a split. Pick a side, write a dispatch, and see who responds.</p>
     </div>
   );
 }

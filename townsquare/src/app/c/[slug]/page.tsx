@@ -74,7 +74,7 @@ export default async function DeskPage({ params, searchParams }: { params: Promi
       {canSee ? (
         <>
           <div className="sticky-sub z-20 mt-6 flex flex-wrap items-center gap-3 border-y border-rule bg-paper px-4 py-2 sm:px-6">
-            <SegmentedTabs variant="pill" active={tab} className="w-[220px]" tabs={[{ key: "takes", label: "Takes", href: `/c/${c.slug}` }, { key: "stories", label: "Stories", href: `/c/${c.slug}?tab=stories` }]} />
+            <SegmentedTabs variant="pill" active={tab} className="w-[220px]" tabs={[{ key: "takes", label: "Dispatches", href: `/c/${c.slug}` }, { key: "stories", label: "Stories", href: `/c/${c.slug}?tab=stories` }]} />
             {tab === "takes" && (
               <SegmentedTabs variant="pill" active={sort} className="w-[200px]" tabs={[{ key: "hot", label: "Hot", href: `/c/${c.slug}` }, { key: "new", label: "New", href: `/c/${c.slug}?sort=new` }, { key: "top", label: "Top", href: `/c/${c.slug}?sort=top` }]} />
             )}
@@ -85,7 +85,7 @@ export default async function DeskPage({ params, searchParams }: { params: Promi
               {beat.map((s) => (
                 <li key={s.key} className="border-b border-rule py-4">
                   <Link href={`/news/story/${s.key}`} className="group block">
-                    <span className="folio !text-[10px] text-ink-3">{s.status === "live" ? "Live · " : ""}{s.section === "Top Stories" ? "National" : s.section} · {s.takes} takes</span>
+                    <span className="folio !text-[10px] text-ink-3">{s.status === "live" ? "Live · " : ""}{s.section === "Top Stories" ? "National" : s.section} · {s.takes} dispatches</span>
                     <span className="mt-1 block font-display text-[21px] leading-snug font-semibold group-hover:underline">{s.title}</span>
                     <MiniSplit split={s.split} className="mt-2" />
                   </Link>

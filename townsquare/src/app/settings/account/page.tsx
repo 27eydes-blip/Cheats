@@ -1,7 +1,7 @@
 import { Frame } from "@/components/ui/Frame";
 import { requireViewerPage } from "@/lib/session";
 import { PageHeader } from "@/components/PageHeader";
-import { AccountForm, DeleteForm, PasswordForm } from "../forms";
+import { AccountForm, DeleteForm, EmailForm, PasswordForm } from "../forms";
 
 export const metadata = { title: "Account" };
 
@@ -11,6 +11,7 @@ export default async function Page() {
     <Frame>
       <PageHeader title="Account" back compact />
       <AccountForm handle={u.handle} email={u.email} hideFollows={!!u.hide_follows} />
+      <div className="border-t border-line"><EmailForm email={u.email} hasPassword={!!u.password_hash} /></div>
       <div className="border-t border-line"><PasswordForm hasPassword={!!u.password_hash} /></div>
       <div className="border-t border-line px-4 py-5 sm:px-6">
         <h2 className="font-display text-h3 font-semibold">Appeals</h2>

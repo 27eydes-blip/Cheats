@@ -5,7 +5,7 @@ import { AppError } from "./errors";
 import { all, get, newId, now, run, tx } from "./db";
 import { rateLimit } from "./ratelimit";
 import { spamCheck } from "./spam";
-import { charCount, cleanText, extractHashtags, extractLinks, extractMentions } from "./text";
+import { charCount, cleanText, extractHashtags, extractLinks, extractMentions, safeHttpUrl } from "./text";
 import { assertCanAct, mediaUrl, toMini, userById, type UserMini, type UserRow } from "./users";
 import { pollSchema } from "./validate";
 import { notify } from "./notifications";
@@ -35,6 +35,8 @@ export type PostView = {
   rootId: string | null;
   media: { id: string; url: string; alt: string; width: number | null; height: number | null; blur: string | null }[];
   link: { url: string; title: string | null; domain: string } | null;
+  /** The source the author attached (feeds the Credibility Meter). */
+  source: { url: string; domain: string } | null;
   poll: PollView | null;
   quote: PostView | null;
   counts: { likes: number; replies: number; reposts: number; quotes: number };
@@ -75,6 +77,9 @@ type PostRow = {
   a_avatar: string | null;
   a_verified: number;
   a_status: string;
+  a_private: number;
+  source_url: string | null;
+  source_domain: string | null;
 };
 
 const placeholders = (n: number) => Array(n).fill("?").join(",");
@@ -85,7 +90,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
   if (!uniq.length) return [];
   const ph = placeholders(uniq.length);
   const rows = all<PostRow>(
-    `SELECT p.*, u.handle a_handle, u.display_name a_display_name, u.avatar_media_id a_avatar, u.verified a_verified, u.status a_status
+    `SELECT p.*, u.handle a_handle, u.display_name a_display_name, u.avatar_media_id a_avatar, u.verified a_verified, u.status a_status, u.is_private a_private
      FROM posts p JOIN users u ON u.id = p.author_id WHERE p.id IN (${ph})`,
     uniq,
   );
@@ -122,6 +127,13 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
         ).map((r) => r.id),
       )
     : new Set<string>();
+  const privAuthors = [...new Set(rows.filter((r) => r.a_private && r.author_id !== viewerId).map((r) => r.author_id))];
+  const followedPriv = new Set(
+    viewerId && privAuthors.length
+      ? all<{ id: string }>(`SELECT followee_id id FROM follows WHERE follower_id = ? AND followee_id IN (${placeholders(privAuthors.length)})`, [viewerId, ...privAuthors]).map((r) => r.id)
+      : [],
+  );
+  const lockedAuthors = new Set(privAuthors.filter((a) => !followedPriv.has(a)));
 
   const replyParents = rows.filter((r) => r.reply_to_id).map((r) => r.reply_to_id!);
   const parentHandles = new Map(
@@ -148,7 +160,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
   for (const id of ids) {
     const r = byId.get(id);
     if (!r) continue;
-    const gone: PostView["gone"] = r.deleted_at || r.a_status === "deleted" ? "deleted" : r.removed_at ? "removed" : blockedAuthors.has(r.author_id) ? "unavailable" : null;
+    const gone: PostView["gone"] = r.deleted_at || r.a_status === "deleted" ? "deleted" : r.removed_at ? "removed" : blockedAuthors.has(r.author_id) || lockedAuthors.has(r.author_id) ? "unavailable" : null;
     const poll = polls.find((p) => p.post_id === r.id);
     const opts = poll ? options.filter((o) => o.poll_id === poll.id) : [];
     out.push({
@@ -162,6 +174,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       rootId: r.root_id,
       media: gone ? [] : media.filter((m) => m.post_id === r.id).map((m) => ({ id: m.id, url: mediaUrl(m.id)!, alt: m.alt, width: m.width, height: m.height, blur: m.blur })),
       link: !gone && r.link_url ? { url: r.link_url, title: r.link_title, domain: r.link_domain ?? "" } : null,
+      source: !gone && r.source_url ? { url: r.source_url, domain: r.source_domain ?? "" } : null,
       poll:
         poll && !gone
           ? {
@@ -216,6 +229,8 @@ export type NewPost = {
   /** Attach the Take to a Story. */
   storyKey?: string | null;
   stance?: TakeStance | null;
+  /** Optional source link (https) backing the dispatch. */
+  sourceUrl?: string | null;
 };
 
 function linkCard(body: string) {
@@ -256,13 +271,15 @@ export function createPost(author: UserRow, input: NewPost): string {
   if (spam) throw new AppError(spam, "spam");
   rateLimit("post", author.id);
 
+  const source = input.sourceUrl ? safeHttpUrl(String(input.sourceUrl).trim().slice(0, 500)) : null;
+  if (input.sourceUrl && String(input.sourceUrl).trim() && !source) throw new AppError("Sources must be a full web address (https://…).");
   const parent = input.replyToId ? visibleTarget(input.replyToId, author.id) : null;
   const stance = input.stance ?? null;
   if (stance && !(TAKE_STANCES as readonly string[]).includes(stance)) throw new AppError("Pick a stance: agree, disagree, context, or question.");
   // Answers inherit their parent's Story; a new Take on a Story needs a stance.
   const storyKey = parent ? (get<{ story_key: string | null }>("SELECT story_key FROM posts WHERE id = ?", [parent.id])?.story_key ?? null) : (input.storyKey ?? null);
   if (storyKey && !parent && !get("SELECT 1 FROM stories WHERE key = ?", [storyKey])) throw new AppError("That story doesn't exist.");
-  if (storyKey && !stance && !parent) throw new AppError("Pick a stance for your take.");
+  if (storyKey && !stance && !parent) throw new AppError("Pick a stance for your dispatch.");
   const quoted = input.quoteOfId ? visibleTarget(input.quoteOfId, author.id) : null;
   const link = mediaIds.length || poll ? null : linkCard(body);
   // Replies inherit the community of their parent; new community posts require membership.
@@ -277,9 +294,9 @@ export function createPost(author: UserRow, input: NewPost): string {
   const t = now();
   tx(() => {
     run(
-      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, link_url, link_title, link_domain, stance, story_key, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, communityId, link?.url ?? null, link?.title ?? null, link?.domain ?? null, stance, storyKey, t],
+      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, link_url, link_title, link_domain, stance, story_key, created_at, source_url, source_domain)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, communityId, link?.url ?? null, link?.title ?? null, link?.domain ?? null, stance, storyKey, t, source, source ? new URL(source).hostname.replace(/^www\./, "") : null],
     );
     mediaIds.forEach((mid, i) => {
       const res = run("UPDATE media SET post_id = ?, position = ?, alt = ? WHERE id = ? AND owner_id = ? AND post_id IS NULL AND kind = 'image'", [
@@ -408,11 +425,12 @@ export function getThread(postId: string, viewerId: string | null) {
 }
 
 /** Authors a viewer never sees in lists: blocked either way, or muted. Uses 3 params. */
+/** Authors a viewer must not see: blocked either way, muted, and private accounts they don't follow. */
 export const hiddenAuthorsSql =
-  "SELECT blocked_id FROM blocks WHERE blocker_id = ? UNION SELECT blocker_id FROM blocks WHERE blocked_id = ? UNION SELECT muted_id FROM mutes WHERE muter_id = ?";
+  "SELECT blocked_id FROM blocks WHERE blocker_id = ? UNION SELECT blocker_id FROM blocks WHERE blocked_id = ? UNION SELECT muted_id FROM mutes WHERE muter_id = ? UNION SELECT id FROM users WHERE is_private = 1 AND id != ? AND id NOT IN (SELECT followee_id FROM follows WHERE follower_id = ?)";
 export const hiddenParams = (viewerId: string | null) => {
   const v = viewerId ?? "";
-  return [v, v, v];
+  return [v, v, v, v, v];
 };
 
 export function authorOf(postId: string) {

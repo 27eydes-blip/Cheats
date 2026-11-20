@@ -10,11 +10,11 @@ export default function Privacy() {
       <h2>What we collect</h2>
       <ul>
         <li>Account info: email, handle, name, password (stored only as a secure hash), and Google ID if you sign in with Google.</li>
-        <li>What you post and do: posts, images, likes, reposts, follows, bookmarks, poll votes, reports.</li>
+        <li>What you post and do: posts, images, likes, reposts, follows, Vault, poll votes, reports.</li>
         <li>Basic technical data: IP address for security and rate limiting, and a session cookie to keep you logged in.</li>
       </ul>
       <h2>What we don&apos;t do</h2>
-      <ul><li>We never sell your private data.</li><li>We strip location and camera data from every image you upload.</li><li>Your bookmarks are visible only to you.</li></ul>
+      <ul><li>We never sell your private data.</li><li>We strip location and camera data from every image you upload.</li><li>Your Vault is visible only to you.</li></ul>
       <h2>Your choices</h2>
       <ul><li>Download all your data from Settings → Privacy and safety.</li><li>Delete your account from Settings → Account.</li><li>Hide your follower lists, and block or mute anyone.</li></ul>
       <h2>Your rights</h2>

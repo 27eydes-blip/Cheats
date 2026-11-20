@@ -50,7 +50,7 @@ export function LeadTile({ s, latest }: { s: StorySummary; latest: string[] }) {
             <span className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[#c4cbe0]">
               <span className="flex items-center gap-1.5"><ClockIcon size={13} /> Updated <Time ms={s.updatedAt} /> ago</span>
               {s.source && <span className="font-semibold text-white">{s.source}</span>}
-              <span className="mono">{s.takes} takes · {s.outlets} outlets</span>
+              <span className="mono">{s.takes} dispatches · {s.outlets} outlets</span>
             </span>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function HotStories({ stories, row }: { stories: StorySummary[]; row?: bo
                 <span className="font-display text-[34px] leading-none font-extrabold text-[var(--wn-blue)] [text-shadow:0_0_18px_rgb(47_107_255/0.6)]">{i + 1}</span>
                 <span className="min-w-0">
                   <span className="line-clamp-3 text-[14px] leading-snug font-semibold">{s.title}</span>
-                  <span className="mono mt-1.5 block text-[10.5px] text-ink-3">+{s.velocity} takes / 6h</span>
+                  <span className="mono mt-1.5 block text-[10.5px] text-ink-3">+{s.velocity} dispatches / 6h</span>
                 </span>
               </Link>
             </li>
@@ -146,7 +146,7 @@ export function LiveNowTile({ events }: { events: LiveEventView[] }) {
 
 export function QuickTakes({ takes }: { takes: PostView[] }) {
   return (
-    <Tile label="Quick Takes" action={{ href: "/explore", text: "More" }}>
+    <Tile label="Quick Dispatches" action={{ href: "/explore", text: "More" }}>
       <ul className="divide-y divide-rule">{takes.map((p) => <li key={p.id}><PostCard post={p} compact /></li>)}</ul>
     </Tile>
   );

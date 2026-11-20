@@ -404,3 +404,21 @@ alter table teams enable row level security; alter table story_teams enable row 
 create policy "teams readable" on teams for select using (true);
 create policy "story teams readable" on story_teams for select using (true);
 -- writes to teams/story_teams happen server-side with the service role only.
+
+-- Migration 5: profiles v2 (location, beat, accent), source links, multi-pins, follow requests, notification settings.
+alter table public.profiles add column if not exists location text not null default '' check (char_length(location) <= 60);
+alter table public.profiles add column if not exists beats jsonb not null default '[]';
+alter table public.profiles add column if not exists accent text not null default 'blue' check (accent in ('blue','cyan','violet','emerald','amber','rose'));
+alter table public.posts add column if not exists source_url text check (source_url ~ '^https?://');
+alter table public.posts add column if not exists source_domain text;
+create table public.profile_pins (user_id uuid references profiles(id) on delete cascade, post_id uuid references posts(id) on delete cascade, position int not null default 0, created_at timestamptz not null default now(), primary key (user_id, post_id));
+create table public.follow_requests (requester_id uuid references profiles(id) on delete cascade, target_id uuid references profiles(id) on delete cascade, created_at timestamptz not null default now(), primary key (requester_id, target_id));
+create table public.notification_prefs (user_id uuid primary key references profiles(id) on delete cascade, follows boolean not null default true, mentions boolean not null default true, replies boolean not null default true, reactions boolean not null default true, relays boolean not null default true, requests boolean not null default true, milestones boolean not null default true);
+alter table profile_pins enable row level security; alter table follow_requests enable row level security; alter table notification_prefs enable row level security;
+create policy "pins readable" on profile_pins for select using (true);
+create policy "own pins" on profile_pins for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "see own requests" on follow_requests for select using (requester_id = auth.uid() or target_id = auth.uid());
+create policy "send request" on follow_requests for insert with check (requester_id = auth.uid());
+create policy "withdraw or answer request" on follow_requests for delete using (requester_id = auth.uid() or target_id = auth.uid());
+create policy "own notification prefs" on notification_prefs for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- Private accounts: tighten the posts read policy so only approved followers (and the author) can read.

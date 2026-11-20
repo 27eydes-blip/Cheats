@@ -7,16 +7,17 @@ import { mediaUrl } from "@/lib/users";
 import { PageHeader } from "@/components/PageHeader";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { Avatar } from "@/components/ui/Avatar";
-import { ChevronRight, EditIcon, KeyboardIcon, MoonIcon, ShieldIcon, UserIcon } from "@/components/icons";
+import { BellIcon, ChevronRight, EditIcon, KeyboardIcon, MoonIcon, ShieldIcon, UserIcon } from "@/components/icons";
 
 export const metadata = { title: "Settings" };
 
 export default async function Settings() {
   const viewer = await requireViewerPage("/settings");
   const items = [
-    { href: "/settings/profile", title: "Edit profile", text: "Photo, banner, name, bio, links", icon: EditIcon },
-    { href: "/settings/account", title: "Account", text: `@${viewer.handle} · password · delete account`, icon: UserIcon },
-    { href: "/settings/privacy", title: "Privacy and safety", text: "Follower lists, blocked and muted, download your data", icon: ShieldIcon },
+    { href: "/settings/profile", title: "Edit profile", text: "Photo, banner, bio, location, Beat, accent color", icon: EditIcon },
+    { href: "/settings/account", title: "Account", text: `@${viewer.handle} · email · password · delete account`, icon: UserIcon },
+    { href: "/settings/privacy", title: "Privacy and safety", text: "Private account, follow requests, blocked and muted, your data", icon: ShieldIcon },
+    { href: "/settings/notifications", title: "Notifications", text: "Followers, mentions, responses, reactions, milestones", icon: BellIcon },
     { href: "/settings/display", title: "Display", text: "Theme and text size", icon: MoonIcon },
   ];
   return (
