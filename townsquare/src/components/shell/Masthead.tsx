@@ -30,7 +30,7 @@ export function Masthead({ unread, tape }: { unread: number; tape: WireQuote[] }
   const openRundown = useRundown();
   const openMenu = useMenu();
   const openShortcuts = useShortcutsHelp();
-  const icon = "relative inline-flex h-11 w-11 items-center justify-center rounded-[10px] text-white transition-colors hover:bg-white/15";
+  const icon = "relative inline-flex h-11 w-11 items-center justify-center rounded-full text-[#b8c2d9] transition-colors hover:bg-white/[0.08] hover:text-white";
 
   const account = viewer
     ? [
@@ -50,38 +50,33 @@ export function Masthead({ unread, tape }: { unread: number; tape: WireQuote[] }
     : [];
 
   return (
-    <header className="sticky top-0 z-40 bg-[var(--masthead)] text-white shadow-[0_1px_0_rgb(255_255_255/0.18)_inset,0_10px_30px_-12px_rgb(47_107_255/0.8)] lg:static" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      {/* light sweep across the bar */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent motion-safe:animate-[sweep_7s_ease-in-out_infinite]" />
-      </div>
-
+    <header className="sticky top-0 z-40 border-b border-[var(--hairline)] bg-[var(--masthead)]/95 text-white backdrop-blur-md lg:static" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {/* Phone / tablet: avatar (opens the side menu) · logo · mini market ticker */}
       <div className="relative grid h-[var(--header-h)] grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 lg:hidden">
         <div className="flex items-center">
           <button type="button" onClick={openMenu} aria-label="Open menu" aria-haspopup="dialog" className="relative inline-flex h-11 w-11 items-center justify-center rounded-[14px] transition-transform active:scale-90">
             {viewer ? (
-              <span className="rounded-[12px] ring-2 ring-white/60"><Avatar url={viewer.avatarUrl} name={viewer.displayName} handle={viewer.handle} size={34} /></span>
+              <Avatar url={viewer.avatarUrl} name={viewer.displayName} handle={viewer.handle} size={30} />
             ) : (
-              <span className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[#0b1220]/35 ring-1 ring-white/40"><UserIcon size={20} /></span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-[#b8c2d9]"><UserIcon size={18} /></span>
             )}
           </button>
         </div>
         <Link href="/" aria-label={`${APP_NAME} home`} className="flex min-h-11 items-center gap-2">
-          <LogoMark size={30} className="rounded-[8px] shadow-[0_0_0_1.5px_rgb(255_255_255/0.55)]" />
-          <Wordmark size="sm" short />
+          <LogoMark size={24} className="rounded-[6px]" />
+          <Wordmark size="sm" short className="!text-[1.2rem]" />
         </Link>
         <div className="flex items-center justify-end"><MiniTicker quotes={tape} /></div>
       </div>
 
       {/* Desktop */}
-      <div className="relative mx-auto hidden h-[68px] max-w-[1320px] items-center gap-3 px-8 lg:flex">
+      <div className="relative mx-auto hidden h-[56px] max-w-[1320px] items-center gap-3 px-8 lg:flex">
         <Link href="/" aria-label={`${APP_NAME} front page`} className="group flex shrink-0 items-center gap-2.5">
-          <LogoMark size={40} className="rounded-[9px] shadow-[0_0_0_1.5px_rgb(255_255_255/0.55),0_6px_18px_rgb(4_10_30/0.45)] transition-transform duration-300 group-hover:rotate-[-8deg]" />
-          <Wordmark size="md" />
+          <LogoMark size={30} className="rounded-[7px]" />
+          <Wordmark size="sm" />
         </Link>
         <div className="ml-auto flex items-center gap-1.5">
-          <button type="button" onClick={openSearch} className="flex h-10 items-center gap-2 rounded-[10px] bg-[#070b14]/25 px-3 text-[13px] text-white ring-1 ring-white/25 transition-all hover:bg-[#070b14]/40 hover:ring-white/60">
+          <button type="button" onClick={openSearch} className="flex h-9 items-center gap-2 rounded-full bg-white/[0.05] px-3.5 text-[13px] text-[#b8c2d9] ring-1 ring-white/10 transition-colors hover:text-white hover:ring-white/25">
             <SearchIcon size={17} /> Search <kbd className="mono ml-4 rounded-[5px] bg-white/15 px-1.5 text-[10.5px]">⌘K</kbd>
           </button>
           {viewer ? (
@@ -91,7 +86,7 @@ export function Masthead({ unread, tape }: { unread: number; tape: WireQuote[] }
                 <InboxIcon size={20} />
                 <Badge n={unread} />
               </Link>
-              <button type="button" onClick={() => openComposer()} className="btn ml-1 !min-h-10 bg-white !px-4 font-bold text-[#1f4fd6] shadow-[0_6px_18px_rgb(4_10_30/0.35)] hover:shadow-[0_0_0_2px_var(--wn-cyan),0_8px_24px_rgb(34_211_238/0.4)]">
+              <button type="button" onClick={() => openComposer()} className="btn ml-1 !min-h-9 !rounded-full bg-[var(--wn-blue-fill)] !px-4 !text-[13.5px] font-bold text-white hover:brightness-110">
                 <TakeIcon size={17} /> Dispatch
               </button>
               <div className="ml-1">
@@ -101,7 +96,7 @@ export function Masthead({ unread, tape }: { unread: number; tape: WireQuote[] }
           ) : (
             <>
               <Link href="/login" className="btn !min-h-10 !px-3 !text-[13px] font-semibold text-white hover:bg-white/15">Log in</Link>
-              <Link href="/signup" className="btn !min-h-10 bg-white !px-4 !text-[13px] font-bold text-[#1f4fd6] shadow-[0_6px_18px_rgb(4_10_30/0.35)] hover:shadow-[0_0_0_2px_var(--wn-cyan)]">Join</Link>
+              <Link href="/signup" className="btn !min-h-9 !rounded-full bg-[var(--wn-blue-fill)] !px-4 !text-[13px] font-bold text-white hover:brightness-110">Join</Link>
             </>
           )}
         </div>

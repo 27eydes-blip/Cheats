@@ -52,26 +52,26 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
       {items.map((it, i) => (
         <li key={`w${i}`} className="flex items-center gap-2.5 pr-8">
           {it.label && !(breaking && i === 0) && (
-            <span className={`rounded-[5px] px-1.5 py-0.5 text-[10px] font-extrabold tracking-[0.12em] uppercase ${it.label === "Breaking" || it.label === "Alert" ? "bg-[var(--wn-red-fill)] text-white" : "bg-white/10 text-[#67e8f9]"}`}>
+            <span className={`rounded-[4px] px-1 py-px text-[9.5px] font-bold tracking-[0.1em] uppercase ${it.label === "Breaking" || it.label === "Alert" ? "bg-[var(--wn-red-fill)] text-white" : "text-ink-3 ring-1 ring-[var(--hairline)]"}`}>
               {it.label}
             </span>
           )}
           {it.teams?.map((t) => <TeamLogo key={t.id} team={t} size="sm" label={false} />)}
           {it.href ? (
-            <Link href={it.href} tabIndex={hidden ? -1 : undefined} className="text-[13px] font-semibold whitespace-nowrap text-white hover:text-[#67e8f9] hover:underline">{it.text}</Link>
+            <Link href={it.href} tabIndex={hidden ? -1 : undefined} className="text-[12px] whitespace-nowrap text-ink-2 hover:text-ink-1 hover:underline">{it.text}</Link>
           ) : (
-            <span className="text-[13px] font-semibold whitespace-nowrap text-white">{it.text}</span>
+            <span className="text-[12px] whitespace-nowrap text-ink-2">{it.text}</span>
           )}
-          <span aria-hidden="true" className="ml-6 h-1 w-1 rounded-full bg-[var(--wn-blue-fill)]" />
+          <span aria-hidden="true" className="ml-6 h-[3px] w-[3px] rounded-full bg-[var(--rule-strong)]" />
         </li>
       ))}
       {quotes.map((q) => {
         const up = q.changePct >= 0;
         return (
           <li key={q.symbol} className="flex items-center gap-2 pr-6">
-            <Link href={`/markets?s=${q.symbol}`} tabIndex={hidden ? -1 : undefined} className="mono flex items-center gap-2 text-[12.5px] whitespace-nowrap hover:text-[#67e8f9]">
-              <b className="font-bold text-white">{INDEX[q.symbol] ?? q.symbol}</b>
-              <span className="text-[#b8c2d9]">{q.price.toFixed(2)}</span>
+            <Link href={`/markets?s=${q.symbol}`} tabIndex={hidden ? -1 : undefined} className="mono flex items-center gap-1.5 text-[11.5px] whitespace-nowrap text-ink-3 hover:text-ink-1">
+              <span className="font-semibold text-ink-2">{INDEX[q.symbol] ?? q.symbol}</span>
+              <span>{q.price.toFixed(2)}</span>
               <span className={up ? "text-[#34d399]" : "text-[#ff6b81]"}>{up ? "▲" : "▼"} {up ? "+" : ""}{q.changePct.toFixed(2)}%</span>
             </Link>
           </li>
@@ -86,16 +86,20 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
       role="region"
       aria-label="Live Wire"
       aria-roledescription="ticker"
-      className={`relative border-b border-rule bg-[var(--wire-bg)] text-[var(--wire-fg)] ${slot === "layout" && path === "/" ? "max-lg:hidden" : slot === "home" ? "-mx-4 lg:hidden" : ""}`}
+      className={`relative border-b border-[var(--hairline)] bg-[var(--wire-bg)] text-[var(--wire-fg)] ${slot === "layout" && path === "/" ? "max-lg:hidden" : slot === "home" ? "lg:hidden" : ""}`}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
       <div className="mx-auto flex h-[var(--wire-h)] max-w-[1320px] items-center">
-        <span className={`relative z-10 flex h-full shrink-0 items-center gap-2 pr-3 pl-3 lg:pl-8 ${breaking ? "bg-[var(--wn-red-fill)]" : "bg-[var(--wire-bg)]"}`}>
-          <span className="relative flex h-2 w-2"><span className="absolute inset-0 animate-ping rounded-full bg-white opacity-70 motion-reduce:hidden" /><span className={`relative h-2 w-2 rounded-full ${breaking ? "bg-white" : "bg-[#ff2d4a]"}`} /></span>
-          <span className="text-[11px] font-extrabold tracking-[0.14em] text-white uppercase">{breaking ? "Breaking" : "Live"}</span>
+        {/* Only breaking news gets a (small) red tag; otherwise the wire is plain gray text. */}
+        <span className="relative z-10 flex h-full shrink-0 items-center bg-[var(--wire-bg)] pr-2 pl-3 lg:pl-8">
+          {breaking ? (
+            <span className="rounded-[4px] bg-[var(--wn-red-fill)] px-1.5 py-px text-[9.5px] font-bold tracking-[0.1em] text-white uppercase">Breaking</span>
+          ) : (
+            <span className="text-[9.5px] font-bold tracking-[0.1em] text-ink-3 uppercase">Latest</span>
+          )}
         </span>
         <div className="relative min-w-0 flex-1 overflow-hidden motion-reduce:overflow-x-auto" data-no-swipe>
           <div
@@ -108,7 +112,7 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
           <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-[var(--wire-bg)] to-transparent" />
           <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[var(--wire-bg)] to-transparent" />
         </div>
-        {demo && quotes.length > 0 && <span className="mono hidden shrink-0 px-3 text-[10px] tracking-wider text-[#8893ad] lg:block lg:pr-8">PRICES: DEMO</span>}
+        {demo && quotes.length > 0 && <span className="mono hidden shrink-0 px-3 text-[10px] tracking-wider text-ink-3 lg:block lg:pr-8">PRICES: DEMO</span>}
       </div>
     </div>
   );

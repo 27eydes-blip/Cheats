@@ -49,7 +49,7 @@ export function Rail({ viewer, unread, unreadMessages }: { viewer: MenuViewer; u
   };
   return (
     <aside aria-label="Side menu" className="fixed inset-y-0 left-0 z-[45] hidden w-[var(--rail-w)] flex-col border-r border-[var(--wn-glass-border)] bg-[var(--wn-panel-1)] transition-[width] duration-200 lg:flex">
-      <div className="flex h-[68px] shrink-0 items-center px-[14px]">
+      <div className="flex h-[56px] shrink-0 items-center px-[14px]">
         <button type="button" onClick={toggle} aria-label="Collapse or expand the side menu" title="Collapse / expand" className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] text-ink-2 hover:bg-white/[0.06] hover:text-ink-1"><PanelIcon size={21} /></button>
       </div>
       <nav aria-label="Side menu" className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-[14px] pb-3">

@@ -59,8 +59,9 @@
   --unsure: #3a4a6a;
   --on-navy: #ffffff;
   --on-signal: #070b14;
-  --masthead: var(--wn-blue-fill);
-  --wire-bg: var(--wn-panel-0);
+  --masthead: #080d18; /* thin dark bar; blue is reserved for actions */
+  --hairline: rgb(255 255 255 / 0.08);
+  --wire-bg: var(--wn-bg);
   --wire-fg: #ffffff;
   --grain-opacity: 0;
 
@@ -119,11 +120,11 @@
   --ease-spring: cubic-bezier(0.2, 0.9, 0.25, 1.15);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --dock-h: 64px;
+  --dock-h: 50px;
   --tabbar-h: 64px;
-  --header-h: 56px;
-  --dial-h: 48px;
-  --wire-h: 36px;
+  --header-h: 48px;
+  --dial-h: 42px;
+  --wire-h: 28px;
   --ticker-h: 36px;
   color-scheme: dark;
 }
@@ -147,6 +148,7 @@
   --wn-glass-border: rgb(31 79 214 / 0.16);
   --wn-glass-border-hot: rgb(8 145 178 / 0.5);
   --rule: rgb(10 18 34 / 0.1);
+  --hairline: rgb(10 18 34 / 0.09);
   --rule-strong: rgb(10 18 34 / 0.2);
   --agree: #0f7a55;
   --disagree: #c0263a;

@@ -29,9 +29,9 @@ export function FeedTabs({ tabs, active }: { tabs: FeedTab[]; active: HomeTab })
   const strip = useRef<HTMLDivElement>(null);
   const [adding, setAdding] = useState(false);
   const all: { tab: HomeTab; label: string; badge: React.ReactNode }[] = [
-    { tab: { kind: "foryou" }, label: "For You", badge: <SparkIcon size={16} /> },
-    { tab: { kind: "friends" }, label: "Friends", badge: <UserIcon size={16} /> },
-    ...tabs.map((t) => ({ tab: { kind: t.kind, key: t.key } as HomeTab, label: t.label, badge: t.kind === "team" ? <TeamLogo team={t.team} size="sm" label={false} /> : <TopicBadge topic={t.key} /> })),
+    { tab: { kind: "foryou" }, label: "For You", badge: null },
+    { tab: { kind: "friends" }, label: "Friends", badge: null },
+    ...tabs.map((t) => ({ tab: { kind: t.kind, key: t.key } as HomeTab, label: t.label, badge: t.kind === "team" ? <TeamLogo team={t.team} size="sm" label={false} /> : null })),
   ];
   const cur = tabParam(active);
   const index = Math.max(0, all.findIndex((x) => tabParam(x.tab) === cur));
@@ -67,9 +67,9 @@ export function FeedTabs({ tabs, active }: { tabs: FeedTab[]; active: HomeTab })
 
   return (
     <>
-      <div className="sticky top-[var(--sub-top)] z-20 -mx-4 border-b border-rule bg-[var(--glass-strong)] backdrop-blur-xl lg:mx-0 lg:rounded-[var(--r-lg)] lg:border lg:border-[var(--wn-glass-border)]">
+      <div className="sticky top-[var(--sub-top)] z-20 border-b border-[var(--hairline)] bg-[var(--paper)]/95 backdrop-blur-md">
         <div className="flex items-center">
-          <div ref={strip} role="tablist" aria-label="Home feed" data-no-swipe className="scrollbar-none flex min-w-0 flex-1 snap-x gap-1.5 overflow-x-auto px-3 py-2">
+          <div ref={strip} role="tablist" aria-label="Home feed" data-no-swipe className="scrollbar-none flex min-w-0 flex-1 overflow-x-auto px-1">
             {all.map((x) => {
               const on = tabParam(x.tab) === cur;
               return (
@@ -79,18 +79,17 @@ export function FeedTabs({ tabs, active }: { tabs: FeedTab[]; active: HomeTab })
                   scroll={false}
                   role="tab"
                   aria-selected={on}
-                  className={`flex h-11 shrink-0 snap-start items-center gap-2 rounded-[13px] pr-3.5 pl-2.5 text-[13.5px] font-bold whitespace-nowrap transition-all duration-200 active:scale-95 ${
-                    on ? "bg-[var(--wn-blue-fill)] text-white shadow-[0_0_0_1px_rgb(127_163_255/0.5)_inset,0_8px_22px_-8px_rgb(47_107_255/0.9)]" : "bg-white/[0.04] text-ink-2 ring-1 ring-rule hover:text-ink-1 hover:ring-[var(--wn-glass-border-hot)]"
-                  }`}
+                  className={`relative flex h-11 shrink-0 items-center gap-1.5 px-3.5 text-[14px] whitespace-nowrap transition-colors ${on ? "font-bold text-ink-1" : "font-medium text-ink-3 hover:text-ink-1"}`}
                 >
                   {x.badge}
                   {x.label}
+                  {on && <span aria-hidden="true" className="absolute inset-x-3.5 bottom-0 h-[2px] rounded-full bg-[var(--wn-blue)]" />}
                 </Link>
               );
             })}
           </div>
-          <button type="button" onClick={() => (viewer ? setAdding(true) : router.push("/login?next=/"))} aria-label="Add topics and teams" title="Add topics and teams" className="mr-2 ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] text-[var(--wn-cyan-ink)] ring-1 ring-[rgb(34_211_238/0.4)] transition-all hover:bg-[rgb(34_211_238/0.1)] active:scale-90">
-            <PlusIcon size={20} strokeWidth={2.2} />
+          <button type="button" onClick={() => (viewer ? setAdding(true) : router.push("/login?next=/"))} aria-label="Add topics and teams" title="Add topics and teams" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-ink-3 hover:text-ink-1">
+            <PlusIcon size={18} strokeWidth={2} />
           </button>
         </div>
       </div>
