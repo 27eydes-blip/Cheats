@@ -10,6 +10,8 @@ import { TeamLogo } from "../sports/TeamLogo";
 export type WireItem = { text: string; href: string | null; at: number; label?: string; teams?: TeamView[] };
 export type WireQuote = { symbol: string; name: string; price: number; changePct: number };
 
+/** Stable default so the sync effect below doesn't see a new array every render. */
+const NO_QUOTES: WireQuote[] = [];
 const INDEX: Record<string, string> = { SPY: "S&P 500", QQQ: "NASDAQ", DIA: "DOW", IWM: "RUSSELL" };
 
 /**
@@ -18,7 +20,7 @@ const INDEX: Record<string, string> = { SPY: "S&P 500", QQQ: "NASDAQ", DIA: "DOW
  * still, swipeable row instead. Breaking items set in the Control Room arrive
  * live (no reload) through the event stream.
  */
-export function LiveWire({ items, quotes: initialQuotes = [], demo }: { items: WireItem[]; quotes?: WireQuote[]; demo?: boolean }) {
+export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot }: { items: WireItem[]; quotes?: WireQuote[]; demo?: boolean; /** "layout": the site-wide bar (hidden on the phone home page, where the feed shows its own under the tabs); "home": that in-feed copy */ slot?: "layout" | "home" }) {
   const router = useRouter();
   const [paused, setPaused] = useState(false);
   const path = usePathname();
@@ -27,7 +29,8 @@ export function LiveWire({ items, quotes: initialQuotes = [], demo }: { items: W
   // The Market Board has its own stock tape, so the wire carries only news there.
   const quotes = path?.startsWith("/markets") ? [] : allQuotes;
   useLiveEvents((e) => {
-    if (e.type === "wire") router.refresh();
+    // Only the site-wide bar refreshes; the in-feed copy rides along.
+    if (e.type === "wire" && slot !== "home") router.refresh();
   });
   // Market moves refresh every 30s while the tab is visible.
   useEffect(() => {
@@ -83,7 +86,7 @@ export function LiveWire({ items, quotes: initialQuotes = [], demo }: { items: W
       role="region"
       aria-label="Live Wire"
       aria-roledescription="ticker"
-      className="relative border-b border-rule bg-[var(--wire-bg)] text-[var(--wire-fg)]"
+      className={`relative border-b border-rule bg-[var(--wire-bg)] text-[var(--wire-fg)] ${slot === "layout" && path === "/" ? "max-lg:hidden" : slot === "home" ? "-mx-4 lg:hidden" : ""}`}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
