@@ -29,10 +29,11 @@ export function MiniTicker({ quotes: initial }: { quotes: WireQuote[] }) {
   if (!q) return <span className="w-[84px]" />;
   const up = q.changePct >= 0;
   return (
-    <Link href="/markets" aria-label={`Markets: ${q.name} ${up ? "up" : "down"} ${Math.abs(q.changePct).toFixed(2)} percent. Open the Market Board`} className="flex h-11 w-[88px] flex-col items-end justify-center rounded-[12px] bg-[#0b1220] px-2.5 ring-1 ring-white/20 transition-transform active:scale-95">
+    <Link href="/markets" title="Open the Market Board" className="flex h-11 w-[88px] flex-col items-end justify-center rounded-[12px] bg-[#0b1220] px-2.5 ring-1 ring-white/20 transition-transform active:scale-95">
       <span key={q.symbol} className="mono flex flex-col items-end leading-none" style={{ animation: "wire-in 380ms var(--ease-out) both" }}>
         <span className="text-[10px] font-bold tracking-[0.08em] text-[#b8c2d9]">{SHORT[q.symbol] ?? q.symbol}</span>
-        <span className={`mt-1 text-[12.5px] font-bold ${up ? "text-[#34d399]" : "text-[#ff6b81]"}`}>{up ? "▲" : "▼"} {Math.abs(q.changePct).toFixed(2)}%</span>
+        <span className={`mt-1 text-[12.5px] font-bold ${up ? "text-[#34d399]" : "text-[#ff6b81]"}`}><span aria-hidden="true">{up ? "▲" : "▼"}</span><span className="sr-only">{up ? "up" : "down"}</span> {Math.abs(q.changePct).toFixed(2)}%</span>
+        <span className="sr-only">. Open the Market Board</span>
       </span>
     </Link>
   );

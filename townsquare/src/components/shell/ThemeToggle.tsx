@@ -43,7 +43,7 @@ export function ThemeToggle({ compact }: { compact?: boolean }) {
           role="radio"
           aria-checked={t === v}
           onClick={() => (setT(v), applyTheme(v))}
-          className={`flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-semibold transition-all duration-200 ${t === v ? "bg-surface text-ink-1 shadow-1" : "text-ink-3 hover:text-ink-1"}`}
+          className={`relative flex h-8 items-center before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] gap-1.5 rounded-full px-2.5 text-[12.5px] font-semibold transition-all duration-200 ${t === v ? "bg-surface text-ink-1 shadow-1" : "text-ink-3 hover:text-ink-1"}`}
           title={l}
         >
           {icon}

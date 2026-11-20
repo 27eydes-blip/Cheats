@@ -99,7 +99,7 @@ export function StanceMeter({ type, id, initial, variant = "compact", onChange }
       onClick={(e) => (e.stopPropagation(), cast(v))}
       aria-pressed={split.mine === v}
       className={`inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-all duration-150 active:translate-y-px ${
-        variant === "compact" ? "h-9 px-2.5 text-[12.5px]" : "h-11 flex-1 px-3 text-[14px]"
+        variant === "compact" ? "relative h-9 px-2.5 text-[12.5px] before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']" : "h-11 flex-1 px-3 text-[14px]"
       } ${split.mine === v ? `${tone} text-on-signal` : "text-ink-2 ring-1 ring-rule hover:ring-rule-strong hover:text-ink-1"}`}
     >
       <span key={split.mine === v ? "on" : "off"} className={split.mine === v ? "animate-pop" : ""}><Icon size={variant === "compact" ? 15 : 17} strokeWidth={1.9} /></span>

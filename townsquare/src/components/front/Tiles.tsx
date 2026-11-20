@@ -82,7 +82,7 @@ export function HotStories({ stories, row }: { stories: StorySummary[]; row?: bo
       <section aria-label="Trending" className="min-w-0">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-display text-[19px] font-extrabold tracking-[0.04em] uppercase"><FlameIcon size={18} className="text-[var(--wn-cyan)]" /> Trending</h2>
-          <Link href="/explore" className="inline-flex min-h-10 items-center px-2 text-[12px] font-bold tracking-[0.06em] text-navy-ink uppercase">All →</Link>
+          <Link href="/explore" className="inline-flex min-h-11 items-center px-2 text-[12px] font-bold tracking-[0.06em] text-navy-ink uppercase">All →</Link>
         </div>
         <ol className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1" data-no-swipe>
           {stories.map((s, i) => (

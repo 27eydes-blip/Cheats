@@ -20,7 +20,7 @@ export function FollowButton({ userId, following: initial, requested = false, sm
   const [pending, start] = useTransition();
   const [glow, setGlow] = useState(0);
   if (viewer?.id === userId) return null;
-  const size = small ? "!min-h-9 !px-3.5 !text-[13px]" : "";
+  const size = small ? "relative !min-h-9 !px-3.5 !text-[13px] before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']" : "";
   const on = state !== "none";
   return (
     <button

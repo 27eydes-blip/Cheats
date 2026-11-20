@@ -67,7 +67,7 @@ export function Masthead({ unread, tape }: { unread: number; tape: WireQuote[] }
             )}
           </button>
         </div>
-        <Link href="/" aria-label={`${APP_NAME} home`} className="flex items-center gap-2">
+        <Link href="/" aria-label={`${APP_NAME} home`} className="flex min-h-11 items-center gap-2">
           <LogoMark size={30} className="rounded-[8px] shadow-[0_0_0_1.5px_rgb(255_255_255/0.55)]" />
           <Wordmark size="sm" short />
         </Link>
