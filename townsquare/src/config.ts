@@ -26,8 +26,8 @@ export const RATE_LIMITS = {
   signupPerIp: [[5, 60 * 60_000]],
   loginPerIp: [[20, 15 * 60_000]],
   report: [[20, 60 * 60_000]],
-  follow: [[60, 60 * 60_000]],
-  like: [[300, 60 * 60_000]],
+  follow: [[15, 60_000], [60, 60 * 60_000]],
+  like: [[60, 60_000], [300, 60 * 60_000]],
   track: [[30, 60_000], [600, 60 * 60_000]],
 } as const satisfies Record<string, readonly (readonly [number, number])[]>;
 

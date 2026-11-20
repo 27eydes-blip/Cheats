@@ -21,6 +21,10 @@ import { Button } from "./ui/Button";
 import { useConfirm } from "./ui/Confirm";
 import { Menu, type MenuItem } from "./ui/Menu";
 import { StanceChip, StanceMeter } from "./ui/Stance";
+import { Reactions } from "./post/Reactions";
+import { FlashBadge } from "./post/FlashBadge";
+import { celebrate } from "./Celebrate";
+import { shareAction } from "@/actions/social";
 import { AmplifyIcon, AnswerIcon, BlockIcon, EditIcon, FlagIcon, LinkIcon, MoreIcon, MuteIcon, PinIcon, QuoteIcon, SaveIcon, ShareIcon, TrashIcon } from "./icons";
 import { useComposer, useToast, useViewer } from "./providers";
 
@@ -44,7 +48,7 @@ export function AuthorLine({ author, createdAt, editedAt, big }: { author: UserM
 }
 
 function Gone({ kind }: { kind: NonNullable<PostView["gone"]> }) {
-  const text = kind === "deleted" ? "This dispatch was deleted by its author." : kind === "removed" ? "This dispatch was removed for breaking the Community Guidelines." : "This dispatch is unavailable.";
+  const text = kind === "expired" ? "This Flash dispatch has expired." : kind === "deleted" ? "This dispatch was deleted by its author." : kind === "removed" ? "This dispatch was removed for breaking the Community Guidelines." : "This dispatch is unavailable.";
   return <p className="border-l-2 border-rule-strong bg-paper-2 px-3.5 py-3 text-[14px] text-ink-3 italic">{text}</p>;
 }
 
@@ -151,6 +155,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
   const link = () => `${window.location.origin}/p/${post.id}`;
   async function share() {
     const url = link();
+    if (viewer) shareAction({ type: "post", id: post.id }).then((r) => r.ok && r.data.length && celebrate({ kind: "achievement", earned: r.data })).catch(() => {});
     if (navigator.share) {
       try {
         await navigator.share({ url, text: post.body.slice(0, 100) });
@@ -256,8 +261,9 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
             {!post.gone && !compact && <div className="-mt-1 -mr-2"><Menu label="Dispatch options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-8 w-8 items-center justify-center rounded-[10px] text-ink-3 hover:bg-paper-2 hover:text-ink-1" /></div>}
           </div>
 
-          {(post.stance || (post.story && !hideStory) || post.replyTo) && (
+          {(post.stance || (post.story && !hideStory) || post.replyTo || post.flashExpiresAt) && (
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              {post.flashExpiresAt && !post.gone && <FlashBadge expiresAt={post.flashExpiresAt} />}
               {post.stance && <StanceChip stance={post.stance} />}
               {post.story && !hideStory && (
                 <Link href={`/news/story/${post.story.key}`} onClick={(e) => e.stopPropagation()} className="min-w-0 truncate text-[12.5px] font-semibold text-gold-ink hover:underline">
@@ -315,6 +321,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
           {!post.gone && !compact && (
             <div className={`flex flex-wrap items-center gap-x-1 gap-y-2 ${focus ? "border-b border-rule py-3" : "mt-3"}`}>
               <StanceMeter type="post" id={post.id} initial={post.split} />
+              <Reactions postId={post.id} counts={post.reactions} mine={post.viewer.reaction} />
               <span className="flex-1" />
               <button type="button" data-action="reply" onClick={(e) => (e.stopPropagation(), !needLogin() && openComposer({ replyTo: post }))} className={`${action} text-ink-2 hover:bg-navy-soft hover:text-navy-ink`}>
                 <AnswerIcon size={17} /> <span className="hidden sm:inline">Respond</span><AnimatedNumber value={post.counts.replies} hideZero className="mono text-[11.5px]" />

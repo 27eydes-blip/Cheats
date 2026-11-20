@@ -18,6 +18,7 @@ export function FollowButton({ userId, following: initial, requested = false, sm
   const toast = useToast();
   const [state, setState] = useState<State>(initial ? "following" : requested ? "requested" : "none");
   const [pending, start] = useTransition();
+  const [glow, setGlow] = useState(0);
   if (viewer?.id === userId) return null;
   const size = small ? "!min-h-9 !px-3.5 !text-[13px]" : "";
   const on = state !== "none";
@@ -41,11 +42,13 @@ export function FollowButton({ userId, following: initial, requested = false, sm
             setState(next);
             onChange?.(next);
             if (next === "requested") toast("Request sent. They'll see it in their notifications.");
-            if (next === "following" && prev === "none") window.dispatchEvent(new CustomEvent("wn:celebrate", { detail: { kind: "follow" } }));
+            if (next === "following" && prev === "none") setGlow((g) => g + 1);
           }
         });
       }}
       aria-pressed={on}
+      key={glow}
+      style={glow ? { animation: "glow-pulse 900ms ease-out" } : undefined}
       className={`group ${on ? "btn-outline hover:!text-danger hover:!shadow-[inset_0_0_0_1px_var(--danger)]" : "btn-primary"} ${size}`}
     >
       {state === "following" ? (

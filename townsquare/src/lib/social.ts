@@ -1,4 +1,6 @@
 import { recordSignal, signalAuthor } from "./interests";
+import { checkAchievements, reactionsReceived, type Earned } from "./achievements";
+import { isReaction, REACTIONS, type ReactionKind } from "./reactions-meta";
 import { AppError } from "./errors";
 import { all, get, now, run, tx } from "./db";
 import { notify, unnotify } from "./notifications";
@@ -56,6 +58,7 @@ export function setRepost(user: UserRow, postId: string, on: boolean): boolean {
     }
   });
   if (on) safeSignal(() => recordSignal(user.id, { type: "post", id: postId }, "share"));
+  if (on) safeSignal(() => void checkAchievements(user.id, "relay"));
   return on;
 }
 
@@ -97,6 +100,7 @@ export function setFollow(user: UserRow, targetId: string, on: boolean): FollowS
     }
     run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [user.id, targetId, now()]);
     notify(targetId, user.id, "follow");
+    safeSignal(() => void checkAchievements(targetId, "follower"));
     safeSignal(() => signalAuthor(user.id, targetId, "follow"));
     return "following";
   }
@@ -124,6 +128,7 @@ export function answerFollowRequest(user: UserRow, requesterId: string, approve:
     if (approve) {
       run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [requesterId, user.id, now()]);
       notify(requesterId, user.id, "follow_accept");
+      safeSignal(() => void checkAchievements(user.id, "follower"));
     }
   });
 }
@@ -232,4 +237,96 @@ export function whoToFollow(viewerId: string | null, limit = 3): UserListItem[] 
     [v, v, v, v, v, v, limit],
   );
   return withFollowState(rows, viewerId);
+}
+
+// ---------------------------------------------------------------- reactions (Boosts)
+/**
+ * React to a dispatch with one of five reactions (one per person; choosing
+ * the same one again removes it, a different one switches). Rate-limited.
+ */
+export function setReaction(user: UserRow, postId: string, kind: string | null): { kind: ReactionKind | null; counts: Record<ReactionKind, number>; earned: Earned[] } {
+  assertCanAct(user);
+  const p = interactable(postId, user.id);
+  if (kind !== null && !isReaction(kind)) throw new AppError("Unknown reaction.");
+  rateLimit("like", user.id);
+  const cur = get<{ kind: ReactionKind }>("SELECT kind FROM reactions WHERE user_id = ? AND post_id = ?", [user.id, postId])?.kind ?? null;
+  const next = kind === cur ? null : kind;
+  let earned: Earned[] = [];
+  tx(() => {
+    if (next) {
+      run(
+        `INSERT INTO reactions (user_id, post_id, kind, created_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT(user_id, post_id) DO UPDATE SET kind = excluded.kind, created_at = excluded.created_at`,
+        [user.id, postId, next, now()],
+      );
+      if (!cur) {
+        unnotify(p.author_id, user.id, "reaction", postId);
+        notify(p.author_id, user.id, "reaction", postId, next);
+      }
+    } else {
+      run("DELETE FROM reactions WHERE user_id = ? AND post_id = ?", [user.id, postId]);
+      unnotify(p.author_id, user.id, "reaction", postId);
+    }
+  });
+  if (next) {
+    safeSignal(() => recordSignal(user.id, { type: "post", id: postId }, "react"));
+    earned = checkAchievements(user.id, "react");
+    safeSignal(() => reactionsReceived(p.author_id));
+  }
+  return { kind: next, counts: reactionCounts([postId]).get(postId)!, earned };
+}
+
+export function reactionCounts(postIds: string[]): Map<string, Record<ReactionKind, number>> {
+  const zero = () => Object.fromEntries(REACTIONS.map((r) => [r.key, 0])) as Record<ReactionKind, number>;
+  const out = new Map(postIds.map((id) => [id, zero()]));
+  if (!postIds.length) return out;
+  for (const r of all<{ post_id: string; kind: ReactionKind; n: number }>(
+    `SELECT post_id, kind, count(*) n FROM reactions WHERE post_id IN (${postIds.map(() => "?").join(",")}) GROUP BY post_id, kind`,
+    postIds,
+  )) out.get(r.post_id)![r.kind] = r.n;
+  return out;
+}
+
+// ---------------------------------------------------------------- friend suggestions
+export type Suggestion = UserListItem & { reason: string; mutuals: number };
+
+/**
+ * People you may know: ranked by mutual connections (people you follow who
+ * follow them) and shared interests (their Beat vs. your interests and Beat).
+ * Excludes you, people you follow or asked to follow, and blocked/muted accounts.
+ */
+export function suggestFriends(viewerId: string, limit = 5): Suggestion[] {
+  const me = get<{ beats: string }>("SELECT beats FROM users WHERE id = ?", [viewerId]);
+  const myTopics = new Set<string>([
+    ...JSON.parse(me?.beats || "[]"),
+    ...all<{ key: string }>("SELECT key FROM interests WHERE user_id = ? AND kind = 'topic' AND weight > 0.5", [viewerId]).map((r) => r.key),
+  ]);
+  const rows = all<MiniRow & { beats: string; mutuals: number; mutual_name: string | null }>(
+    `SELECT u.id, u.handle, u.display_name, u.avatar_media_id, u.verified, u.bio, u.beats,
+       (SELECT count(*) FROM follows f1 JOIN follows f2 ON f2.follower_id = f1.followee_id WHERE f1.follower_id = ? AND f2.followee_id = u.id) mutuals,
+       (SELECT m.display_name FROM follows f1 JOIN follows f2 ON f2.follower_id = f1.followee_id JOIN users m ON m.id = f1.followee_id WHERE f1.follower_id = ? AND f2.followee_id = u.id LIMIT 1) mutual_name
+     FROM users u
+     WHERE u.id != ? AND u.status = 'active'
+       AND u.id NOT IN (SELECT followee_id FROM follows WHERE follower_id = ?)
+       AND u.id NOT IN (SELECT target_id FROM follow_requests WHERE requester_id = ?)
+       AND u.id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ? UNION SELECT blocker_id FROM blocks WHERE blocked_id = ? UNION SELECT muted_id FROM mutes WHERE muter_id = ?)
+     LIMIT 400`,
+    [viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId],
+  );
+  const LABEL: Record<string, string> = { politics: "Politics", markets: "Markets", sports: "Sports", tech: "Tech", world: "World", culture: "Culture", national: "National", science: "Science", health: "Health", courts: "Courts", energy: "Energy", media: "Media" };
+  return rows
+    .map((r) => {
+      const shared = (JSON.parse(r.beats || "[]") as string[]).filter((b) => myTopics.has(b));
+      const score = r.mutuals * 2 + shared.length * 1.5 + (r.verified ? 0.5 : 0);
+      const reason = r.mutuals
+        ? `Followed by ${r.mutual_name}${r.mutuals > 1 ? ` and ${r.mutuals - 1} other${r.mutuals > 2 ? "s" : ""} you follow` : ""}`
+        : shared.length
+          ? `Also covers ${shared.slice(0, 2).map((b) => LABEL[b] ?? b).join(" and ")}`
+          : r.verified ? "Verified Voice" : "New on WorldNet";
+      return { score, item: { ...toMini(r), bio: r.bio, viewerFollows: false, reason, mutuals: r.mutuals } };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((x) => x.item);
 }

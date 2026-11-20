@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { credibilityScore } from "@/lib/credibility";
+import { earnedAchievements, postingStreak } from "@/lib/achievements";
 import { profileFeed, type ProfileTab } from "@/lib/feed";
 import { hydrate, liveHostIds } from "@/lib/posts";
 import { ACCENTS, BEATS, isAccent, type Beat } from "@/lib/profile-theme";
@@ -48,6 +49,8 @@ export default async function Profile({ params, searchParams }: { params: Promis
   const accent = ACCENTS[isAccent(p.accent) ? p.accent : "blue"];
   const live = liveHostIds().has(p.id);
   const cred = credibilityScore(p.id);
+  const streak = postingStreak(p.id);
+  const badges = earnedAchievements(p.id);
   const visible = canSeeDispatches(p) && !p.viewer.blocked;
   const friend = viewer && !p.viewer.isSelf ? isFriend(viewer.id, p.id) : false;
   const pins = visible ? hydrate(pinnedIds(p.id), viewer?.id ?? null).filter((x) => !x.gone) : [];
@@ -115,6 +118,18 @@ export default async function Profile({ params, searchParams }: { params: Promis
                 <ul className="flex flex-wrap gap-1.5">
                   {p.beats.filter((b): b is Beat => b in BEATS).map((b) => (
                     <li key={b} className="beat-chip rounded-[8px] px-2.5 py-1 text-[12px] font-bold" style={{ ["--c" as string]: BEATS[b].color }}>{BEATS[b].label}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {(streak > 0 || badges.length > 0) && (
+              <section aria-labelledby="ach">
+                <h2 id="ach" className="mb-2 text-[11px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">Achievements</h2>
+                <ul className="flex flex-wrap gap-1.5">
+                  {streak > 0 && <li className="amber-ink inline-flex min-h-8 items-center gap-1 rounded-[8px] bg-[rgb(251_191_36/0.12)] px-2 text-[12.5px] font-extrabold ring-1 ring-[#fbbf24]/40" title={`${streak}-day posting streak`}>🔥 {streak}-day streak</li>}
+                  {badges.map((b) => (
+                    <li key={b.key} title={`${b.label}: ${b.text}`} className="inline-flex min-h-8 items-center gap-1 rounded-[8px] bg-white/[0.04] px-2 text-[12.5px] font-semibold ring-1 ring-rule"><span aria-hidden="true">{b.emoji}</span>{b.label}</li>
                   ))}
                 </ul>
               </section>

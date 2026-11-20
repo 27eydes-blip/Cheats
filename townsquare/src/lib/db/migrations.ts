@@ -147,6 +147,20 @@ ALTER TABLE notifications_v2 RENAME TO notifications;
 CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id, created_at DESC);
 `,
   },
+  {
+    id: 6,
+    name: "flash_dispatches_and_achievements",
+    sql: `
+ALTER TABLE posts ADD COLUMN expires_at INTEGER;
+CREATE INDEX IF NOT EXISTS posts_expires ON posts(expires_at) WHERE expires_at IS NOT NULL;
+CREATE TABLE IF NOT EXISTS achievements (
+  user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key       TEXT NOT NULL,
+  earned_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, key)
+);
+`,
+  },
 ];
 
 export function runMigrations(db: DatabaseSync) {

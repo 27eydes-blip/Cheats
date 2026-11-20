@@ -7,6 +7,7 @@ import { ChipLink, ChipRow } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/States";
 import { AgreeIcon, AmplifyIcon, AnswerIcon, FlameIcon, QuoteIcon, ShieldIcon, SparkIcon, UserIcon } from "@/components/icons";
 import { RequestButtons } from "./RequestButtons";
+import { FollowerCelebrate } from "./FollowerCelebrate";
 import { Kicker } from "@/components/ui/Badge";
 import { Frame, PageTitle } from "@/components/ui/Frame";
 import { all } from "@/lib/db";
@@ -114,9 +115,11 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
     desks.get(k)!.items.push(g);
   }
   const fresh = groups.filter((g) => !g.read);
+  const newFollows = fresh.filter((g) => g.type === "follow").flatMap((g) => g.actors);
   return (
     <Frame>
       {fresh.length > 0 && <MarkRead />}
+      {newFollows.length > 0 && <FollowerCelebrate id={newFollows.map((a) => a.id).join(",")} text={`${newFollows[0].displayName}${newFollows.length > 1 ? ` and ${newFollows.length - 1} more` : ""} followed you`} />}
       <PageTitle folio={<Kicker tone="gold">Inbox</Kicker>} title="Newsdesk" dek={fresh.length ? `${fresh.length} new, grouped by story.` : "You're all caught up."} />
       <div className="sticky-sub z-20 border-b border-rule bg-paper px-4 py-2.5 sm:px-6">
         <ChipRow label="Filter the Newsdesk">

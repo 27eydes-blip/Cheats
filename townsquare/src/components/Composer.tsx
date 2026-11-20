@@ -8,6 +8,9 @@ import { createPostAction } from "@/actions/posts";
 import { Avatar } from "./ui/Avatar";
 import { StanceChip, type TakeStance } from "./ui/Stance";
 import { AgreeIcon, CloseIcon, ContextIcon, DisagreeIcon, ImageIcon, LinkIcon, PollIcon, QuestionIcon } from "./icons";
+import { EmojiPicker } from "./composer/EmojiPicker";
+import { CropDialog } from "./composer/CropDialog";
+import { celebrate } from "./Celebrate";
 import { POSTED_EVENT, useToast, useViewer } from "./providers";
 import { QuoteEmbed } from "./PostCard";
 
@@ -42,6 +45,10 @@ export function Composer({
   const [storyKey, setStoryKey] = useState<string>(presetStory ?? "");
   const [stance, setStance] = useState<TakeStance | null>(null);
   const [source, setSource] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
+  const [cropIdx, setCropIdx] = useState<number | null>(null);
+  const [suggest, setSuggest] = useState<{ kind: "@" | "#"; start: number; end: number; items: { value: string; label: string; sub?: string }[]; sel: number } | null>(null);
+  const suggestReq = useRef(0);
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -85,6 +92,45 @@ export function Composer({
     setExpanded(true);
   }
 
+  function insertAtCursor(text: string) {
+    const ta = taRef.current;
+    const at = ta?.selectionStart ?? body.length;
+    const next = body.slice(0, at) + text + body.slice(ta?.selectionEnd ?? at);
+    setBody(next);
+    setExpanded(true);
+    requestAnimationFrame(() => {
+      ta?.focus();
+      ta?.setSelectionRange(at + text.length, at + text.length);
+    });
+  }
+
+  /** @mention and #tag suggestions for the word under the caret. */
+  function detectToken(text: string, caret: number) {
+    const m = /(^|\s)([@#])([\p{L}\p{N}_]{1,30})$/u.exec(text.slice(0, caret));
+    if (!m) return setSuggest(null);
+    const kind = m[2] as "@" | "#";
+    const q = m[3];
+    const startAt = caret - q.length - 1;
+    const id = ++suggestReq.current;
+    fetch(kind === "@" ? `/api/mentions?q=${encodeURIComponent(q)}` : `/api/tags?q=${encodeURIComponent(q)}`)
+      .then((r) => r.json())
+      .then((list: { handle?: string; displayName?: string; tag?: string; n?: number }[]) => {
+        if (id !== suggestReq.current) return;
+        const items = list.map((x) => (kind === "@" ? { value: `@${x.handle} `, label: `@${x.handle}`, sub: x.displayName } : { value: `#${x.tag} `, label: `#${x.tag}`, sub: x.n ? `${x.n} recent` : "topic" }));
+        setSuggest(items.length ? { kind, start: startAt, end: caret, items, sel: 0 } : null);
+      })
+      .catch(() => {});
+  }
+
+  function applySuggestion(value: string) {
+    if (!suggest) return;
+    const next = body.slice(0, suggest.start) + value + body.slice(suggest.end);
+    const pos = suggest.start + value.length;
+    setBody(next);
+    setSuggest(null);
+    requestAnimationFrame(() => (taRef.current?.focus(), taRef.current?.setSelectionRange(pos, pos)));
+  }
+
   function submit() {
     setError(null);
     const form = new FormData();
@@ -95,6 +141,7 @@ export function Composer({
     if (storyKey && !replyTo) form.set("storyKey", storyKey);
     if (stance) form.set("stance", stance);
     if (source?.trim()) form.set("sourceUrl", source.trim());
+    if (flash && !replyTo && !communityId) form.set("flash", "1");
     for (const p of pics) (form.append("images", p.file), form.append("alts", p.alt));
     if (poll) {
       form.set("hasPoll", "1");
@@ -109,6 +156,9 @@ export function Composer({
       setPics([]);
       setPoll(null);
       setStance(null);
+      setFlash(false);
+      setSource(null);
+      if (res.data.earned?.length) celebrate({ kind: "achievement", earned: res.data.earned });
       if (compact) setExpanded(false);
       window.dispatchEvent(new CustomEvent(POSTED_EVENT, { detail: res.data.post }));
       toast(replyTo ? "Response filed" : "Dispatch filed", "ok", `/p/${res.data.id}`);
@@ -122,6 +172,7 @@ export function Composer({
     if (!body.trim() && !pics.length && !poll) setExpanded(false);
   };
 
+  const cropping = cropIdx !== null ? pics[cropIdx] : null;
   return (
     <div ref={rootRef} onBlur={collapseIfEmpty} className={compact ? "px-4 py-3 sm:px-5" : "px-4 pt-1 pb-4 sm:px-6"}>
       {replyTo && !compact && (
@@ -172,12 +223,39 @@ export function Composer({
             autoFocus={autoFocus}
             value={body}
             onFocus={() => setExpanded(true)}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === "Enter" && canPost && submit()}
+            onChange={(e) => (setBody(e.target.value), detectToken(e.target.value, e.target.selectionStart ?? e.target.value.length))}
+            onKeyDown={(e) => {
+              if (suggest && suggest.items.length) {
+                if (e.key === "ArrowDown") return (e.preventDefault(), setSuggest({ ...suggest, sel: (suggest.sel + 1) % suggest.items.length }));
+                if (e.key === "ArrowUp") return (e.preventDefault(), setSuggest({ ...suggest, sel: (suggest.sel - 1 + suggest.items.length) % suggest.items.length }));
+                if (e.key === "Enter" || e.key === "Tab") return (e.preventDefault(), applySuggestion(suggest.items[suggest.sel].value));
+                if (e.key === "Escape") return (e.preventDefault(), setSuggest(null));
+              }
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && canPost) submit();
+            }}
+            onBlur={() => setTimeout(() => setSuggest(null), 150)}
+            aria-autocomplete="list"
+            aria-controls={suggest ? `${idBase}-suggest` : undefined}
             placeholder={replyTo ? `Respond to @${replyTo.author.handle}…` : poll ? "Ask the question…" : communityId ? "Start a discussion…" : storyKey ? "What's your read?" : "Dispatch: what's your read on the news?"}
             rows={1}
             className={`w-full resize-none bg-transparent leading-snug placeholder:text-ink-3 focus:outline-none ${expanded ? "min-h-[3.4em] py-1.5 text-[18px]" : "py-2 text-[16px]"}`}
           />
+
+          {suggest && suggest.items.length > 0 && (
+            <ul id={`${idBase}-suggest`} role="listbox" aria-label={suggest.kind === "@" ? "People" : "Topic tags"} className="glass-strong relative z-30 mt-1 max-h-60 animate-scale-in overflow-y-auto rounded-[12px] p-1 shadow-3 ring-1 ring-[var(--wn-glass-border)]">
+              {suggest.items.map((it, i) => (
+                <li key={it.value} role="option" aria-selected={i === suggest.sel}>
+                  <button type="button" onMouseDown={(e) => (e.preventDefault(), applySuggestion(it.value))} className={`flex min-h-10 w-full items-center gap-2 rounded-[9px] px-2.5 text-left text-[14px] ${i === suggest.sel ? "bg-[rgb(47_107_255/0.18)]" : "hover:bg-white/5"}`}>
+                    <span className="font-semibold">{it.label}</span>{it.sub && <span className="truncate text-[12.5px] text-ink-3">{it.sub}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {flash && (
+            <p className="mt-2 flex animate-scale-in items-center gap-2 rounded-[10px] bg-[rgb(251_191_36/0.1)] px-3 py-2 text-[13px] ring-1 ring-[#fbbf24]/40"><span className="amber-ink font-extrabold tracking-[0.08em] uppercase">⚡ Flash</span><span className="text-ink-2">This dispatch disappears after 24 hours.</span></p>
+          )}
 
           {pics.length > 0 && (
             <ul className={`mt-2 grid gap-2 ${pics.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
@@ -185,7 +263,8 @@ export function Composer({
                 <li key={p.url} className="relative animate-scale-in overflow-hidden rounded-[10px] ring-1 ring-rule">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.url} alt={p.alt || `Attachment ${i + 1}`} className="aspect-[4/3] w-full object-cover" />
-                  <button type="button" onClick={() => (URL.revokeObjectURL(p.url), setPics((all) => all.filter((x) => x !== p)))} className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-[10px] bg-black/65 text-white" aria-label={`Remove image ${i + 1}`}><CloseIcon size={16} /></button>
+                  <button type="button" onClick={() => (URL.revokeObjectURL(p.url), setPics((all) => all.filter((x) => x !== p)))} className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-[10px] bg-black/65 text-white" aria-label={`Remove image ${i + 1}`}><CloseIcon size={16} /></button>
+                  {p.file.type !== "image/gif" && <button type="button" onClick={() => setCropIdx(i)} className="absolute top-2 left-2 flex h-9 items-center rounded-[10px] bg-black/65 px-2.5 text-[12.5px] font-bold text-white" aria-label={`Crop image ${i + 1}`}>Crop</button>}
                   <label className="block bg-paper">
                     <span className="sr-only">Alt text for image {i + 1}</span>
                     <input value={p.alt} maxLength={LIMITS.altChars} onChange={(e) => setPics((all) => all.map((x) => (x === p ? { ...x, alt: e.target.value } : x)))} placeholder="+ Describe this image (alt text)" className="w-full bg-transparent px-3 py-2 text-[13.5px] placeholder:text-ink-3 focus:outline-none" />
@@ -231,6 +310,8 @@ export function Composer({
                 <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => fileRef.current?.click()} disabled={pics.length >= LIMITS.imagesPerPost || !!poll} aria-label="Add images" title="Add images" tabIndex={expanded ? 0 : -1}><ImageIcon size={20} /></button>
                 {!replyTo && <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => setPoll(poll ? null : ["", ""])} disabled={pics.length > 0} aria-label="Add a poll" aria-pressed={!!poll} title="Add a poll" tabIndex={expanded ? 0 : -1}><PollIcon size={20} /></button>}
+                <EmojiPicker onPick={insertAtCursor} />
+                {!replyTo && !communityId && <button type="button" className={`inline-flex h-10 items-center justify-center rounded-[10px] px-2 text-[13px] font-extrabold tracking-[0.04em] uppercase ${flash ? "amber-ink bg-[rgb(251_191_36/0.12)]" : "text-navy-ink hover:bg-navy-soft"}`} onClick={() => setFlash(!flash)} aria-pressed={flash} title="Flash: disappears after 24 hours" tabIndex={expanded ? 0 : -1}>⚡<span className="sr-only">Flash dispatch</span></button>}
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft" onClick={() => setSource(source === null ? "" : null)} aria-label="Add a source link" aria-pressed={source !== null} title="Add a source" tabIndex={expanded ? 0 : -1}><LinkIcon size={20} /></button>
                 <div className="ml-auto flex items-center gap-3">
                   {needsStance && !stance && <span className="text-[12.5px] text-ink-3">Pick a stance</span>}
@@ -253,6 +334,18 @@ export function Composer({
           </div>
         </div>
       </div>
+      {cropping && (
+        <CropDialog
+          src={cropping.url}
+          file={cropping.file}
+          onCancel={() => setCropIdx(null)}
+          onDone={(f, url) => {
+            URL.revokeObjectURL(cropping.url);
+            setPics((all) => all.map((x) => (x === cropping ? { ...x, file: f, url } : x)));
+            setCropIdx(null);
+          }}
+        />
+      )}
     </div>
   );
 }

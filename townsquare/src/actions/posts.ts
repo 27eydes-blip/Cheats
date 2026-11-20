@@ -1,5 +1,6 @@
 "use server";
 import { togglePin } from "@/lib/social";
+import { checkAchievements } from "@/lib/achievements";
 import { revalidatePath } from "next/cache";
 import { LIMITS } from "@/config";
 import { AppError } from "@/lib/errors";
@@ -28,12 +29,14 @@ export async function createPostAction(form: FormData) {
       storyKey: (form.get("storyKey") as string) || null,
       stance: ((form.get("stance") as string) || null) as never,
       sourceUrl: (form.get("sourceUrl") as string) || null,
+      flash: form.get("flash") === "1",
       mediaIds,
       alts,
       poll: form.get("hasPoll") === "1" ? { options: pollOptions, durationHours: Number(form.get("pollHours") ?? 24) } : null,
     });
+    const earned = checkAchievements(user.id, "post");
     revalidatePath("/", "layout");
-    return { id, post: getPostView(id, user.id)! };
+    return { id, post: getPostView(id, user.id)!, earned };
   });
 }
 

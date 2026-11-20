@@ -1,3 +1,6 @@
+import { deleteFiles } from "./media";
+import type { ReactionKind } from "./reactions-meta";
+import { reactionCounts } from "./social";
 import { LIMITS } from "@/config";
 import { publish } from "./realtime";
 import { recordSignal } from "./interests";
@@ -28,8 +31,10 @@ export type PostView = {
   body: string;
   createdAt: number;
   editedAt: number | null;
-  /** "deleted" by the author, "removed" by moderators, "unavailable" when blocked */
-  gone: null | "deleted" | "removed" | "unavailable";
+  /** "deleted" by the author, "removed" by moderators, "unavailable" when blocked, "expired" for a past Flash */
+  gone: null | "deleted" | "removed" | "unavailable" | "expired";
+  /** Flash dispatches disappear 24 hours after posting. */
+  flashExpiresAt: number | null;
   author: UserMini;
   replyTo: { id: string; handle: string } | null;
   rootId: string | null;
@@ -45,7 +50,9 @@ export type PostView = {
   story: { key: string; title: string } | null;
   /** Readers' agree / disagree / unsure split on this Take. */
   split: Split;
-  viewer: { liked: boolean; reposted: boolean; bookmarked: boolean; isAuthor: boolean; canEdit: boolean };
+  /** Reaction counts (the five Boost reactions). */
+  reactions: Record<ReactionKind, number>;
+  viewer: { liked: boolean; reposted: boolean; bookmarked: boolean; isAuthor: boolean; canEdit: boolean; reaction: ReactionKind | null };
 };
 
 /** A feed entry: a post, optionally shown because someone reposted it. */
@@ -80,6 +87,7 @@ type PostRow = {
   a_private: number;
   source_url: string | null;
   source_domain: string | null;
+  expires_at: number | null;
 };
 
 const placeholders = (n: number) => Array(n).fill("?").join(",");
@@ -88,6 +96,7 @@ const placeholders = (n: number) => Array(n).fill("?").join(",");
 export function hydrate(ids: string[], viewerId: string | null, depth = 0): PostView[] {
   const uniq = [...new Set(ids)];
   if (!uniq.length) return [];
+  if (depth === 0) sweepFlash();
   const ph = placeholders(uniq.length);
   const rows = all<PostRow>(
     `SELECT p.*, u.handle a_handle, u.display_name a_display_name, u.avatar_media_id a_avatar, u.verified a_verified, u.status a_status, u.is_private a_private
@@ -117,6 +126,10 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
   const mine = (table: string) =>
     viewerId ? new Set(all<{ post_id: string }>(`SELECT post_id FROM ${table} WHERE user_id = ? AND post_id IN (${ph})`, [viewerId, ...uniq]).map((r) => r.post_id)) : new Set<string>();
   const liked = mine("likes");
+  const reactionMap = reactionCounts(uniq);
+  const myReactions = new Map(
+    viewerId ? all<{ post_id: string; kind: ReactionKind }>(`SELECT post_id, kind FROM reactions WHERE user_id = ? AND post_id IN (${ph})`, [viewerId, ...uniq]).map((r) => [r.post_id, r.kind]) : [],
+  );
   const reposted = mine("reposts");
   const bookmarked = mine("bookmarks");
   const blockedAuthors = viewerId
@@ -160,7 +173,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
   for (const id of ids) {
     const r = byId.get(id);
     if (!r) continue;
-    const gone: PostView["gone"] = r.deleted_at || r.a_status === "deleted" ? "deleted" : r.removed_at ? "removed" : blockedAuthors.has(r.author_id) || lockedAuthors.has(r.author_id) ? "unavailable" : null;
+    const gone: PostView["gone"] = r.expires_at && r.deleted_at ? "expired" : r.deleted_at || r.a_status === "deleted" ? "deleted" : r.removed_at ? "removed" : blockedAuthors.has(r.author_id) || lockedAuthors.has(r.author_id) ? "unavailable" : null;
     const poll = polls.find((p) => p.post_id === r.id);
     const opts = poll ? options.filter((o) => o.poll_id === poll.id) : [];
     out.push({
@@ -175,6 +188,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       media: gone ? [] : media.filter((m) => m.post_id === r.id).map((m) => ({ id: m.id, url: mediaUrl(m.id)!, alt: m.alt, width: m.width, height: m.height, blur: m.blur })),
       link: !gone && r.link_url ? { url: r.link_url, title: r.link_title, domain: r.link_domain ?? "" } : null,
       source: !gone && r.source_url ? { url: r.source_url, domain: r.source_domain ?? "" } : null,
+      flashExpiresAt: r.expires_at,
       poll:
         poll && !gone
           ? {
@@ -191,7 +205,9 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       stance: r.stance,
       story: r.story_key && storyTitles.has(r.story_key) ? { key: r.story_key, title: storyTitles.get(r.story_key)! } : null,
       split: split.get(r.id) ?? { ...EMPTY_SPLIT },
+      reactions: reactionMap.get(r.id)!,
       viewer: {
+        reaction: myReactions.get(r.id) ?? null,
         liked: liked.has(r.id),
         reposted: reposted.has(r.id),
         bookmarked: bookmarked.has(r.id),
@@ -231,7 +247,33 @@ export type NewPost = {
   stance?: TakeStance | null;
   /** Optional source link (https) backing the dispatch. */
   sourceUrl?: string | null;
+  /** Flash: the dispatch disappears after 24 hours. */
+  flash?: boolean;
 };
+
+export const FLASH_MS = 24 * 3_600_000;
+let lastSweep = 0;
+/**
+ * Expire Flash dispatches: wipe the text, link, tags and images of any whose
+ * 24 hours are up. Cheap (indexed) and throttled; runs before posts are shown.
+ */
+export function sweepFlash(t = now(), force = false) {
+  if (!force && t - lastSweep < 15_000) return 0;
+  lastSweep = t;
+  const ids = all<{ id: string }>("SELECT id FROM posts WHERE expires_at IS NOT NULL AND expires_at <= ? AND deleted_at IS NULL", [t]).map((r) => r.id);
+  if (!ids.length) return 0;
+  const ph = placeholders(ids.length);
+  const files = all<{ path: string }>(`SELECT path FROM media WHERE post_id IN (${ph})`, ids);
+  tx(() => {
+    run(`UPDATE posts SET deleted_at = expires_at, body = '', link_url = NULL, link_title = NULL, link_domain = NULL, source_url = NULL, source_domain = NULL WHERE id IN (${ph})`, ids);
+    run(`DELETE FROM post_hashtags WHERE post_id IN (${ph})`, ids);
+    run(`DELETE FROM reposts WHERE post_id IN (${ph})`, ids);
+    run(`DELETE FROM media WHERE post_id IN (${ph})`, ids);
+    run(`DELETE FROM profile_pins WHERE post_id IN (${ph})`, ids);
+  });
+  deleteFiles(files);
+  return ids.length;
+}
 
 function linkCard(body: string) {
   const first = extractLinks(body)[0];
@@ -294,9 +336,9 @@ export function createPost(author: UserRow, input: NewPost): string {
   const t = now();
   tx(() => {
     run(
-      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, link_url, link_title, link_domain, stance, story_key, created_at, source_url, source_domain)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, communityId, link?.url ?? null, link?.title ?? null, link?.domain ?? null, stance, storyKey, t, source, source ? new URL(source).hostname.replace(/^www\./, "") : null],
+      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, link_url, link_title, link_domain, stance, story_key, created_at, source_url, source_domain, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, communityId, link?.url ?? null, link?.title ?? null, link?.domain ?? null, stance, storyKey, t, source, source ? new URL(source).hostname.replace(/^www\./, "") : null, input.flash && !parent && !communityId ? t + FLASH_MS : null],
     );
     mediaIds.forEach((mid, i) => {
       const res = run("UPDATE media SET post_id = ?, position = ?, alt = ? WHERE id = ? AND owner_id = ? AND post_id IS NULL AND kind = 'image'", [

@@ -16,6 +16,7 @@ import { LiveWire, type WireItem } from "@/components/shell/LiveWire";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
 import { Masthead } from "@/components/shell/Masthead";
 import { SiteFooter } from "@/components/shell/SiteFooter";
+import { Celebrate } from "@/components/Celebrate";
 import { NavProgress } from "@/components/shell/NavProgress";
 import { InstallPrompt, PhoneGestures } from "@/components/shell/PhoneGestures";
 import { condensed, inter, mono } from "./fonts";
@@ -116,6 +117,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Dock liveCount={liveCount} />
           <RegisterSW />
           <PhoneGestures />
+          <Celebrate />
           <InstallPrompt />
         </Providers>
       </body>

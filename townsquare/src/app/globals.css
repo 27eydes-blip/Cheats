@@ -370,3 +370,8 @@ html.light .team-badge-ring { stroke: var(--ring-l); }
 html.light .beat-chip { color: color-mix(in srgb, var(--c) 45%, #000); }
 .accent-ink { color: var(--accent-ink); }
 html.light .accent-ink { color: color-mix(in srgb, var(--accent-c) 50%, #000); }
+
+@keyframes spark { from { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) scale(1); opacity: 1; } to { transform: translate(-50%, -50%) rotate(var(--a)) translateY(-20px) scale(0.3); opacity: 0; } }
+@keyframes glow-pulse { 0% { box-shadow: 0 0 0 0 rgb(34 211 238 / 0.6); } 100% { box-shadow: 0 0 0 18px rgb(34 211 238 / 0); } }
+.amber-ink { color: #fbbf24; }
+html.light .amber-ink { color: #92400e; }

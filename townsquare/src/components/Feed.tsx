@@ -27,7 +27,7 @@ type Item = FeedItem | ForYouItem;
 type Page = { items: Item[]; nextCursor: string | null };
 const itemId = (it: Item) => ("story" in it ? `story:${it.story.key}` : `post:${it.post.id}`);
 
-export function Feed({ initial, source, empty, live, prependOwn }: { initial: FeedPage | Page; source: Source; empty: React.ReactNode; live?: boolean; prependOwn?: boolean }) {
+export function Feed({ initial, source, empty, live, prependOwn, interleave }: { initial: FeedPage | Page; source: Source; empty: React.ReactNode; live?: boolean; prependOwn?: boolean; /** a block shown after the Nth item (e.g. friend suggestions) */ interleave?: { at: number; node: React.ReactNode } }) {
   const [items, setItems] = useState<Item[]>(initial.items);
   const [cursor, setCursor] = useState(initial.nextCursor);
   const [loading, setLoading] = useState(false);
@@ -169,7 +169,8 @@ export function Feed({ initial, source, empty, live, prependOwn }: { initial: Fe
               ) : (
                 <PostCard post={it.post} repostedBy={it.repostedBy} index={i} onGone={(id) => setItems((c) => c.filter((x) => "story" in x || x.post.id !== id))} />
               );
-            return "kind" in it ? <ForYouFrame key={it.key} item={it} onDismiss={drop}>{body}</ForYouFrame> : <div key={it.key}>{body}</div>;
+            const row = "kind" in it ? <ForYouFrame key={it.key} item={it} onDismiss={drop}>{body}</ForYouFrame> : <div key={it.key}>{body}</div>;
+            return interleave && i === interleave.at - 1 ? [row, <div key="interleave" className="border-y border-rule bg-white/[0.015] px-4 py-2">{interleave.node}</div>] : row;
           })}
         </div>
       )}

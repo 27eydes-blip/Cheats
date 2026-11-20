@@ -422,3 +422,11 @@ create policy "send request" on follow_requests for insert with check (requester
 create policy "withdraw or answer request" on follow_requests for delete using (requester_id = auth.uid() or target_id = auth.uid());
 create policy "own notification prefs" on notification_prefs for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 -- Private accounts: tighten the posts read policy so only approved followers (and the author) can read.
+
+-- Migration 6: Flash dispatches (expire after 24h) and achievements.
+alter table public.posts add column if not exists expires_at timestamptz;
+create index if not exists posts_expires on public.posts(expires_at) where expires_at is not null;
+create table public.achievements (user_id uuid references profiles(id) on delete cascade, key text not null, earned_at timestamptz not null default now(), primary key (user_id, key));
+alter table achievements enable row level security;
+create policy "achievements readable" on achievements for select using (true);
+-- achievements are awarded server-side only (service role).

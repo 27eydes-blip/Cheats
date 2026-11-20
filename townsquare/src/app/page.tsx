@@ -7,6 +7,8 @@ import { followingFeed } from "@/lib/feed";
 import { forYou } from "@/lib/foryou";
 import { Feed } from "@/components/Feed";
 import { HomeTabs } from "@/components/feed/HomeTabs";
+import { Suggestions } from "@/components/social/Suggestions";
+import { suggestFriends } from "@/lib/social";
 import { debates, latestTakes, voices } from "@/lib/takes";
 import { CHANNELS } from "@/components/shell/channels";
 import { BriefingPromo, DebateTile, HotStories, LeadTile, LiveNowTile, MoreStories, PollTile, QuickTakes, StoryTile, VoicesTile, WireTile } from "@/components/front/Tiles";
@@ -49,6 +51,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
   if (!channel) {
     const tab = sp.tab === "following" ? "following" : "foryou";
     const initial = tab === "following" ? (vid ? followingFeed(vid) : { items: [], nextCursor: null }) : forYou(vid, null, undefined, { excludeStory: lead.key });
+    const suggestions = vid ? suggestFriends(vid, 4) : [];
     return (
       <div className="mx-auto max-w-[1320px] px-4 pt-5 lg:px-8 lg:pt-8">
         <h1 className="sr-only">{APP_NAME} Front Page</h1>
@@ -65,10 +68,15 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
                 source={{ tab, ...(tab === "foryou" ? { exclude: lead.key } : {}) }}
                 live={tab === "following"}
                 prependOwn
+                interleave={suggestions.length && tab === "foryou" ? { at: 5, node: <Suggestions people={suggestions.slice(0, 3)} compact /> } : undefined}
                 empty={
                   tab === "following" ? (
                     vid ? (
-                      <EmptyState art="community" title="Your Following feed is quiet" body="Follow a few Voices and their dispatches land here, newest first. Try one of these:" action={{ label: "Find people", href: "/explore" }} />
+                      <div className="pb-4">
+                        <EmptyState art="community" title="Your Following feed is quiet" body="Follow a few people and their dispatches land here, newest first. Here are some to start with:" />
+                        <div className="px-4"><Suggestions people={suggestions.length ? suggestions : []} compact /></div>
+                        {!suggestions.length && <p className="px-4 text-center text-[14px] text-ink-3">Try <Link href="/explore" className="font-semibold text-[var(--wn-blue-ink)]">Trending</Link> to find voices.</p>}
+                      </div>
                     ) : (
                       <EmptyState art="community" title="Log in to see who you follow" body="Following shows dispatches from people you follow, newest first." action={{ label: "Log in", href: "/login?next=/?tab=following" }} />
                     )
@@ -84,7 +92,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
               <HotStories stories={hot} />
               {events.some((e) => e.isLive) && <LiveNowTile events={events} />}
               <BriefingPromo minutes={Math.max(4, Math.round((stories.slice(0, 10).reduce((n, s) => n + s.title.split(" ").length + s.summary.split(" ").length, 0) + 600) / 230))} count={Math.min(10, stories.length)} />
-              <VoicesTile voices={people} />
+              {suggestions.length ? <Suggestions people={suggestions} /> : <VoicesTile voices={people} />}
             </div>
           </aside>
         </div>

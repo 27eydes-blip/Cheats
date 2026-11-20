@@ -1,7 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireViewer } from "@/lib/session";
-import { answerFollowRequest, setBlock, setBookmark, setFollow, setLike, setMute, setRepost, togglePin } from "@/lib/social";
+import { checkAchievements } from "@/lib/achievements";
+import { trackEvents } from "@/lib/interests";
+import { answerFollowRequest, setReaction, setBlock, setBookmark, setFollow, setLike, setMute, setRepost, togglePin } from "@/lib/social";
 import { markAllRead } from "@/lib/notifications";
 import { attempt } from "./result";
 
@@ -57,5 +59,18 @@ export async function pinAction(postId: string) {
     const on = togglePin(await requireViewer(), postId);
     revalidatePath("/u/[handle]", "page");
     return on;
+  });
+}
+
+export async function reactAction(postId: string, kind: string | null) {
+  return attempt(async () => setReaction(await requireViewer(), postId, kind));
+}
+
+/** Shares of a story/dispatch link count toward "Story spreader". */
+export async function shareAction(target: { type: "post" | "story"; id: string }) {
+  return attempt(async () => {
+    const user = await requireViewer();
+    trackEvents(user.id, [{ type: target.type === "story" ? "story" : "post", id: String(target.id).slice(0, 64), kind: "share" }]);
+    return checkAchievements(user.id, "share");
   });
 }
