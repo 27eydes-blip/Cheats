@@ -1,52 +1,102 @@
 import { notFound } from "next/navigation";
-import { getBanner, recentActions, reportQueue, siteStats } from "@/lib/moderation";
+import { dailySeries, getBanner, recentActions, reportQueue, siteStats } from "@/lib/moderation";
 import { requireViewerPage } from "@/lib/session";
 import { PageHeader } from "@/components/PageHeader";
-import { BannerForm, ReportCard } from "./AdminClient";
+import { Kicker } from "@/components/ui/Badge";
+import { Sparkline } from "@/components/ui/Sparkline";
+import { EmptyState } from "@/components/ui/States";
+import { ShieldIcon } from "@/components/icons";
+import { Time } from "@/components/Time";
+import { BannerComposer, ReportCard } from "./AdminClient";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
+
+const ACTION_TONE: Record<string, string> = {
+  remove: "bg-danger", ban: "bg-breaking", suspend: "bg-danger", warn: "bg-warning", dismiss: "bg-ink-3", restore: "bg-success", unsuspend: "bg-success", verify: "bg-accent", unverify: "bg-ink-3",
+};
 
 export default async function Admin() {
   const admin = await requireViewerPage("/admin");
   if (admin.role !== "admin") notFound();
   const queue = reportQueue(admin.id);
   const stats = siteStats();
+  const series = dailySeries(14);
   const banner = getBanner();
+  const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const kpis = [
+    { label: "Open reports", value: stats.openReports, series: series.reports, color: stats.openReports ? "var(--danger)" : "var(--success)", note: `${sum(series.reports)} filed in 14 days` },
+    { label: "Posts, 24h", value: stats.posts24h, series: series.posts, color: "var(--accent)", note: `${sum(series.posts)} in 14 days` },
+    { label: "Sign-ups, 24h", value: stats.signups24h, series: series.signups, color: "var(--accent-2)", note: `${stats.users} total accounts` },
+    { label: "Mod actions", value: sum(series.actions), series: series.actions, color: "var(--warning)", note: `${stats.suspended} suspended now` },
+  ];
+  const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+  for (const g of queue) counts[g.severity]++;
+
   return (
     <>
-      <PageHeader title="Admin" subtitle="Moderation queue and site controls" />
-      <dl className="grid grid-cols-3 gap-2 border-b border-line p-4 text-center sm:grid-cols-5">
-        {Object.entries({ "Open reports": stats.openReports, Users: stats.users, Suspended: stats.suspended, "Posts 24h": stats.posts24h, "Signups 24h": stats.signups24h }).map(([k, v]) => (
-          <div key={k} className="rounded-xl bg-surface p-2">
-            <dt className="text-xs text-muted">{k}</dt>
-            <dd className="text-xl font-black tabular-nums">{v}</dd>
+      <PageHeader title="Trust & Safety" kicker={<Kicker>Admin</Kicker>} subtitle="Moderation queue, site banner, and health" />
+      <div role="note" className="mx-4 mb-4 flex items-start gap-3 rounded-[var(--r-lg)] bg-accent-soft px-4 py-3 text-[14px] ring-1 ring-accent/20 sm:mx-6">
+        <ShieldIcon size={20} className="mt-0.5 shrink-0 text-accent" />
+        <p><b>The same rules apply to every account,</b> public figures and staff included. Act on what the content does, never on who posted it or which side it takes.</p>
+      </div>
+
+      <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 px-4 sm:px-6">
+        {kpis.map((k) => (
+          <div key={k.label} className="card p-4">
+            <p className="text-[13px] font-medium text-ink-3">{k.label}</p>
+            <div className="mt-1 flex items-end justify-between gap-2">
+              <p className="num font-display text-[34px] leading-none font-semibold">{k.value}</p>
+              <Sparkline values={k.series} width={84} height={30} color={k.color} label={`${k.label}, last 14 days`} />
+            </div>
+            <p className="mt-2 text-[12.5px] text-ink-3">{k.note}</p>
           </div>
         ))}
-      </dl>
-
-      <section className="border-b border-line p-4">
-        <h2 className="text-lg font-extrabold">Breaking-news banner</h2>
-        <BannerForm current={banner} />
       </section>
 
-      <section>
-        <h2 className="px-4 pt-4 text-lg font-extrabold">Report queue ({queue.length})</h2>
-        <p className="px-4 pb-2 text-sm text-muted">Child safety, threats, and doxxing reports are sorted to the top. The same rules apply to every account.</p>
-        {queue.length === 0 ? <p className="px-6 py-10 text-center text-muted">Queue is empty. 🎉</p> : queue.map((g) => <ReportCard key={`${g.targetType}:${g.targetId}`} group={g} />)}
+      <section aria-labelledby="queue" className="mt-7">
+        <div className="flex flex-wrap items-end justify-between gap-2 px-4 sm:px-6">
+          <div>
+            <h2 id="queue" className="font-display text-h2 font-semibold">Report queue</h2>
+            <p className="text-[13.5px] text-ink-3">Sorted by severity, then by number of reports.</p>
+          </div>
+          <div className="flex gap-1.5 text-[12px] font-bold">
+            {(["critical", "high", "medium", "low"] as const).map((s) => (
+              <span key={s} className={`num rounded-md px-2 py-1 ${s === "critical" ? "bg-breaking text-white" : s === "high" ? "bg-danger-soft text-danger" : s === "medium" ? "bg-warning-bg text-warning" : "bg-surface-2 text-ink-2"}`}>
+                {counts[s]} {s}
+              </span>
+            ))}
+          </div>
+        </div>
+        {queue.length === 0 ? (
+          <EmptyState art="done" title="Queue is clear" body="New reports land here, most severe first." />
+        ) : (
+          <div className="mt-3 space-y-3 px-4 sm:px-6">{queue.map((g) => <ReportCard key={`${g.targetType}:${g.targetId}`} group={g} />)}</div>
+        )}
       </section>
 
-      <section className="border-t border-line p-4">
-        <h2 className="text-lg font-extrabold">Recent moderation actions</h2>
-        <ul className="mt-2 space-y-1 text-sm">
+      <section aria-labelledby="banner" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">
+        <h2 id="banner" className="font-display text-h2 font-semibold">Breaking-news banner</h2>
+        <p className="text-[13.5px] text-ink-3">Shown in the ticker across the top of every page. Link it to a live story (e.g. /news/story/bikelanes) or an outside article.</p>
+        <BannerComposer current={banner} />
+      </section>
+
+      <section aria-labelledby="log" className="mt-8 border-t border-line px-4 pt-6 pb-8 sm:px-6">
+        <h2 id="log" className="font-display text-h2 font-semibold">Moderation log</h2>
+        <ol className="relative mt-4 border-l-2 border-line pl-5">
           {recentActions().map((a) => (
-            <li key={a.id}>
-              <span className="text-muted">{new Date(a.created_at).toLocaleString()}</span> · <b>@{a.mod_handle ?? "system"}</b> {a.action} <b>@{a.user_handle}</b>
-              {a.target_post_id && <> (<a className="text-accent underline" href={`/p/${a.target_post_id}`}>post</a>)</>}
-              {a.note && <span className="text-muted"> — {a.note}</span>}
+            <li key={a.id} className="relative pb-5 last:pb-0">
+              <span aria-hidden="true" className={`absolute top-1.5 -left-[27px] h-3 w-3 rounded-full ring-4 ring-surface ${ACTION_TONE[a.action] ?? "bg-ink-3"}`} />
+              <p className="text-[14.5px]">
+                <b>@{a.mod_handle ?? "system"}</b> <span className="font-semibold uppercase tracking-wide text-[12px] text-ink-2">{a.action}</span> <b>@{a.user_handle ?? "deleted"}</b>
+                {a.target_post_id && <> · <a className="text-accent hover:underline" href={`/p/${a.target_post_id}`}>post</a></>}
+              </p>
+              {a.note && <p className="mt-0.5 text-[14px] text-ink-2">“{a.note}”</p>}
+              <p className="text-[12.5px] text-ink-3"><Time ms={a.created_at} /> ago</p>
             </li>
           ))}
-        </ul>
+          {recentActions().length === 0 && <li className="text-[14px] text-ink-3">No actions yet.</li>}
+        </ol>
       </section>
     </>
   );

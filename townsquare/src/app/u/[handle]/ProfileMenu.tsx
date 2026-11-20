@@ -4,13 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { blockAction, muteAction } from "@/actions/social";
 import { BlockIcon, FlagIcon, LinkIcon, MoreIcon, MuteIcon } from "@/components/icons";
-import { Menu } from "@/components/Menu";
+import { Menu } from "@/components/ui/Menu";
 import { useToast } from "@/components/providers";
+import { useConfirm } from "@/components/ui/Confirm";
 import { ReportDialog } from "@/components/ReportDialog";
 
 export function ProfileMenu({ userId, handle, blocked, muted }: { userId: string; handle: string; blocked: boolean; muted: boolean }) {
   const router = useRouter();
   const toast = useToast();
+  const ask = useConfirm();
   const [reporting, setReporting] = useState(false);
   const [, start] = useTransition();
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, msg: string) =>
@@ -20,7 +22,7 @@ export function ProfileMenu({ userId, handle, blocked, muted }: { userId: string
       router.refresh();
     });
   return (
-    <div className="rounded-full border border-line">
+    <div className="rounded-full ring-1 ring-line-strong">
       <Menu
         label={`More options for @${handle}`}
         button={<MoreIcon />}
@@ -30,7 +32,9 @@ export function ProfileMenu({ userId, handle, blocked, muted }: { userId: string
           {
             label: blocked ? `Unblock @${handle}` : `Block @${handle}`,
             icon: <BlockIcon size={18} />,
-            onSelect: () => (blocked || confirm(`Block @${handle}? This also removes follows between you.`)) && run(() => blockAction(userId, !blocked), blocked ? "Unblocked" : "Blocked"),
+            onSelect: async () =>
+              (blocked || (await ask({ title: `Block @${handle}?`, body: "They won't see your posts and you won't see theirs. Follows between you are removed.", confirm: "Block", danger: true }))) &&
+              run(() => blockAction(userId, !blocked), blocked ? "Unblocked" : "Blocked"),
           },
           "divider",
           { label: `Report @${handle}`, danger: true, icon: <FlagIcon size={18} />, onSelect: () => setReporting(true) },

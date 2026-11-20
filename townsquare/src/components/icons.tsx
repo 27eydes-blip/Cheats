@@ -43,11 +43,28 @@ export const TrashIcon = (p: P) => <Svg {...p}><path d="M4 7h16M10 11v6M14 11v6M
 export const QuoteIcon = (p: P) => <Svg {...p}><path d="M4 20h4L19 9l-4-4L4 16z" /></Svg>;
 export const LogoutIcon = (p: P) => <Svg {...p}><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3" /></Svg>;
 
-export function VerifiedBadge({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" role="img" aria-label="Verified account" className="inline-block shrink-0 text-accent">
-      <path fill="currentColor" d="M12 1.5 14.6 3.4l3.2-.2 1 3 2.7 1.8-.9 3.1.9 3.1-2.7 1.8-1 3-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3-2.7-1.8.9-3.1-.9-3.1L5.2 6l1-3 3.2.2z" />
-      <path d="m8 12.2 2.7 2.7L16.2 9.3" stroke="#fff" strokeWidth={2.2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+export const SunIcon = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></Svg>;
+export const MoonIcon = (p: P) => <Svg {...p}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Svg>;
+export const MonitorIcon = (p: P) => <Svg {...p}><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></Svg>;
+export const CommandIcon = (p: P) => <Svg {...p}><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z" /></Svg>;
+export const ChevronRight = (p: P) => <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>;
+export const ChevronDown = (p: P) => <Svg {...p}><path d="m6 9 6 6 6-6" /></Svg>;
+export const ArrowUpIcon = (p: P) => <Svg {...p}><path d="M12 19V5M5 12l7-7 7 7" /></Svg>;
+export const ArrowRightIcon = (p: P) => <Svg {...p}><path d="M5 12h14M13 5l7 7-7 7" /></Svg>;
+export const VoteUpIcon = ({ filled, ...p }: P & { filled?: boolean }) => <Svg {...p}><path d="M12 4 4 13h5v7h6v-7h5z" fill={filled ? "currentColor" : "none"} /></Svg>;
+export const VoteDownIcon = ({ filled, ...p }: P & { filled?: boolean }) => <Svg {...p}><path d="M12 20 4 11h5V4h6v7h5z" fill={filled ? "currentColor" : "none"} /></Svg>;
+export const CheckIcon = (p: P) => <Svg {...p}><path d="m5 12.5 4.5 4.5L19 7.5" /></Svg>;
+export const ClockIcon = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Svg>;
+export const PlayIcon = (p: P) => <Svg {...p}><path d="M7 4.5v15l13-7.5z" fill="currentColor" /></Svg>;
+export const MicIcon = (p: P) => <Svg {...p}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></Svg>;
+export const MapPinIcon = (p: P) => <Svg {...p}><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></Svg>;
+export const SparkIcon = (p: P) => <Svg {...p}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></Svg>;
+export const TrendIcon = (p: P) => <Svg {...p}><path d="m3 17 6-6 4 4 8-8M15 7h6v6" /></Svg>;
+export const EyeIcon = (p: P) => <Svg {...p}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></Svg>;
+export const BellPlusIcon = (p: P) => <Svg {...p}><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9M10 20a2 2 0 0 0 4 0" /><path d="M12 7v5M9.5 9.5h5" /></Svg>;
+export const KeyboardIcon = (p: P) => <Svg {...p}><rect x="2.5" y="6" width="19" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></Svg>;
+export const LayersIcon = (p: P) => <Svg {...p}><path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" /></Svg>;
+export const FlameIcon = (p: P) => <Svg {...p}><path d="M12 22c4 0 7-2.8 7-7 0-4.5-3.5-6.5-4.5-10C11 7 9.5 9 9.5 11.5 8 10.8 7.4 9.6 7.3 8.5 5.8 10.2 5 12.3 5 15c0 4.2 3 7 7 7z" /></Svg>;
+export const ExpandIcon = (p: P) => <Svg {...p}><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></Svg>;
+
+export { VerifiedSeal as VerifiedBadge } from "./ui/Badge";

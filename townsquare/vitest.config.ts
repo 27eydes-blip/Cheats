@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    exclude: ["tests/visual/**", "node_modules/**"],
     env: { DATABASE_PATH: ":memory:" },
   },
 });

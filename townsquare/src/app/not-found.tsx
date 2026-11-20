@@ -1,11 +1,5 @@
-import Link from "next/link";
+import { EmptyState } from "@/components/ui/States";
 
 export default function NotFound() {
-  return (
-    <div className="px-6 py-20 text-center">
-      <h1 className="text-3xl font-black">Not found</h1>
-      <p className="mt-2 text-muted">This page doesn&apos;t exist, or it was removed.</p>
-      <Link href="/" className="btn-primary mt-6">Go home</Link>
-    </div>
-  );
+  return <EmptyState art="search" title="This page isn't here" body="It may have been removed, or the link is off by a character." action={{ label: "Back to Home", href: "/" }} />;
 }

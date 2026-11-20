@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const securityHeaders = [
@@ -8,6 +9,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // This app lives inside a larger repo; trace files from here.
+  outputFileTracingRoot: path.join(__dirname),
   // sharp is a native module; keep it out of the server bundle.
   serverExternalPackages: ["sharp"],
   experimental: {

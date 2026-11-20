@@ -19,7 +19,25 @@ function open(): DatabaseSync {
   const db = new DatabaseSync(file);
   db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+/** Additive column migrations for databases created by earlier versions. */
+const COLUMNS: [table: string, column: string, definition: string][] = [
+  ["users", "interests", "TEXT NOT NULL DEFAULT '[]'"],
+  ["users", "onboarded", "INTEGER NOT NULL DEFAULT 1"],
+  ["media", "blur", "TEXT"],
+  ["live_events", "tag", "TEXT"],
+  ["live_events", "description", "TEXT NOT NULL DEFAULT ''"],
+  ["live_events", "viewers", "INTEGER NOT NULL DEFAULT 0"],
+];
+
+function migrate(db: DatabaseSync) {
+  for (const [table, column, def] of COLUMNS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`);
+  }
 }
 
 export function db(): DatabaseSync {

@@ -1,0 +1,109 @@
+/*
+ * Townsquare design tokens — the single source of truth for color, type,
+ * radius, shadow, glass, and motion. Mirrored in src/design/tokens.ts.
+ * Every text/background pair below meets WCAG AA (checked in DESIGN.md).
+ */
+:root,
+.light {
+  /* Ink (text) */
+  --ink-1: #0f1420;
+  --ink-2: #3c4352;
+  --ink-3: #5d6575;
+  /* Surfaces: warm off-white canvas, white cards */
+  --canvas: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efeee9;
+  --surface-3: #e5e3dc;
+  --line: rgb(15 20 32 / 0.09);
+  --line-strong: rgb(15 20 32 / 0.16);
+  /* Signature accent: electric blue → indigo */
+  --accent: #3043d6;
+  --accent-2: #5b2ee8;
+  --accent-grad: linear-gradient(135deg, #2563eb 0%, #4338e6 55%, #5b2ee8 100%);
+  --accent-soft: rgb(48 67 214 / 0.09);
+  --accent-ring: rgb(48 67 214 / 0.35);
+  --on-accent: #ffffff;
+  /* Signals */
+  --breaking: #d0182b;
+  --live: #e11d2e;
+  --success: #0a7a46;
+  --warning: #9a5b00;
+  --warning-bg: #fff4dc;
+  --danger: #c4182b;
+  --danger-soft: rgb(196 24 43 / 0.08);
+  /* Ticker (always a dark broadcast bar) */
+  --ticker-bg: #0f1420;
+  --ticker-fg: #f3f5f9;
+  /* Glass */
+  --glass: rgb(246 245 241 / 0.78);
+  --glass-strong: rgb(255 255 255 / 0.86);
+  /* Shadows: soft, layered */
+  --shadow-1: 0 1px 0 rgb(15 20 32 / 0.04), 0 1px 2px rgb(15 20 32 / 0.05);
+  --shadow-2: 0 1px 2px rgb(15 20 32 / 0.05), 0 4px 12px rgb(15 20 32 / 0.06), 0 12px 32px rgb(15 20 32 / 0.05);
+  --shadow-3: 0 2px 6px rgb(15 20 32 / 0.08), 0 16px 48px rgb(15 20 32 / 0.16);
+  --glow: 0 0 0 1px rgb(48 67 214 / 0.18), 0 6px 20px rgb(67 56 230 / 0.28);
+
+  /* Radius */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* Type */
+  --font-ui: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
+  --fs-display: clamp(2.125rem, 1.4rem + 3.2vw, 3.5rem);
+  --fs-h1: clamp(1.625rem, 1.3rem + 1.4vw, 2.25rem);
+  --fs-h2: clamp(1.3125rem, 1.2rem + 0.5vw, 1.625rem);
+  --fs-h3: clamp(1.125rem, 1.08rem + 0.2vw, 1.25rem);
+  --fs-body: clamp(0.96875rem, 0.95rem + 0.1vw, 1rem);
+  --fs-small: 0.8125rem;
+  --fs-micro: 0.71875rem;
+  --track-tight: -0.022em;
+
+  /* Motion */
+  --dur-micro: 120ms;
+  --dur-std: 220ms;
+  --dur-emph: 380ms;
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.25, 1.15);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layout */
+  --tabbar-h: 64px;
+  --header-h: 56px;
+  --ticker-h: 36px;
+  color-scheme: light;
+}
+
+.dark {
+  --ink-1: #eef1f6;
+  --ink-2: #b7bfcc;
+  --ink-3: #8b95a7;
+  --canvas: #0b0e14;
+  --surface: #121823;
+  --surface-2: #1a2130;
+  --surface-3: #232b3c;
+  --line: rgb(226 232 245 / 0.08);
+  --line-strong: rgb(226 232 245 / 0.15);
+  --accent: #8aa4ff;
+  --accent-2: #a98bff;
+  --accent-soft: rgb(138 164 255 / 0.12);
+  --accent-ring: rgb(138 164 255 / 0.45);
+  --breaking: #d0182b;
+  --live: #ff3b4a;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --warning-bg: rgb(251 191 36 / 0.1);
+  --danger: #ff7a85;
+  --danger-soft: rgb(255 122 133 / 0.1);
+  --ticker-bg: #05070b;
+  --glass: rgb(11 14 20 / 0.72);
+  --glass-strong: rgb(18 24 35 / 0.82);
+  --shadow-1: 0 1px 0 rgb(0 0 0 / 0.4);
+  --shadow-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-3: 0 4px 12px rgb(0 0 0 / 0.5), 0 24px 64px rgb(0 0 0 / 0.55);
+  --glow: 0 0 0 1px rgb(138 164 255 / 0.25), 0 8px 28px rgb(91 46 232 / 0.4);
+  color-scheme: dark;
+}

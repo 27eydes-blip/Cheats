@@ -22,6 +22,9 @@ export type UserRow = {
   verified: number;
   hide_follows: number;
   is_premium: number;
+  town: string | null;
+  interests: string;
+  onboarded: number;
   created_at: number;
 };
 
@@ -32,6 +35,8 @@ export type UserMini = {
   displayName: string;
   avatarUrl: string | null;
   verified: boolean;
+  /** Hosting something on Live right now. */
+  live?: boolean;
 };
 
 export type ProfileView = UserMini & {
@@ -75,8 +80,8 @@ export async function createUser(input: z.input<typeof signupSchema>): Promise<U
   const hash = await hashPassword(data.password);
   const id = newId();
   run(
-    `INSERT INTO users (id, email, password_hash, handle, display_name, role, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (id, email, password_hash, handle, display_name, role, onboarded, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
     [id, data.email, hash, data.handle, data.displayName, adminEmails().includes(data.email) ? "admin" : "user", now()],
   );
   return userById(id)!;
@@ -107,7 +112,7 @@ export function upsertGoogleUser(p: { sub: string; email: string; name: string }
     }
     const id = newId();
     run(
-      `INSERT INTO users (id, email, google_sub, handle, display_name, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, email, google_sub, handle, display_name, role, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
       [id, p.email.toLowerCase(), p.sub, handle, p.name.slice(0, 50) || handle, adminEmails().includes(p.email.toLowerCase()) ? "admin" : "user", now()],
     );
     return userById(id)!;
@@ -260,4 +265,16 @@ export function assertCanAct(u: UserRow) {
     throw new AppError(`Your account is suspended${until}. You can still read, but not post or interact.`, "suspended");
   }
   if (u.status === "deleted") throw new AppError("This account was deleted.", "deleted");
+}
+
+export const INTERESTS = [
+  "Local news", "Politics", "World", "Business", "Sports", "Tech", "Science", "Health",
+  "Entertainment", "Music", "Books", "Food", "Faith", "Outdoors", "Gaming", "Cars",
+] as const;
+
+/** Save onboarding choices: interests (from the fixed list) and an optional home town for Local. */
+export function saveOnboarding(userId: string, input: { interests: string[]; town: string }) {
+  const interests = input.interests.filter((i): i is (typeof INTERESTS)[number] => (INTERESTS as readonly string[]).includes(i)).slice(0, 16);
+  const town = input.town.replace(/[\u0000-\u001F]/g, "").trim().slice(0, 60) || null;
+  run("UPDATE users SET interests = ?, town = ?, onboarded = 1 WHERE id = ?", [JSON.stringify(interests), town, userId]);
 }

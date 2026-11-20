@@ -43,17 +43,38 @@ export async function saveImage(ownerId: string, file: File, purpose: Purpose, a
     throw new AppError("That image couldn't be read. Try a different file.");
   }
 
+  // A tiny blurred preview shown while the full image loads (no layout shift, no blank box).
+  const blur = await blurPlaceholder(out.data);
   const id = newId();
   const dir = uploadDir();
   mkdirSync(dir, { recursive: true });
   const rel = `${id}.webp`;
   writeFileSync(path.join(dir, rel), out.data);
   run(
-    `INSERT INTO media (id, owner_id, kind, mime, width, height, bytes, path, alt, created_at)
-     VALUES (?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?)`,
-    [id, ownerId, purpose === "post" ? "image" : purpose, out.info.width, out.info.pageHeight ?? out.info.height, out.data.length, rel, alt.slice(0, LIMITS.altChars), now()],
+    `INSERT INTO media (id, owner_id, kind, mime, width, height, bytes, path, alt, blur, created_at)
+     VALUES (?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?, ?)`,
+    [id, ownerId, purpose === "post" ? "image" : purpose, out.info.width, out.info.pageHeight ?? out.info.height, out.data.length, rel, alt.slice(0, LIMITS.altChars), blur, now()],
   );
   return id;
+}
+
+export async function blurPlaceholder(buf: Buffer): Promise<string> {
+  const tiny = await sharp(buf).resize(16, 16, { fit: "inside" }).webp({ quality: 40 }).toBuffer();
+  return `data:image/webp;base64,${tiny.toString("base64")}`;
+}
+
+/** Widths the media route will resize to (like next/image's deviceSizes). */
+export const MEDIA_WIDTHS = [320, 640, 960, 1280] as const;
+
+/** Resized copy of a stored image, cached on disk next to the original. */
+export async function resized(data: Buffer, file: string, width: number): Promise<Buffer> {
+  const cacheDir = path.join(uploadDir(), "w");
+  const cached = path.join(cacheDir, `${width}-${path.basename(file)}`);
+  if (existsSync(cached)) return readFileSync(cached);
+  const out = await sharp(data, { animated: true }).resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
+  mkdirSync(cacheDir, { recursive: true });
+  writeFileSync(cached, out);
+  return out;
 }
 
 type MediaRow = { id: string; owner_id: string; post_id: string | null; kind: string; mime: string; path: string };
@@ -63,7 +84,7 @@ type MediaRow = { id: string; owner_id: string; post_id: string | null; kind: st
  * avatars/banners of live accounts are public; post images follow their post;
  * an image not attached to anything yet is visible only to its owner.
  */
-export function readMediaFor(id: string, viewerId: string | null): { data: Buffer; mime: string; isPublic: boolean } | null {
+export function readMediaFor(id: string, viewerId: string | null): { data: Buffer; mime: string; isPublic: boolean; file: string } | null {
   const m = get<MediaRow>("SELECT id, owner_id, post_id, kind, mime, path FROM media WHERE id = ?", [id]);
   if (!m) return null;
   let allowed = m.owner_id === viewerId;
@@ -83,9 +104,12 @@ export function readMediaFor(id: string, viewerId: string | null): { data: Buffe
   if (!allowed) return null;
   const file = path.join(uploadDir(), path.basename(m.path));
   if (!existsSync(file)) return null;
-  return { data: readFileSync(file), mime: m.mime, isPublic };
+  return { data: readFileSync(file), mime: m.mime, isPublic, file };
 }
 
 export function deleteFiles(paths: { path: string }[]) {
-  for (const p of paths) rmSync(path.join(uploadDir(), path.basename(p.path)), { force: true });
+  for (const p of paths) {
+    rmSync(path.join(uploadDir(), path.basename(p.path)), { force: true });
+    for (const w of MEDIA_WIDTHS) rmSync(path.join(uploadDir(), "w", `${w}-${path.basename(p.path)}`), { force: true });
+  }
 }

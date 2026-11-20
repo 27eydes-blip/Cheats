@@ -13,7 +13,7 @@ import path from "node:path";
 import { all, get, newId, run, tx } from "../src/lib/db";
 import { hashPassword } from "../src/lib/passwords";
 import { extractHashtags, extractMentions } from "../src/lib/text";
-import { uploadDir } from "../src/lib/media";
+import { blurPlaceholder, uploadDir } from "../src/lib/media";
 
 // Deterministic randomness so every seed looks the same.
 let s = 42;
@@ -195,6 +195,60 @@ const COMMUNITIES: [string, string, string][] = [
   ["space", "Night Sky", "Astronomy, launches, and what to look for tonight."],
 ];
 
+const COMMUNITY_POSTS: Record<string, string[]> = {
+  localnews: ["The bike lane vote passed 5-2. What does this actually change for drivers on Main?", "Anyone know why the water main on 3rd keeps breaking?", "Coffee shop on 5th closing after 22 years — let's do a send-off this Saturday"],
+  politics: ["Read the full state budget summary. Ask me anything about where the money goes.", "Early voting turnout is up 18%. Good sign or just convenience?", "Debate night megathread: keep it civil"],
+  football: ["Eagles 28, Wildcats 24 — game thread recap", "Who's the best QB in the conference this year?", "Playoff bracket predictions"],
+  gardening: ["My tomatoes split after the rain. Anything I can do?", "Show your fall harvest 🎃", "Bees swarmed my shed. Who do I call?"],
+  tech: ["Is the new phone update worth installing yet?", "How do you explain two-factor auth to your parents?", "Best budget laptop for a high schooler?"],
+  food: ["Best tacos in town — final answer?", "Rosa's truck is at the park today 🌮", "Grandma's recipes you still make"],
+  veterans: ["Job fair Thursday at the community center — who's going?", "VA appointment wait times this month?"],
+  books: ["November pick: what did everyone think of the ending?", "Books that made you cry on a plane"],
+  parents: ["New school start times: how are mornings going?", "Rainy day ideas for under-10s"],
+  space: ["Jupiter is huge tonight, look southeast after 9", "Meteor shower peak this week — best dark spots nearby?"],
+};
+
+const COMMENTS = [
+  "This is the right call, honestly.", "I disagree, and here's why: the numbers don't add up.", "Source? Genuinely asking.", "Lived here 30 years, this comes up every decade.",
+  "Great thread, thanks for organizing it.", "Can someone summarize for those of us who missed the meeting?", "Same experience here.", "Hard agree.",
+  "Counterpoint: it depends a lot on the neighborhood.", "Update: they posted the minutes online.", "😂 accurate", "Following this one.",
+];
+
+const STORY_TAKES = ["Watching this closely.", "This affects my commute directly.", "Glad they finally voted.", "Big day for downtown.", "Not sure about this one.", "Here's what my neighbors are saying:"];
+
+const STORIES: [string, string, string, string, string | null, "live" | "developing" | "ended", [string, "update" | "key" | "quote"][]][] = [
+  ["bikelanes", "City council passes downtown bike lane plan 5-2", "After a four-hour meeting, the council approved protected bike lanes on Main and 5th. Construction starts in spring.", "Local", "bikelanes", "live", [
+    ["Council meeting opens; more than 200 residents signed up to speak.", "update"],
+    ["Public comment runs past two hours, split roughly evenly for and against.", "update"],
+    ["\"We've studied this for three years. It's time.\" — Council member Ortiz", "quote"],
+    ["Amendment to keep 40 parking spaces on 5th passes 6-1.", "key"],
+    ["Final vote: 5-2 in favor. Construction expected to begin in April.", "key"],
+    ["Business owners on Main plan a meeting next week about delivery zones.", "update"],
+  ]],
+  ["budget", "State budget clears key vote after late-night session", "Lawmakers advanced the spending plan 61-38. Both parties claim wins on schools and roads.", "Politics", "statebudget", "developing", [
+    ["House convenes for a rare late-night session.", "update"],
+    ["Bipartisan deal adds $40M for rural roads.", "key"],
+    ["Budget clears the House 61-38; Senate vote expected Thursday.", "key"],
+  ]],
+  ["eagles", "Eagles rally in fourth quarter to stay unbeaten", "A late touchdown sealed a 28-24 win over the Wildcats.", "Sports", "football", "ended", [
+    ["Wildcats lead 24-14 entering the fourth.", "update"],
+    ["Eagles score twice in four minutes to take the lead.", "key"],
+    ["Final: Eagles 28, Wildcats 24.", "key"],
+  ]],
+  ["gas", "Gas prices rise for a third straight week", "Average price up 20 cents locally; analysts point to refinery maintenance.", "Business", "economy", "developing", [
+    ["Average local price hits $3.61.", "update"],
+    ["Analysts expect prices to ease by mid-December.", "update"],
+  ]],
+];
+
+const LIVE: [string, "stream" | "audio" | "debate", string, number, string, string, number][] = [
+  ["Friday Night Lights: Eagles postgame", "stream", "coach_dave", -35, "Highlights, interviews, and your questions after the big comeback.", "football", 1243],
+  ["City Hall Live: bike lanes explained", "audio", "maria_lopez", -12, "Maria breaks down the vote and takes calls.", "bikelanes", 386],
+  ["Markets at the open", "stream", "markets_mike", 95, "What's moving and why, in 20 minutes.", "economy", 0],
+  ["Debate night: should the town fair come back?", "debate", "tom_on_policy", 60 * 26, "Two neighbors, two sides, five-minute rounds. You vote.", "townfair", 0],
+  ["Night Sky Q&A", "audio", "astro_omar", 60 * 50, "Bring your telescope questions.", "space", 0],
+];
+
 /** A simple generated picture (gradient + shapes) so media grids have something to show. */
 async function makeImage(ownerId: string, i: number): Promise<string> {
   const hue = (i * 47) % 360;
@@ -207,8 +261,8 @@ async function makeImage(ownerId: string, i: number): Promise<string> {
   const id = newId();
   mkdirSync(uploadDir(), { recursive: true });
   writeFileSync(path.join(uploadDir(), `${id}.webp`), data);
-  run("INSERT INTO media (id, owner_id, kind, mime, width, height, bytes, path, alt, created_at) VALUES (?, ?, 'image', 'image/webp', 1200, 800, ?, ?, ?, ?)", [
-    id, ownerId, data.length, `${id}.webp`, "Illustrated landscape with hills and a bright sun", NOW,
+  run("INSERT INTO media (id, owner_id, kind, mime, width, height, bytes, path, alt, blur, created_at) VALUES (?, ?, 'image', 'image/webp', 1200, 800, ?, ?, ?, ?, ?)", [
+    id, ownerId, data.length, `${id}.webp`, "Illustrated landscape with hills and a bright sun", await blurPlaceholder(data), NOW,
   ]);
   return id;
 }
@@ -254,10 +308,10 @@ async function main() {
   for (let i = 0; i < 14; i++) images.push(await makeImage(pick(users.slice(2)).id, i));
 
   const posts: { id: string; author: string; created: number }[] = [];
-  const insertPost = (author: string, body: string, created: number, extra: { reply?: { id: string; root: string | null }; quote?: string } = {}) => {
+  const insertPost = (author: string, body: string, created: number, extra: { reply?: { id: string; root: string | null }; quote?: string; community?: string } = {}) => {
     const id = newId() + posts.length;
-    run(`INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, [
-      id, author, body, extra.reply?.id ?? null, extra.reply ? (extra.reply.root ?? extra.reply.id) : null, extra.quote ?? null, created,
+    run(`INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+      id, author, body, extra.reply?.id ?? null, extra.reply ? (extra.reply.root ?? extra.reply.id) : null, extra.quote ?? null, extra.community ?? null, created,
     ]);
     for (const t of extractHashtags(body)) run("INSERT OR IGNORE INTO post_hashtags (post_id, tag, created_at) VALUES (?, ?, ?)", [id, t, created]);
     for (const h of extractMentions(body)) {
@@ -349,8 +403,26 @@ async function main() {
       run("INSERT INTO communities (id, slug, name, description, rules, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", [
         cid, slug, name, desc, JSON.stringify(["Be civil", "Stay on topic", "No spam or self-promotion without context"]), users[int(2, 29)].id, NOW - int(10, 200) * 24 * HOUR,
       ]);
-      for (const u of users) if (rand() < 0.45) run("INSERT OR IGNORE INTO memberships (community_id, user_id, role, created_at) VALUES (?, ?, 'member', ?)", [cid, u.id, NOW]);
+      for (const u of users) if (rand() < 0.45 || u.handle === "admin" || u.handle === "demo") run("INSERT OR IGNORE INTO memberships (community_id, user_id, role, created_at) VALUES (?, ?, 'member', ?)", [cid, u.id, NOW]);
+      // Threaded discussions with votes
+      for (const [ti, title] of (COMMUNITY_POSTS[slug] ?? []).entries()) {
+        const created = NOW - int(2, 90) * HOUR;
+        const root = insertPost(pick(users.slice(2)).id, title, created, { community: cid });
+        const thread: { id: string; depth: number; at: number }[] = [{ id: root, depth: 0, at: created }];
+        const n = int(3, 9) + (ti === 0 ? 6 : 0);
+        for (let k = 0; k < n; k++) {
+          const parent = rand() < 0.45 ? thread[0] : pick(thread.filter((x) => x.depth < 4));
+          const at = Math.min(NOW - 60_000, parent.at + int(3, 240) * 60_000);
+          const id = insertPost(pick(users.slice(2)).id, pick(COMMENTS), at, { reply: { id: parent.id, root }, community: cid });
+          thread.push({ id, depth: parent.depth + 1, at });
+        }
+        for (const t of thread) for (const u of users) {
+          const r = rand();
+          if (r < (t.depth === 0 ? 0.55 : 0.22)) run("INSERT OR IGNORE INTO community_votes (user_id, post_id, value, created_at) VALUES (?, ?, ?, ?)", [u.id, t.id, r < 0.04 ? -1 : 1, NOW]);
+        }
+      }
     }
+    run("UPDATE posts SET score = (SELECT coalesce(sum(value), 0) FROM community_votes v WHERE v.post_id = posts.id), reply_count = (SELECT count(*) FROM posts c WHERE c.reply_to_id = posts.id) WHERE community_id IS NOT NULL");
 
     // News: fictional outlets on example.* domains
     for (const [id, name, home] of NEWS_SOURCES) run("INSERT INTO news_sources (id, name, homepage, verified) VALUES (?, ?, ?, 1)", [id, name, home]);
@@ -361,7 +433,26 @@ async function main() {
       ]);
     });
 
-    run("INSERT INTO site_settings (key, value) VALUES ('banner', ?)", [JSON.stringify({ text: "City council passes downtown bike lane plan 5-2 — sample breaking banner, edit it in Admin", url: null, level: "breaking", setAt: NOW })]);
+    run("INSERT INTO site_settings (key, value) VALUES ('banner', ?)", [JSON.stringify({ text: "City council passes downtown bike lane plan 5-2 after four-hour meeting", url: "/news/story/bikelanes", level: "breaking", setAt: NOW })]);
+
+    // Live story pages with timelines (sample content from fictional outlets)
+    const reporter = byHandle.get("maria_lopez")!.id;
+    for (const [key, title, summary, section, tag, status, updates] of STORIES) {
+      run("INSERT INTO stories (key, title, summary, section, tag, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [key, title, summary, section, tag, status, NOW - updates.length * 40 * 60_000, NOW - 4 * 60_000]);
+      updates.forEach(([body, kind], i) =>
+        run("INSERT INTO story_updates (id, story_key, body, kind, author_id, source_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", [
+          newId() + key + i, key, body, kind, i % 3 === 2 ? null : reporter, i % 3 === 2 ? NEWS_SOURCES[i % NEWS_SOURCES.length][0] : null, NOW - (updates.length - i) * 35 * 60_000 + 60_000,
+        ]),
+      );
+      if (tag) for (let k = 0; k < 4; k++) insertPost(pick(users.slice(2)).id, `${pick(STORY_TAKES)} #${tag}`, NOW - int(5, 300) * 60_000);
+    }
+
+    // Live: two shows on air now, three scheduled
+    for (const [title, kind, handle, startMin, desc, tag, viewers] of LIVE) {
+      run("INSERT INTO live_events (id, kind, title, host_id, starts_at, ends_at, created_at, description, tag, viewers) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)", [
+        newId() + handle, kind, title, byHandle.get(handle)!.id, NOW + startMin * 60_000, NOW, desc, tag, viewers,
+      ]);
+    }
 
     // A few open reports so the admin queue isn't empty
     const spamId = insertPost(byHandle.get("night_owl_ike")!.id, "Sample reported post for the admin queue (pretend this was spam).", NOW - 5 * HOUR);

@@ -1,6 +1,6 @@
 // Minimal service worker: makes the app installable and shows an offline page.
 // Network-first for pages; never caches API responses or user media.
-const CACHE = "ts-v1";
+const CACHE = "ts-v2";
 const OFFLINE = "/offline.html";
 
 self.addEventListener("install", (e) => {

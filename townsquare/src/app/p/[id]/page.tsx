@@ -5,6 +5,7 @@ import { getViewer } from "@/lib/session";
 import { Composer } from "@/components/Composer";
 import { PageHeader } from "@/components/PageHeader";
 import { PostCard } from "@/components/PostCard";
+import { EmptyState } from "@/components/ui/States";
 
 export const dynamic = "force-dynamic";
 
@@ -23,20 +24,19 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   const { post, ancestors, replies } = thread;
   return (
     <>
-      <PageHeader title={post.replyTo ? "Thread" : "Post"} back />
-      {ancestors.map((a) => (
-        <PostCard key={a.id} post={a} threadLine />
-      ))}
+      <PageHeader title={post.replyTo ? "Thread" : "Post"} back compact />
+      {ancestors.map((a) => <PostCard key={a.id} post={a} threadLine />)}
       <PostCard key={post.id} post={post} focus />
       {viewer && !post.gone && (
         <div className="border-b border-line">
           <Composer compact replyTo={post} />
         </div>
       )}
+      {replies.length > 0 && <h2 className="kicker border-b border-line px-4 py-3 text-ink-3 sm:px-5">{replies.length} repl{replies.length === 1 ? "y" : "ies"}</h2>}
       {replies.length === 0 ? (
-        !post.gone && <p className="px-6 py-10 text-center text-muted">No replies yet.</p>
+        !post.gone && <EmptyState art="community" title="No replies yet" body="Be the first to reply." />
       ) : (
-        replies.map((r) => <PostCard key={r.id} post={r} />)
+        replies.map((r, i) => <PostCard key={r.id} post={r} index={i} />)
       )}
     </>
   );

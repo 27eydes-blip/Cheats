@@ -254,6 +254,37 @@ CREATE TABLE IF NOT EXISTS news_items (
 );
 CREATE INDEX IF NOT EXISTS news_section ON news_items(section, published_at DESC);
 
+-- Community up/down votes (Stage 2 preview). posts.score holds the sum.
+CREATE TABLE IF NOT EXISTS community_votes (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  post_id TEXT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  value   INTEGER NOT NULL CHECK (value IN (-1, 1)),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, post_id)
+);
+
+-- Live story pages: one row per developing story, with a timeline of updates.
+CREATE TABLE IF NOT EXISTS stories (
+  key        TEXT PRIMARY KEY,
+  title      TEXT NOT NULL,
+  summary    TEXT NOT NULL DEFAULT '',
+  section    TEXT NOT NULL DEFAULT 'Top Stories',
+  tag        TEXT,                -- hashtag whose posts form the community thread
+  status     TEXT NOT NULL DEFAULT 'developing' CHECK (status IN ('live','developing','ended')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS story_updates (
+  id         TEXT PRIMARY KEY,
+  story_key  TEXT NOT NULL REFERENCES stories(key) ON DELETE CASCADE,
+  body       TEXT NOT NULL,
+  kind       TEXT NOT NULL DEFAULT 'update' CHECK (kind IN ('update','key','quote')),
+  author_id  TEXT REFERENCES users(id) ON DELETE SET NULL,
+  source_id  TEXT REFERENCES news_sources(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS story_updates_key ON story_updates(story_key, created_at DESC);
+
 -- Stage 2+ live blogs / Stage 4 streams
 CREATE TABLE IF NOT EXISTS live_events (
   id         TEXT PRIMARY KEY,

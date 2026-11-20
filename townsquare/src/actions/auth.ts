@@ -26,7 +26,7 @@ export async function signupAction(_: Result | null, form: FormData): Promise<Re
     } as never);
     await startSession(user.id);
   });
-  if (res.ok) redirect("/?welcome=1");
+  if (res.ok) redirect("/welcome");
   return res;
 }
 

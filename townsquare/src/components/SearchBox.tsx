@@ -17,15 +17,15 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
       className="relative"
     >
       <label htmlFor="site-search" className="sr-only">Search</label>
-      <SearchIcon className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" size={18} />
+      <SearchIcon className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-3" size={18} />
       <input
         id="site-search"
         type="search"
         value={q}
         autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search posts, people, #tags"
-        className="input rounded-full bg-surface pl-11"
+        placeholder="Search posts, people, #topics"
+        className="input !rounded-full !bg-surface-2 !pl-11 !ring-0 focus:!bg-surface"
         enterKeyHint="search"
       />
     </form>

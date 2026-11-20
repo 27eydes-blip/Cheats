@@ -1,105 +1,254 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* One accent color for the whole product: change --accent here. */
-:root {
-  --accent: #1d4ed8;          /* deep blue */
-  --accent-strong: #1e40af;
-  --accent-soft: #e8efff;
-  --breaking: #c8102e;        /* breaking-news bar */
-  --bg: #ffffff;
-  --surface: #f5f7fa;
-  --fg: #0b1220;
-  --muted: #536071;           /* 7:1 on white */
-  --border: #e3e7ee;
-  --danger: #b42318;
-  --success: #067647;
-  color-scheme: light;
-}
-.dark {
-  --accent: #5b8cff;
-  --accent-strong: #7aa2ff;
-  --accent-soft: #14213d;
-  --breaking: #e23b4e;
-  --bg: #0a0e14;
-  --surface: #121821;
-  --fg: #eef2f7;
-  --muted: #9aa6b5;
-  --border: #232c38;
-  --danger: #f97066;
-  --success: #47cd89;
-  color-scheme: dark;
-}
-
+/* Tailwind reads the tokens, so utilities follow the active theme. */
 @theme inline {
-  --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-strong);
-  --color-accent-soft: var(--accent-soft);
-  --color-breaking: var(--breaking);
-  --color-bg: var(--bg);
+  --color-canvas: var(--canvas);
   --color-surface: var(--surface);
-  --color-fg: var(--fg);
-  --color-muted: var(--muted);
-  --color-line: var(--border);
-  --color-danger: var(--danger);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-breaking: var(--breaking);
+  --color-live: var(--live);
   --color-success: var(--success);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-display);
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --shadow-3: var(--shadow-3);
+  --shadow-glow: var(--glow);
+  --ease-spring: var(--ease-spring);
+  --ease-out: var(--ease-out);
 }
 
 html {
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--canvas);
+  color: var(--ink-1);
   -webkit-tap-highlight-color: transparent;
   text-size-adjust: 100%;
+  font-feature-settings: "cv11", "ss01", "ss03";
 }
 body {
-  background: var(--bg);
+  background: var(--canvas);
   min-height: 100dvh;
+  font-size: var(--fs-body);
+  line-height: 1.5;
 }
+::selection { background: var(--accent-ring); }
 
-/* Visible keyboard focus everywhere, never on mouse click. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
-@utility btn {
-  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+/* ---------- type ---------- */
+@utility font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: var(--track-tight);
 }
-@utility btn-primary {
-  @apply btn bg-accent text-white hover:bg-accent-strong;
+@utility text-display { font-size: var(--fs-display); line-height: 1.04; }
+@utility text-h1 { font-size: var(--fs-h1); line-height: 1.12; }
+@utility text-h2 { font-size: var(--fs-h2); line-height: 1.2; }
+@utility text-h3 { font-size: var(--fs-h3); line-height: 1.3; }
+@utility kicker {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-@utility btn-outline {
-  @apply btn border border-line bg-bg text-fg hover:bg-surface;
+@utility num { font-variant-numeric: tabular-nums; }
+
+/* ---------- surfaces ---------- */
+@utility glass {
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
 }
-@utility btn-ghost {
-  @apply btn text-fg hover:bg-surface;
-}
-@utility btn-danger {
-  @apply btn bg-danger text-white hover:opacity-90;
-}
-@utility input {
-  @apply w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-[16px] text-fg placeholder:text-muted focus:border-accent focus:outline-none;
-}
-@utility label {
-  @apply mb-1 block text-sm font-semibold;
+@utility glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(22px) saturate(1.8);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
 }
 @utility card {
-  @apply rounded-2xl border border-line bg-bg;
+  --avatar-gap: var(--surface);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+@utility hairline { border-color: var(--line); }
+@utility bg-accent-grad { background-image: var(--accent-grad); }
+@utility text-accent-grad {
+  background-image: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
+/* ---------- controls (legacy class names map onto ui/Button styles) ---------- */
+@utility btn {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--r-pill);
+  padding-inline: 1.125rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform var(--dur-micro) var(--ease-out), background-color var(--dur-std), box-shadow var(--dur-std), color var(--dur-std), opacity var(--dur-std);
+  &:active:not(:disabled) { transform: scale(0.96); }
+  &:disabled { cursor: not-allowed; opacity: 0.45; }
+}
+@utility btn-primary {
+  @apply btn;
+  background-image: var(--accent-grad);
+  color: var(--on-accent);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 4px 14px rgb(67 56 230 / 0.28);
+  &:hover:not(:disabled) { box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 6px 22px rgb(67 56 230 / 0.42); }
+}
+@utility btn-outline {
+  @apply btn;
+  background: var(--surface);
+  color: var(--ink-1);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  &:hover:not(:disabled) { background: var(--surface-2); }
+}
+@utility btn-ghost {
+  @apply btn;
+  color: var(--ink-1);
+  &:hover:not(:disabled) { background: var(--surface-2); }
+}
+@utility btn-danger {
+  @apply btn;
+  background: var(--danger);
+  color: #fff;
+  &:hover:not(:disabled) { filter: brightness(1.08); }
+}
+@utility btn-ink {
+  @apply btn;
+  background: var(--ink-1);
+  color: var(--canvas);
+  &:hover:not(:disabled) { opacity: 0.88; }
+}
+@utility input {
+  width: 100%;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  padding: 0.7rem 0.9rem;
+  font-size: 16px;
+  color: var(--ink-1);
+  transition: border-color var(--dur-std), box-shadow var(--dur-std);
+  &::placeholder { color: var(--ink-3); }
+  &:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+}
+@utility label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-1);
+}
+
+/* ---------- skeleton shimmer ---------- */
 @utility skeleton {
-  @apply animate-pulse rounded bg-surface;
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* ---------- motion ---------- */
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes live-ring { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.04); } }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(1); } 35% { transform: scale(0.78); } 70% { transform: scale(1.22); } 100% { transform: scale(1); } }
+@keyframes spin-once { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes bounce-down { 0% { transform: translateY(0); } 40% { transform: translateY(3px) scaleY(0.9); } 70% { transform: translateY(-3px); } 100% { transform: none; } }
+@keyframes burst { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); } }
+@keyframes ring-burst { 0% { opacity: 0.7; transform: scale(0.4); } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes slide-down { from { opacity: 0; transform: translateY(-120%); } to { opacity: 1; transform: none; } }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scale-in { from { opacity: 0; transform: scale(0.96) translateY(4px); } to { opacity: 1; transform: none; } }
+
+@utility animate-enter { animation: enter var(--dur-std) var(--ease-out) both; }
+@utility animate-live { animation: live-pulse 1.8s ease-out infinite; }
+@utility animate-pop { animation: pop var(--dur-emph) var(--ease-spring); }
+@utility animate-spin-once { animation: spin-once 520ms var(--ease-out); }
+@utility animate-bounce-down { animation: bounce-down var(--dur-emph) var(--ease-spring); }
+@utility animate-slide-down { animation: slide-down var(--dur-emph) var(--ease-spring) both; }
+@utility animate-fade-in { animation: fade-in var(--dur-std) var(--ease-out) both; }
+@utility animate-scale-in { animation: scale-in var(--dur-std) var(--ease-out) both; }
+
+/* Offscreen feed items skip layout and paint until scrolled near (cheap virtualization). */
+@utility cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-dialog::backdrop { background: rgb(0 0 0 / 0.5); }
+dialog::backdrop { background: rgb(5 7 11 / 0.55); backdrop-filter: blur(4px); }
+dialog[open] { animation: scale-in var(--dur-std) var(--ease-out); }
 
-/* Bottom padding so content clears the mobile tab bar and the iPhone home indicator */
-.pb-tabbar { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
-@media (min-width: 640px) { .pb-tabbar { padding-bottom: 2rem; } }
+/* Space so content clears the floating mobile tab bar and the home indicator. */
+.pb-tabbar { padding-bottom: calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom)); }
+@media (min-width: 640px) { .pb-tabbar { padding-bottom: 3rem; } }
+
+@keyframes roll-in-up { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes roll-out-up { from { transform: none; opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+@keyframes roll-in-down { from { transform: translateY(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes roll-out-down { from { transform: none; opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+
+/* Phone chrome: the app bar slides away while reading and returns on scroll up. */
+.appbar { transition: transform var(--dur-emph) var(--ease-out); }
+@media (max-width: 639px) {
+  [data-chrome="hidden"] .appbar { transform: translateY(-100%); }
+  :root { --sub-top: calc(var(--header-h) + env(safe-area-inset-top)); }
+  [data-chrome="hidden"] { --sub-top: 0px; }
+}
+@media (min-width: 640px) { :root { --sub-top: 0px; } }
+.sticky-sub { position: sticky; top: var(--sub-top); transition: top var(--dur-emph) var(--ease-out); }

@@ -278,3 +278,47 @@ begin
 end $$;
 create trigger likes_count after insert or delete on likes for each row execute function bump_counter('like_count');
 create trigger reposts_count after insert or delete on reposts for each row execute function bump_counter('repost_count');
+
+-- ---------- design remodel additions: onboarding, votes, live stories, live metadata, image placeholders ----------
+alter table public.profiles add column if not exists interests jsonb not null default '[]';
+alter table public.profiles add column if not exists onboarded boolean not null default false;
+alter table public.media add column if not exists blur text;
+alter table public.live_events add column if not exists tag text;
+alter table public.live_events add column if not exists description text not null default '';
+alter table public.live_events add column if not exists viewers int not null default 0;
+
+create table public.community_votes (
+  user_id uuid references profiles(id) on delete cascade,
+  post_id uuid references posts(id) on delete cascade,
+  value smallint not null check (value in (-1, 1)),
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+alter table community_votes enable row level security;
+-- Votes are private; only the totals (posts.score) are public.
+create policy "own votes" on community_votes for select using (user_id = auth.uid());
+create policy "vote on community posts" on community_votes for insert with check (
+  user_id = auth.uid() and exists (select 1 from posts p where p.id = post_id and p.community_id is not null and p.deleted_at is null and p.removed_at is null));
+create policy "change own vote" on community_votes for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "clear own vote" on community_votes for delete using (user_id = auth.uid());
+
+create table public.stories (
+  key text primary key, title text not null, summary text not null default '', section text not null default 'Top Stories',
+  tag text, status text not null default 'developing' check (status in ('live','developing','ended')),
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table public.story_updates (
+  id uuid primary key default gen_random_uuid(),
+  story_key text not null references stories(key) on delete cascade,
+  body text not null, kind text not null default 'update' check (kind in ('update','key','quote')),
+  author_id uuid references profiles(id) on delete set null,
+  source_id uuid references news_sources(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+alter table stories enable row level security;
+alter table story_updates enable row level security;
+create policy "stories public" on stories for select using (true);
+create policy "story updates public" on story_updates for select using (true);
+create policy "admins write stories" on stories for all using (is_admin()) with check (is_admin());
+create policy "verified newsroom accounts post updates" on story_updates for insert with check (
+  is_admin() or (author_id = auth.uid() and exists (select 1 from profiles where id = auth.uid() and verified)));

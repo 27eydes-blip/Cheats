@@ -27,7 +27,7 @@ export type PostView = {
   author: UserMini;
   replyTo: { id: string; handle: string } | null;
   rootId: string | null;
-  media: { id: string; url: string; alt: string; width: number | null; height: number | null }[];
+  media: { id: string; url: string; alt: string; width: number | null; height: number | null; blur: string | null }[];
   link: { url: string; title: string | null; domain: string } | null;
   poll: PollView | null;
   quote: PostView | null;
@@ -78,8 +78,8 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
   );
   const byId = new Map(rows.map((r) => [r.id, r]));
 
-  const media = all<{ id: string; post_id: string; alt: string; width: number | null; height: number | null }>(
-    `SELECT id, post_id, alt, width, height FROM media WHERE post_id IN (${ph}) ORDER BY position`,
+  const media = all<{ id: string; post_id: string; alt: string; width: number | null; height: number | null; blur: string | null }>(
+    `SELECT id, post_id, alt, width, height, blur FROM media WHERE post_id IN (${ph}) ORDER BY position`,
     uniq,
   );
   const polls = all<{ id: string; post_id: string; closes_at: number }>(`SELECT id, post_id, closes_at FROM polls WHERE post_id IN (${ph})`, uniq);
@@ -123,6 +123,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
   const quotes = depth === 0 ? new Map(hydrate(rows.filter((r) => r.quote_of_id).map((r) => r.quote_of_id!), viewerId, 1).map((q) => [q.id, q])) : new Map<string, PostView>();
 
   const t = now();
+  const live = liveHostIds();
   const out: PostView[] = [];
   for (const id of ids) {
     const r = byId.get(id);
@@ -136,10 +137,10 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       createdAt: r.created_at,
       editedAt: r.edited_at,
       gone,
-      author: toMini({ id: r.author_id, handle: r.a_handle, display_name: r.a_display_name, avatar_media_id: r.a_avatar, verified: r.a_verified }),
+      author: { ...toMini({ id: r.author_id, handle: r.a_handle, display_name: r.a_display_name, avatar_media_id: r.a_avatar, verified: r.a_verified }), live: live.has(r.author_id) },
       replyTo: r.reply_to_id ? { id: r.reply_to_id, handle: parentHandles.get(r.reply_to_id) ?? "unknown" } : null,
       rootId: r.root_id,
-      media: gone ? [] : media.filter((m) => m.post_id === r.id).map((m) => ({ id: m.id, url: mediaUrl(m.id)!, alt: m.alt, width: m.width, height: m.height })),
+      media: gone ? [] : media.filter((m) => m.post_id === r.id).map((m) => ({ id: m.id, url: mediaUrl(m.id)!, alt: m.alt, width: m.width, height: m.height, blur: m.blur })),
       link: !gone && r.link_url ? { url: r.link_url, title: r.link_title, domain: r.link_domain ?? "" } : null,
       poll:
         poll && !gone
@@ -166,6 +167,17 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
   return out;
 }
 
+/** Accounts hosting a stream, audio room, or debate right now (they get a pulsing ring). */
+export function liveHostIds(): Set<string> {
+  const t = now();
+  return new Set(
+    all<{ host_id: string }>(
+      "SELECT host_id FROM live_events WHERE host_id IS NOT NULL AND kind != 'liveblog' AND starts_at <= ? AND (ends_at IS NULL OR ends_at > ?)",
+      [t, t],
+    ).map((r) => r.host_id),
+  );
+}
+
 export function getPostView(id: string, viewerId: string | null) {
   return hydrate([id], viewerId)[0] ?? null;
 }
@@ -177,6 +189,7 @@ export type NewPost = {
   mediaIds?: string[];
   alts?: string[];
   poll?: { options: string[]; durationHours: number } | null;
+  communityId?: string | null;
 };
 
 function linkCard(body: string) {
@@ -220,14 +233,21 @@ export function createPost(author: UserRow, input: NewPost): string {
   const parent = input.replyToId ? visibleTarget(input.replyToId, author.id) : null;
   const quoted = input.quoteOfId ? visibleTarget(input.quoteOfId, author.id) : null;
   const link = mediaIds.length || poll ? null : linkCard(body);
+  // Replies inherit the community of their parent; new community posts require membership.
+  const communityId = parent ? (get<{ community_id: string | null }>("SELECT community_id FROM posts WHERE id = ?", [parent.id])?.community_id ?? null) : (input.communityId ?? null);
+  if (communityId && !parent) {
+    const m = get<{ role: string }>("SELECT role FROM memberships WHERE community_id = ? AND user_id = ?", [communityId, author.id]);
+    if (!m) throw new AppError("Join this community to post in it.");
+    if (m.role === "banned") throw new AppError("You're banned from this community.", "forbidden");
+  }
 
   const id = newId();
   const t = now();
   tx(() => {
     run(
-      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, link_url, link_title, link_domain, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, link?.url ?? null, link?.title ?? null, link?.domain ?? null, t],
+      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, link_url, link_title, link_domain, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, communityId, link?.url ?? null, link?.title ?? null, link?.domain ?? null, t],
     );
     mediaIds.forEach((mid, i) => {
       const res = run("UPDATE media SET post_id = ?, position = ?, alt = ? WHERE id = ? AND owner_id = ? AND post_id IS NULL AND kind = 'image'", [

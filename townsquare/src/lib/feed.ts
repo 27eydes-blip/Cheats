@@ -211,17 +211,33 @@ export function searchUsers(q: string, viewerId: string | null, limit = 20) {
   return rows.map((r) => ({ ...toMini(r), bio: r.bio, viewerFollows: following.has(r.id) }));
 }
 
-export type Trend = { tag: string; posts: number };
+export type Trend = { tag: string; posts: number; series: number[]; rising: boolean };
 
-/** Hashtags with the most posts lately; widens the window when things are quiet. */
+/**
+ * Hashtags with the most posts lately; widens the window when things are quiet.
+ * Each trend carries 12 buckets of post counts across the window (for sparklines).
+ */
 export function trending(limit = 10): Trend[] {
   for (const hours of [24, 72, 24 * 7, 24 * 30]) {
+    const since = now() - hours * 3_600_000;
     const rows = all<{ tag: string; n: number }>(
-      `SELECT h.tag, count(*) n FROM post_hashtags h JOIN posts p ON p.id = h.post_id
+      `SELECT lower(h.tag) tag, count(*) n FROM post_hashtags h JOIN posts p ON p.id = h.post_id
        WHERE h.created_at > ? AND ${LIVE} GROUP BY lower(h.tag) ORDER BY n DESC, max(h.created_at) DESC LIMIT ?`,
-      [now() - hours * 3_600_000, limit],
+      [since, limit],
     );
-    if (rows.length >= Math.min(5, limit) || hours === 24 * 30) return rows.map((r) => ({ tag: r.tag.toLowerCase(), posts: r.n }));
+    if (rows.length >= Math.min(5, limit) || hours === 24 * 30) {
+      const bucket = (hours * 3_600_000) / 12;
+      return rows.map((r) => {
+        const series = Array(12).fill(0) as number[];
+        for (const { created_at } of all<{ created_at: number }>(
+          `SELECT h.created_at FROM post_hashtags h JOIN posts p ON p.id = h.post_id WHERE lower(h.tag) = ? AND h.created_at > ? AND ${LIVE}`,
+          [r.tag, since],
+        )) series[Math.min(11, Math.floor((created_at - since) / bucket))]++;
+        const recent = series.slice(8).reduce((a, b) => a + b, 0);
+        const earlier = series.slice(0, 8).reduce((a, b) => a + b, 0) / 2;
+        return { tag: r.tag, posts: r.n, series, rising: recent > earlier };
+      });
+    }
   }
   return [];
 }

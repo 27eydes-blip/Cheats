@@ -17,7 +17,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   const sp = await searchParams;
   if (await getViewer()) redirect(sp.next?.startsWith("/") ? sp.next : "/");
   return (
-    <AuthCard title="Log in" google={!!process.env.GOOGLE_CLIENT_ID} notice={sp.deleted ? "Your account was deleted. Sorry to see you go." : sp.error ? (ERRORS[sp.error] ?? "Sign-in failed.") : undefined}>
+    <AuthCard title="Welcome back" subtitle="Log in to see what your people are talking about." google={!!process.env.GOOGLE_CLIENT_ID} notice={sp.deleted ? "Your account was deleted. Sorry to see you go." : sp.error ? (ERRORS[sp.error] ?? "Sign-in failed.") : undefined}>
       <LoginForm next={sp.next ?? "/"} />
     </AuthCard>
   );

@@ -3,7 +3,10 @@
 A social + news platform by **Gleyde Technologies, LLC**: follow people, join communities, and get live
 news in one feed you control. *Townsquare* is a working name — change `APP_NAME` in `src/config.ts`.
 
-This folder holds **Stage 1 (MVP)**. See [PLAN.md](PLAN.md) for the architecture and the stage roadmap.
+This folder holds **Stage 1 (MVP)** plus the **"modern newsroom meets social" design remodel**.
+See [PLAN.md](PLAN.md) for architecture and roadmap, and [DESIGN.md](DESIGN.md) for the design
+system (audit, tokens, type, components, motion). Every component and state is on the live
+**`/design`** page, in light and dark.
 
 ## What works today (Stage 1)
 
@@ -19,7 +22,11 @@ This folder holds **Stage 1 (MVP)**. See [PLAN.md](PLAN.md) for the architecture
 | Settings | Dark/light/auto theme, larger text, handle, password, hide follower lists, blocked/muted lists, **download my data** (JSON), **delete account** |
 | Legal | Terms, Privacy, Community Guidelines placeholders — **clearly marked as drafts a lawyer must review before launch** |
 | PWA | Installable (manifest, icons, offline page, service worker in production) |
-| Preview tabs | News (sample headlines from fictional outlets), Communities (seeded list), Live (coming soon) |
+| News hub | Magazine layout (lead story, 2-column grid, ranked headlines), section chips, outlet labels on every item, live story pages with timeline, key moments, "How it is covered" outlet strip, and the community thread |
+| Communities | Community pages with banner, join, Hot / New / Top, up/down votes, threaded comments with colored depth lines and collapse |
+| Live | Live-now cards, scheduled shows with countdown and Remind me (per device), player page with live chat (posts tagged with the show's hashtag); video/audio streaming itself is Stage 4 |
+| Onboarding | Sign-up → pick interests → follow suggestions → home town for Local |
+| Desktop extras | Command palette (⌘K / Ctrl K), keyboard shortcuts (j/k move, l like, r reply, n new post, ? help) |
 
 ## Run it
 
@@ -52,6 +59,7 @@ Seeded logins:
    - Windows: run `ipconfig` and look for "IPv4 Address"
 3. With your phone on the **same Wi-Fi**, open `http://<that-ip>:3000` (for example `http://192.168.1.23:3000`).
 4. Add it to your home screen: Safari → Share → **Add to Home Screen**; Chrome → ⋮ → **Add to Home screen**.
+   It opens full-screen with the Townsquare icon and a dark splash screen, and respects the notch and home indicator.
 
 If the page doesn't load, allow Node through your computer's firewall. For the full installable
 app experience (service worker) and to test away from home Wi-Fi, the site needs HTTPS: deploy it
@@ -75,6 +83,13 @@ Create an OAuth client at console.cloud.google.com → APIs & Services → Crede
 Authorized redirect URI: `<APP_URL>/auth/google/callback`. Put `GOOGLE_CLIENT_ID` and
 `GOOGLE_CLIENT_SECRET` in `.env.local`. Until then the button explains it isn't configured.
 
+## Design and quality
+
+- Tokens: `src/styles/tokens.css` (CSS variables, light + dark), mirrored in `src/design/tokens.ts`; Tailwind reads them via `@theme`.
+- Components: `src/components/ui` (primitives) plus feature folders (`post/`, `news/`, `community/`, `live/`, `shell/`).
+- Fonts are self-hosted (Inter + Newsreader variable), so no third-party font requests.
+- Lighthouse (production build, home page): **mobile 98 performance / 100 accessibility / 100 best practices**, desktop 100 / 100 / 100, layout shift 0.
+
 ## Tests
 
 ```bash
@@ -82,7 +97,13 @@ npm test          # vitest: sign up, log in, sessions, post, edit window, replie
                   # polls, follow + Following/For You feeds, block/mute, search/trending,
                   # report → admin queue → remove/suspend, rate limits, spam, XSS-safe links
 npm run typecheck
+npm run test:visual          # Playwright screenshots of 10 pages × phone/desktop × light/dark vs. baselines
+npm run test:visual:update   # accept intentional visual changes
 ```
+
+The visual suite seeds its own database (`data/visual`) and masks times and counts, so it is
+repeatable. Baselines live in `tests/visual/__screenshots__` (rendered with Linux Chromium; a
+different OS can differ by a few pixels).
 
 ## Security notes
 
@@ -114,7 +135,9 @@ tests/               vitest suites
 
 ## Known limits (by design for Stage 1)
 
-- Link cards show the domain and path; they don't fetch page titles yet (a sandboxed fetcher comes in Stage 2 to avoid SSRF).
+- Link cards show the domain and path with generated cover art; they don't fetch real page titles or images yet (a sandboxed fetcher comes in Stage 2 to avoid SSRF).
+- Feed "virtualization" uses `content-visibility: auto` (offscreen posts skip layout and paint) rather than removing DOM nodes.
+- Images use the app's own resizing route (`/api/media/:id?w=`) with blur placeholders instead of `next/image`, because the Next optimizer can't pass the viewer's cookie for private images.
 - Two-factor auth and email verification arrive with Supabase Auth.
 - News, Communities, and Live tabs are read-only previews of Stage 2–4.
 - Search is substring + hashtag; Postgres full-text (already in the schema) replaces it on the swap.

@@ -36,6 +36,7 @@ export type ReportGroup = {
   count: number;
   firstAt: number;
   reportIds: string[];
+  severity: "critical" | "high" | "medium" | "low";
   post: PostView | null;
   user: (UserMini & { status: string; strikes: number }) | null;
 };
@@ -68,6 +69,7 @@ export function reportQueue(adminId: string): ReportGroup[] {
         count: 0,
         firstAt: r.created_at,
         reportIds: [],
+        severity: "low",
         post,
         user: u ? { ...toMini(u), status: u.status, strikes: strikes(u.id) } : null,
       };
@@ -76,12 +78,16 @@ export function reportQueue(adminId: string): ReportGroup[] {
     g.count++;
     g.reportIds.push(r.id);
     if (r.details) g.details.push(r.details);
+    const rank = ["low", "medium", "high", "critical"];
+    const sev = SEVERITY[r.reason] ?? "low";
+    if (rank.indexOf(sev) > rank.indexOf(g.severity)) g.severity = sev;
     const existing = g.reasons.find((x) => x.reason === r.reason);
     if (existing) existing.count++;
     else g.reasons.push({ reason: r.reason, label: REPORT_REASONS[r.reason as keyof typeof REPORT_REASONS] ?? r.reason, count: 1 });
   }
+  const rank = { critical: 0, high: 1, medium: 2, low: 3 } as const;
   const pri = (g: ReportGroup) => (g.reasons.some((r) => PRIORITY.includes(r.reason)) ? 0 : 1);
-  return [...groups.values()].sort((a, b) => pri(a) - pri(b) || b.count - a.count || a.firstAt - b.firstAt);
+  return [...groups.values()].sort((a, b) => rank[a.severity] - rank[b.severity] || pri(a) - pri(b) || b.count - a.count || a.firstAt - b.firstAt);
 }
 
 export function strikes(userId: string) {
@@ -147,7 +153,7 @@ export function moderate(admin: UserRow, p: { targetType: "post" | "user"; targe
   });
 }
 
-export function recentActions(limit = 30) {
+export function recentActions(limit = 20) {
   return all<{ id: string; action: string; note: string; created_at: number; mod_handle: string | null; user_handle: string | null; target_post_id: string | null }>(
     `SELECT a.id, a.action, a.note, a.created_at, a.target_post_id, m.handle mod_handle, u.handle user_handle
      FROM moderation_actions a LEFT JOIN users m ON m.id = a.moderator_id LEFT JOIN users u ON u.id = a.target_user_id
@@ -167,6 +173,29 @@ export function siteStats() {
     openReports: n("SELECT count(*) n FROM reports WHERE status = 'open'"),
   };
 }
+
+/** Daily counts for the last `days` days (oldest first) — feeds the admin sparklines. */
+export function dailySeries(days = 14) {
+  const t = now();
+  const start = t - days * 86_400_000;
+  const series = (sql: string) => {
+    const out = Array(days).fill(0) as number[];
+    for (const { at } of all<{ at: number }>(sql, [start])) out[Math.min(days - 1, Math.floor((at - start) / 86_400_000))]++;
+    return out;
+  };
+  return {
+    posts: series("SELECT created_at at FROM posts WHERE created_at > ?"),
+    signups: series("SELECT created_at at FROM users WHERE created_at > ?"),
+    reports: series("SELECT created_at at FROM reports WHERE created_at > ?"),
+    actions: series("SELECT created_at at FROM moderation_actions WHERE created_at > ?"),
+  };
+}
+
+/** How serious a report reason is; drives the color tags in the admin queue. */
+export const SEVERITY: Record<string, "critical" | "high" | "medium" | "low"> = {
+  sexual_minor: "critical", threat: "critical", self_harm: "high", doxxing: "high", harassment: "high", hate: "high",
+  illegal: "medium", impersonation: "medium", spam: "low", other: "low",
+};
 
 // ---------- breaking-news banner (site setting) ----------
 export type Banner = { text: string; url: string | null; level: "breaking" | "alert" | "info"; setAt: number };

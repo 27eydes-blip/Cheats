@@ -8,7 +8,7 @@ export default async function Page() {
   const jar = await cookies();
   return (
     <>
-      <PageHeader title="Display" back />
+      <PageHeader title="Display" back compact />
       <DisplayForm theme={jar.get("theme")?.value ?? "system"} textSize={jar.get("textsize")?.value ?? "normal"} />
     </>
   );

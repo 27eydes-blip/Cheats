@@ -64,6 +64,7 @@ describe("follow + feeds", () => {
     createPost(a, { body: "100% sure about this" });
     expect(searchPosts("#football", null).items).toHaveLength(2);
     expect(searchPosts("100%", null).items).toHaveLength(1);
-    expect(trending()[0]).toEqual({ tag: "football", posts: 2 });
+    expect(trending()[0]).toMatchObject({ tag: "football", posts: 2 });
+    expect(trending()[0].series.reduce((a, b) => a + b, 0)).toBe(2);
   });
 });

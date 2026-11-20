@@ -23,6 +23,7 @@ export async function createPostAction(form: FormData) {
       body: String(form.get("body") ?? ""),
       replyToId: (form.get("replyToId") as string) || null,
       quoteOfId: (form.get("quoteOfId") as string) || null,
+      communityId: (form.get("communityId") as string) || null,
       mediaIds,
       alts,
       poll: form.get("hasPoll") === "1" ? { options: pollOptions, durationHours: Number(form.get("pollHours") ?? 24) } : null,

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { REPORT_REASONS } from "@/lib/validate";
 import { reportAction } from "@/actions/moderation";
-import { Modal } from "./Modal";
+import { Sheet as Modal } from "./ui/Sheet";
 import { useToast } from "./providers";
 
 /** Report a post or an account. Same reasons and rules for every account. */
@@ -35,7 +35,7 @@ export function ReportDialog({ open, onClose, targetType, targetId, label }: { o
           <legend className="mb-2 font-semibold">What&apos;s wrong?</legend>
           <div className="space-y-1">
             {Object.entries(REPORT_REASONS).map(([k, v]) => (
-              <label key={k} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-surface">
+              <label key={k} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-[12px] px-3 ring-1 ring-transparent transition-colors hover:bg-surface-2 has-[:checked]:bg-accent-soft has-[:checked]:ring-accent/40">
                 <input type="radio" name="reason" value={k} checked={reason === k} onChange={() => setReason(k)} className="h-5 w-5 accent-[var(--accent)]" />
                 <span>{v}</span>
               </label>
@@ -49,7 +49,7 @@ export function ReportDialog({ open, onClose, targetType, targetId, label }: { o
         )}
         <div>
           <label htmlFor="report-details" className="label">
-            Anything else? <span className="font-normal text-muted">(optional)</span>
+            Anything else? <span className="font-normal text-ink-3">(optional)</span>
           </label>
           <textarea id="report-details" value={details} onChange={(e) => setDetails(e.target.value)} maxLength={1000} rows={3} className="input" />
         </div>
@@ -62,7 +62,7 @@ export function ReportDialog({ open, onClose, targetType, targetId, label }: { o
             {pending ? "Sending…" : "Send report"}
           </button>
         </div>
-        <p className="text-xs text-muted">
+        <p className="text-xs text-ink-3">
           You can also block or mute this account. Read the <a className="underline" href="/legal/guidelines">Community Guidelines</a>.
         </p>
       </form>
