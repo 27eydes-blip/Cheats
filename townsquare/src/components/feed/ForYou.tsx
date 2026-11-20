@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { muteTopicAction, notInterestedAction, showMoreAction, trackAction } from "@/actions/feed";
 import type { ForYouItem } from "@/lib/foryou";
 import type { TrackEvent } from "@/lib/interests";
-import { MoreIcon, MuteIcon, PlusIcon, CloseIcon, SparkIcon } from "../icons";
+import { MoreIcon, MuteIcon, PlusIcon, CloseIcon } from "../icons";
 import { useToast, useViewer } from "../providers";
 import { Menu, type MenuItem } from "../ui/Menu";
 
@@ -89,18 +89,15 @@ export function ForYouFrame({ item, onDismiss, children }: { item: Exclude<ForYo
     ...(topic ? [{ label: `Mute topic: ${topic}`, icon: <MuteIcon size={18} />, onSelect: () => act(() => muteTopicAction(item.topic!, true), `${topic} muted. Undo in Settings.`, true) }] : []),
   ];
 
-  const label = item.kind === "post" && item.promoted ? (
-    <span className="rounded-[6px] bg-[rgb(34_211_238/0.14)] px-1.5 py-0.5 text-[10.5px] font-extrabold tracking-[0.1em] text-[var(--wn-cyan-ink)] uppercase ring-1 ring-[rgb(34_211_238/0.30)]">Promoted</span>
-  ) : item.reason ? (
-    <><SparkIcon size={13} className="shrink-0 text-[var(--wn-cyan-ink)]" /><span className="truncate">{item.reason}</span></>
-  ) : null;
+  // "Why am I seeing this": one quiet gray line, indented to line up with the text column.
+  const label = item.kind === "post" && item.promoted ? "Promoted" : item.kind === "post" ? item.reason : null;
   const merged = typeof children === "function";
   return (
     <div ref={ref} role="article" aria-label={item.kind === "story" ? item.story.title : `Dispatch by ${item.post.author.displayName}`} className="relative">
-      {(label || !merged) && (
-        <div className={`flex items-center justify-between gap-2 pl-4 ${merged ? "min-h-8 pt-2.5 pr-4" : "min-h-11 pr-1.5"}`}>
-          <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold text-ink-3">{label}</span>
-          {!merged && <Menu label="Feed options" items={items} button={<MoreIcon size={18} />} buttonClassName="inline-flex h-11 w-11 items-center justify-center rounded-[12px] text-ink-3 hover:bg-white/5 hover:text-ink-1" />}
+      {label && <p className="truncate px-4 pt-2 pl-[68px] text-[12.5px] leading-none text-ink-3">{label}</p>}
+      {!merged && (
+        <div className="absolute top-1.5 right-[104px] z-[1] sm:right-[140px]">
+          <Menu label="Feed options" items={items} button={<MoreIcon size={17} />} buttonClassName="tap flex h-5 w-7 items-center justify-center text-ink-3 hover:text-ink-1" />
         </div>
       )}
       {merged ? children(items) : children}
@@ -118,18 +115,18 @@ export function TrackOpen({ type, id }: { type: "post" | "story"; id: string }) 
   return null;
 }
 
-/** A sponsored card: always labeled, with its own tinted border. Shown only when ads are on in the Control Room. */
+/**
+ * A sponsored row: always labeled, and deliberately quieter than a dispatch
+ * (gray text, no avatar, no image, no color). Shown only when ads are on in the Control Room.
+ */
 export function SponsoredCard({ ad }: { ad: { id: string; sponsor: string; title: string; body: string; url: string } }) {
   return (
-    <aside aria-label={`Sponsored by ${ad.sponsor}`} className="relative overflow-hidden rounded-[var(--r-lg)] bg-[rgb(34_211_238/0.06)] p-4 border border-dashed border-[rgb(34_211_238/0.6)]">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="rounded-[6px] bg-[rgb(34_211_238/0.16)] px-2 py-1 text-[10.5px] leading-none font-extrabold tracking-[0.12em] text-[var(--wn-cyan-ink)] uppercase ring-1 ring-[rgb(34_211_238/0.40)]">Sponsored</span>
-        <span className="truncate text-[12.5px] font-semibold text-ink-2">{ad.sponsor}</span>
-      </div>
-      <a href={ad.url} target="_blank" rel="sponsored noopener noreferrer" className="group block">
-        <span className="block font-display text-[22px] leading-tight font-bold group-hover:text-[var(--wn-cyan-ink)]">{ad.title}</span>
-        {ad.body && <span className="mt-1 block text-[14.5px] text-ink-2">{ad.body}</span>}
-        <span className="mt-3 inline-flex min-h-11 items-center rounded-[10px] px-3 text-[13px] font-bold text-ink-1 ring-1 ring-[rgb(34_211_238/0.50)] group-hover:bg-[rgb(34_211_238/0.12)]">Learn more ↗</span>
+    <aside aria-label={`Sponsored by ${ad.sponsor}`} className="px-4 py-2.5 pl-[68px]">
+      <p className="text-[12.5px] text-ink-3"><span className="rounded-[4px] px-1 py-px font-semibold ring-1 ring-[var(--hairline)]">Sponsored</span> · {ad.sponsor}</p>
+      <a href={ad.url} target="_blank" rel="sponsored noopener noreferrer" className="group mt-1 block">
+        <span className="block text-[14.5px] leading-[20px] font-medium text-ink-2 group-hover:underline">{ad.title}</span>
+        {ad.body && <span className="block text-[13.5px] leading-[19px] text-ink-3">{ad.body}</span>}
+        <span className="tap mt-0.5 inline-block text-[13px] text-ink-3 underline underline-offset-2">Learn more</span>
       </a>
     </aside>
   );

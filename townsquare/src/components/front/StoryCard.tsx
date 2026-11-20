@@ -59,3 +59,56 @@ export function StoryTile({ s, big, flat, rising }: { s: StorySummary; big?: boo
   );
 }
 
+
+/**
+ * A story in the timeline: a flat row with a small side thumbnail, not a card.
+ * Quiet by design: gray meta text, no overlays, no pulsing, no colored numbers.
+ */
+export function StoryRow({ s, rising, lead }: { s: StorySummary; rising?: boolean; /** the top story of the moment */ lead?: boolean }) {
+  return (
+    <Link href={`/news/story/${s.key}`} className="group flex gap-3 px-4 py-2.5">
+      <span className="min-w-0 flex-1">
+        <span className="flex min-w-0 items-center gap-1.5 text-[13px] leading-[19px] text-ink-3">
+          <span className="shrink-0 font-semibold text-ink-2">{lead ? "Top story" : sectionName(s)}</span>
+          {s.status === "live" && <><span aria-hidden="true">·</span><span className="shrink-0">Live</span></>}
+          {s.status === "developing" && <><span aria-hidden="true">·</span><span className="shrink-0">Developing</span></>}
+          {rising && <><span aria-hidden="true">·</span><span className="inline-flex shrink-0 items-center gap-0.5"><FlameIcon size={12} /> Rising</span></>}
+          <span aria-hidden="true">·</span>
+          <span className="shrink-0"><Time ms={s.updatedAt} /></span>
+        </span>
+        <span className="mt-0.5 line-clamp-3 block text-[15px] leading-[21px] font-semibold text-ink-1 group-hover:underline">{s.title}</span>
+        {lead && <span className="mt-0.5 line-clamp-2 block text-[14px] leading-[20px] text-ink-2">{s.summary}</span>}
+        <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-ink-3">
+          {s.source && <span className="truncate">{s.source}</span>}
+          {s.source && <span aria-hidden="true">·</span>}
+          <span className="shrink-0">{s.takes} dispatch{s.takes === 1 ? "" : "es"}</span>
+        </span>
+        {s.teams.length > 0 && <span className="mt-1.5 block"><TeamChips teams={s.teams} linked={false} /></span>}
+      </span>
+      <span className="relative mt-0.5 block h-[76px] w-[76px] shrink-0 overflow-hidden rounded-[12px] ring-1 ring-[var(--hairline)] sm:h-[84px] sm:w-[112px]">
+        <StoryArt seed={s.key} section={s.section} photo={s.photo} width={320} />
+      </span>
+    </Link>
+  );
+}
+
+/** Trending as a plain list for the home sidebar: no big numerals, no colored odds-style figures. */
+export function TrendingList({ stories }: { stories: StorySummary[] }) {
+  return (
+    <section aria-label="Trending" className="rounded-[14px] border border-[var(--hairline)]">
+      <h2 className="px-4 pt-3 pb-1 text-[17px] font-bold">Trending</h2>
+      <ol>
+        {stories.map((s, i) => (
+          <li key={s.key}>
+            <Link href={`/news/story/${s.key}`} className="group block px-4 py-2 hover:bg-white/[0.02]">
+              <span className="block text-[12.5px] text-ink-3">{i + 1} · {sectionName(s)}</span>
+              <span className="line-clamp-2 block text-[14.5px] leading-snug font-semibold text-ink-1 group-hover:underline">{s.title}</span>
+              <span className="block text-[12.5px] text-ink-3">{s.takes} dispatch{s.takes === 1 ? "" : "es"}</span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+      <Link href="/explore" className="block px-4 py-2.5 text-[14px] text-[var(--wn-blue-ink)] hover:underline">Show more</Link>
+    </section>
+  );
+}

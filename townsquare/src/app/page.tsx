@@ -19,6 +19,7 @@ import { debates, latestTakes, voices } from "@/lib/takes";
 import { CHANNELS } from "@/components/shell/channels";
 import { BriefingPromo, DebateTile, HotStories, LeadTile, LiveNowTile, MoreStories, PollTile, QuickTakes, StoryTile, VoicesTile, WireTile } from "@/components/front/Tiles";
 import { EmptyState } from "@/components/ui/States";
+import { StoryRow, TrendingList } from "@/components/front/StoryCard";
 import { APP_NAME } from "@/config";
 import { MarketStrip } from "@/components/markets/LiveQuotes";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
@@ -71,30 +72,24 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
       : { tab: "foryou", exclude: lead.key };
     const pinned = tab.kind === "topic" || tab.kind === "team" ? tabs.some((t) => t.kind === tab.kind && t.key === tab.key) : true;
     return (
-      <div className="mx-auto max-w-[1320px] px-4 lg:px-8 lg:pt-6">
+      <div className="mx-auto max-w-[1080px] lg:px-6">
         <h1 className="sr-only">{APP_NAME} home</h1>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
-          <div id="home-feed" className="min-w-0 space-y-4">
+        <div className="grid lg:grid-cols-[minmax(0,640px)_minmax(0,330px)] lg:justify-center lg:gap-7">
+          <div id="home-feed" className="min-w-0 lg:min-h-screen lg:border-x lg:border-[var(--hairline)]">
             <FeedTabs tabs={tabs} active={tab} />
-            <div className="!mt-0"><LiveWire items={wireItems()} slot="home" /></div>
-            {tab.kind === "foryou" && (
-              <>
-                <LeadTile s={lead} latest={latest} />
-                <div className="lg:hidden"><HotStories stories={hot} row /></div>
-                <div className="hidden lg:block"><MarketStrip initial={indexQuotes} mode={marketMode()} label={marketStatus().label} /></div>
-              </>
-            )}
+            <LiveWire items={wireItems()} slot="home" />
+            {tab.kind === "foryou" && <div role="article" aria-label={lead.title} className="tl-row"><StoryRow s={lead} lead /></div>}
             {tab.kind === "topic" && (
-              <header className="flex items-center justify-between gap-3 pt-1">
-                <h2 className="font-display text-[clamp(1.8rem,1.4rem+1.6vw,2.4rem)] leading-none font-extrabold uppercase">{TOPIC_LABEL[tab.key]}</h2>
+              <header className="tl-row flex items-center justify-between gap-3 px-4 py-2.5">
+                <h2 className="text-[17px] font-bold">{TOPIC_LABEL[tab.key]}</h2>
                 {!pinned && vid && <span className="text-[12.5px] text-ink-3">Tap + to pin this tab</span>}
               </header>
             )}
             {tab.kind === "team" && team && (
-              <header className="flex items-center gap-3 pt-1">
-                <TeamLogo team={team} size="lg" />
+              <header className="tl-row flex items-center gap-3 px-4 py-2.5">
+                <TeamLogo team={team} size="md" />
                 <div className="min-w-0">
-                  <h2 className="truncate font-display text-[clamp(1.6rem,1.3rem+1.4vw,2.2rem)] leading-none font-extrabold uppercase">{team.fullName}</h2>
+                  <h2 className="truncate text-[17px] font-bold">{team.fullName}</h2>
                   <Link href={`/sports/${team.id}`} className="inline-flex min-h-9 items-center text-[13px] font-semibold text-[var(--wn-blue-ink)] hover:text-[var(--wn-cyan-ink)]">Team page →</Link>
                 </div>
               </header>
@@ -129,8 +124,8 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
             />
           </div>
           <aside className="hidden min-w-0 lg:block">
-            <div className="sticky top-[calc(var(--sub-top)+16px)] space-y-5">
-              <HotStories stories={hot} />
+            <div className="quiet sticky top-[calc(var(--sub-top)+16px)] space-y-4 pt-4">
+              <TrendingList stories={hot} />
               {events.some((e) => e.isLive) && <LiveNowTile events={events} />}
               <BriefingPromo minutes={Math.max(4, Math.round((stories.slice(0, 10).reduce((n, s) => n + s.title.split(" ").length + s.summary.split(" ").length, 0) + 600) / 230))} count={Math.min(10, stories.length)} />
               {suggestions.length ? <Suggestions people={suggestions} /> : <VoicesTile voices={people} />}
