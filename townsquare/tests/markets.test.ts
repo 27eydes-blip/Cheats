@@ -1,3 +1,5 @@
+import { getHistory } from "@/lib/markets/history";
+import { recentSessions } from "@/lib/markets/clock";
 import { beforeEach, describe, expect, it } from "vitest";
 import { marketStatus } from "@/lib/markets/clock";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
@@ -51,5 +53,35 @@ describe("watchlist", () => {
     expect(getWatchlist(u.id)).toEqual([...DEFAULT_WATCHLIST.filter((s) => s !== "AAPL"), "NFLX"]);
     expect(() => addToWatchlist(u.id, "not a ticker")).toThrow("U.S. ticker");
     expect(addToWatchlist(u.id, "brk.b")).toContain("BRK.B");
+  });
+});
+
+describe("price history (demo)", () => {
+  const WED_2PM_ET = Date.parse("2026-11-18T19:00:00Z");
+  const SAT_NOON_ET = Date.parse("2026-11-21T17:00:00Z");
+
+  it("weekends point at Friday's session", () => {
+    expect(recentSessions(3, SAT_NOON_ET)).toEqual(["2026-11-18", "2026-11-19", "2026-11-20"]);
+  });
+
+  it("returns well-formed candles for every range", async () => {
+    for (const [range, min] of [["1D", 50], ["5D", 50], ["1M", 22], ["1Y", 252]] as const) {
+      const h = await getHistory("AAPL", range, WED_2PM_ET);
+      expect(h.available).toBe(true);
+      expect(h.candles.length).toBeGreaterThanOrEqual(min);
+      for (const c of h.candles) {
+        expect(c.h).toBeGreaterThanOrEqual(Math.max(c.o, c.c) - 1e-9);
+        expect(c.l).toBeLessThanOrEqual(Math.min(c.o, c.c) + 1e-9);
+        expect(c.v).toBeGreaterThan(0);
+      }
+      expect(h.candles.map((c) => c.t)).toEqual([...h.candles.map((c) => c.t)].sort((a, b) => a - b));
+    }
+  });
+
+  it("daily history ends at the live quote and joins yesterday's close", async () => {
+    const [q] = await getQuotes(["MSFT"], WED_2PM_ET);
+    const { candles } = await getHistory("MSFT", "1M", WED_2PM_ET);
+    expect(candles.at(-1)!.c).toBeCloseTo(q.price, 6);
+    expect(candles.at(-2)!.c).toBeCloseTo(q.prevClose, 6);
   });
 });

@@ -1,4 +1,5 @@
 import { LIMITS } from "@/config";
+import { publish } from "./realtime";
 import { AppError } from "./errors";
 import { all, get, newId, now, run, tx } from "./db";
 import { rateLimit } from "./ratelimit";
@@ -312,6 +313,7 @@ export function createPost(author: UserRow, input: NewPost): string {
       notify(quoted.author_id, author.id, "quote", id);
     }
   });
+  if (storyKey && !parent && !communityId) publish({ type: "take", storyKey, postId: id });
   return id;
 }
 

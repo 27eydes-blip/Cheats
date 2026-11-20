@@ -17,7 +17,7 @@ export function LiveCard({ e }: { e: LiveEventView }) {
         <span className="mono flex items-center gap-1 text-[11px] text-white/75"><EyeIcon size={13} /> {e.viewers.toLocaleString("en-US")}</span>
       </div>
       <div className="relative aspect-video overflow-hidden">
-        <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105"><StoryArt seed={e.id + e.title} section="Top Stories" /></div>
+        <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105"><StoryArt seed={e.title} section="Top Stories" /></div>
         <span className="absolute top-1/2 left-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[4px] bg-black/40 ring-1 ring-white/40 backdrop-blur-sm">
           {e.kind === "audio" ? <MicIcon size={24} /> : <PlayIcon size={22} />}
         </span>

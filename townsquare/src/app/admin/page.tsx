@@ -7,7 +7,8 @@ import { Sparkline } from "@/components/ui/Sparkline";
 import { EmptyState } from "@/components/ui/States";
 import { ShieldIcon } from "@/components/icons";
 import { Time } from "@/components/Time";
-import { BannerComposer, ReportCard } from "./AdminClient";
+import { BannerComposer, ReportCard, StoryPhotos } from "./AdminClient";
+import { listStories } from "@/lib/news";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -79,6 +80,12 @@ export default async function Admin() {
         <h2 id="banner" className="font-display text-h1 font-semibold">Live Wire composer</h2>
         <p className="text-[13.5px] text-ink-3">The breaking item leads the Live Wire on every page. Link it to a live story (e.g. /news/story/infrastructure) or an outside article.</p>
         <BannerComposer current={banner} />
+      </section>
+
+      <section aria-labelledby="photos" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">
+        <h2 id="photos" className="font-display text-h1 font-semibold">Story photos</h2>
+        <p className="text-[13.5px] text-ink-3">Stories without a photo use generated cover art in the house colors.</p>
+        <StoryPhotos stories={listStories(60).map(({ key, title, section, photo }) => ({ key, title, section, photo }))} />
       </section>
 
       <section aria-labelledby="log" className="mt-8 border-t border-line px-4 pt-6 pb-8 sm:px-6">

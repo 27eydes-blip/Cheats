@@ -14,6 +14,8 @@ import { ChannelDial } from "@/components/shell/ChannelDial";
 import { Dock } from "@/components/shell/Dock";
 import { LiveWire, type WireItem } from "@/components/shell/LiveWire";
 import { Masthead } from "@/components/shell/Masthead";
+import { NavProgress } from "@/components/shell/NavProgress";
+import { InstallPrompt, PhoneGestures } from "@/components/shell/PhoneGestures";
 import { inter, mono, newsreader } from "./fonts";
 import "./globals.css";
 
@@ -87,6 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Skip to content
         </a>
         <Providers viewer={clientViewer}>
+          <Suspense fallback={null}><NavProgress /></Suspense>
           <Masthead unread={unread} />
           <div className="sticky top-0 z-30 shadow-[0_1px_0_var(--rule)]">
             <Suspense fallback={<div className="h-[var(--dial-h)] border-b border-rule bg-paper" />}>
@@ -104,6 +107,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </main>
           <Dock liveCount={liveCount} />
           <RegisterSW />
+          <PhoneGestures />
+          <InstallPrompt />
         </Providers>
       </body>
     </html>

@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Banner, ModAction, ReportGroup } from "@/lib/moderation";
-import { moderateAction, setBannerAction } from "@/actions/moderation";
+import { moderateAction, setBannerAction, setStoryPhotoAction } from "@/actions/moderation";
+import type { StorySummary } from "@/lib/news";
+import { StoryArt } from "@/components/front/StoryArt";
 import { Avatar } from "@/components/ui/Avatar";
 import { SeverityTag } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -165,5 +167,54 @@ export function BannerComposer({ current }: { current: Banner | null }) {
         {current && <Button variant="secondary" disabled={pending} onClick={() => submit(true)}>Clear</Button>}
       </div>
     </div>
+  );
+}
+
+/** Story photos: upload with alt text and a credit, preview, or go back to generated art. */
+export function StoryPhotos({ stories }: { stories: Pick<StorySummary, "key" | "title" | "section" | "photo">[] }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [key, setKey] = useState(stories[0]?.key ?? "");
+  const [preview, setPreview] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const s = stories.find((x) => x.key === key);
+  const submit = (form: FormData, remove = false) =>
+    start(async () => {
+      form.set("key", key);
+      if (remove) form.set("remove", "1");
+      const r = await setStoryPhotoAction(form);
+      toast(r.ok ? (remove ? "Photo removed" : "Photo published") : r.error, r.ok ? "ok" : "error");
+      if (r.ok) (setPreview(null), router.refresh());
+    });
+  return (
+    <form className="mt-4 grid gap-4 md:grid-cols-[1fr_280px]" onSubmit={(e) => (e.preventDefault(), submit(new FormData(e.currentTarget)))}>
+      <div className="space-y-3">
+        <label className="block">
+          <span className="label">Story</span>
+          <select value={key} onChange={(e) => (setKey(e.target.value), setPreview(null))} className="input">
+            {stories.map((x) => <option key={x.key} value={x.key}>{x.photo ? "● " : ""}{x.title}</option>)}
+          </select>
+        </label>
+        <label className="block">
+          <span className="label">Photo (JPEG, PNG or WebP; location data is stripped)</span>
+          <input name="file" type="file" accept="image/jpeg,image/png,image/webp" className="input py-2" onChange={(e) => { const f = e.target.files?.[0]; setPreview(f ? URL.createObjectURL(f) : null); }} />
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block"><span className="label">Alt text</span><input name="alt" maxLength={400} placeholder="What the photo shows" className="input" /></label>
+          <label className="block"><span className="label">Credit</span><input name="credit" maxLength={80} placeholder="Photographer / Agency" className="input" /></label>
+        </div>
+        <p className="text-[12.5px] text-ink-3">Only upload photos you have the rights to use. The credit shows on every view of the story.</p>
+        <div className="flex gap-2">
+          <Button type="submit" disabled={pending}>{pending ? "Uploading…" : "Publish photo"}</Button>
+          {s?.photo && <Button type="button" variant="secondary" disabled={pending} onClick={() => submit(new FormData(), true)}>Use generated art</Button>}
+        </div>
+      </div>
+      <div>
+        <p className="label">Preview</p>
+        <div className="aspect-[16/9] overflow-hidden ring-1 ring-rule">
+          {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : s ? <StoryArt seed={s.key} section={s.section} photo={s.photo} width={640} /> : null}
+        </div>
+      </div>
+    </form>
   );
 }

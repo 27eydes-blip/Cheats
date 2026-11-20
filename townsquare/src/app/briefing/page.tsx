@@ -37,7 +37,7 @@ export default async function Briefing() {
 
       {lead && (
         <Link href={`/news/story/${lead.key}`} className="group mt-8 grid gap-6 md:grid-cols-2">
-          <div className="aspect-[4/3] overflow-hidden"><StoryArt seed={lead.key} section={lead.section} /></div>
+          <div className="aspect-[4/3] overflow-hidden"><StoryArt seed={lead.key} section={lead.section} photo={lead.photo} /></div>
           <div>
             <span className="flex items-center gap-2">{lead.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{lead.section === "Top Stories" ? "National" : lead.section}</Kicker></span>
             <h1 className="mt-2 font-display text-display font-semibold text-balance group-hover:underline">{lead.title}</h1>

@@ -45,7 +45,7 @@ export function LeadTile({ s, latest }: { s: StorySummary; latest: string[] }) {
     <article className="min-w-0 border-t-[3px] border-navy-ink pt-3">
       <Link href={`/news/story/${s.key}`} className="group block">
         <div className="relative aspect-[16/7] overflow-hidden">
-          <StoryArt seed={s.key} section={s.section} className="transition-transform duration-700 group-hover:scale-[1.02]" />
+          <StoryArt seed={s.key} section={s.section} photo={s.photo} priority className="transition-transform duration-700 group-hover:scale-[1.02]" />
           <span className="mono absolute right-3 bottom-3 bg-navy/85 px-2 py-1 text-[11px] text-white">{s.takes} takes · {s.outlets} outlets</span>
         </div>
         <div className="mt-4"><StatusKicker s={s} /></div>
@@ -74,7 +74,7 @@ export function StoryTile({ s, big }: { s: StorySummary; big?: boolean }) {
   return (
     <article className="min-w-0 border-t-2 border-navy-ink pt-3">
       <Link href={`/news/story/${s.key}`} className="group block">
-        <div className={`overflow-hidden ${big ? "aspect-[16/9]" : "aspect-[3/2]"}`}><StoryArt seed={s.key} section={s.section} className="transition-transform duration-700 group-hover:scale-[1.03]" /></div>
+        <div className={`overflow-hidden ${big ? "aspect-[16/9]" : "aspect-[3/2]"}`}><StoryArt seed={s.key} section={s.section} photo={s.photo} className="transition-transform duration-700 group-hover:scale-[1.03]" /></div>
         <div className="mt-3"><StatusKicker s={s} /></div>
         <h3 className={`mt-1.5 font-display font-semibold text-balance group-hover:underline decoration-gold decoration-2 underline-offset-4 ${big ? "text-h1" : "text-h2"}`}>{s.title}</h3>
         {big && <p className="mt-2 line-clamp-2 text-[15px] text-ink-2">{s.summary}</p>}
@@ -119,7 +119,7 @@ export function LiveNowTile({ events }: { events: LiveEventView[] }) {
         {on.map((e) => (
           <li key={e.id}>
             <Link href={`/live/${e.id}`} className="group flex items-center gap-3 bg-navy p-2.5 text-white">
-              <span className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-[2px]"><StoryArt seed={e.id} section="Top Stories" /><span className="absolute top-1 left-1"><LiveBadge label="ON AIR" className="!px-1 !text-[8.5px]" /></span></span>
+              <span className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-[2px]"><StoryArt seed={e.title} section="Top Stories" /><span className="absolute top-1 left-1"><LiveBadge label="ON AIR" className="!px-1 !text-[8.5px]" /></span></span>
               <span className="min-w-0">
                 <span className="line-clamp-2 text-[13.5px] leading-snug font-semibold group-hover:underline">{e.title}</span>
                 <span className="mono text-[11px] text-white/70">{e.viewers.toLocaleString("en-US")} watching</span>

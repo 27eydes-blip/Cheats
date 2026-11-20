@@ -23,7 +23,7 @@ export default async function LivePlayer({ params }: { params: Promise<{ id: str
   return (
     <div className="mx-auto max-w-[1040px] lg:pt-6">
       <div className="relative aspect-video overflow-hidden bg-black text-white">
-        <div className="absolute inset-0 opacity-80"><StoryArt seed={e.id + e.title} section="Top Stories" /></div>
+        <div className="absolute inset-0 opacity-80"><StoryArt seed={e.title} section="Top Stories" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70" />
         <Link href="/live" className="absolute top-3 left-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur hover:bg-black/60" aria-label="Back to Live"><BackIcon size={20} /></Link>
         <div className="absolute top-3 right-3 flex items-center gap-2">

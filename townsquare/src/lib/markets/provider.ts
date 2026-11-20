@@ -27,7 +27,7 @@ export type MarketMode = "live" | "demo";
 export const marketMode = (): MarketMode => (process.env.FINNHUB_API_KEY ? "live" : "demo");
 
 // ---------------------------------------------------------------- demo simulator
-function seeded(seed: string) {
+export function seeded(seed: string) {
   let h = 2166136261;
   for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
   return () => {
@@ -40,7 +40,7 @@ function seeded(seed: string) {
 
 /** The whole simulated session for a symbol on a date: 390 one-minute prices. */
 const sessionCache = new Map<string, { prevClose: number; path: number[] }>();
-function demoSession(symbol: string, date: string) {
+export function demoSession(symbol: string, date: string) {
   const key = `${symbol}:${date}`;
   const hit = sessionCache.get(key);
   if (hit) return hit;

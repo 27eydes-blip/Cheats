@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { publish } from "./realtime";
 import { AppError } from "./errors";
 import { all, get, newId, now, run, tx } from "./db";
 import { notify } from "./notifications";
@@ -209,4 +210,5 @@ export function setBanner(admin: UserRow, banner: Omit<Banner, "setAt"> | null) 
   if (admin.role !== "admin") throw new AppError("Admins only.", "forbidden");
   if (!banner || !banner.text.trim()) run("DELETE FROM site_settings WHERE key = 'banner'");
   else run("INSERT INTO site_settings (key, value) VALUES ('banner', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [JSON.stringify({ ...banner, text: banner.text.trim().slice(0, 140), setAt: now() })]);
+  publish({ type: "wire" });
 }

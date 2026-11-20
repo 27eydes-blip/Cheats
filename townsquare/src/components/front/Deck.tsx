@@ -59,7 +59,7 @@ export function Deck({ cards, channels, channelIndex }: { cards: Card[]; channel
             {c.kind === "story" && (
               <>
                 <Link href={`/news/story/${c.s.key}`} className="relative block h-[36%] min-h-[150px] shrink-0 overflow-hidden">
-                  <StoryArt seed={c.s.key} section={c.s.section} />
+                  <StoryArt seed={c.s.key} section={c.s.section} photo={c.s.photo} />
                   <span className="absolute top-3 left-3 flex items-center gap-2">
                     {c.s.status === "live" ? <LiveBadge label="LIVE" /> : <span className="folio bg-navy/85 px-1.5 py-0.5 !text-[10px] text-gold">{c.s.status === "developing" ? "Developing" : "Final"}</span>}
                   </span>

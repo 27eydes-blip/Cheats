@@ -29,5 +29,25 @@ export function marketStatus(now = Date.now()): MarketStatus {
   }
   const minuteOfSession = Math.max(0, Math.min(389, et.minutes - OPEN_MIN));
   const label = open ? "Market open" : weekend ? "Closed for the weekend" : et.minutes < OPEN_MIN ? "Pre-market" : "After hours";
-  return { open, label, nextChangeMs: next, sessionDate: et.date, minuteOfSession: open ? minuteOfSession : et.minutes < OPEN_MIN && !weekend ? 0 : 389 };
+  // Before the open (or on a weekend) the latest session is the previous trading day.
+  const started = !weekend && et.minutes >= OPEN_MIN;
+  const sessionDate = started ? et.date : previousWeekday(et.date);
+  return { open, label, nextChangeMs: next, sessionDate, minuteOfSession: open ? minuteOfSession : 389 };
+}
+
+const WEEKDAY = (d: string) => new Date(`${d}T12:00:00Z`).getUTCDay();
+const shift = (d: string, days: number) => new Date(Date.parse(`${d}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+
+/** The weekday before `date` (YYYY-MM-DD). */
+export function previousWeekday(date: string) {
+  let d = shift(date, -1);
+  while (WEEKDAY(d) === 0 || WEEKDAY(d) === 6) d = shift(d, -1);
+  return d;
+}
+
+/** The last `n` trading dates ending with the current session, oldest first. */
+export function recentSessions(n: number, now = Date.now()) {
+  const out = [marketStatus(now).sessionDate];
+  while (out.length < n) out.unshift(previousWeekday(out[0]));
+  return out;
 }

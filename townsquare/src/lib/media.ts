@@ -17,8 +17,8 @@ export function sniffImage(buf: Buffer): "jpeg" | "png" | "webp" | "gif" | null 
   return null;
 }
 
-type Purpose = "post" | "avatar" | "banner";
-const MAX_DIM: Record<Purpose, [number, number]> = { post: [2048, 2048], avatar: [400, 400], banner: [1500, 500] };
+type Purpose = "post" | "avatar" | "banner" | "story";
+const MAX_DIM: Record<Purpose, [number, number]> = { post: [2048, 2048], avatar: [400, 400], banner: [1500, 500], story: [1920, 1080] };
 
 /**
  * Validate, re-encode to WebP, and store an uploaded image. Re-encoding drops
@@ -33,7 +33,7 @@ export async function saveImage(ownerId: string, file: File, purpose: Purpose, a
   const [w, h] = MAX_DIM[purpose];
   let img = sharp(buf, { animated: kind === "gif" && purpose === "post", limitInputPixels: 50_000_000 }).rotate();
   img =
-    purpose === "post"
+    purpose === "post" || purpose === "story"
       ? img.resize({ width: w, height: h, fit: "inside", withoutEnlargement: true })
       : img.resize({ width: w, height: h, fit: "cover" });
   let out: { data: Buffer; info: sharp.OutputInfo };
@@ -91,6 +91,11 @@ export function readMediaFor(id: string, viewerId: string | null): { data: Buffe
   let isPublic = false;
   if (!allowed && (m.kind === "avatar" || m.kind === "banner")) {
     allowed = !!get("SELECT 1 FROM users WHERE id = ? AND status != 'deleted'", [m.owner_id]);
+    isPublic = allowed;
+  }
+  if (!allowed && m.kind === "story") {
+    // Story photos are public once an editor attaches them to a story.
+    allowed = !!get("SELECT 1 FROM stories WHERE image_media_id = ?", [m.id]);
     isPublic = allowed;
   }
   if (!allowed && m.post_id) {

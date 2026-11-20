@@ -372,3 +372,7 @@ create table public.watchlist (
 );
 alter table watchlist enable row level security;
 create policy "own watchlist" on watchlist for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Story photos (editor-uploaded, credited).
+alter table public.stories add column if not exists image_media_id uuid references media(id) on delete set null;
+alter table public.stories add column if not exists image_credit text check (char_length(image_credit) <= 80);

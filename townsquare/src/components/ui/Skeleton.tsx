@@ -51,3 +51,31 @@ export function BentoSkeleton() {
     </div>
   );
 }
+
+/** Story page placeholder: headline, meter, two take columns. */
+export function StorySkeleton() {
+  return (
+    <div role="status" aria-label="Loading story" className="mx-auto max-w-[1320px] space-y-5 px-4 py-6 lg:px-8">
+      <div className="skeleton h-3 w-28" />
+      <div className="skeleton h-12 w-4/5" />
+      <div className="skeleton h-5 w-3/5" />
+      <div className="skeleton h-16 w-full" />
+      <div className="grid gap-6 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="space-y-3">{[0, 1, 2].map((j) => <div key={j} className="skeleton h-28 w-full" />)}</div>)}</div>
+    </div>
+  );
+}
+
+/** Markets board placeholder (always dark, like the board itself). */
+export function MarketsSkeleton() {
+  const b = "animate-pulse rounded-[4px] bg-white/[0.06]";
+  return (
+    <div role="status" aria-label="Loading markets" className="dark terminal-grid min-h-screen">
+      <div className="h-10 border-y border-[#c8a24a]/40 bg-black/60" />
+      <div className="mx-auto max-w-[1440px] space-y-6 px-4 pt-6 sm:px-6">
+        <div className={`${b} h-14 w-80`} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className={`${b} h-[230px]`} />)}</div>
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px]"><div className={`${b} h-[440px]`} /><div className={`${b} h-[440px]`} /></div>
+      </div>
+    </div>
+  );
+}

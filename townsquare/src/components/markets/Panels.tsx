@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { Quote } from "@/lib/markets/provider";
 import { addWatchAction, removeWatchAction } from "@/actions/markets";
 import { ALL_TICKERS, INDEX_ETFS, STOCKS } from "@/lib/markets/universe";
 import { CloseIcon, PlusIcon } from "../icons";
 import { useToast, useViewer } from "../providers";
-import { AreaChart, MiniLine } from "./Charts";
+import { AreaChart, MiniLine, PriceChart, type Bar } from "./Charts";
+import type { Range } from "@/lib/markets/history";
+
+const RANGES: Range[] = ["1D", "5D", "1M", "1Y"];
 import { fmtChg, fmtPct, fmtPrice, useMarket } from "./MarketData";
 
 const up = (q: Quote) => q.change >= 0;
@@ -88,7 +91,7 @@ export function StatusBar() {
         {status.label}
       </span>
       <span className="text-white/70" suppressHydrationWarning>{status.open ? "Closes in" : "Opens in"} <b className="text-white">{h}h {String(m).padStart(2, "0")}m {String(s).padStart(2, "0")}s</b></span>
-      <span className="text-white/70" suppressHydrationWarning>NEW YORK <b className="text-white">{et}</b></span>
+      <span className="text-white/70" suppressHydrationWarning>NEW YORK <b className="inline-block min-w-[11ch] text-white">{et || "--:--:-- --"}</b></span>
       <span className={`ml-auto rounded-[2px] px-2 py-1 font-bold tracking-wider ${mode === "live" ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-[#c8a24a]/20 text-[#e3c773]"}`} title={mode === "demo" ? "No market-data key is configured, so prices are simulated." : "Quotes from Finnhub"}>
         {mode === "live" ? "LIVE DATA · FINNHUB" : "DEMO DATA · SIMULATED PRICES"}
       </span>
@@ -98,7 +101,7 @@ export function StatusBar() {
 
 /** One index card: S&P 500 (SPY), Nasdaq-100 (QQQ), Dow (DIA), Russell 2000 (IWM). */
 export function IndexCard({ symbol }: { symbol: string }) {
-  const { quotes, select, selected } = useMarket();
+  const { quotes, select, selected, status } = useMarket();
   const q = quotes[symbol];
   const f = useFlash(symbol);
   if (!q) return <div className="h-[210px] animate-pulse rounded-[4px] bg-white/5" />;
@@ -108,7 +111,7 @@ export function IndexCard({ symbol }: { symbol: string }) {
       type="button"
       onClick={() => select(symbol)}
       aria-pressed={selected === symbol}
-      className={`group relative overflow-hidden rounded-[4px] border bg-[#081226]/80 p-4 text-left backdrop-blur transition-all duration-300 hover:-translate-y-0.5 ${selected === symbol ? "border-[#c8a24a] shadow-[0_0_0_1px_#c8a24a,0_10px_40px_rgb(200_162_74/0.18)]" : "border-white/10 hover:border-white/25"}`}
+      className={`group relative overflow-hidden rounded-[4px] border bg-[#081226]/80 p-4 text-left transition-all duration-300 hover:-translate-y-0.5 ${selected === symbol ? "border-[#c8a24a] shadow-[0_0_0_1px_#c8a24a,0_10px_40px_rgb(200_162_74/0.18)]" : "border-white/10 hover:border-white/25"}`}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -118,7 +121,7 @@ export function IndexCard({ symbol }: { symbol: string }) {
         <span className={`mono rounded-[2px] px-1.5 py-0.5 text-[11px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
       </div>
       <p key={f.key} className={`mono mt-3 inline-block rounded-[2px] px-1 -ml-1 text-[30px] leading-none font-semibold ${up(q) ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
-      <p className={`mono mt-1 text-[12px] ${tone(q)}`}>{fmtChg(q.change)} today</p>
+      <p className={`mono mt-1 text-[12px] ${tone(q)}`}>{fmtChg(q.change)} {status.open ? "today" : "last session"}</p>
       <div className="mt-3"><AreaChart values={q.series} prevClose={q.prevClose} height={64} label={`${q.name} intraday`} /></div>
       <div className="mt-3">
         <div className="relative h-1 rounded-full bg-white/10">
@@ -130,15 +133,53 @@ export function IndexCard({ symbol }: { symbol: string }) {
   );
 }
 
-/** Big interactive chart for the selected symbol, with key stats. */
+/** Big interactive chart for the selected symbol: 1D/5D/1M/1Y, line or candles, volume, key stats. */
 export function FocusChart() {
-  const { quotes, selected } = useMarket();
+  const { quotes, selected, mode, status, initialHistory } = useMarket();
   const q = quotes[selected];
   const f = useFlash(selected);
-  if (!q) return <div className="h-[420px] animate-pulse rounded-[4px] bg-white/5" />;
+  const [range, setRange] = useState<Range>("1D");
+  const [kind, setKind] = useState<"line" | "candle">("line");
+  const [hist, setHist] = useState<{ key: string; bars: Bar[]; note?: string; available: boolean } | null>(() =>
+    initialHistory ? { key: `${initialHistory.symbol}:1D`, bars: initialHistory.bars, available: true } : null,
+  );
+  const skipFirst = useRef(!!initialHistory);
+  const key = `${selected}:${range}`;
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const r = await fetch(`/api/markets/history?symbol=${selected}&range=${range}`).catch(() => null);
+      if (!r?.ok || !alive) return;
+      const d = (await r.json()) as { candles: Bar[]; note?: string; available: boolean };
+      if (alive) setHist({ key, bars: d.candles, note: d.note, available: d.available });
+    };
+    if (skipFirst.current) skipFirst.current = false;
+    else load();
+    const t = range === "1D" ? setInterval(() => !document.hidden && load(), 30_000) : undefined;
+    return () => { alive = false; if (t) clearInterval(t); };
+  }, [selected, range, key]);
+
+  // Keep the newest bar in step with the live quote between history refreshes.
+  const bars = useMemo(() => {
+    if (!hist || hist.key !== key || !q) return null;
+    const b = [...hist.bars];
+    if (b.length && (range === "1D" || range === "5D" || range === "1M" || range === "1Y")) {
+      const last = b[b.length - 1];
+      b[b.length - 1] = { ...last, c: q.price, h: Math.max(last.h, q.price), l: Math.min(last.l, q.price) };
+    }
+    return b;
+  }, [hist, key, q, range]);
+
+  if (!q) return <div className="h-[460px] animate-pulse rounded-[4px] bg-white/5" />;
+  const first = range === "1D" ? q.prevClose : bars?.[0]?.o;
+  const rangeChg = first ? q.price - first : 0;
+  const rangePct = first ? (rangeChg / first) * 100 : 0;
+  const rUp = rangeChg >= 0;
   const stats: [string, string][] = [["Open", fmtPrice(q.open)], ["Prev close", fmtPrice(q.prevClose)], ["Day high", fmtPrice(q.high)], ["Day low", fmtPrice(q.low)]];
+  const seg = "rounded-[3px] px-2.5 py-1 text-[11.5px] font-bold transition-colors";
   return (
-    <section aria-label={`${q.symbol} chart`} className="relative overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80 p-5 backdrop-blur">
+    <section aria-label={`${q.symbol} chart`} className="relative overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80 p-5">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 h-24 bg-gradient-to-b from-white/[0.04] to-transparent" style={{ animation: "scan 6s linear infinite" }} />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -148,12 +189,27 @@ export function FocusChart() {
           </h2>
         </div>
         <div className="text-right">
-          <p key={f.key} className={`mono inline-block rounded-[2px] px-1 text-[clamp(2rem,1.4rem+2vw,3rem)] leading-none font-semibold ${up(q) ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
-          <p className={`mono mt-1 text-[14px] font-semibold ${tone(q)}`}><Arrow q={q} /> {fmtChg(q.change)} ({fmtPct(q.changePct)})</p>
+          <p key={f.key} className={`mono inline-block rounded-[2px] px-1 text-[clamp(2rem,1.4rem+2vw,3rem)] leading-none font-semibold ${rUp ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
+          <p className={`mono mt-1 text-[14px] font-semibold ${rUp ? "text-[#2ee6a6]" : "text-[#ff5c7a]"}`}>{rUp ? "▲" : "▼"} {fmtChg(rangeChg)} ({fmtPct(rangePct)}) <span className="text-white/45">{range === "1D" ? (status.open ? "today" : "last session") : range === "5D" ? "5 days" : range === "1M" ? "1 month" : "1 year"}</span></p>
         </div>
       </div>
-      <div className="relative mt-5"><AreaChart values={q.series} prevClose={q.prevClose} height={240} interactive label={`${q.symbol} intraday price`} /></div>
-      <div className="mono relative mt-2 flex justify-between text-[10.5px] text-white/40"><span>9:30 AM ET</span><span>12:00</span><span>4:00 PM</span></div>
+      <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2">
+        <div role="tablist" aria-label="Time range" className="mono flex gap-1 rounded-[4px] bg-black/40 p-1">
+          {RANGES.map((r) => (
+            <button key={r} role="tab" aria-selected={range === r} type="button" onClick={() => setRange(r)} className={`${seg} ${range === r ? "bg-[#c8a24a] text-[#0b1f4b]" : "text-white/60 hover:text-white"}`}>{r}</button>
+          ))}
+        </div>
+        <div className="mono flex gap-1 rounded-[4px] bg-black/40 p-1" role="group" aria-label="Chart style">
+          {(["line", "candle"] as const).map((k) => (
+            <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`${seg} ${kind === k ? "bg-white/15 text-white" : "text-white/60 hover:text-white"}`}>{k === "line" ? "LINE" : "CANDLES"}</button>
+          ))}
+        </div>
+      </div>
+      <div className="relative mt-4">
+        {bars ? <PriceChart bars={bars} kind={kind} range={range} baseline={range === "1D" ? q.prevClose : undefined} height={280} /> : <div className="h-[300px] animate-pulse rounded-[2px] bg-white/[0.04]" />}
+      </div>
+      {hist?.key === key && hist.note && <p className="relative mt-2 text-[11.5px] text-white/50">{hist.note}</p>}
+      {mode === "demo" && <p className="mono relative mt-2 text-[10px] text-[#e3c773]/80">SIMULATED HISTORY · DEMO DATA</p>}
       <dl className="relative mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-[2px] bg-white/10 sm:grid-cols-4">
         {stats.map(([k, v]) => (
           <div key={k} className="bg-[#081226] px-3 py-2.5"><dt className="folio !text-[9.5px] text-white/50">{k}</dt><dd className="mono mt-0.5 text-[15px] text-white">{v}</dd></div>
@@ -176,6 +232,7 @@ export function Watchlist() {
     if (!viewer) return (window.location.href = "/login?next=/markets");
     const prev = watchlist;
     if (!watchlist.includes(s)) setWatchlist([...watchlist, s]);
+    navigator.vibrate?.(6);
     setSym("");
     start(async () => {
       const r = await addWatchAction(s);
@@ -192,7 +249,7 @@ export function Watchlist() {
     });
   };
   return (
-    <section aria-labelledby="wl" className="flex flex-col overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80 backdrop-blur">
+    <section aria-labelledby="wl" className="flex flex-col overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <h2 id="wl" className="folio text-[#e3c773]">Your watchlist</h2>
         <span className="mono text-[11px] text-white/50">{watchlist.length} TICKERS</span>
@@ -245,12 +302,19 @@ function WatchPrice({ q }: { q: Quote }) {
 export function Heatmap() {
   const { quotes, select } = useMarket();
   const sectors = [...new Set(STOCKS.map((t) => t.sector))];
+  const ink = (p: number) => {
+    // Black or white ink, whichever contrasts more; the worst case is still above 4.5:1.
+    const m = color(p).match(/\d+/g)!.map((v) => Number(v) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    const L = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
+    // Whichever of white or near-black contrasts more with this tile.
+    return 1.05 / (L + 0.05) >= (L + 0.05) / 0.05 ? "#ffffff" : "#000000";
+  };
   const color = (p: number) => {
     const a = Math.min(1, Math.abs(p) / 3);
     return p >= 0 ? `rgb(${Math.round(10 + 10 * a)} ${Math.round(70 + 140 * a)} ${Math.round(60 + 70 * a)})` : `rgb(${Math.round(90 + 150 * a)} ${Math.round(40 + 20 * a)} ${Math.round(60 + 20 * a)})`;
   };
   return (
-    <section aria-labelledby="heat" className="rounded-[4px] border border-white/10 bg-[#081226]/80 p-4 backdrop-blur">
+    <section aria-labelledby="heat" className="[content-visibility:auto] [contain-intrinsic-size:auto_560px] rounded-[4px] border border-white/10 bg-[#081226]/80 p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 id="heat" className="folio text-[#e3c773]">Sector heatmap</h2>
         <span className="mono flex items-center gap-1.5 text-[10px] text-white/50">−3% <span className="h-2 w-16 rounded-full" style={{ background: `linear-gradient(90deg, ${color(-3)}, #1b2840, ${color(3)})` }} /> +3%</span>
@@ -271,11 +335,11 @@ export function Heatmap() {
                       type="button"
                       onClick={() => select(t.symbol)}
                       title={`${t.name} ${fmtPct(p)}`}
-                      className={`flex flex-col items-center justify-center rounded-[2px] text-white transition-transform hover:z-10 hover:scale-105 hover:ring-1 hover:ring-[#e3c773] ${t.size === 3 ? "col-span-2 row-span-2" : t.size === 2 ? "col-span-2" : ""}`}
-                      style={{ background: color(p) }}
+                      className={`flex flex-col items-center justify-center rounded-[2px] transition-transform hover:z-10 hover:scale-105 hover:ring-1 hover:ring-[#e3c773] ${t.size === 3 ? "col-span-2 row-span-2" : t.size === 2 ? "col-span-2" : ""}`}
+                      style={{ background: color(p), color: ink(p) }}
                     >
                       <span className={`mono font-bold ${t.size === 3 ? "text-[15px]" : "text-[11px]"}`}>{t.symbol}</span>
-                      <span className="mono text-[10px] opacity-85">{fmtPct(p)}</span>
+                      <span className="mono text-[10px]">{fmtPct(p)}</span>
                     </button>
                   );
                 })}
@@ -313,7 +377,7 @@ export function Movers() {
     </div>
   );
   return (
-    <section aria-labelledby="movers" className="rounded-[4px] border border-white/10 bg-[#081226]/80 p-4 backdrop-blur">
+    <section aria-labelledby="movers" className="rounded-[4px] border border-white/10 bg-[#081226]/80 p-4">
       <h2 id="movers" className="folio mb-3 text-[#e3c773]">Top movers</h2>
       <div className="grid gap-5 sm:grid-cols-2">{col("Gainers", gain)}{col("Losers", lose)}</div>
     </section>

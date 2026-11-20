@@ -1,5 +1,6 @@
 "use client";
 
+import { useLiveEvents } from "../live";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Split, StanceTarget, StanceValue } from "@/lib/stance";
@@ -65,6 +66,10 @@ export function StanceMeter({ type, id, initial, variant = "compact", onChange }
   const [split, setSplit] = useState(initial);
   const [, start] = useTransition();
   useEffect(() => setSplit(initial), [initial]);
+  // Live: other readers' stances move the meter in real time (your own pick stays yours).
+  useLiveEvents((e) => {
+    if (e.type === "stance" && e.target === type && e.id === id) setSplit((s) => ({ ...s, agree: e.agree, disagree: e.disagree, unsure: e.unsure, total: e.total }));
+  });
 
   const cast = (value: StanceValue) => {
     if (!viewer) return router.push(`/login?next=${encodeURIComponent(location.pathname)}`);

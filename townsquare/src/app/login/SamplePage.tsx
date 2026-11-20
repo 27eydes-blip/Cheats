@@ -15,7 +15,7 @@ export function SamplePage() {
       </div>
       <div className="mt-4 grid gap-5 sm:grid-cols-[1.4fr_1fr]">
         <div>
-          <div className="aspect-[16/10] overflow-hidden"><StoryArt seed={lead.key} section={lead.section} /></div>
+          <div className="aspect-[16/10] overflow-hidden"><StoryArt seed={lead.key} section={lead.section} photo={lead.photo} /></div>
           <div className="mt-3">{lead.status === "live" && <LiveBadge label="LIVE" />}</div>
           <p className="mt-1.5 font-display text-[24px] leading-tight font-semibold">{lead.title}</p>
           <MiniSplit split={lead.split} className="mt-3" />

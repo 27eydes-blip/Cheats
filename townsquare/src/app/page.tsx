@@ -9,6 +9,10 @@ import { Deck, type DeckCardData } from "@/components/front/Deck";
 import { BriefingPromo, DebateTile, HotStories, LeadTile, LiveNowTile, MoreStories, PollTile, QuickTakes, StoryTile, VoicesTile, WireTile } from "@/components/front/Tiles";
 import { EmptyState } from "@/components/ui/States";
 import { Wordmark } from "@/components/ui/Logo";
+import { MarketStrip } from "@/components/markets/LiveQuotes";
+import { getQuotes, marketMode } from "@/lib/markets/provider";
+import { marketStatus } from "@/lib/markets/clock";
+import { INDEX_ETFS } from "@/lib/markets/universe";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +34,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
   const poll = pollId ? getPostView(pollId, vid) : null;
   const people = voices(vid, 3, section);
   const wire = latestNews(section, 5);
+  const indexQuotes = await getQuotes(INDEX_ETFS.map((t) => t.symbol));
 
   if (!stories.length) {
     return <EmptyState art="news" title={`Quiet on the ${channel?.label ?? "national"} desk`} body="No stories in this channel yet. Check the Front Page." action={{ label: "Front Page", href: "/" }} />;
@@ -76,6 +81,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
             <Link href="/" className="folio !text-[10.5px] text-ink-3 hover:text-navy-ink">← Front Page</Link>
           </div>
         )}
+        {(!channel || channel.key === "Business") && <MarketStrip initial={indexQuotes} mode={marketMode()} label={marketStatus().label} />}
         <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:grid-cols-12 lg:gap-x-10">
           <div className="col-span-2 lg:col-span-8"><LeadTile s={lead} latest={latest} /></div>
           <div className="col-span-2 grid gap-8 md:grid-cols-2 lg:col-span-4 lg:block lg:space-y-8">

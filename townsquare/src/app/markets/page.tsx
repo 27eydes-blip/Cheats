@@ -3,26 +3,31 @@ import { getViewer } from "@/lib/session";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
 import { marketStatus } from "@/lib/markets/clock";
 import { getWatchlist } from "@/lib/markets/watchlist";
-import { INDEX_ETFS, STOCKS } from "@/lib/markets/universe";
+import { INDEX_ETFS, STOCKS, SYMBOL_RE } from "@/lib/markets/universe";
 import { listStories } from "@/lib/news";
+import { getHistory } from "@/lib/markets/history";
 import { MarketData } from "@/components/markets/MarketData";
 import { Breadth, FocusChart, Heatmap, IndexCard, Movers, StatusBar, TickerTape, Watchlist } from "@/components/markets/Panels";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Markets", description: "S&P 500, Nasdaq, Dow and your watchlist on a live market board." };
 
-export default async function MarketsPage() {
+export default async function MarketsPage({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
+  const want = ((await searchParams).s ?? "").toUpperCase();
   const viewer = await getViewer();
   const watchlist = getWatchlist(viewer?.id ?? null);
-  const symbols = [...INDEX_ETFS, ...STOCKS].map((t) => t.symbol);
+  const focus = SYMBOL_RE.test(want) ? want : undefined;
+  const symbols = [...new Set([...INDEX_ETFS, ...STOCKS].map((t) => t.symbol).concat(focus ? [focus] : []))];
   const t = Date.now();
   const quotes = await getQuotes([...new Set([...symbols, ...watchlist])], t);
   const stories = listStories(4, { section: "Business", viewerId: viewer?.id ?? null });
   const mode = marketMode();
+  const first = focus ?? watchlist[0] ?? "SPY";
+  const h1 = await getHistory(first, "1D", t);
 
   return (
     <div className="dark terminal-grid -mt-px min-h-screen text-white">
-      <MarketData initial={quotes} mode={mode} status={marketStatus(t)} symbols={symbols} watchlist={watchlist}>
+      <MarketData initial={quotes} mode={mode} status={marketStatus(t)} symbols={symbols} watchlist={watchlist} focus={focus} initialHistory={h1.available ? { symbol: first, bars: h1.candles } : undefined}>
         <TickerTape />
         <div className="mx-auto max-w-[1440px] px-4 pt-6 pb-16 sm:px-6">
           <header className="flex flex-wrap items-end justify-between gap-4">

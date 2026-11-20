@@ -54,7 +54,7 @@ export default async function DeskPage({ params, searchParams }: { params: Promi
 
       {pin && (
         <Link href={`/news/story/${pin.key}`} className="group mx-4 mt-6 grid gap-4 border-b border-rule pb-6 sm:mx-6 sm:grid-cols-[220px_1fr]">
-          <div className="aspect-[3/2] overflow-hidden"><StoryArt seed={pin.key} section={pin.section} /></div>
+          <div className="aspect-[3/2] overflow-hidden"><StoryArt seed={pin.key} section={pin.section} photo={pin.photo} /></div>
           <div>
             <p className="folio flex items-center gap-2 text-gold-ink">Pinned by the editors {pin.status === "live" && <LiveBadge label="LIVE" />}</p>
             <h2 className="mt-1 font-display text-h1 font-semibold group-hover:underline">{pin.title}</h2>

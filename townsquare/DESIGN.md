@@ -117,7 +117,15 @@ The one always-dark screen: a terminal grid (navy-black, 32 px grid lines, navy 
 Gains are mint `#2EE6A6`, losses coral `#FF5C7A`, both with a soft glow; gold marks the selected symbol, the day-range marker and labels.
 Prices flash on every tick; the tape pauses on hover and stops under reduced motion. A DEMO / LIVE badge always says where prices come from.
 
-## 9. Next five improvements
+Charts: line (glowing area) or candles, volume bars underneath, right-edge price gridlines, and a gold crosshair with an OHLC + volume readout (mouse or touch).
+
+## 9. Motion and feel
+
+- A 3 px gold progress bar runs along the top on every page change; page-shaped placeholders (bento, story, markets) fill slow loads.
+- Stance meters and the Live Wire move live; new takes arrive as a navy "N new takes · Show" pill rather than shoving the list.
+- Installed app: pull-to-refresh (gold arrow on a navy disc), edge swipe-back, and short haptic ticks on stance, watchlist add, and gesture thresholds.
+
+## 10. Next five improvements
 
 1. **Real content pipeline:** RSS ingest that clusters headlines into Stories automatically (the "How it is covered" strip then fills itself), plus an editor tool to write timeline updates.
 2. **Context notes with cross-viewpoint rating:** only show a Context take as a "note" once readers who usually disagree both rate it helpful (the stance history already gives the signal).

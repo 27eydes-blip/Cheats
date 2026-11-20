@@ -14,6 +14,8 @@ type Ctx = {
   setWatchlist: (w: string[]) => void;
   selected: string;
   select: (s: string) => void;
+  /** Server-rendered 1D candles for the first symbol shown, so the big chart paints immediately. */
+  initialHistory?: { symbol: string; bars: { t: number; o: number; h: number; l: number; c: number; v: number }[] };
 };
 
 const MarketCtx = createContext<Ctx | null>(null);
@@ -24,12 +26,12 @@ export const useMarket = () => useContext(MarketCtx)!;
  * mode, 15s with a live provider) while the tab is visible, and records the
  * direction of each tick so prices can flash green or red.
  */
-export function MarketData({ initial, mode, status: initialStatus, symbols, watchlist: initialWatch, children }: { initial: Quote[]; mode: MarketMode; status: MarketStatus; symbols: string[]; watchlist: string[]; children: React.ReactNode }) {
+export function MarketData({ initial, mode, status: initialStatus, symbols, watchlist: initialWatch, focus, initialHistory, children }: { focus?: string; initialHistory?: Ctx["initialHistory"]; initial: Quote[]; mode: MarketMode; status: MarketStatus; symbols: string[]; watchlist: string[]; children: React.ReactNode }) {
   const [quotes, setQuotes] = useState<Record<string, Quote>>(() => Object.fromEntries(initial.map((q) => [q.symbol, q])));
   const [ticks, setTicks] = useState<Ctx["ticks"]>({});
   const [status, setStatus] = useState(initialStatus);
   const [watchlist, setWatchlist] = useState(initialWatch);
-  const [selected, select] = useState(initialWatch[0] ?? "SPY");
+  const [selected, select] = useState(focus ?? initialWatch[0] ?? "SPY");
   const last = useRef(quotes);
   const want = useMemo(() => [...new Set([...symbols, ...watchlist])], [symbols, watchlist]);
 
@@ -50,12 +52,12 @@ export function MarketData({ initial, mode, status: initialStatus, symbols, watc
   }, [want]);
 
   useEffect(() => {
-    poll();
+    // The page arrives with fresh quotes; the first poll waits one interval.
     const t = setInterval(poll, mode === "demo" ? 4000 : 15000);
     return () => clearInterval(t);
   }, [poll, mode]);
 
-  return <MarketCtx.Provider value={{ quotes, ticks, mode, status, watchlist, setWatchlist, selected, select }}>{children}</MarketCtx.Provider>;
+  return <MarketCtx.Provider value={{ quotes, ticks, mode, status, watchlist, setWatchlist, selected, select, initialHistory }}>{children}</MarketCtx.Provider>;
 }
 
 export const fmtPrice = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

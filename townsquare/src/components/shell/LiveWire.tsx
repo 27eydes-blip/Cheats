@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BackIcon, ChevronRight } from "../icons";
+import { useLiveEvents } from "../live";
 
 export type WireItem = { text: string; href: string | null; at: number; label?: string };
 
@@ -18,7 +20,12 @@ export function LiveWire({ items }: { items: WireItem[] }) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
   useEffect(() => setMounted(true), []);
+  // Breaking item set in the Control Room: pull the new wire right away and show it first.
+  useLiveEvents((e) => {
+    if (e.type === "wire") (router.refresh(), setI(0));
+  });
   useEffect(() => {
     if (paused || items.length < 2 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const t = setInterval(() => setI((x) => (x + 1) % items.length), 5200);

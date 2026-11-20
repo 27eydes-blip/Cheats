@@ -1,0 +1,95 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import type { MarketMode, Quote } from "@/lib/markets/provider";
+import { MiniLine } from "./Charts";
+import { fmtPct, fmtPrice } from "./MarketData";
+
+/** Keeps a small set of quotes fresh (every 15s while the tab is visible). */
+function useLiveQuotes(initial: Quote[]) {
+  const [quotes, setQuotes] = useState(initial);
+  const [flash, setFlash] = useState<Record<string, { dir: 1 | -1; n: number }>>({});
+  const last = useRef(initial);
+  useEffect(() => {
+    const syms = initial.map((q) => q.symbol).join(",");
+    const t = setInterval(async () => {
+      if (document.hidden) return;
+      const r = await fetch(`/api/markets?symbols=${syms}`).catch(() => null);
+      if (!r?.ok) return;
+      const d = (await r.json()) as { quotes: Quote[] };
+      const f: typeof flash = {};
+      for (const q of d.quotes) {
+        const p = last.current.find((x) => x.symbol === q.symbol);
+        if (p && p.price !== q.price) f[q.symbol] = { dir: q.price > p.price ? 1 : -1, n: Date.now() };
+      }
+      last.current = d.quotes;
+      setQuotes(d.quotes);
+      setFlash((x) => ({ ...x, ...f }));
+    }, 15000);
+    return () => clearInterval(t);
+  }, [initial]);
+  return { quotes, flash };
+}
+
+const INDEX_LABEL: Record<string, string> = { SPY: "S&P 500", QQQ: "Nasdaq", DIA: "Dow", IWM: "Russell" };
+
+/** Front Page band: the four indexes on navy, linking to the Market Board. */
+export function MarketStrip({ initial, mode, label }: { initial: Quote[]; mode: MarketMode; label: string }) {
+  const { quotes, flash } = useLiveQuotes(initial);
+  return (
+    <Link href="/markets" className="group mb-8 flex items-stretch overflow-hidden rounded-[4px] bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)] transition-shadow hover:shadow-[inset_0_-3px_0_var(--gold),0_8px_30px_rgb(11_31_75/0.25)]" aria-label="Markets: open the Market Board">
+      <span className="flex shrink-0 flex-col justify-center border-r border-white/15 px-4 py-2">
+        <span className="folio !text-[10px] text-[#e3c773]">Markets</span>
+        <span className="mono text-[10px] text-white/60">{label}{mode === "demo" ? " · DEMO" : ""}</span>
+      </span>
+      <ul className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+        {quotes.map((q) => {
+          const up = q.change >= 0;
+          const f = flash[q.symbol];
+          return (
+            <li key={q.symbol} className="flex shrink-0 items-center gap-3 border-r border-white/10 px-4 py-2 last:border-r-0 lg:flex-1">
+              <span>
+                <span className="block text-[12px] font-bold">{INDEX_LABEL[q.symbol] ?? q.symbol}</span>
+                <span key={f?.n} className={`mono block rounded-[2px] text-[13px] ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>
+              </span>
+              <span className={`mono text-[12px] font-bold ${up ? "text-[#2ee6a6]" : "text-[#ff8a9e]"}`}>{up ? "▲" : "▼"} {fmtPct(q.changePct)}</span>
+              <span className="hidden xl:block"><MiniLine values={q.series} prevClose={q.prevClose} width={70} height={24} /></span>
+            </li>
+          );
+        })}
+      </ul>
+      <span className="hidden shrink-0 items-center px-4 text-[12px] font-semibold text-[#e3c773] group-hover:underline sm:flex">Market Board →</span>
+    </Link>
+  );
+}
+
+/** Story page: the stocks tied to this story and how they're trading. */
+export function StoryTickers({ initial, mode }: { initial: Quote[]; mode: MarketMode }) {
+  const { quotes, flash } = useLiveQuotes(initial);
+  return (
+    <section aria-labelledby="mkt" className="mt-6">
+      <div className="flex items-baseline justify-between border-t-2 border-navy-ink pt-3">
+        <h2 id="mkt" className="folio text-navy-ink">Market reaction</h2>
+        <Link href="/markets" className="mono text-[10.5px] text-ink-3 hover:text-navy-ink">{mode === "demo" ? "SIMULATED PRICES · " : ""}MARKET BOARD →</Link>
+      </div>
+      <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {quotes.map((q) => {
+          const up = q.change >= 0;
+          const f = flash[q.symbol];
+          return (
+            <li key={q.symbol}>
+              <Link href={`/markets?s=${q.symbol}`} className="flex items-center justify-between gap-2 rounded-[4px] border border-rule bg-paper-2 px-3 py-2 transition-colors hover:border-navy-ink">
+                <span className="min-w-0">
+                  <span className="mono block text-[13px] font-bold text-ink-1">{q.symbol}</span>
+                  <span key={f?.n} className={`mono block rounded-[2px] text-[12px] text-ink-2 ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>
+                </span>
+                <span className={`mono text-[12px] font-bold ${up ? "text-agree" : "text-disagree"}`}>{up ? "▲" : "▼"} {fmtPct(q.changePct)}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}

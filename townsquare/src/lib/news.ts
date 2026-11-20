@@ -1,4 +1,6 @@
-import { all, get, now } from "./db";
+import { all, get, now, run } from "./db";
+import { AppError } from "./errors";
+import { saveImage } from "./media";
 import { splits, EMPTY_SPLIT, type Split } from "./stance";
 import { toMini, type UserMini } from "./users";
 
@@ -27,9 +29,13 @@ export type StorySummary = {
   /** Takes per 2-hour bucket over the last 24 hours (sparkline). */
   series: number[];
   split: Split;
+  /** Editor-supplied photo (with credit and alt text); null means use generated art. */
+  photo: StoryPhoto | null;
 };
 
-type StoryRow = { key: string; title: string; summary: string; section: string; tag: string | null; status: StorySummary["status"]; updated_at: number; updates: number; outlets: number; takes: number; velocity: number };
+export type StoryPhoto = { url: string; alt: string; credit: string; blur: string | null };
+
+type StoryRow = { image_media_id: string | null; image_credit: string | null; photo_alt: string | null; photo_blur: string | null; key: string; title: string; summary: string; section: string; tag: string | null; status: StorySummary["status"]; updated_at: number; updates: number; outlets: number; takes: number; velocity: number };
 
 /**
  * Stories for the Front Page. `order: "hot"` ranks by take velocity (the
@@ -40,7 +46,7 @@ export function listStories(limit = 10, opts: { section?: string; order?: "hot" 
   const where = opts.section && opts.section !== "Top Stories" ? "WHERE s.section = ?" : "";
   const order = opts.order === "hot" ? "velocity DESC, takes DESC" : "(s.status = 'live') DESC, (s.status = 'ended') ASC, s.updated_at DESC";
   const rows = all<StoryRow>(
-    `SELECT s.*, (SELECT count(*) FROM story_updates u WHERE u.story_key = s.key) updates,
+    `SELECT s.*, (SELECT alt FROM media m WHERE m.id = s.image_media_id) photo_alt, (SELECT blur FROM media m WHERE m.id = s.image_media_id) photo_blur, (SELECT count(*) FROM story_updates u WHERE u.story_key = s.key) updates,
        (SELECT count(DISTINCT source_id) FROM news_items n WHERE n.story_key = s.key) outlets,
        (SELECT count(*) FROM posts p WHERE p.story_key = s.key AND p.deleted_at IS NULL AND p.removed_at IS NULL) takes,
        (SELECT count(*) FROM posts p WHERE p.story_key = s.key AND p.deleted_at IS NULL AND p.removed_at IS NULL AND p.created_at > ?) velocity
@@ -59,6 +65,7 @@ export function listStories(limit = 10, opts: { section?: string; order?: "hot" 
   return rows.map((r) => ({
     key: r.key, title: r.title, summary: r.summary, section: r.section, tag: r.tag, status: r.status, updatedAt: r.updated_at,
     updates: r.updates, outlets: r.outlets, takes: r.takes, velocity: r.velocity, series: series.get(r.key)!, split: sp.get(r.key) ?? { ...EMPTY_SPLIT },
+    photo: r.image_media_id ? { url: `/api/media/${r.image_media_id}`, alt: r.photo_alt ?? "", credit: r.image_credit ?? "", blur: r.photo_blur } : null,
   }));
 }
 
@@ -113,4 +120,23 @@ export function liveEvent(id: string) {
 
 export function storyKeyExists(key: string) {
   return !!get("SELECT 1 FROM stories WHERE key = ?", [key]);
+}
+
+/**
+ * Editors attach a photo to a Story (or remove it to go back to the generated
+ * art). Alt text and a credit line are required: we only show photos we can credit.
+ */
+export async function setStoryPhoto(editor: { id: string; role: string }, key: string, input: { file: File; alt: string; credit: string } | null) {
+  if (editor.role !== "admin") throw new AppError("Editors only.", "forbidden");
+  if (!get("SELECT 1 FROM stories WHERE key = ?", [key])) throw new AppError("Story not found.", "not_found");
+  if (!input) {
+    run("UPDATE stories SET image_media_id = NULL, image_credit = NULL WHERE key = ?", [key]);
+    return;
+  }
+  const alt = input.alt.trim();
+  const credit = input.credit.trim();
+  if (!alt) throw new AppError("Describe the photo for screen-reader users (alt text).");
+  if (!credit) throw new AppError("Add a credit line (photographer / agency).");
+  const id = await saveImage(editor.id, input.file, "story", alt);
+  run("UPDATE stories SET image_media_id = ?, image_credit = ? WHERE key = ?", [id, credit.slice(0, 80), key]);
 }

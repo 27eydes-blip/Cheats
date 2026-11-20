@@ -1,4 +1,5 @@
 import { useId } from "react";
+import type { StoryPhoto } from "@/lib/news";
 
 const MOTIF: Record<string, number> = { Politics: 0, World: 1, Business: 2, Tech: 3, Sports: 4, Culture: 5, "Top Stories": 6 };
 
@@ -7,8 +8,9 @@ const MOTIF: Record<string, number> = { Politics: 0, World: 1, Business: 2, Tech
  * field, a gold disc, and a section motif (dome, globe grid, chart, circuit,
  * field lines, stage, isobars). Deterministic per story; no image requests.
  */
-export function StoryArt({ seed, section, className = "" }: { seed: string; section: string; className?: string }) {
+export function StoryArt({ seed, section, className = "", photo, width = 1200, priority }: { seed: string; section: string; className?: string; photo?: StoryPhoto | null; width?: number; priority?: boolean }) {
   const u = useId().replace(/[^a-zA-Z0-9]/g, "");
+  if (photo) return <StoryPhotoView photo={photo} className={className} width={width} priority={priority} />;
   let h = 2166136261;
   for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
   const r = (n: number, m: number) => ((h >>> n) & 0xff) % m;
@@ -80,5 +82,24 @@ export function StoryArt({ seed, section, className = "" }: { seed: string; sect
       )}
       <rect y="396" width="640" height="4" fill="#c8a24a" />
     </svg>
+  );
+}
+
+/** An editor's photo with its credit line; a blurred preview holds the space while it loads. */
+function StoryPhotoView({ photo, className, width, priority }: { photo: StoryPhoto; className: string; width: number; priority?: boolean }) {
+  return (
+    <span className="relative block h-full w-full overflow-hidden bg-navy" style={photo.blur ? { backgroundImage: `url(${photo.blur})`, backgroundSize: "cover" } : undefined}>
+      <img
+        src={`${photo.url}?w=${width > 960 ? 1280 : width > 640 ? 960 : 640}`}
+        srcSet={`${photo.url}?w=640 640w, ${photo.url}?w=960 960w, ${photo.url}?w=1280 1280w`}
+        sizes={width <= 640 ? "(min-width: 1024px) 33vw, 100vw" : "(min-width: 1024px) 66vw, 100vw"}
+        alt={photo.alt}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
+        decoding="async"
+        className={`h-full w-full object-cover ${className}`}
+      />
+      {photo.credit && <span className="absolute right-0 bottom-0 bg-black/55 px-1.5 py-0.5 text-[10px] text-white/85">{photo.credit}</span>}
+    </span>
   );
 }

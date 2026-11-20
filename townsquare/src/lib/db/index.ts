@@ -34,6 +34,8 @@ const COLUMNS: [table: string, column: string, definition: string][] = [
   ["posts", "stance", "TEXT"],
   ["posts", "story_key", "TEXT"],
   ["communities", "pinned_story_key", "TEXT"],
+  ["stories", "image_media_id", "TEXT"],
+  ["stories", "image_credit", "TEXT"],
 ];
 
 function migrate(db: DatabaseSync) {

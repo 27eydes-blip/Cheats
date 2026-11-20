@@ -7,12 +7,16 @@ import { debates, storyTakes } from "@/lib/takes";
 import { DebateCard } from "@/components/front/DebateCard";
 import { StoryArt } from "@/components/front/StoryArt";
 import { TakesBoard } from "@/components/story/TakesBoard";
+import { NewTakes } from "@/components/story/NewTakes";
 import { Avatar } from "@/components/ui/Avatar";
 import { Kicker, LiveBadge, SourceLabel, VerifiedSeal } from "@/components/ui/Badge";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { StanceMeter } from "@/components/ui/Stance";
 import { LocalDate, Time } from "@/components/Time";
 import { StoryActions } from "./StoryActions";
+import { StoryTickers } from "@/components/markets/LiveQuotes";
+import { getQuotes, marketMode } from "@/lib/markets/provider";
+import { storyTickers } from "@/lib/markets/storyTickers";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +34,8 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
   const fights = debates(viewer?.id ?? null, 2, key);
   const voices = [...new Map(takes.filter((t) => t.author.verified).map((t) => [t.author.id, t.author])).values()].slice(0, 3);
   const section = story.section === "Top Stories" ? "National" : story.section;
+  const tickers = storyTickers(key);
+  const tickerQuotes = tickers.length ? await getQuotes(tickers) : [];
 
   return (
     <article className="mx-auto max-w-[1320px]">
@@ -47,7 +53,8 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
 
       <div className="grid gap-10 px-4 pt-6 lg:grid-cols-12 lg:px-8">
         <div className="min-w-0 lg:col-span-8">
-          <div className="aspect-[16/8] overflow-hidden"><StoryArt seed={story.key} section={story.section} /></div>
+          <div className="aspect-[16/8] overflow-hidden"><StoryArt seed={story.key} section={story.section} photo={story.photo} priority /></div>
+          {tickerQuotes.length > 0 && <StoryTickers initial={tickerQuotes} mode={marketMode()} />}
 
           {/* Timeline rail */}
           <section aria-labelledby="timeline" className="mt-8">
@@ -141,6 +148,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
           <h2 id="takes" className="font-display text-display font-semibold">The Takes</h2>
           <span className="mono pb-2 text-[12px] text-ink-3">{takes.length} TAKES</span>
         </div>
+        <NewTakes storyKey={key} />
         <div className="mt-4"><TakesBoard takes={takes} /></div>
       </section>
     </article>
