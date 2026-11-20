@@ -78,6 +78,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
           <div id="home-feed" className="min-w-0 lg:min-h-screen lg:border-x lg:border-[var(--hairline)]">
             <FeedTabs tabs={tabs} active={tab} />
             <LiveWire items={wireItems()} slot="home" />
+            {(tab.kind === "foryou" || tab.kind === "friends") && <h2 className="sr-only">{tab.kind === "friends" ? "Friends" : "For You"} timeline</h2>}
             {tab.kind === "foryou" && <div role="article" aria-label={lead.title} className="tl-row"><StoryRow s={lead} lead /></div>}
             {tab.kind === "topic" && (
               <header className="tl-row flex items-center justify-between gap-3 px-4 py-2.5">

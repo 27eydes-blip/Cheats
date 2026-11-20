@@ -97,7 +97,7 @@ export function ForYouFrame({ item, onDismiss, children }: { item: Exclude<ForYo
       {label && <p className="truncate px-4 pt-2 pl-[68px] text-[12.5px] leading-none text-ink-3">{label}</p>}
       {!merged && (
         <div className="absolute top-1.5 right-[104px] z-[1] sm:right-[140px]">
-          <Menu label="Feed options" items={items} button={<MoreIcon size={17} />} buttonClassName="tap flex h-5 w-7 items-center justify-center text-ink-3 hover:text-ink-1" />
+          <Menu label="Feed options" items={items} button={<MoreIcon size={17} />} buttonClassName="tap flex h-6 w-8 items-center justify-center text-ink-3 hover:text-ink-1" />
         </div>
       )}
       {merged ? children(items) : children}

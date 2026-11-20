@@ -32,7 +32,7 @@ import { useComposer, useToast, useViewer } from "./providers";
 export function AuthorLine({ author, createdAt, editedAt, big }: { author: UserMini; createdAt: number; editedAt?: number | null; big?: boolean }) {
   return (
     <div className="flex min-w-0 items-baseline gap-x-1 whitespace-nowrap">
-      <Link href={`/u/${author.handle}`} className={`inline-flex min-w-0 shrink items-center gap-1 font-semibold text-ink-1 hover:underline ${big ? "text-[16px]" : "text-[15px]"}`} onClick={(e) => e.stopPropagation()}>
+      <Link href={`/u/${author.handle}`} className={`inline-flex min-h-6 min-w-0 shrink items-center gap-1 font-semibold text-ink-1 hover:underline ${big ? "text-[16px]" : "text-[15px]"}`} onClick={(e) => e.stopPropagation()}>
         <span className="truncate">{author.displayName}</span>
         {author.verified && <VerifiedSeal size={big ? 16 : 14} />}
       </Link>
@@ -266,7 +266,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
             <div id={`post-${post.id}-author`} className="min-w-0 leading-[20px]">
               <AuthorLine author={post.author} createdAt={post.createdAt} editedAt={post.editedAt} big={focus} />
             </div>
-            {!post.gone && !compact && <Menu label="Dispatch options" items={menu} button={<MoreIcon size={17} />} buttonClassName="tap flex h-5 w-7 shrink-0 items-center justify-center text-ink-3 hover:text-ink-1" />}
+            {!post.gone && !compact && <Menu label="Dispatch options" items={menu} button={<MoreIcon size={17} />} buttonClassName="tap flex h-6 w-8 shrink-0 items-center justify-center text-ink-3 hover:text-ink-1" />}
           </div>
 
           {(post.stance || (post.story && !hideStory) || post.replyTo || post.flashExpiresAt) && (

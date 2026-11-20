@@ -67,7 +67,7 @@ export function StoryTile({ s, big, flat, rising }: { s: StorySummary; big?: boo
 export function StoryRow({ s, rising, lead }: { s: StorySummary; rising?: boolean; /** the top story of the moment */ lead?: boolean }) {
   return (
     <Link href={`/news/story/${s.key}`} className="group flex gap-3 px-4 py-2.5">
-      <span className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1.5 text-[13px] leading-[19px] text-ink-3">
           <span className="shrink-0 font-semibold text-ink-2">{lead ? "Top story" : sectionName(s)}</span>
           {s.status === "live" && <><span aria-hidden="true">·</span><span className="shrink-0">Live</span></>}
@@ -76,7 +76,7 @@ export function StoryRow({ s, rising, lead }: { s: StorySummary; rising?: boolea
           <span aria-hidden="true">·</span>
           <span className="shrink-0"><Time ms={s.updatedAt} /></span>
         </span>
-        <span className="mt-0.5 line-clamp-3 block text-[15px] leading-[21px] font-semibold text-ink-1 group-hover:underline">{s.title}</span>
+        <h3 className="mt-0.5 line-clamp-3 text-[15px] leading-[21px] font-semibold text-ink-1 group-hover:underline">{s.title}</h3>
         {lead && <span className="mt-0.5 line-clamp-2 block text-[14px] leading-[20px] text-ink-2">{s.summary}</span>}
         <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-ink-3">
           {s.source && <span className="truncate">{s.source}</span>}
@@ -84,7 +84,7 @@ export function StoryRow({ s, rising, lead }: { s: StorySummary; rising?: boolea
           <span className="shrink-0">{s.takes} dispatch{s.takes === 1 ? "" : "es"}</span>
         </span>
         {s.teams.length > 0 && <span className="mt-1.5 block"><TeamChips teams={s.teams} linked={false} /></span>}
-      </span>
+      </div>
       <span className="relative mt-0.5 block h-[76px] w-[76px] shrink-0 overflow-hidden rounded-[12px] ring-1 ring-[var(--hairline)] sm:h-[84px] sm:w-[112px]">
         <StoryArt seed={s.key} section={s.section} photo={s.photo} width={320} />
       </span>
