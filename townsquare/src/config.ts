@@ -29,6 +29,7 @@ export const RATE_LIMITS = {
   follow: [[15, 60_000], [60, 60 * 60_000]],
   like: [[60, 60_000], [300, 60 * 60_000]],
   track: [[30, 60_000], [600, 60 * 60_000]],
+  message: [[20, 60_000], [200, 60 * 60_000]],
 } as const satisfies Record<string, readonly (readonly [number, number])[]>;
 
 /**
@@ -37,3 +38,11 @@ export const RATE_LIMITS = {
  * e.g. "/brand/personal-logo.svg". null hides it.
  */
 export const PERSONAL_LOGO: { src: string; alt: string; href?: string } | null = null;
+
+/**
+ * Feature flags. Wallet is a placeholder (no payments exist); it stays hidden
+ * until this is true (or NEXT_PUBLIC_FEATURE_WALLET=1 at build time).
+ */
+export const FEATURES = {
+  wallet: process.env.NEXT_PUBLIC_FEATURE_WALLET === "1",
+} as const;

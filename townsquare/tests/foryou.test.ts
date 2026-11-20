@@ -14,7 +14,7 @@ function story(key: string, section: string, status = "developing", ago = 1) {
   run("INSERT INTO stories (key, title, section, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", [key, `Story ${key}`, section, status, t, t]);
 }
 const post = (u: Awaited<ReturnType<typeof makeUser>>, body: string, storyKey?: string) => createPost(u, { body, storyKey, stance: storyKey ? "agree" : undefined } as Parameters<typeof createPost>[1]);
-const ids = (p: ReturnType<typeof forYou>) => p.items.map((i) => (i.kind === "post" ? `post:${i.post.id}` : `story:${i.story.key}`));
+const ids = (p: ReturnType<typeof forYou>) => p.items.map((i) => (i.kind === "post" ? `post:${i.post.id}` : i.kind === "story" ? `story:${i.story.key}` : `ad:${i.ad.id}`));
 
 describe("For You feed", () => {
   it("logged-out viewers get a trending + breaking mix with stories and dispatches", async () => {

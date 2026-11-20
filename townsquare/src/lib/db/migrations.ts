@@ -161,6 +161,43 @@ CREATE TABLE IF NOT EXISTS achievements (
 );
 `,
   },
+  {
+    id: 7,
+    name: "feed_tabs_messages_lists",
+    sql: `
+CREATE TABLE IF NOT EXISTS feed_tabs (
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind       TEXT NOT NULL CHECK (kind IN ('topic','team')),
+  key        TEXT NOT NULL,
+  position   INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, kind, key)
+);
+CREATE TABLE IF NOT EXISTS messages (
+  id           TEXT PRIMARY KEY,
+  sender_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipient_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body         TEXT NOT NULL,
+  created_at   INTEGER NOT NULL,
+  read_at      INTEGER
+);
+CREATE INDEX IF NOT EXISTS messages_inbox ON messages(recipient_id, read_at, created_at DESC);
+CREATE INDEX IF NOT EXISTS messages_pair ON messages(sender_id, recipient_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS lists (
+  id         TEXT PRIMARY KEY,
+  owner_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS lists_owner ON lists(owner_id, created_at);
+CREATE TABLE IF NOT EXISTS list_members (
+  list_id    TEXT NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (list_id, user_id)
+);
+`,
+  },
 ];
 
 export function runMigrations(db: DatabaseSync) {

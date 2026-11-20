@@ -4,11 +4,15 @@ import { getBanner } from "./moderation";
 import { listStories, type StorySummary } from "./news";
 import { hiddenAuthorsSql, hiddenParams, hydrate, type PostView } from "./posts";
 import { loadProfile, mutedTopics } from "./interests";
+import { getAds, isSponsoredSlot, type SponsoredCard } from "./ads";
+import { storiesForTeam } from "./sports/teams";
 import { diversify, scoreCandidate, SECTION_TOPIC, type Activity, type Candidate, type Topic } from "./ranking";
 
 export type ForYouItem =
   | { key: string; kind: "post"; post: PostView; repostedBy: null; reason?: string; topic: string | null; promoted?: boolean }
-  | { key: string; kind: "story"; story: StorySummary; reason?: string; topic: string | null };
+  | { key: string; kind: "story"; story: StorySummary; reason?: string; topic: string | null; rising?: boolean }
+  | { key: string; kind: "sponsored"; ad: SponsoredCard; topic: null };
+export type ForYouOpts = { excludeStory?: string; /** topic tab: only this topic */ topic?: string; /** team tab: only stories tagged with this team, and dispatches on them */ teamId?: string };
 export type ForYouPage = { items: ForYouItem[]; nextCursor: string | null };
 
 const H = 3_600_000;
@@ -24,12 +28,18 @@ const fromAgg = (a?: Agg) => (a ? ages(a.n6, a.n24, a.nOld) : []);
 const BUCKET = (col: string, t: number) =>
   `SUM(CASE WHEN ${col} > ${t - 6 * H} THEN 1 ELSE 0 END) n6, SUM(CASE WHEN ${col} <= ${t - 6 * H} AND ${col} > ${t - 24 * H} THEN 1 ELSE 0 END) n24, SUM(CASE WHEN ${col} <= ${t - 24 * H} THEN 1 ELSE 0 END) nOld`;
 
+/** A story is "rising" when takes are arriving fast: 3+ in the last 6 hours and more than the 6 hours before. */
+export function isRising(s: Pick<StorySummary, "velocity" | "series">) {
+  const prev = s.series.slice(6, 9).reduce((a, b) => a + b, 0);
+  return s.velocity >= 3 && s.velocity > prev;
+}
+
 /**
  * Build, score, diversify and page the For You feed: recent top-level
  * Dispatches plus Stories. Logged-out and brand-new viewers have an empty
  * interest profile, which makes this a trending + breaking mix.
  */
-export function forYou(viewerId: string | null, cursor?: string | null, limit: number = LIMITS.feedPage, opts: { excludeStory?: string } = {}): ForYouPage {
+export function forYou(viewerId: string | null, cursor?: string | null, limit: number = LIMITS.feedPage, opts: ForYouOpts = {}): ForYouPage {
   const t = now();
   const offset = Math.max(0, Number(cursor) || 0);
   const profile = loadProfile(viewerId);
@@ -39,8 +49,8 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
   );
 
   // ---- posts
-  const posts = all<{ id: string; author_id: string; created_at: number; section: string | null; promoted: number }>(
-    `SELECT p.id, p.author_id, p.created_at, s.section, p.promoted FROM posts p
+  const posts = all<{ id: string; author_id: string; created_at: number; section: string | null; promoted: number; story_key: string | null }>(
+    `SELECT p.id, p.author_id, p.created_at, s.section, p.promoted, p.story_key FROM posts p
      JOIN users u ON u.id = p.author_id LEFT JOIN stories s ON s.key = p.story_key
      WHERE p.deleted_at IS NULL AND p.removed_at IS NULL AND p.community_id IS NULL AND p.reply_to_id IS NULL
        AND u.status = 'active' AND p.created_at > ? AND p.author_id NOT IN (${hiddenAuthorsSql})
@@ -71,10 +81,12 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
   const tags = new Map<string, string[]>();
   if (ids.length) for (const r of all<{ post_id: string; tag: string }>(`SELECT post_id, tag FROM post_hashtags WHERE post_id IN (${q})`, ids)) tags.set(r.post_id, [...(tags.get(r.post_id) ?? []), r.tag]);
 
+  const teamStories = opts.teamId ? new Set(storiesForTeam(opts.teamId)) : null;
   const cands: (Candidate & { authorId: string | null; topic: Topic | null })[] = [];
   for (const p of posts) {
     const topic = p.section ? (SECTION_TOPIC[p.section] ?? "national") : null;
-    if (topic && muted.has(topic)) continue;
+    if (opts.topic ? topic !== opts.topic : topic && muted.has(topic)) continue;
+    if (teamStories && !(p.story_key && teamStories.has(p.story_key))) continue;
     const activity: Activity = { positive: fromAgg(positive.get(p.id)), replies: fromAgg(replies.get(p.id)), shares: fromAgg(shares.get(p.id)), views: fromAgg(views.get(p.id)), negative: negative.get(p.id) ?? 0 };
     cands.push({ id: `post:${p.id}`, type: "post", ageHours: (t - p.created_at) / H, authorId: p.author_id, topic, tags: tags.get(p.id) ?? [], activity, socialProof: social.get(p.id) ?? 0, breaking: false, promoted: !!p.promoted });
   }
@@ -90,7 +102,8 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
   const storyMap = new Map<string, StorySummary>();
   for (const s of stories) {
     const topic = SECTION_TOPIC[s.section] ?? "national";
-    if (muted.has(topic)) continue;
+    if (opts.topic ? topic !== opts.topic : muted.has(topic)) continue;
+    if (teamStories && !teamStories.has(s.key)) continue;
     storyMap.set(s.key, s);
     const breaking = s.status === "live" || !!banner?.url?.includes(`/news/story/${s.key}`);
     cands.push({
@@ -115,8 +128,19 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
       if (post && !post.gone) items.push({ key: `fy${offset + i}_${post.id}`, kind: "post", post, repostedBy: null, reason: c.promoted ? undefined : reason, topic: c.topic, promoted: !!c.promoted });
     } else {
       const story = storyMap.get(c.id.slice(6));
-      if (story) items.push({ key: `fy${offset + i}_${story.key}`, kind: "story", story, reason, topic: c.topic });
+      if (story) items.push({ key: `fy${offset + i}_${story.key}`, kind: "story", story, reason, topic: c.topic, rising: isRising(story) });
     }
   });
+  // Sponsored cards (only when an admin enabled them): fixed slots, clearly labeled, never ranked.
+  const ads = !opts.topic && !opts.teamId ? getAds() : null;
+  if (ads?.enabled && ads.cards.length) {
+    for (let i = items.length - 1; i >= 0; i--) {
+      const abs = offset + i;
+      if (isSponsoredSlot(abs)) {
+        const ad = ads.cards[Math.floor(abs / 10) % ads.cards.length];
+        items.splice(i, 0, { key: `ad${abs}_${ad.id}`, kind: "sponsored", ad, topic: null });
+      }
+    }
+  }
   return { items, nextCursor: offset + limit < ordered.length ? String(offset + limit) : null };
 }
