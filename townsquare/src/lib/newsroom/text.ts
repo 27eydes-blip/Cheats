@@ -91,6 +91,12 @@ const STOP = new Set(
 
 function stem(w: string): string {
   if (/^\d/.test(w)) return w;
+  const out = stem1(w);
+  // "approve" / "approved" / "approves" all end up as "approv"; "vote" / "voted" as "vot".
+  return out.length > 3 && out.endsWith("e") && !out.endsWith("ee") ? out.slice(0, -1) : out;
+}
+
+function stem1(w: string): string {
   if (w.length > 4 && w.endsWith("ies")) return w.slice(0, -3) + "y";
   if (w.length > 5 && w.endsWith("ing")) return w.slice(0, -3);
   if (w.length > 4 && w.endsWith("ed") && !w.endsWith("eed")) return w.slice(0, -2);

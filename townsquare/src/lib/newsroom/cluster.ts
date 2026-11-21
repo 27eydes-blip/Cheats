@@ -18,6 +18,8 @@ import { cleanTitle, isOpinion, loadedWords, neutralize, tokenize } from "./text
 export const STORY_WINDOW = 36 * 3_600_000;
 export const JOIN_THRESHOLD = 0.3;
 export const MIN_SHARED = 2;
+/** Two stories created in the same run merge when their profiles are this similar and share 3+ distinctive words. */
+export const MERGE_THRESHOLD = 0.33;
 
 export type Bag = Record<string, number>;
 export type Doc = {
@@ -32,8 +34,13 @@ export function makeIdf(corpus: Bag[]) {
   for (const b of corpus) for (const t of Object.keys(b)) df.set(t, (df.get(t) ?? 0) + 1);
   const n = corpus.length;
   const idf = (t: string) => Math.log((n + 1) / ((df.get(t) ?? 0) + 1)) + 1;
-  /** Words in more than 10% of recent articles (and more than 10) aren't distinctive enough to link two articles on their own. */
-  const common = (t: string) => (df.get(t) ?? 0) > Math.max(10, n * 0.1);
+  /**
+   * Words in more than 20% of recent articles (and more than 25) aren't
+   * distinctive enough to link two articles on their own. The bar is high on
+   * purpose: on a day one event dominates, its own key words are frequent,
+   * and they must still be allowed to link its articles.
+   */
+  const common = (t: string) => (df.get(t) ?? 0) > Math.max(25, n * 0.2);
   return { idf, common, size: n };
 }
 
@@ -104,7 +111,30 @@ export function assign(docs: Doc[], stories: StoryState[], corpus: Bag[], makeKe
       assignment.set(d.id, s.key);
     }
   }
-  return { assignment, created, stories: live };
+  // Merge pass: a story created in this run may duplicate another story (the first article used
+  // different words). Only stories created in this run are merged away, so existing story links never change.
+  const merged = new Set<string>();
+  for (const c of created) {
+    let best: { s: StoryState; sim: number } | null = null;
+    for (const s of live) {
+      if (s.key === c.key || merged.has(s.key)) continue;
+      if (c.firstAt - s.lastAt > STORY_WINDOW || s.firstAt - c.lastAt > STORY_WINDOW) continue;
+      if (sharedTerms(c.terms, s.terms, common).length < MIN_SHARED + 1) continue;
+      const sim = cosine(c.terms, s.terms, idf);
+      if (sim >= MERGE_THRESHOLD && (!best || sim > best.sim)) best = { s, sim };
+    }
+    if (!best) continue;
+    // Keep the older story (existing ones first, then the one created earlier in this run).
+    const keep = created.includes(best.s) && created.indexOf(best.s) > created.indexOf(c) ? c : best.s;
+    const drop = keep === c ? best.s : c;
+    addBag(keep.terms, drop.terms);
+    keep.firstAt = Math.min(keep.firstAt, drop.firstAt);
+    keep.lastAt = Math.max(keep.lastAt, drop.lastAt);
+    keep.size += drop.size;
+    merged.add(drop.key);
+    for (const [doc, key] of assignment) if (key === drop.key) assignment.set(doc, keep.key);
+  }
+  return { assignment, created: created.filter((c) => !merged.has(c.key)), stories: live.filter((s) => !merged.has(s.key)) };
 }
 
 /** URL slug for a new story: the first few words of its first headline plus a short random suffix. */

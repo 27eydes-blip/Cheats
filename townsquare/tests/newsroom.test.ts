@@ -145,3 +145,19 @@ describe("clustering", () => {
     expect(storySlug("BREAKING: Senate passes $1.2 trillion infrastructure bill in 62-38 vote", "ab12")).toBe("senate-passes-12-trillion-infrastructure-bill-in-ab12");
   });
 });
+
+describe("clustering when the first article uses different words", () => {
+  it("merges a near-duplicate story created in the same run, keeping existing stories' keys", () => {
+    const at = Date.UTC(2026, 10, 20, 12);
+    const d = (id: string, title: string, snip: string, h: number): Doc => ({ id, sourceId: id, outletName: id, title, snippet: snip, url: `https://e.example.com/${id}`, terms: articleTerms(title, snip), publishedAt: at + h * 3_600_000 });
+    const docs = [
+      d("a", "Senate approves sweeping infrastructure package", "Senators voted 62-38 for the infrastructure package.", 0),
+      d("b", "Infrastructure bill clears Senate with bipartisan support", "The infrastructure bill passed the Senate with Republican votes.", 0.2),
+      d("c", "Senate passes infrastructure bill in 62-38 vote", "The Senate approved the infrastructure bill, sending it to the House.", 0.4),
+      d("e", "Senate approves sweeping infrastructure package", "Senators voted 62-38 for the infrastructure package.", 0.6),
+    ];
+    const r = assign(docs, [], [], (x) => `k-${x.id}`);
+    expect(new Set(docs.map((x) => r.assignment.get(x.id))).size).toBe(1);
+    expect(r.created).toHaveLength(1);
+  });
+});

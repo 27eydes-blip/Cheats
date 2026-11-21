@@ -7,7 +7,12 @@ import { get, now, run } from "../db";
  */
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
-const site = () => (process.env.SITE_URL || process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${(process.env.SITE_URL || process.env.RAILWAY_PUBLIC_DOMAIN)!.replace(/^https?:\/\//, "")}` : "");
+/** The public site address (APP_URL, or Railway's domain), so site owners can see who is reading their feed. */
+const site = () => {
+  const raw = process.env.APP_URL || process.env.RAILWAY_PUBLIC_DOMAIN || "";
+  if (!raw || /localhost|127\.0\.0\.1/.test(raw)) return "";
+  return `https://${raw.replace(/^https?:\/\//, "").replace(/\/$/, "")}`;
+};
 export const BOT_TOKEN = "WorldNetNewsBot";
 export const userAgent = () => `${BOT_TOKEN}/1.0 (RSS reader; headlines and links only${site() ? `; +${site()}/help#news-sources` : ""})`;
 
