@@ -1,3 +1,4 @@
+import { publishedNotesForPosts } from "./notes/notes";
 import { deleteFiles } from "./media";
 import type { ReactionKind } from "./reactions-meta";
 import { reactionCounts } from "./social";
@@ -52,6 +53,8 @@ export type PostView = {
   split: Split;
   /** Reaction counts (the five Boost reactions). */
   reactions: Record<ReactionKind, number>;
+  /** A context note that raters across viewpoints found helpful (shown under the dispatch). */
+  note: { id: string; body: string; sourceUrl: string; sourceDomain: string } | null;
   viewer: { liked: boolean; reposted: boolean; bookmarked: boolean; isAuthor: boolean; canEdit: boolean; reaction: ReactionKind | null };
 };
 
@@ -169,6 +172,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       ? all<{ key: string; title: string }>(`SELECT key, title FROM stories WHERE key IN (${placeholders(storyKeys.length)})`, storyKeys).map((r) => [r.key, r.title])
       : [],
   );
+  const notes = depth === 0 ? publishedNotesForPosts(uniq) : new Map();
   const out: PostView[] = [];
   for (const id of ids) {
     const r = byId.get(id);
@@ -189,6 +193,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       link: !gone && r.link_url ? { url: r.link_url, title: r.link_title, domain: r.link_domain ?? "" } : null,
       source: !gone && r.source_url ? { url: r.source_url, domain: r.source_domain ?? "" } : null,
       flashExpiresAt: r.expires_at,
+      note: gone ? null : notes.get(r.id) ?? null,
       poll:
         poll && !gone
           ? {

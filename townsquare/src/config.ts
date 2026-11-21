@@ -30,6 +30,10 @@ export const RATE_LIMITS = {
   like: [[60, 60_000], [300, 60 * 60_000]],
   track: [[30, 60_000], [600, 60 * 60_000]],
   message: [[20, 60_000], [200, 60 * 60_000]],
+  /** Context notes: a few a day; ratings faster; flags limited to stop brigading. */
+  note: [[3, 60 * 60_000], [5, 24 * 60 * 60_000]],
+  noteRating: [[30, 10 * 60_000], [200, 24 * 60 * 60_000]],
+  noteFlag: [[10, 60 * 60_000]],
 } as const satisfies Record<string, readonly (readonly [number, number])[]>;
 
 /**
