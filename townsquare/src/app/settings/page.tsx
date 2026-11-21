@@ -17,6 +17,7 @@ export default async function Settings() {
     { href: "/settings/profile", title: "Edit profile", text: "Photo, banner, bio, location, Beat, accent color", icon: EditIcon },
     { href: "/settings/account", title: "Account", text: `@${viewer.handle} · email · password · delete account`, icon: UserIcon },
     { href: "/settings/privacy", title: "Privacy and safety", text: "Private account, follow requests, blocked and muted, your data", icon: ShieldIcon },
+    { href: "/settings/alerts", title: "Alerts", text: "Push alerts on your phone: breaking news, responses, quiet hours", icon: BellIcon },
     { href: "/settings/notifications", title: "Notifications", text: "Followers, mentions, responses, reactions, milestones", icon: BellIcon },
     { href: "/settings/display", title: "Display", text: "Theme and text size", icon: MoonIcon },
   ];

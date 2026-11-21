@@ -123,6 +123,7 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
       {fresh.length > 0 && <MarkRead />}
       {newFollows.length > 0 && <FollowerCelebrate id={newFollows.map((a) => a.id).join(",")} text={`${newFollows[0].displayName}${newFollows.length > 1 ? ` and ${newFollows.length - 1} more` : ""} followed you`} />}
       <PageTitle folio={<Kicker tone="gold">Inbox</Kicker>} title="Newsdesk" dek={fresh.length ? `${fresh.length} new, grouped by story.` : "You're all caught up."} />
+      <p className="px-4 pt-2 text-[13.5px] sm:px-6"><Link href="/settings/alerts" className="text-[var(--wn-blue-ink)] underline">Get push alerts on this device</Link></p>
       <div className="sticky-sub z-20 border-b border-rule bg-paper px-4 py-2.5 sm:px-6">
         <ChipRow label="Filter the Newsdesk">
           {Object.entries(LABELS).map(([k, v]) => <ChipLink key={k} href={k === "all" ? "/notifications" : `/notifications?f=${k}`} active={k === filter}>{v}</ChipLink>)}
