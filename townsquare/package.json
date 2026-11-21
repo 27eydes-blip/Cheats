@@ -14,7 +14,8 @@
     "test:visual": "playwright test --trace off",
     "test:visual:update": "playwright test --trace off --update-snapshots",
     "start:server": "tsx scripts/seed.ts && npm start",
-    "teams:refresh": "tsx scripts/refresh-team-logos.ts"
+    "teams:refresh": "tsx scripts/refresh-team-logos.ts",
+    "news:ingest": "tsx scripts/ingest.ts"
   },
   "engines": {
     "node": ">=22.13"
@@ -23,12 +24,14 @@
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@fontsource-variable/newsreader": "^5.3.0",
+    "fast-xml-parser": "5.12.0",
     "next": "^15.5.29",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "server-only": "^0.0.1",
     "sharp": "^0.34.5",
     "tsx": "^4.20.6",
+    "web-push": "3.6.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -38,6 +41,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/web-push": "^3.6.4",
     "jsdom": "^25.0.1",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",

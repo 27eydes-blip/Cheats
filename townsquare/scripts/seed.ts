@@ -4,7 +4,9 @@
  * Takes with stances (plus head-to-head Answers), stance votes, 10 Desks with
  * threaded discussions, Live Studio shows, 50 headlines, and a few reports.
  *
- * All people, outlets, and events are fictional sample data.
+ * All people, outlets, and events are fictional sample data. Stories and
+ * outlets are marked as demo data: they show only while the Control Room's
+ * demo switch is on (the default outside production).
  *
  *   npm run seed     (refuses to run on a database that already has users)
  *   npm run reset    (wipes ./data and seeds again)
@@ -372,7 +374,11 @@ async function main() {
     for (const h of ["maria_lopez", "markets_mike", "tom_on_policy", "dr_amina", "defense_dana", "the_real_nina", "priya_codes", "coach_dave"]) {
       run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [by.get("demo")!.id, by.get(h)!.id, NOW - 100 * HOUR]);
     }
-    for (const [id, name, home] of OUTLETS) run("INSERT INTO news_sources (id, name, homepage, verified) VALUES (?, ?, ?, 1)", [id, name, home]);
+    // Fictional demo outlets (hidden when the Control Room's demo switch is off). Leans are made up so the coverage bar has something to show.
+    const DEMO_LEAN: Record<string, string> = { o1: "Center", o2: "Lean Left", o3: "Lean Right", o4: "Left", o5: "Right", o6: "Center" };
+    for (const [id, name, home] of OUTLETS) {
+      run("INSERT INTO news_sources (id, name, homepage, verified, kind, demo, lean, lean_note, active) VALUES (?, ?, ?, 1, 'demo', 1, ?, 'Fictional demo outlet.', 0)", [id, name, home, DEMO_LEAN[id]]);
+    }
   });
   for (let i = 0; i < 8; i++) images.push(await makeImage(pick(voices).id, i));
 
@@ -403,7 +409,7 @@ async function main() {
     STORIES.forEach((st, si) => {
       const age = (st.status === "ended" ? 30 : st.status === "live" ? 6 : 14) * HOUR;
       const created = NOW - age;
-      run("INSERT INTO stories (key, title, summary, section, tag, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+      run("INSERT INTO stories (key, title, summary, section, tag, status, created_at, updated_at, origin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'demo')", [
         st.key, st.title, st.summary, st.section, st.tag, st.status, created, st.status === "live" ? NOW - int(2, 9) * MIN : NOW - int(1, 8) * HOUR,
       ]);
       st.updates.forEach(([body, kind], i) =>
