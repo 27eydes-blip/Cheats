@@ -446,3 +446,70 @@ create policy "send as self" on messages for insert with check (sender_id = auth
 create policy "mark own inbox read" on messages for update using (recipient_id = auth.uid()) with check (recipient_id = auth.uid());
 create policy "own lists" on lists for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 create policy "own list members" on list_members for all using (exists (select 1 from lists l where l.id = list_id and l.owner_id = auth.uid())) with check (exists (select 1 from lists l where l.id = list_id and l.owner_id = auth.uid()));
+
+-- Migration 8: real news (outlet leans, feed status, clustering fields), context notes, push alerts.
+-- News is written only by the server's ingest job (service role); everyone can read it.
+alter table public.news_sources add column if not exists kind text not null default 'rss';
+alter table public.news_sources add column if not exists lean text check (lean in ('Left','Lean Left','Center','Lean Right','Right'));
+alter table public.news_sources add column if not exists lean_note text not null default '';
+alter table public.news_sources add column if not exists color text not null default '#7fa3ff';
+alter table public.news_sources add column if not exists category text;
+alter table public.news_sources add column if not exists outlet_type text not null default 'digital';
+alter table public.news_sources add column if not exists api_source text;
+alter table public.news_sources add column if not exists active boolean not null default true;
+alter table public.news_sources add column if not exists demo boolean not null default false;
+alter table public.news_sources add column if not exists etag text;
+alter table public.news_sources add column if not exists last_modified text;
+alter table public.news_sources add column if not exists last_fetch_at timestamptz;
+alter table public.news_sources add column if not exists last_success_at timestamptz;
+alter table public.news_sources add column if not exists last_status int;
+alter table public.news_sources add column if not exists last_error text;
+alter table public.news_sources add column if not exists error_count int not null default 0;
+alter table public.news_sources add column if not exists next_fetch_at timestamptz not null default now();
+alter table public.news_sources add column if not exists items_total int not null default 0;
+alter table public.news_items add column if not exists guid text;
+alter table public.news_items add column if not exists topic text;
+alter table public.news_items add column if not exists opinion boolean not null default false;
+alter table public.news_items add column if not exists tokens jsonb not null default '[]';
+alter table public.news_items add column if not exists fetched_at timestamptz;
+alter table public.news_items add constraint news_items_summary_len check (char_length(summary) < 280);
+create index if not exists news_items_story on public.news_items(story_key, published_at desc);
+alter table public.stories add column if not exists origin text not null default 'real' check (origin in ('real','demo'));
+alter table public.stories add column if not exists category text;
+alter table public.stories add column if not exists importance real not null default 0;
+alter table public.stories add column if not exists freshness real not null default 0;
+alter table public.stories add column if not exists summary_source text;
+alter table public.stories add column if not exists keywords jsonb not null default '{}';
+alter table public.stories add column if not exists last_article_at timestamptz;
+alter table public.stories add column if not exists headline_locked boolean not null default false;
+create table public.ingest_runs (id uuid primary key default gen_random_uuid(), started_at timestamptz not null default now(), finished_at timestamptz, trigger text not null default 'schedule', sources int not null default 0, fetched int not null default 0, new_items int not null default 0, stories_new int not null default 0, stories_updated int not null default 0, errors int not null default 0, note text not null default '');
+create table public.robots_cache (host text primary key, body text not null default '', status int not null, fetched_at timestamptz not null default now());
+alter table ingest_runs enable row level security; alter table robots_cache enable row level security; -- service role only
+
+create table public.context_notes (
+  id uuid primary key default gen_random_uuid(), author_id uuid not null references profiles(id) on delete cascade,
+  target_type text not null check (target_type in ('post','story')), target_id text not null,
+  body text not null check (char_length(body) between 20 and 280), source_url text not null check (source_url ~ '^https?://'),
+  status text not null default 'needs_ratings' check (status in ('needs_ratings','published','not_helpful','removed')),
+  intercept real, factor real, ratings int not null default 0, detail jsonb not null default '{}',
+  created_at timestamptz not null default now(), published_at timestamptz, status_changed_at timestamptz
+);
+create index notes_target on public.context_notes(target_type, target_id, status);
+create table public.note_ratings (note_id uuid references context_notes(id) on delete cascade, rater_id uuid references profiles(id) on delete cascade, value text not null check (value in ('helpful','somewhat','not_helpful')), reason text not null, created_at timestamptz not null default now(), primary key (note_id, rater_id));
+create table public.note_flags (id uuid primary key default gen_random_uuid(), note_id uuid not null references context_notes(id) on delete cascade, reporter_id uuid references profiles(id) on delete set null, reason text not null, created_at timestamptz not null default now(), resolved_at timestamptz);
+create table public.rater_scores (user_id uuid primary key references profiles(id) on delete cascade, factor real not null, grp int not null, ratings int not null default 0, updated_at timestamptz not null default now());
+alter table context_notes enable row level security; alter table note_ratings enable row level security; alter table note_flags enable row level security; alter table rater_scores enable row level security;
+-- Published notes are public; authors see their own. Status, scores and publishing are set by the server only.
+create policy "published notes readable" on context_notes for select using (status = 'published' or author_id = auth.uid());
+create policy "write own note" on context_notes for insert with check (author_id = auth.uid() and status = 'needs_ratings');
+create policy "own ratings" on note_ratings for all using (rater_id = auth.uid()) with check (rater_id = auth.uid());
+create policy "file a flag" on note_flags for insert with check (reporter_id = auth.uid());
+
+create table public.push_subscriptions (id uuid primary key default gen_random_uuid(), user_id uuid not null references profiles(id) on delete cascade, endpoint text not null unique check (endpoint ~ '^https://'), p256dh text not null, auth text not null, user_agent text not null default '', created_at timestamptz not null default now(), last_success_at timestamptz, failures int not null default 0);
+create table public.alert_prefs (user_id uuid primary key references profiles(id) on delete cascade, breaking boolean not null default true, replies boolean not null default true, mentions boolean not null default true, follows boolean not null default true, following boolean not null default true, quiet_start int check (quiet_start between 0 and 1439), quiet_end int check (quiet_end between 0 and 1439), tz text not null default 'America/New_York', breaking_cap int not null default 3 check (breaking_cap between 0 and 10));
+create table public.alert_log (user_id uuid references profiles(id) on delete cascade, kind text not null, ref text not null, sent_at timestamptz not null default now(), primary key (user_id, kind, ref));
+create table public.breaking_alerts (story_key text primary key, title text not null, body text not null default '', url text not null, sent_by uuid references profiles(id) on delete set null, auto boolean not null default false, recipients int not null default 0, sent_at timestamptz not null default now());
+alter table push_subscriptions enable row level security; alter table alert_prefs enable row level security; alter table alert_log enable row level security; alter table breaking_alerts enable row level security;
+create policy "own push subscriptions" on push_subscriptions for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own alert prefs" on alert_prefs for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- alert_log and breaking_alerts: server (service role) only.

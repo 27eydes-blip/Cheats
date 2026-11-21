@@ -34,6 +34,26 @@ export default function Help() {
         ))}
         <p className="px-1 pt-3 text-[13.5px] text-ink-3">Still stuck? See <Link href="/legal/terms" className="underline">Terms</Link>, <Link href="/legal/privacy" className="underline">Privacy</Link>, or manage your account in <Link href="/settings" className="underline">Settings</Link>.</p>
       </div>
+      <div className="mt-8 space-y-6 px-4 pb-10 text-[15px] leading-relaxed text-ink-2 sm:px-6">
+        <h2 className="text-[19px] font-bold text-ink-1">How the news works</h2>
+        <section id="news-sources" aria-labelledby="h-sources" className="scroll-mt-28">
+          <h3 id="h-sources" className="text-[16px] font-bold text-ink-1">Where headlines come from</h3>
+          <p className="mt-1">Every 10 minutes we read the public RSS feeds of more than 50 outlets across the spectrum (wire services, national papers, TV news, and left, center and right sites), plus AP and Reuters through a licensed news service when one is set up. We keep only the headline, a snippet under 280 characters, the outlet&apos;s name, the time, and a link to the original article. We never copy articles, we check each site&apos;s robots.txt, we cache feeds, and we don&apos;t use outlet logos. Our feed reader identifies itself as <span className="mono text-[13px]">WorldNetNewsBot</span>.</p>
+          <p className="mt-2">Articles about the same event are grouped into one Story. Its headline is written from what the outlets agree on, with loaded words removed. Outlets can ask us to stop reading their feed, and we will.</p>
+        </section>
+        <section id="coverage" aria-labelledby="h-cov" className="scroll-mt-28">
+          <h3 id="h-cov" className="text-[16px] font-bold text-ink-1">The coverage bar</h3>
+          <p className="mt-1">The thin bar on a story shows which outlets are covering it: the share from the left (Left and Lean Left), the center, and the right (Lean Right and Right), and how many outlets in all. Tap it to see every outlet, grouped by lean, each linking to its own article. Lean labels are approximate, based on public third-party ratings (AllSides and Ad Fontes Media); sports and tech sites aren&apos;t rated. When one side has 70% or more of the coverage, or a side has 10% or less, the story says so in plain words, like &ldquo;Few Right-leaning outlets covering this&rdquo;. It describes coverage, not whether the story is true.</p>
+        </section>
+        <section id="notes" aria-labelledby="h-notes" className="scroll-mt-28">
+          <h3 id="h-notes" className="text-[16px] font-bold text-ink-1">Context notes</h3>
+          <p className="mt-1">Anyone signed in for at least 3 days can add a short note with a source link to a dispatch or story (open the ••• menu, or the Context notes section). Others rate notes Helpful, Somewhat helpful or Not helpful, with a reason. A note shows publicly only when people who usually disagree with each other both rate it helpful: we group raters by their past rating patterns, and a note needs at least 5 ratings, at least 2 from each group, and mostly-helpful ratings in both. Lots of votes from one side are never enough. Notes can stop showing if later ratings change, and you can report a note for spam or abuse.</p>
+        </section>
+        <section id="alerts" aria-labelledby="h-alerts" className="scroll-mt-28">
+          <h3 id="h-alerts" className="text-[16px] font-bold text-ink-1">Push alerts</h3>
+          <p className="mt-1">Turn them on in <Link href="/settings/alerts" className="underline">Settings → Alerts</Link>; we only ask your browser for permission when you flip that switch. Choose breaking news, responses, mentions, new followers, and big stories on the topics and teams you pinned. Set quiet hours and a daily limit for breaking alerts. On iPhone, add {APP_NAME} to your Home Screen first, then turn alerts on from the app.</p>
+        </section>
+      </div>
     </Frame>
   );
 }
