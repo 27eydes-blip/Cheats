@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dailySeries, getBanner, recentActions, reportQueue, siteStats } from "@/lib/moderation";
 import { requireViewerPage } from "@/lib/session";
@@ -46,6 +47,12 @@ export default async function Admin() {
         <ShieldIcon size={20} className="mt-0.5 shrink-0 text-gold-ink" />
         <p><b>The same rules apply to every account,</b> public figures and staff included. Act on what the content does, never on who posted it or which side it dispatches.</p>
       </div>
+
+      <nav aria-label="Control Room pages" className="mx-4 mb-6 flex flex-wrap gap-2 sm:mx-6">
+        <Link href="/admin/news" className="btn-outline !min-h-10 !text-[14px]">News feeds and outlets</Link>
+        <Link href="/admin/notes" className="btn-outline !min-h-10 !text-[14px]">Context notes review</Link>
+        <Link href="/admin/alerts" className="btn-outline !min-h-10 !text-[14px]">Breaking alerts</Link>
+      </nav>
 
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-x-6 gap-y-6 px-4 sm:px-6 lg:grid-cols-4">
         {kpis.map((k) => (
