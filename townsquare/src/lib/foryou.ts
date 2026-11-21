@@ -1,4 +1,6 @@
 import { LIMITS } from "@/config";
+import { NOT_DEMO_STORY } from "./feed";
+import { demoEnabled } from "./newsroom/settings";
 import { all, now } from "./db";
 import { getBanner } from "./moderation";
 import { listStories, type StorySummary } from "./news";
@@ -53,7 +55,7 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
     `SELECT p.id, p.author_id, p.created_at, s.section, p.promoted, p.story_key FROM posts p
      JOIN users u ON u.id = p.author_id LEFT JOIN stories s ON s.key = p.story_key
      WHERE p.deleted_at IS NULL AND p.removed_at IS NULL AND p.community_id IS NULL AND p.reply_to_id IS NULL
-       AND u.status = 'active' AND p.created_at > ? AND p.author_id NOT IN (${hiddenAuthorsSql})
+       AND u.status = 'active' AND p.created_at > ? AND p.author_id NOT IN (${hiddenAuthorsSql}) ${demoEnabled() ? "" : `AND ${NOT_DEMO_STORY}`}
        ${viewerId ? "AND (u.is_private = 0 OR p.author_id = ? OR EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = ? AND f.followee_id = p.author_id))" : "AND u.is_private = 0"}
      ORDER BY p.created_at DESC LIMIT 400`,
     [t - 7 * 24 * H, ...hiddenParams(viewerId), ...(viewerId ? [viewerId, viewerId] : [])],
@@ -105,7 +107,7 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
     if (opts.topic ? topic !== opts.topic : muted.has(topic)) continue;
     if (teamStories && !teamStories.has(s.key)) continue;
     storyMap.set(s.key, s);
-    const breaking = s.status === "live" || !!banner?.url?.includes(`/news/story/${s.key}`);
+    const breaking = s.status === "live" || !!banner?.url?.includes(`/news/story/${s.key}`) || (s.origin === "real" && s.importance >= 80 && (t - s.updatedAt) / H < 6);
     cands.push({
       id: `story:${s.key}`, type: "story", ageHours: (t - s.updatedAt) / H, authorId: null, topic, tags: s.tag ? [s.tag.toLowerCase()] : [],
       activity: { positive: fromAgg(sagree.get(s.key)), replies: fromAgg(stakes.get(s.key)), shares: [], views: fromAgg(sviews.get(s.key)), negative: s.split.disagree },

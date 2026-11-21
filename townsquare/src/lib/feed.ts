@@ -1,3 +1,4 @@
+import { demoEnabled } from "./newsroom/settings";
 import { LIMITS } from "@/config";
 import { all, get, now } from "./db";
 import { hiddenAuthorsSql, hiddenParams, hydrate, type FeedItem } from "./posts";
@@ -9,6 +10,8 @@ export type FeedKind = "following" | "foryou";
 type Row = { post_id: string; sort_at: number; k: string; reposter_id: string | null };
 
 const LIVE = "p.deleted_at IS NULL AND p.removed_at IS NULL AND p.community_id IS NULL";
+/** Posts written about a fictional demo story are hidden with the demo data. */
+export const NOT_DEMO_STORY = "(p.story_key IS NULL OR NOT EXISTS (SELECT 1 FROM stories ds WHERE ds.key = p.story_key AND ds.origin = 'demo'))";
 
 function parseCursor(c: string | null | undefined): [number, string] {
   if (!c) return [Number.MAX_SAFE_INTEGER, "~"];
@@ -42,14 +45,15 @@ function toItems(rows: Row[], viewerId: string | null): FeedItem[] {
 /** Following: newest first, no ranking. Your posts, posts by people you follow, and their reposts. */
 export function followingFeed(viewerId: string, cursor?: string | null, limit: number = LIMITS.feedPage): FeedPage {
   const [at, k] = parseCursor(cursor);
+  const demo = demoEnabled() ? "" : `AND ${NOT_DEMO_STORY}`;
   const rows = all<Row>(
     `SELECT * FROM (
        SELECT p.id post_id, p.created_at sort_at, p.id k, NULL reposter_id FROM posts p
-       WHERE ${LIVE} AND p.reply_to_id IS NULL
+       WHERE ${LIVE} AND p.reply_to_id IS NULL ${demo}
          AND p.author_id IN (SELECT followee_id FROM follows WHERE follower_id = ? UNION SELECT ?)
        UNION ALL
        SELECT r.post_id, r.created_at, r.user_id || r.post_id, r.user_id FROM reposts r JOIN posts p ON p.id = r.post_id
-       WHERE ${LIVE} AND r.user_id IN (SELECT followee_id FROM follows WHERE follower_id = ?)
+       WHERE ${LIVE} ${demo} AND r.user_id IN (SELECT followee_id FROM follows WHERE follower_id = ?)
      ) f
      WHERE (f.sort_at < ? OR (f.sort_at = ? AND f.k < ?))
        AND (SELECT author_id FROM posts WHERE id = f.post_id) NOT IN (${hiddenAuthorsSql})
