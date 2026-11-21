@@ -5,6 +5,9 @@
  * Useful as a Railway cron service if you set NEWS_INGEST=off on the web service.
  */
 import { runIngest } from "../src/lib/newsroom/ingest";
+import { registerNewsAlerts } from "../src/lib/push/news-alerts";
+
+registerNewsAlerts();
 
 runIngest({ trigger: "cli", force: process.argv.includes("--all") })
   .then((r) => {

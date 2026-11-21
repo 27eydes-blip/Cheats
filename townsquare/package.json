@@ -15,7 +15,8 @@
     "test:visual:update": "playwright test --trace off --update-snapshots",
     "start:server": "tsx scripts/seed.ts && npm start",
     "teams:refresh": "tsx scripts/refresh-team-logos.ts",
-    "news:ingest": "tsx scripts/ingest.ts"
+    "news:ingest": "tsx scripts/ingest.ts",
+    "push:keys": "tsx scripts/push-keys.ts"
   },
   "engines": {
     "node": ">=22.13"

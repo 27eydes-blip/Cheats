@@ -1,3 +1,4 @@
+import { pushForNotification } from "./push/social";
 import { all, get, newId, now, run } from "./db";
 import { toMini, type UserMini } from "./users";
 
@@ -44,6 +45,7 @@ export function notify(userId: string, actorId: string | null, type: Notificatio
     message,
     now(),
   ]);
+  pushForNotification(userId, actorId, type, postId);
 }
 
 export function unnotify(userId: string, actorId: string, type: NotificationType, postId: string | null) {
