@@ -23,9 +23,10 @@ import { Menu, type MenuItem } from "./ui/Menu";
 import { StanceChip, StanceMeter } from "./ui/Stance";
 import { Reactions } from "./post/Reactions";
 import { FlashBadge } from "./post/FlashBadge";
+import { NoteCard } from "./notes/NoteCard";
 import { celebrate } from "./Celebrate";
 import { shareAction } from "@/actions/social";
-import { AmplifyIcon, AnswerIcon, BlockIcon, EditIcon, FlagIcon, LinkIcon, MoreIcon, MuteIcon, PinIcon, QuoteIcon, SaveIcon, ShareIcon, TrashIcon } from "./icons";
+import { HelpIcon, AmplifyIcon, AnswerIcon, BlockIcon, EditIcon, FlagIcon, LinkIcon, MoreIcon, MuteIcon, PinIcon, QuoteIcon, SaveIcon, ShareIcon, TrashIcon } from "./icons";
 import { useComposer, useToast, useViewer } from "./providers";
 
 /** Byline on one line: name, seal, handle, time. Long names truncate; the time never does. */
@@ -222,6 +223,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
           if (r.ok) setHidden(true);
         });
       } },
+      { label: "Add a context note", icon: <HelpIcon size={18} />, onSelect: () => router.push(`/p/${post.id}?note=1#notes`) },
       "divider",
       { label: "Report dispatch", danger: true, icon: <FlagIcon size={18} />, onSelect: () => setReporting(true) },
     );
@@ -315,6 +317,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
                 )}
                 {post.poll && !compact && <Poll poll={post.poll} postId={post.id} isAuthor={post.viewer.isAuthor} createdAt={post.createdAt} />}
                 {post.quote && !compact && <div className="mt-2"><QuoteEmbed post={post.quote} /></div>}
+                {post.note && !compact && <NoteCard note={post.note} compact={!focus} />}
               </>
             )}
           </div>

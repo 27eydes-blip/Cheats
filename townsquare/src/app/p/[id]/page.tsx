@@ -8,6 +8,8 @@ import { Composer } from "@/components/Composer";
 import { PageHeader } from "@/components/PageHeader";
 import { PostCard } from "@/components/PostCard";
 import { EmptyState } from "@/components/ui/States";
+import { NotesPanel } from "@/components/notes/NotesPanel";
+import { FLAG_REASONS, notesFor, REASONS } from "@/lib/notes/notes";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,11 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       <PageHeader title={post.replyTo ? "Thread" : "Dispatch"} back compact />
       {ancestors.map((a) => <PostCard key={a.id} post={a} threadLine />)}
       <PostCard key={post.id} post={post} focus />
+      {!post.gone && (
+        <div className="border-b border-line">
+          <NotesPanel targetType="post" targetId={post.id} notes={notesFor("post", post.id, viewer?.id ?? null)} reasons={REASONS} flagReasons={FLAG_REASONS} />
+        </div>
+      )}
       {viewer && !post.gone && (
         <div className="border-b border-line">
           <Composer compact replyTo={post} />

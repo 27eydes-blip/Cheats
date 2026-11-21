@@ -9,6 +9,8 @@ import { StoryArt } from "@/components/front/StoryArt";
 import { CoverageBar } from "@/components/news/CoverageBar";
 import { CoverageList } from "@/components/news/CoverageList";
 import { FeedImage } from "@/components/news/FeedImage";
+import { NotesPanel } from "@/components/notes/NotesPanel";
+import { FLAG_REASONS, notesFor, REASONS } from "@/lib/notes/notes";
 import { TakesBoard } from "@/components/story/TakesBoard";
 import { NewTakes } from "@/components/story/NewTakes";
 import { Avatar } from "@/components/ui/Avatar";
@@ -105,6 +107,10 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
               ))}
             </ol>
           </section>
+
+          <div className="mt-6 border-t border-[var(--wn-glass-border)] [&>section]:px-0">
+            <NotesPanel targetType="story" targetId={story.key} notes={notesFor("story", story.key, viewer?.id ?? null)} reasons={REASONS} flagReasons={FLAG_REASONS} />
+          </div>
 
           {/* Who's covering this: spread across the spectrum, then every outlet's own article */}
           {story.articles.length > 0 && (
