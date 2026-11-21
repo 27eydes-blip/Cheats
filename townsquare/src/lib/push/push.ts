@@ -6,12 +6,13 @@ import { AppError } from "../errors";
  * Web push. Keys come from Railway variables:
  *   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY   (npm run push:keys makes a pair)
  *   VAPID_SUBJECT                         mailto: address or https URL the push services can contact
+ *                                         (falls back to APP_URL)
  * Without them, push is simply off: the Alerts toggle explains that and nothing is sent.
  */
 export function vapid() {
   const pub = process.env.VAPID_PUBLIC_KEY?.trim();
   const priv = process.env.VAPID_PRIVATE_KEY?.trim();
-  const site = process.env.SITE_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "");
+  const site = process.env.APP_URL && !/localhost/.test(process.env.APP_URL) ? process.env.APP_URL : process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "";
   const subject = process.env.VAPID_SUBJECT?.trim() || (site ? (site.startsWith("http") ? site : `https://${site}`) : "");
   return pub && priv && subject ? { pub, priv, subject } : null;
 }

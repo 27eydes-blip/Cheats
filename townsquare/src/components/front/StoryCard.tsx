@@ -81,7 +81,7 @@ export function StoryRow({ s, rising, lead }: { s: StorySummary; rising?: boolea
             <span className="shrink-0"><Time ms={s.updatedAt} /></span>
           </span>
           <h3 className="mt-0.5 line-clamp-3 text-[15px] leading-[21px] font-semibold text-ink-1 group-hover:underline">{s.title}</h3>
-          {lead && s.summary && <span className="mt-0.5 line-clamp-2 block text-[14px] leading-[20px] text-ink-2">{s.summary}</span>}
+          {lead && s.summary && <span className="mt-0.5 line-clamp-2 block text-[14px] leading-[20px] text-ink-2">{s.summary}{s.summarySource && <span className="text-ink-3"> ({s.summarySource})</span>}</span>}
           {s.origin === "demo" && (
             <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-ink-3">
               {s.source && <span className="truncate">{s.source}</span>}
