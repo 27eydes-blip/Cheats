@@ -122,7 +122,7 @@ export function NotesPanel({ targetType, targetId, notes, reasons, flagReasons }
     if (params.get("note") === "1" && viewer) setWriting(true);
   }, [params, viewer]);
   const mine = notes.mine.filter((n) => n.status !== "published");
-  const toRate = [...mine, ...notes.pending.filter((n) => !n.mine)];
+  const toRate = notes.pending.filter((n) => !n.mine);
   return (
     <section id="notes" aria-labelledby="notes-h" className="px-4 py-4">
       <div className="flex items-center justify-between gap-2">
@@ -139,6 +139,12 @@ export function NotesPanel({ targetType, targetId, notes, reasons, flagReasons }
         <>
           <h3 className="mt-4 text-[13px] font-semibold text-ink-2">Needs your rating ({toRate.length})</h3>
           <ul>{toRate.map((n) => <RateNote key={n.id} note={n} reasons={reasons} flagReasons={flagReasons} />)}</ul>
+        </>
+      )}
+      {viewer && mine.length > 0 && (
+        <>
+          <h3 className="mt-4 text-[13px] font-semibold text-ink-2">Your notes</h3>
+          <ul>{mine.map((n) => <RateNote key={n.id} note={n} reasons={reasons} flagReasons={flagReasons} />)}</ul>
         </>
       )}
       <p className="mt-3 text-[12.5px] text-ink-3"><Link href="/help#notes" className="underline">How context notes work</Link></p>
