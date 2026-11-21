@@ -6,6 +6,9 @@ import { getViewer } from "@/lib/session";
 import { debates, storyTakes } from "@/lib/takes";
 import { DebateCard } from "@/components/front/DebateCard";
 import { StoryArt } from "@/components/front/StoryArt";
+import { CoverageBar } from "@/components/news/CoverageBar";
+import { CoverageList } from "@/components/news/CoverageList";
+import { FeedImage } from "@/components/news/FeedImage";
 import { TakesBoard } from "@/components/story/TakesBoard";
 import { NewTakes } from "@/components/story/NewTakes";
 import { Avatar } from "@/components/ui/Avatar";
@@ -45,7 +48,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
       <header className="px-4 pt-5 lg:px-8 lg:pt-8">
         <div className="hero-glow">
           <div className="relative overflow-hidden rounded-[var(--r-xl)] ring-1 ring-[var(--wn-glass-border)]">
-            <div className="aspect-square sm:aspect-[16/9] lg:aspect-[21/9]"><StoryArt seed={story.key} section={story.section} photo={story.photo} priority hero /></div>
+            <div className="relative aspect-square sm:aspect-[16/9] lg:aspect-[21/9]"><StoryArt seed={story.key} section={story.section} photo={story.photo} priority hero />{!story.photo && story.feedImage && <FeedImage url={story.feedImage.url} credit={`Image: ${story.feedImage.credit}`} />}</div>
             <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_11_20/0)_30%,rgb(7_11_20/0.6)_60%,rgb(7_11_20/0.97)_100%)]" />
             <div className="absolute inset-x-0 bottom-0 p-4 sm:p-8">
               <div className="flex flex-wrap items-center gap-2">
@@ -57,9 +60,14 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
             </div>
           </div>
         </div>
-        <p className="mt-5 max-w-[760px] text-[clamp(1.1rem,1rem+0.4vw,1.3rem)] leading-snug font-medium text-ink-2">{story.summary}</p>
+        {story.summary && (
+          <p className="mt-5 max-w-[760px] text-[clamp(1.1rem,1rem+0.4vw,1.3rem)] leading-snug font-medium text-ink-2">
+            {story.summary}
+            {story.summarySource && <span className="mt-1 block text-[13px] font-normal text-ink-3">Snippet from {story.summarySource}. The headline above is written from what the outlets agree on.</span>}
+          </p>
+        )}
         <p className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 rounded-[12px] border border-[var(--wn-glass-border)] bg-white/[0.02] px-3 py-2 text-[11.5px] text-ink-3">
-          <span>UPDATED <Time ms={story.updatedAt} /> AGO</span><span>{story.updates.length} UPDATES</span><span>{story.outlets} OUTLETS</span><span>{story.takes} TAKES</span><span className="text-[var(--wn-cyan-ink)]">+{story.velocity} IN 6H</span>
+          <span>UPDATED <Time ms={story.updatedAt} /> AGO</span><span>{story.updates.length} UPDATES</span><span>{story.outlets} OUTLETS</span>{story.category && <span>{story.category.toUpperCase()}</span>}<span>{story.takes} TAKES</span><span className="text-[var(--wn-cyan-ink)]">+{story.velocity} IN 6H</span>
         </p>
       </header>
 
@@ -98,24 +106,14 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
             </ol>
           </section>
 
-          {/* How it is covered */}
-          {story.coverage.length > 0 && (
+          {/* Who's covering this: spread across the spectrum, then every outlet's own article */}
+          {story.articles.length > 0 && (
             <section aria-labelledby="coverage" className="mt-6">
               <div className="flex items-baseline justify-between border-t border-[var(--wn-glass-border)] pt-3">
-                <h2 id="coverage" className="folio text-navy-ink">How it is covered</h2>
-                <span className="mono text-[11px] text-ink-3">{new Set(story.coverage.map((c) => c.source)).size} OUTLETS, SIDE BY SIDE</span>
+                <h2 id="coverage" className="folio text-navy-ink">Who&apos;s covering this</h2>
               </div>
-              <ul className="scrollbar-none mt-4 grid auto-cols-[78%] grid-flow-col gap-0 overflow-x-auto sm:auto-cols-[40%] lg:auto-cols-fr" data-no-swipe>
-                {story.coverage.map((c, i) => (
-                  <li key={c.id} className={`min-w-0 ${i ? "border-l border-rule" : ""} px-4 first:pl-0`}>
-                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="group block">
-                      <SourceLabel name={c.source} size="md" />
-                      <h3 className="mt-3 font-display text-[19px] leading-snug font-semibold group-hover:underline">{c.title}</h3>
-                      <p className="mono mt-3 text-[11px] text-ink-3"><Time ms={c.publishedAt} /> AGO · READ AT SOURCE ↗</p>
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-3"><CoverageBar storyKey={story.key} coverage={story.coverage} items={story.articles} size="md" /></div>
+              <div className="mt-4"><CoverageList items={story.articles} /></div>
             </section>
           )}
         </div>

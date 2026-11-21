@@ -154,7 +154,7 @@ export function getStory(key: string, viewerId: string | null = null) {
      WHERE n.story_key = ? ORDER BY n.published_at DESC`,
     [key],
   ).map((r): CoverageItem => ({ id: r.id, title: r.title, summary: r.summary, url: r.url, source: r.name, sourceId: r.source_id, sourceUrl: r.homepage, publishedAt: r.published_at, lean: r.lean, leanNote: r.lean_note, color: r.color, opinion: !!r.opinion }));
-  return { ...s, updates, coverage };
+  return { ...s, updates, articles: coverage };
 }
 
 /** Headlines for the top ticker: the admin banner first, then live stories. */

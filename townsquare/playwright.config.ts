@@ -23,7 +23,7 @@ export default defineConfig({
     { name: "desktop-dark", use: { viewport: { width: 1440, height: 900 }, colorScheme: "dark" } },
   ],
   webServer: {
-    command: `rm -rf data/visual && DATABASE_PATH=data/visual/app.db UPLOAD_DIR=data/visual/uploads npx tsx scripts/seed.ts && DATABASE_PATH=data/visual/app.db UPLOAD_DIR=data/visual/uploads npx next start -p ${PORT}`,
+    command: `rm -rf data/visual && DATABASE_PATH=data/visual/app.db UPLOAD_DIR=data/visual/uploads npx tsx scripts/seed.ts && NEWS_DEMO=1 NEWS_INGEST=off DATABASE_PATH=data/visual/app.db UPLOAD_DIR=data/visual/uploads npx next start -p ${PORT}`,
     port: PORT,
     reuseExistingServer: false,
     timeout: 120_000,
