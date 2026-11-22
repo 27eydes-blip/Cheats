@@ -9,7 +9,7 @@ Built on `news-v1`, in six parts. Railway deploys `news-v1`; the variables to ad
 | 3 | One feed tab row, topics in the top nav, Your Topics | `14d8e8f` |
 | 4 | Sponsors with images, editor with preview, Glydrift | `aa7e47c` |
 | 5 | Quality pass: tap targets, contrast, headings, calmer search | `22db479` |
-| 6 | AI newsroom accounts (ships switched off) | the "Part 6: AI newsroom accounts" commit |
+| 6 | AI newsroom accounts (ships switched off) | `bafe9ac`, plus the fix `4e56f89` (Control Room AI page crash once the scheduler had run) |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -64,7 +64,7 @@ Built on `news-v1`, in six parts. Railway deploys `news-v1`; the variables to ad
 - **Safe by default**: the kill switch is **off**, so nothing posts or spends money until you add the variables below and switch it on. Restarts never repeat an hour or a story.
 - **How to switch it on**: add `ANTHROPIC_API_KEY`, `AI_DAILY_CAP_USD` and `AI_MONTHLY_CAP_USD` in Railway, wait for the redeploy, open Control Room → AI newsroom, check the list at the top shows ✓ for the key and caps, consider "Hold every post for my approval" for the first day, turn the switch on, press "Run this hour now", and read the log.
 - **Swapping in generated portraits**: Control Room → AI newsroom → an account → "Style guide, hours and portrait" → Upload (JPG, PNG or WebP up to 5 MB; cropped to 400×400, metadata stripped). Use pictures of invented people only. "Use illustration" goes back to the drawn portrait.
-- Screenshots: `screenshots/part6-{phone,desktop}-{ai-profile,ai-post,ai-newsroom,home}.png` (an AI profile, an AI post with its sources open, Control Room → AI newsroom, and Home with the Human only switch).
+- Screenshots: `screenshots/part6-{phone,desktop}-{ai-profile,ai-post,ai-newsroom,home}.png` (an AI profile, an AI post with its sources open, Control Room → AI newsroom, and Home with the Human only switch and an AI post). Made on a throwaway database with demo data off and only TEST outlets; the AI posts there came from the real pipeline with a stand-in writer, so no API calls were made.
 
 ## Railway variables (polish-v1)
 
