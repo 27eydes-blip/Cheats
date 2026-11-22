@@ -64,10 +64,18 @@ describe("Security rules in the markup (what the CSP relies on)", () => {
       }
     });
 
+    test(`${f}: canonical address is on gleyde.com (none on the 404 page)`, () => {
+      const canon = [...src.matchAll(/<link rel="canonical" href="([^"]+)">/g)].map((m) => m[1]);
+      if (f === "404.html") return assert.equal(canon.length, 0);
+      const pagePath = f === "index.html" ? "/" : `/${f.replace(/\.html$/, "")}`;
+      assert.deepEqual(canon, [`https://gleyde.com${pagePath}`]);
+    });
+
     test(`${f}: only allowed outside resources are loaded`, () => {
       const loads = [
         ...[...src.matchAll(/<script[^>]+src="([^"]+)"/gi)].map((m) => m[1]),
-        ...[...src.matchAll(/<link[^>]+href="([^"]+)"/gi)].map((m) => m[1]),
+        // rel="canonical" only names the page's official address; the browser loads nothing from it.
+        ...[...src.matchAll(/<link(?![^>]*rel="canonical")[^>]+href="([^"]+)"/gi)].map((m) => m[1]),
         ...[...src.matchAll(/<(?:img|source|iframe|video|audio|embed|object)[^>]+(?:src|srcset|data)="([^"]+)"/gi)].map((m) => m[1]),
       ];
       for (const u of loads) {
