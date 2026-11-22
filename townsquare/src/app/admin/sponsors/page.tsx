@@ -18,7 +18,7 @@ export default async function SponsorsPage() {
   }));
   return (
     <Frame width="medium">
-      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="hover:underline">Control Room</Link></Kicker>} title="Sponsors" dek="Sponsored cards in For You: always labeled, never ranked, at fixed slots (4th item, then every 10th)." />
+      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="tap inline-flex min-h-6 items-center hover:underline">Control Room</Link></Kicker>} title="Sponsors" dek="Sponsored cards in For You: always labeled, never ranked, at fixed slots (4th item, then every 10th)." />
       <SponsorsAdmin sponsors={sponsors} enabled={getAds().enabled} />
     </Frame>
   );

@@ -73,7 +73,7 @@ export function DebateCard({ d, compact }: { d: Debate; compact?: boolean }) {
 
   return (
     <div className="bg-paper-2 p-4 sm:p-5">
-      {d.story && <Link href={`/news/story/${d.story.key}`} className="folio mb-3 block !text-[10px] text-gold-ink hover:underline">On: {d.story.title}</Link>}
+      {d.story && <Link href={`/news/story/${d.story.key}`} className="folio mb-1 flex min-h-11 items-center !text-[10px] text-gold-ink hover:underline">On: {d.story.title}</Link>}
       <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
         {side_(d.left, "a")}
         <span className="mono hidden self-center px-1 text-[13px] font-bold text-ink-3 sm:block">VS</span>
@@ -97,7 +97,7 @@ export function DebateCard({ d, compact }: { d: Debate; compact?: boolean }) {
           </button>
         </div>
       </div>
-      <Link href={`/p/${d.left.id}`} className="folio mt-3 block text-center !text-[10px] text-ink-3 hover:text-navy-ink">Read the full exchange →</Link>
+      <Link href={`/p/${d.left.id}`} className="folio mt-1 flex min-h-11 items-center justify-center !text-[10px] text-ink-3 hover:text-navy-ink">Read the full exchange →</Link>
     </div>
   );
 }

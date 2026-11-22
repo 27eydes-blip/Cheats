@@ -40,7 +40,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
   const takes = storyTakes(key, viewer?.id ?? null);
   const fights = debates(viewer?.id ?? null, 2, key);
   const voices = [...new Map(takes.filter((t) => t.author.verified).map((t) => [t.author.id, t.author])).values()].slice(0, 3);
-  const section = story.section === "Top Stories" ? "National" : story.section;
+  const section = story.section === "Top Stories" ? "U.S." : story.section;
   const tickers = storyTickers(key);
   const tickerQuotes = tickers.length ? await getQuotes(tickers) : [];
 

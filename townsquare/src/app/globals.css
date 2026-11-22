@@ -206,6 +206,9 @@ html.dark body {
   transition: transform var(--dur-micro) var(--ease-out), background-color var(--dur-std), box-shadow var(--dur-std), color var(--dur-std), opacity var(--dur-std), border-color var(--dur-std);
   &:active:not(:disabled) { transform: scale(0.97); }
   &:disabled { cursor: not-allowed; opacity: 0.45; }
+  /* Compact buttons (min-h-9/10) still get a 44px tap area, invisibly. */
+  position: relative;
+  &::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 }
 @utility btn-primary {
   @apply btn;

@@ -16,7 +16,7 @@ export default async function NotesReview() {
   const q = abuseQueue();
   return (
     <Frame width="medium">
-      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="hover:underline">Control Room</Link></Kicker>} title="Context notes" dek="Notes people reported, raters moving unusually fast, and accounts whose notes keep getting rejected." />
+      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="tap inline-flex min-h-6 items-center hover:underline">Control Room</Link></Kicker>} title="Context notes" dek="Notes people reported, raters moving unusually fast, and accounts whose notes keep getting rejected." />
       <section aria-labelledby="flagged" className="mt-6">
         <h2 id="flagged" className="mx-4 text-[17px] font-bold sm:mx-6">Reported notes ({q.flagged.length})</h2>
         <p className="mx-4 mt-1 text-[13.5px] text-ink-3 sm:mx-6">Notes with 3 or more open reports are hidden until you review them. Removing a note is final for that note; dismissing keeps it and clears the reports.</p>

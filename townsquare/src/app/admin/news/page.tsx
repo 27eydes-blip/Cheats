@@ -24,7 +24,7 @@ export default async function NewsAdmin() {
 
   return (
     <Frame width="medium">
-      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="hover:underline">Control Room</Link></Kicker>} title="News feeds" dek="Where real headlines come from: outlets, feeds, lean ratings, sync status and errors." />
+      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="tap inline-flex min-h-6 items-center hover:underline">Control Room</Link></Kicker>} title="News feeds" dek="Where real headlines come from: outlets, feeds, lean ratings, sync status and errors." />
 
       <section aria-label="Sync status" className="mx-4 mt-6 grid gap-4 border-y border-[var(--hairline)] py-4 sm:mx-6 sm:grid-cols-4">
         <div><p className="text-[12.5px] text-ink-3">Last sync</p><p className="text-[16px] font-semibold">{st.last ? <><Time ms={st.last.started_at} /> ago</> : "Never"}</p>{st.last && <p className="text-[12.5px] text-ink-3">{st.last.new_items} new, {st.last.errors} errors ({st.last.trigger})</p>}</div>
@@ -55,17 +55,17 @@ export default async function NewsAdmin() {
         <p className="mx-4 mt-1 text-[13.5px] text-ink-3 sm:mx-6">Lean labels are approximate, from public third-party ratings. Edit them here; the note says where each came from.</p>
         <ul className="mt-3 border-t border-[var(--hairline)]">
           {sources.map((s) => (
-            <li key={s.id} className={`border-b border-[var(--hairline)] px-4 py-3 sm:px-6 ${s.active ? "" : "opacity-60"}`}>
+            <li key={s.id} className="border-b border-[var(--hairline)] px-4 py-3 sm:px-6">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <OutletBadge name={s.name} color={s.color} className="text-[15px]" />
                 <span className="text-[12.5px] text-ink-3">{s.outlet_type}{s.category ? ` · ${s.category}` : ""}{s.kind === "api" ? " · via news API" : ""}</span>
                 {s.active && s.error_count >= FAILING_AFTER && <span className="rounded-[4px] bg-[var(--wn-red-fill)] px-1.5 py-px text-[11px] font-bold text-white">Failing {s.error_count}× in a row</span>}
                 {!!s.pending_check && <span className="rounded-[4px] px-1.5 py-px text-[11px] font-semibold text-ink-2 ring-1 ring-[var(--hairline)]">Waiting for robots.txt and feed check</span>}
-                <span className="ml-auto text-[12.5px] text-ink-3">{!s.active && !s.pending_check ? "Off" : s.items_24h ? `${s.items_24h} new in 24h` : ""}</span>
+                <span className="ml-auto text-[12.5px] text-ink-3">{!s.active && !s.pending_check ? <span className="rounded-[4px] px-1.5 py-px font-semibold ring-1 ring-[var(--hairline)]">Off</span> : s.items_24h ? `${s.items_24h} new in 24h` : ""}</span>
               </div>
               <p className="mt-1 text-[13px] text-ink-2">
                 <span className="text-ink-3">Last result: </span>
-                {!s.last_fetch_at ? "not fetched yet" : s.last_error ? <span className="text-[var(--disagree)]">error{s.last_status ? ` (HTTP ${s.last_status})` : ""}: {s.last_error}</span> : s.last_status === 304 ? "unchanged since the last sync (304)" : `OK, ${s.last_found} items, ${s.last_new} new`}
+                {!s.last_fetch_at ? "not fetched yet" : s.last_error ? <span className="text-[var(--disagree)]">error{s.last_status && !s.last_error.includes(`HTTP ${s.last_status}`) ? ` (HTTP ${s.last_status})` : ""}: {s.last_error}</span> : s.last_status === 304 ? "unchanged since the last sync (304)" : `OK, ${s.last_found} items, ${s.last_new} new`}
                 {s.last_fetch_at && <span className="text-ink-3"> · <Time ms={s.last_fetch_at} /> ago</span>}
                 {s.last_success_at && s.last_error && <span className="text-ink-3"> · last worked <Time ms={s.last_success_at} /> ago</span>}
               </p>

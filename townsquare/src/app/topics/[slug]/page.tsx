@@ -36,6 +36,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             <h1 className="text-[20px] font-bold">{label}</h1>
             {topic === "sports" && <Link href="/sports" className="tap text-[14px] text-[var(--wn-blue-ink)] hover:underline">All teams</Link>}
           </header>
+          <h2 className="sr-only">Latest in {label}</h2>
           {lead && <div role="article" aria-label={lead.title} className="tl-row"><StoryRow s={lead} lead /></div>}
           <Feed
             key={topic}

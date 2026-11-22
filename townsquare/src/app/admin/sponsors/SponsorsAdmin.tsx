@@ -88,7 +88,7 @@ function Editor({ initial, onDone }: { initial: S | null; onDone: () => void }) 
         </div>
         <div className="hidden lg:block">
           <p className="text-[12.5px] text-ink-3">Desktop preview (feed column)</p>
-          <div className="mt-1 w-[400px] overflow-hidden rounded-[12px] bg-[var(--paper)] ring-1 ring-[var(--hairline)]"><div className="origin-top-left scale-[0.625]" style={{ width: 640 }}><div className="tl-row"><SponsoredCard ad={preview} preview /></div></div></div>
+          <div className="mt-1 w-[400px] overflow-hidden rounded-[12px] bg-[var(--paper)] ring-1 ring-[var(--hairline)]"><div style={{ width: 640, zoom: 0.625 }}><div className="tl-row"><SponsoredCard ad={preview} preview /></div></div></div>
         </div>
       </div>
     </div>

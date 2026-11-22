@@ -16,7 +16,7 @@ export function PageHeader({
     <>
       <div className={`px-4 sm:px-6 ${compact ? "pt-4 pb-3" : "pt-6 pb-0 lg:pt-10"}`}>
         {back && (
-          <button type="button" onClick={() => (history.length > 1 ? router.back() : router.push("/"))} className="folio mb-2 inline-flex items-center gap-1 !text-[10.5px] text-ink-3 hover:text-navy-ink" aria-label="Back">
+          <button type="button" onClick={() => (history.length > 1 ? router.back() : router.push("/"))} className="folio tap mb-2 inline-flex min-h-8 items-center gap-1 !text-[10.5px] text-ink-3 hover:text-navy-ink" aria-label="Back">
             <BackIcon size={14} /> Back
           </button>
         )}

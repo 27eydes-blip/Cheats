@@ -14,13 +14,13 @@ export function CredibilityMeter({ c, accent }: { c: Credibility; accent: string
           <text x="46" y="44" textAnchor="middle" fill="var(--ink-1)" fontFamily="var(--font-display)" fontWeight="800" fontSize="22">{c.score}</text>
         </svg>
         <div className="min-w-0">
-          <h3 id="cred" className="text-[11px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">Credibility</h3>
+          <h2 id="cred" className="text-[11px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">Credibility</h2>
           <p className="accent-ink font-display text-[22px] leading-none font-extrabold uppercase">{c.level}</p>
           <p className="mt-1 text-[12px] text-ink-3">{c.sourced} of {c.dispatches} dispatches sourced</p>
         </div>
       </div>
       <details className="mt-2 text-[12.5px] text-ink-2">
-        <summary className="inline-flex min-h-9 cursor-pointer items-center font-semibold text-[var(--wn-blue-ink)]">How this is scored</summary>
+        <summary className="inline-flex min-h-11 cursor-pointer items-center font-semibold text-[var(--wn-blue-ink)]">How this is scored</summary>
         <ul className="mt-1 space-y-1">
           {c.parts.map((p) => (
             <li key={p.label} className="flex justify-between gap-3"><span>{p.label}</span><span className={`mono ${p.points < 0 ? "text-disagree" : ""}`}>{p.points > 0 ? "+" : ""}{p.points}</span></li>

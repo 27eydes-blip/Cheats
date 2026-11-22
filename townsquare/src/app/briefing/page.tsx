@@ -39,7 +39,7 @@ export default async function Briefing() {
         <Link href={`/news/story/${lead.key}`} className="group mt-8 grid gap-6 md:grid-cols-2">
           <div className="aspect-[4/3] overflow-hidden"><StoryArt seed={lead.key} section={lead.section} photo={lead.photo} /></div>
           <div>
-            <span className="flex items-center gap-2">{lead.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{lead.section === "Top Stories" ? "National" : lead.section}</Kicker></span>
+            <span className="flex items-center gap-2">{lead.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{lead.section === "Top Stories" ? "U.S." : lead.section}</Kicker></span>
             <h1 className="mt-2 font-display text-display font-semibold text-balance group-hover:underline">{lead.title}</h1>
             <p className="drop-cap mt-4 text-[17px] leading-relaxed text-ink-2">{lead.summary}</p>
             <MiniSplit split={lead.split} className="mt-4" />
@@ -51,7 +51,7 @@ export default async function Briefing() {
         {rest.map((s, i) => (
           <Link key={s.key} href={`/news/story/${s.key}`} className="group mb-6 block break-inside-avoid">
             <span className="mono text-[11px] text-gold-ink">{String(i + 2).padStart(2, "0")}</span>
-            <Kicker tone="muted" className="ml-2">{s.section === "Top Stories" ? "National" : s.section}</Kicker>
+            <Kicker tone="muted" className="ml-2">{s.section === "Top Stories" ? "U.S." : s.section}</Kicker>
             <h2 className="mt-1 font-display text-[21px] leading-snug font-semibold group-hover:underline">{s.title}</h2>
             <p className="mt-1.5 text-[14.5px] leading-relaxed text-ink-2">{s.summary}</p>
             <MiniSplit split={s.split} className="mt-2" />

@@ -57,7 +57,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               <h2 className="folio border-b-2 border-navy-ink pb-1.5 text-navy-ink">Stories</h2>
               <ul>{stories.map((s) => (
                 <li key={s.key} className="border-b border-rule py-3"><Link href={`/news/story/${s.key}`} className="group block">
-                  <span className="flex items-center gap-2">{s.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{s.section === "Top Stories" ? "National" : s.section}</Kicker></span>
+                  <span className="flex items-center gap-2">{s.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{s.section === "Top Stories" ? "U.S." : s.section}</Kicker></span>
                   <span className="mt-1 block font-display text-[20px] leading-snug font-semibold group-hover:underline">{s.title}</span>
                   <MiniSplit split={s.split} className="mt-2" />
                 </Link></li>

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Split } from "@/lib/stance";
 import { Avatar } from "../ui/Avatar";
 import { VerifiedSeal } from "../ui/Badge";
-import { MiniSplit, StanceChip, type TakeStance } from "../ui/Stance";
+import { StanceChip, type TakeStance } from "../ui/Stance";
 import { CloseIcon, DeskIcon, EditionIcon, RundownIcon, SearchIcon, StudioIcon, TakeIcon } from "../icons";
 import { useViewer } from "../providers";
 import { CHANNELS, TOPICS_END } from "./channels";
@@ -119,10 +119,9 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
           node: (
             <span className="flex w-full items-center gap-3">
               <span className="min-w-0 flex-1">
-                <span className="folio block !text-[10px] text-ink-3">{s.status === "live" ? <span className="text-live-bg dark:text-live">● Live · </span> : null}<span>{`${s.section} · ${s.takes} dispatches`}</span></span>
-                <span className="block truncate font-display text-[17px] font-semibold">{s.title}</span>
+                <span className="block text-[12.5px] text-ink-3"><span>{`${s.section === "Top Stories" ? "U.S." : s.section}${s.status === "live" ? " · Live" : ""} · ${s.takes} dispatch${s.takes === 1 ? "" : "es"}`}</span></span>
+                <span className="block truncate text-[15px] font-semibold">{s.title}</span>
               </span>
-              <MiniSplit split={s.split} />
             </span>
           ),
         });
@@ -169,14 +168,14 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
     <dialog ref={ref} onClose={onClose} aria-label="Search" className="m-0 h-[100dvh] max-h-none w-screen max-w-none bg-paper p-0 text-ink-1">
       {open && (
         <div className="mx-auto flex h-full max-w-[860px] flex-col px-4 lg:px-8" onKeyDown={onKey} style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }}>
-          <div className="flex items-center gap-3 border-b-2 border-navy-ink py-3 lg:pt-10">
+          <div className="flex items-center gap-3 border-b border-[var(--hairline)] py-3 lg:pt-10">
             <SearchIcon size={24} className="shrink-0 text-ink-3" />
             <input
               ref={input}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search stories, voices, desks, dispatches"
-              className="min-w-0 flex-1 bg-transparent font-display text-[clamp(1.4rem,1.1rem+1.4vw,2.2rem)] font-semibold tracking-[-0.02em] placeholder:font-normal placeholder:text-ink-3 focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-[clamp(1.15rem,1rem+0.8vw,1.6rem)] font-semibold placeholder:font-normal placeholder:text-ink-3 focus:outline-none"
               role="combobox"
               autoComplete="off"
               spellCheck={false}
@@ -200,13 +199,13 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
           </div>
           <ul id="search-list" role="listbox" className="flex-1 overflow-y-auto overscroll-contain pb-10">
             {failed && <li role="status" className="py-3 text-center text-[14px] text-ink-3"><span>{"Search is having trouble right now. Try again in a moment, or "}</span><a href={`/search?q=${encodeURIComponent(q)}`} className="underline">open the search page</a><span>.</span></li>}
-            {res && !failed && rows.every((r) => r.id === "all" || r.id.startsWith("j-")) && (q || !rows.length) && <li className="py-10 text-center font-display text-h3 text-ink-3"><span>{q ? `Nothing on the wire for “${q}”.` : "Nothing here yet."}</span></li>}
+            {res && !failed && rows.every((r) => r.id === "all" || r.id.startsWith("j-")) && (q || !rows.length) && <li className="py-10 text-center text-[16px] text-ink-3"><span>{q ? `Nothing on the wire for “${q}”.` : "Nothing here yet."}</span></li>}
             {rows.map((r, i) => {
               const header = r.group !== last ? r.group : null;
               last = r.group;
               return (
                 <li key={r.id} role="presentation">
-                  {header && <p className="folio border-b border-rule pt-5 pb-1.5 text-ink-3">{header}</p>}
+                  {header && <p className="border-b border-[var(--hairline)] pt-5 pb-1.5 text-[12.5px] font-semibold tracking-[0.06em] text-ink-3 uppercase">{header}</p>}
                   <button
                     type="button"
                     id={`sr-${r.id}`}
@@ -215,7 +214,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
                     data-idx={i}
                     onMouseMove={() => setSel(i)}
                     onClick={() => go(r.href)}
-                    className={`flex min-h-12 w-full items-center border-b border-rule px-2 py-2 text-left text-[15px] transition-colors ${i === sel ? "bg-gold-soft shadow-[inset_3px_0_0_var(--gold)]" : ""}`}
+                    className={`flex min-h-12 w-full items-center border-b border-[var(--hairline)] px-2 py-2 text-left text-[15px] transition-colors ${i === sel ? "bg-white/[0.04] shadow-[inset_2px_0_0_var(--wn-blue)]" : ""}`}
                   >
                     {r.node}
                   </button>

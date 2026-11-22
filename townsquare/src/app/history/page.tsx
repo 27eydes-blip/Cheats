@@ -31,7 +31,7 @@ export default async function History() {
               {it.kind === "story" ? (
                 <Link href={`/news/story/${it.story.key}`} className="group flex items-center gap-3 p-3">
                   <span className="block aspect-[4/3] w-28 shrink-0 overflow-hidden rounded-[10px]"><StoryArt seed={it.story.key} section={it.story.section} photo={it.story.photo} width={320} /></span>
-                  <span className="min-w-0"><CategoryTag>{it.story.section === "Top Stories" ? "National" : it.story.section}</CategoryTag><span className="mt-1.5 block font-display text-[19px] leading-tight font-bold group-hover:text-[var(--wn-cyan-ink)]">{it.story.title}</span></span>
+                  <span className="min-w-0"><CategoryTag>{it.story.section === "Top Stories" ? "U.S." : it.story.section}</CategoryTag><span className="mt-1.5 block font-display text-[19px] leading-tight font-bold group-hover:text-[var(--wn-cyan-ink)]">{it.story.title}</span></span>
                 </Link>
               ) : (
                 <PostCard flat post={it.post} />

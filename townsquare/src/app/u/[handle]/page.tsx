@@ -181,8 +181,8 @@ export default async function Profile({ params, searchParams }: { params: Promis
               <nav role="tablist" aria-label="Profile" className="card scrollbar-none sticky top-[calc(var(--sub-top)+8px)] z-20 flex gap-1 overflow-x-auto p-1">
                 {TABS.map((t) => (
                   <Link key={t.key} role="tab" aria-selected={t.key === tab.key} href={t.key === "dispatches" ? `/u/${p.handle}` : `/u/${p.handle}?tab=${t.key}`} scroll={false}
-                    className={`flex h-10 min-w-[96px] flex-1 items-center justify-center rounded-[10px] px-3 text-[13px] font-bold tracking-[0.04em] uppercase transition-all ${t.key === tab.key ? "text-white" : "text-ink-2 hover:bg-white/[0.05] hover:text-ink-1"}`}
-                    style={t.key === tab.key ? { background: accent.color, color: "#04070f" } : undefined}>
+                    className={`flex h-11 min-w-[96px] flex-1 items-center justify-center rounded-[10px] px-3 text-[13px] font-bold tracking-[0.04em] uppercase transition-all ${t.key === tab.key ? "text-ink-1" : "text-ink-2 hover:bg-white/[0.05] hover:text-ink-1"}`}
+                    style={t.key === tab.key ? { boxShadow: `inset 0 -3px 0 ${accent.color}`, background: "rgb(255 255 255 / 0.05)" } : undefined}>
                     {t.label}
                   </Link>
                 ))}

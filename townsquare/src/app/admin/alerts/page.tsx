@@ -21,7 +21,7 @@ export default async function AlertsAdmin() {
   const devices = get<{ n: number; u: number }>("SELECT count(*) n, count(DISTINCT user_id) u FROM push_subscriptions")!;
   return (
     <Frame width="medium">
-      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="hover:underline">Control Room</Link></Kicker>} title="Breaking alerts" dek="Send a push alert for a major story. Each story can be sent once, ever." />
+      <PageTitle folio={<Kicker tone="gold"><Link href="/admin" className="tap inline-flex min-h-6 items-center hover:underline">Control Room</Link></Kicker>} title="Breaking alerts" dek="Send a push alert for a major story. Each story can be sent once, ever." />
       <p className="mx-4 mt-4 text-[14px] text-ink-2 sm:mx-6">
         {pushConfigured() ? <>{devices.u} people have alerts on, on {devices.n} devices.</> : <b>Push isn&apos;t configured: add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT in Railway.</b>}{" "}
         Stories scoring {BREAKING_AUTO_SCORE()}+ with 8+ outlets are sent automatically (at most one per sync, six a day). Each reader&apos;s quiet hours and daily limit still apply.
