@@ -103,8 +103,8 @@ export function blindspots(stories: SectionStory[], limit = 3) {
 }
 
 /** Trending: the stories most outlets and readers are on right now. */
-export function trending(stories: SectionStory[], limit = 5) {
-  const score = (s: SectionStory) => s.coverage.total * 2 + s.velocity * 3 + s.takes * 0.5 + s.importance / 25 + (s.status === "live" ? 5 : 0);
+export function trending<T extends StorySummary>(stories: T[], limit = 5): T[] {
+  const score = (s: StorySummary) => s.coverage.total * 2 + s.velocity * 3 + s.takes * 0.5 + s.importance / 25 + (s.status === "live" ? 5 : 0);
   return [...stories].sort((a, b) => score(b) - score(a)).slice(0, limit);
 }
 

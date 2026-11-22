@@ -294,3 +294,16 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Business sidebar**: a Markets card with the S&P 500, Nasdaq-100, Dow and Russell 2000 from the existing markets data, labeled "Demo prices" without a live market data key. Green and red are used only for price direction, as on the ticker.
 - **One accent**: every new section uses the same blue glow and blue chips. Politics keeps its blue-and-red glow, which stands for the spectrum.
 - **Routing**: `topicHref()` sends topics that have a section page there, so the top nav and Your Topics agree. The old `/topics/<slug>` addresses for the five sections redirect permanently (308, in `next.config.ts`); `/topics/sports` and `/topics/us` are untouched.
+
+## sections-v1, Job 2: Sports hub
+
+- **One board, two users**: `buildBoard()` (`src/lib/sports/hub.ts`) gives the live strip, Game of the Day, live/today/upcoming/results and team records. The page renders it, and `/api/sports/scores` returns the same object for the refresh, so the two can't disagree.
+- **Polling, not push**: every 30 seconds, only while a game is live or starts within 15 minutes, never while the tab is hidden. The data feed itself updates live scores every 2 minutes with a paid key (every 15 minutes on the free key), so faster polling would only re-read the same data. A failed refresh keeps the last scores and tries again.
+- **Score flash**: the client compares each game's score with the previous refresh. A change gets a 1.6-second blue fade (blue is the accent, red is kept for LIVE). With reduced motion it gets a plain outline instead.
+- **Auto-advancing strip**: moves one card every 4.5 seconds, pauses on hover, touch and focus, and doesn't run with reduced motion. It can always be scrolled by hand.
+- **Game of the Day order**: a live game with one of your teams; the best live game (bigger league first: NFL, NBA, college football, MLB and NHL, Premier League, MLS; then the closest score); your team's next game within 24 hours; the next game today; the next upcoming game; the latest result.
+- **Key stats**: TheSportsDB's `lookupeventstats.php` (often a paid-key feature), fetched by the browser after the page loads, so the page never waits on it. The answer is cached for 2 minutes. The strip appears only when there are stats, never for games that haven't started, and disappears quietly on any error.
+- **Playoff lines**: the provider's own row notes decide (Playoffs, Play-in, Champions League, Relegation…). Without notes, only the Premier League gets default lines (top 4, bottom 3). The NFL, NBA, NHL and MLB tables we get may mix conferences or divisions, and a wrong playoff line is worse than none. Qualifying places get a blue bar, play-in a lighter blue bar, relegation a gray bar, with a key and a screen-reader label on each row.
+- **One accent**: blue for links, chips, wins and the hero; red only for the LIVE tag and live card outlines. Form strips use a blue W, an outlined L and a gray D, instead of green and red.
+- **My Teams** is the same list as the teams in Your Topics. The new Add to My Teams button on team pages edits it.
+- **Time zones**: as before, from the `tz` cookie the browser sets. Until then, US Eastern.

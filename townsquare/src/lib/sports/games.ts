@@ -1,5 +1,6 @@
 import { all, db, get, now, run, tx } from "../db";
 import { normName } from "./names";
+import { badgeLetters, circleColors } from "./logos";
 import { getSetting, setSetting } from "../newsroom/settings";
 import { LEAGUES, type League } from "./teams-data";
 import { listTeams, type TeamView } from "./teams";
@@ -38,9 +39,11 @@ export type GameView = {
   status: GameStatus;
   detail: string;
   venue: string;
-  home: { id: string | null; name: string; score: number | null; team: TeamView | null };
-  away: { id: string | null; name: string; score: number | null; team: TeamView | null };
+  home: GameSide;
+  away: GameSide;
 };
+/** One side of a game. `badge` is the letter circle to show when there's no logo (the team's, or a neutral one for an unmatched name). */
+export type GameSide = { id: string | null; name: string; score: number | null; team: TeamView | null; badge: { letters: string; fill: string; text: string } };
 export type StandingRow = {
   league: League;
   season: string;
@@ -370,9 +373,14 @@ function toViews(rows: GameRow[]): GameView[] {
     status: r.status,
     detail: r.detail,
     venue: r.venue,
-    home: { id: r.home_team_id, name: r.home_name, score: r.home_score, team: r.home_team_id ? teams.get(r.home_team_id) ?? null : null },
-    away: { id: r.away_team_id, name: r.away_name, score: r.away_score, team: r.away_team_id ? teams.get(r.away_team_id) ?? null : null },
+    home: side(r.home_team_id, r.home_name, r.home_score, teams),
+    away: side(r.away_team_id, r.away_name, r.away_score, teams),
   }));
+}
+
+function side(id: string | null, name: string, score: number | null, teams: Map<string, TeamView>): GameSide {
+  const team = id ? teams.get(id) ?? null : null;
+  return { id, name, score, team, badge: team?.circle ?? { letters: badgeLetters({ name }), ...circleColors(null) } };
 }
 
 const leagueWhere = (leagues?: League[]) => (leagues?.length ? `AND league IN (${leagues.map(() => "?").join(",")})` : "");

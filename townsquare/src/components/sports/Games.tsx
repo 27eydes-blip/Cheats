@@ -3,15 +3,15 @@ import type { GameView, StandingRow } from "@/lib/sports/games";
 import { DRAW_LEAGUES } from "@/lib/sports/games";
 import { LEAGUE_NAME, type League } from "@/lib/sports/teams-data";
 import { fmtDay, fmtTime } from "@/lib/sports/time";
+import type { Zone } from "@/lib/sports/status";
 import { LetterBadge, TeamLogo } from "./TeamLogo";
-import { badgeLetters, circleColors } from "@/lib/sports/logos";
 
 type Side = GameView["home"];
 
 function SideLogo({ side, size = "sm" }: { side: Side; league: League; size?: "sm" | "md" }) {
   if (side.team) return <TeamLogo team={side.team} size={size} label={false} />;
-  // A team we couldn't match: a neutral circle with its initials.
-  return <LetterBadge circle={{ letters: badgeLetters({ name: side.name }), ...circleColors(null) }} name={side.name} px={size === "md" ? 34 : 22} label={false} />;
+  // A team we couldn't match: the neutral letter circle computed with the game.
+  return <LetterBadge circle={side.badge} name={side.name} px={size === "md" ? 34 : 22} label={false} />;
 }
 
 const winner = (g: GameView, side: "home" | "away") =>
@@ -22,7 +22,7 @@ export function GameStatusLabel({ g, tz, now, withDay = true }: { g: GameView; t
   if (g.status === "live")
     return (
       <span className="inline-flex items-center gap-1.5 font-bold text-live">
-        <span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse rounded-full bg-live" />
+        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-live motion-safe:animate-pulse" />
         LIVE{g.detail ? ` · ${g.detail}` : ""}
       </span>
     );
@@ -94,7 +94,13 @@ export function ScoreStrip({ games, tz, now, label = "Scores" }: { games: GameVi
 }
 
 /** League table. Soccer leagues show draws, goal difference and points; others wins, losses and win share. */
-export function StandingsTable({ rows, league }: { rows: StandingRow[]; league: League }) {
+const ZONE_STYLE: Record<NonNullable<Zone>, { bar: string; label: string }> = {
+  qualify: { bar: "shadow-[inset_3px_0_0_var(--wn-blue)]", label: "Playoff or qualifying places" },
+  playin: { bar: "shadow-[inset_3px_0_0_rgb(127_163_255/0.55)]", label: "Play-in places" },
+  relegation: { bar: "shadow-[inset_3px_0_0_var(--ink-3)]", label: "Relegation places" },
+};
+
+export function StandingsTable({ rows, league, zones = [] }: { rows: StandingRow[]; league: League; zones?: Zone[] }) {
   const soccer = DRAW_LEAGUES.includes(league);
   const hasPoints = rows.some((r) => r.points !== null);
   const pct = (r: StandingRow) => {
@@ -122,10 +128,15 @@ export function StandingsTable({ rows, league }: { rows: StandingRow[]; league: 
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.teamName} className="border-b border-[var(--hairline)]">
+          {rows.map((r, i) => (
+            <tr
+              key={r.teamName}
+              data-zone={zones[i] ?? undefined}
+              className={`border-b ${zones[i] ? ZONE_STYLE[zones[i]!].bar : ""} ${i > 0 && zones[i] !== zones[i - 1] ? "border-t-2 border-t-[var(--wn-blue-ink)]/60" : ""} border-b-[var(--hairline)]`}
+            >
               <td className="num py-2 pl-4 text-ink-3">{r.rank}</td>
               <th scope="row" className="py-2 text-left font-semibold">
+                {zones[i] && <span className="sr-only">{ZONE_STYLE[zones[i]!].label}: </span>}
                 {r.teamId ? (
                   <Link href={`/sports/${r.teamId}`} className="flex min-h-8 items-center gap-2 hover:underline">
                     {r.team && <TeamLogo team={r.team} size="sm" label={false} />}
@@ -146,6 +157,14 @@ export function StandingsTable({ rows, league }: { rows: StandingRow[]; league: 
           ))}
         </tbody>
       </table>
+      {zones.some(Boolean) && (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2 text-[12px] text-ink-3" aria-label="Table key">
+          {(["qualify", "playin", "relegation"] as const).filter((z) => zones.includes(z)).map((z) => (
+            <li key={z} className="flex items-center gap-1.5"><span aria-hidden="true" className={`inline-block h-3 w-1 ${ZONE_STYLE[z].bar}`} />{ZONE_STYLE[z].label}</li>
+          ))}
+          <li>A line marks where the places change.</li>
+        </ul>
+      )}
     </div>
   );
 }

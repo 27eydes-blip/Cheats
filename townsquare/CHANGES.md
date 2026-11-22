@@ -4,7 +4,7 @@ Two jobs, each shipped to `news-v1` as its own commit so it can be rolled back o
 
 | Job | What | Commit on news-v1 |
 |---|---|---|
-| 1 | World, Business, Tech and Culture get the Politics treatment | the "Sections: World, Business, Tech and Culture pages" commit |
+| 1 | World, Business, Tech and Culture get the Politics treatment | `784315e` |
 | 2 | Sports hub upgrade | the "Sports hub" commit |
 
 ## Job 1: World, Business, Tech and Culture pages
@@ -25,6 +25,21 @@ Two jobs, each shipped to `news-v1` as its own commit so it can be rolled back o
 - Fixed while there: the sidebar is drawn twice (phone and desktop), which repeated element IDs; each copy now has its own.
 - Railway: nothing to add. Database: no changes.
 - Screenshots (TEST outlets only, on `sections-v1`): `screenshots/sections-{phone,desktop}-{world,business,tech,culture,world-region,politics}.png`.
+
+## Job 2: Sports hub
+- **Live scoreboard strip** across the top of the sports pages: live games first, then the next ones to start. It shows a red LIVE tag with the quarter or minute, and advances on its own (paused while you touch or hover it, and off with reduced motion).
+- **Live refresh**: while any game is live or about to start, scores refresh every 30 seconds without reloading the page. A score that changes flashes briefly. It pauses when the tab is hidden and stops when nothing is live.
+- **Game of the Day**: a large card with both teams, logos, records, the score or the start time, and a button into the game. It picks a live game with one of your teams, else the best live game, else your team's next game, else the next game today.
+- **League tabs with icons**; a **My Teams** row with each team's next or live game; **game cards** that say Live (red, the only red), Final, or the start time in your own time zone.
+- **Game pages**: the score updates live. A **Key stats** strip appears only if the data source has stats for that game (otherwise nothing shows). Also a **last five games** form strip for both teams and **head to head** with a summary.
+- **Standings** with playoff-line highlights. The provider's own notes ("Playoffs", "Play-in", "Relegation") mark the places, with a line where they change. The Premier League gets top-4 and bottom-3 lines by default.
+- **Sports news** column (the existing story feed) and **Trending in sports**, in a sidebar on desktop and under the games on phones.
+- **Team pages**: **Add to My Teams** button, last-five form, schedule and results as cards, and **Headlines**.
+- **Skeleton loaders** while sports pages load.
+- **Logos everywhere**: uploaded logo or TheSportsDB badge where available, else the team-color letter circle; teams we can't match get a neutral circle with initials. No unlicensed logos.
+- Reduced motion is respected (no pulsing, auto-scroll or flashing; a changed score gets an outline instead). Tap targets are at least 44px, and LIVE text is white on red.
+- Railway: nothing to add. Database: no changes.
+- Screenshots (TEST teams and games only, on `sections-v1`): `screenshots/sports-{phone,desktop}-{hub,hub-full,game,standings,team}.png`.
 
 ---
 

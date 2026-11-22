@@ -11,7 +11,10 @@ import { viewerTz } from "@/lib/sports/viewer-tz";
 import { tzAbbr } from "@/lib/sports/time";
 import { StoryRow } from "@/components/front/StoryCard";
 import { TeamLogo } from "@/components/sports/TeamLogo";
-import { GameRow } from "@/components/sports/Games";
+import { GameCard } from "@/components/sports/live/GameCard";
+import { FollowTeam } from "@/components/sports/FollowTeam";
+import { getFeedTabs } from "@/lib/feedtabs";
+import { resultFor } from "@/lib/sports/status";
 import { EmptyState } from "@/components/ui/States";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +46,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
           <div style={{ color: ink }} className="min-w-0">
             <p className="text-[12px] font-extrabold tracking-[0.14em] uppercase">{LEAGUE_NAME[team.league]} · {team.abbr}</p>
             <h1 className="text-[clamp(1.6rem,1.2rem+2vw,2.4rem)] leading-tight font-extrabold">{team.fullName}</h1>
+            <div className="mt-3"><FollowTeam teamId={team.id} name={team.name} signedIn={!!viewer} following={!!viewer && getFeedTabs(viewer.id).some((t) => t.kind === "team" && t.key === team.id)} /></div>
             {standing && (
               <p className="num mt-0.5 text-[14px] font-semibold">
                 {standing.wins}-{standing.losses}{standing.draws ? `-${standing.draws}` : ""}{standing.points !== null ? ` · ${standing.points} pts` : ""} · #{standing.rank} in the {LEAGUE_NAME[team.league]}
@@ -54,18 +58,24 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
 
       <section aria-labelledby="sched">
         <h2 id="sched" className="tl-row px-4 pt-4 pb-2 text-[17px] font-bold">Schedule</h2>
-        {next.length ? <ul>{next.map((g) => <GameRow key={g.id} g={g} tz={tz} now={now} showLeague={false} withDay />)}</ul> : <p className="tl-row px-4 pb-4 text-[14px] text-ink-3">No upcoming games loaded. It may be the off-season.</p>}
+        {next.length ? <ul className="grid gap-2 px-4 pb-2 sm:grid-cols-2">{next.map((g) => <GameCard key={g.id} g={g} tz={tz} now={now} showLeague={false} withDay />)}</ul> : <p className="tl-row px-4 pb-4 text-[14px] text-ink-3">No upcoming games loaded. It may be the off-season.</p>}
       </section>
 
       {last.length > 0 && (
         <section aria-labelledby="results">
           <h2 id="results" className="tl-row px-4 pt-4 pb-2 text-[17px] font-bold">Results</h2>
-          <ul>{last.map((g) => <GameRow key={g.id} g={g} tz={tz} now={now} showLeague={false} withDay />)}</ul>
+          <p className="flex gap-1.5 px-4 pb-3" aria-label={`Last ${Math.min(5, last.length)}: ${last.slice(0, 5).map((g) => resultFor(g, team.id)).join(", ")}`}>
+            {last.slice(0, 5).map((g) => {
+              const r = resultFor(g, team.id);
+              return <span key={g.id} aria-hidden="true" className={`flex h-8 w-8 items-center justify-center rounded-[8px] text-[12.5px] font-extrabold ${r === "W" ? "bg-[var(--wn-blue-fill)] text-white" : r === "L" ? "text-ink-2 ring-1 ring-[var(--hairline)]" : "bg-white/[0.08] text-ink-2"}`}>{r}</span>;
+            })}
+          </p>
+          <ul className="grid gap-2 px-4 pb-2 sm:grid-cols-2">{last.map((g) => <GameCard key={g.id} g={g} tz={tz} now={now} showLeague={false} withDay />)}</ul>
         </section>
       )}
 
       <section aria-labelledby="ts">
-        <h2 id="ts" className="tl-row px-4 pt-4 pb-2 text-[17px] font-bold">Stories</h2>
+        <h2 id="ts" className="tl-row px-4 pt-4 pb-2 text-[17px] font-bold">Headlines</h2>
         {stories.length ? (
           stories.map((s) => <div key={s.key} role="article" aria-label={s.title} className="tl-row"><StoryRow s={s} /></div>)
         ) : (

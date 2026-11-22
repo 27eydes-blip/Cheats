@@ -245,7 +245,7 @@ export function ReadersSplit({ stories, idp = "" }: { idp?: string; stories: Sec
 }
 
 /** Trending in the section: what most outlets and readers are on right now. */
-export function TrendingCard({ stories, label, idp = "" }: { idp?: string; stories: SectionStory[]; label: string }) {
+export function TrendingCard({ stories, label, idp = "" }: { idp?: string; stories: StorySummary[]; label: string }) {
   if (!stories.length) return null;
   return (
     <section aria-labelledby={`${idp}trending`} className="rounded-[16px] bg-white/[0.03] p-4 ring-1 ring-[var(--hairline)]">

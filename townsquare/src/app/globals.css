@@ -410,3 +410,15 @@ html.light .tl-row:hover { background: rgb(10 18 34 / 0.02); }
 /* Invisible padding: small controls keep a 44px tap area. */
 .tap { position: relative; }
 .tap::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+
+/* Sports: a brief highlight when a score changes (skipped with reduced motion). */
+@keyframes score-flash {
+  0% { background-color: rgb(47 107 255 / 0.32); }
+  100% { background-color: transparent; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .score-flash { animation: score-flash 1.6s var(--ease-out, ease-out) 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .score-flash { outline: 2px solid var(--wn-blue-ink); outline-offset: -2px; }
+}

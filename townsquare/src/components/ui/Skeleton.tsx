@@ -79,3 +79,24 @@ export function MarketsSkeleton() {
     </div>
   );
 }
+
+/** Sports hub and game pages while they load: score strip, hero card and game cards. */
+export function SportsSkeleton({ game = false }: { game?: boolean }) {
+  return (
+    <div aria-busy="true" aria-label="Loading scores" className="mx-auto max-w-[1080px]">
+      <div className="flex gap-2 overflow-hidden border-b border-[var(--hairline)] px-4 py-2.5">
+        {[0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-[74px] w-[188px] shrink-0 rounded-[12px]" />)}
+      </div>
+      <div className="max-w-[680px] space-y-3 px-4 pt-4">
+        {game ? <div className="skeleton h-[180px] rounded-[16px]" /> : (
+          <>
+            <div className="skeleton h-9 w-40 rounded-[8px]" />
+            <div className="flex gap-2">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-10 w-20 rounded-full" />)}</div>
+            <div className="skeleton h-[230px] rounded-[20px]" />
+          </>
+        )}
+        <div className="grid gap-2 sm:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-[96px] rounded-[14px]" />)}</div>
+      </div>
+    </div>
+  );
+}
