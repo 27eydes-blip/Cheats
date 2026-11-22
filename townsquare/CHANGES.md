@@ -1,3 +1,31 @@
+# What changed (tickers-v1, overnight job 1)
+
+Shipped to `news-v1`; the commit hash is in OVERNIGHT.md.
+
+## Look up any stock
+- **More names on the board**: Cloudflare (NET) in Technology, plus Snowflake, Datadog and Shopify (Technology), Coinbase and Robinhood (Financials), Reddit and Roblox (Communication), Uber (Industrials) and Airbnb (Consumer). Palantir was already there. The board now has 120 stocks.
+- **Symbol search** at the top of the Markets page and on every stock page. Type a name or ticker ("cloudflare", "NET") to get matches with the name, ticker and exchange (NYSE, Nasdaq, NYSE Arca…), plus "ETF" for funds.
+  - It uses Finnhub's `/search`, limited to U.S. listings, and shows only stocks and exchange-traded funds by default (no warrants, foreign lines or odd security types).
+  - Each search answer is cached for 10 minutes.
+  - Exchange names come from Finnhub's U.S. symbol list, loaded in the background once a day (one request).
+  - Every request goes through the shared Finnhub limiter. When the budget is spent, or Finnhub fails, the box searches the board's own tickers and says it is busy.
+  - It works with arrows, Enter and Escape (a standard combobox), and waits 250 ms after typing stops.
+  - Without a key (demo mode) it searches the board's own tickers and says so.
+- **Stock pages** at `/markets/<ticker>` (for example `/markets/NET`): the name, exchange and sector, the current price and the day's change, the chart (1D / 5D / 1M / 1Y as before), and **Add to watchlist**.
+  - Prices come through the same quote store and limiter. If a call fails, the last good price stays.
+  - If there is no price at all, the page says so plainly.
+  - Index funds also say what they track.
+- **Watchlists** take any valid ticker, not just the board's, with live prices. Each one holds up to **50** symbols (was 30).
+- **Ticker validation**: letters, dots and dashes only, at most 10 characters, starting with a letter, with no dot or dash at the end or doubled (AAPL, BRK.B and BF-B are fine).
+- **Searches are rate-limited** per signed-in user, or per IP address when signed out: 30 a minute and 400 an hour.
+- **Index cards are labeled honestly.**
+  - Each card shows the index name, then the fund's own name and ticker (for example "SPDR S&P 500 ETF Trust · SPY"), and the note "Tracked via SPY ETF, not the index level".
+  - The same goes for the Business sidebar's Markets card, the sector board's benchmark and the chart header when a fund is selected.
+  - Tight spaces (the Latest strip, the phone's top-bar ticker, the Front Page markets band) show the fund label ("S&P 500 ETF · SPY") or the ticker, never a bare index name. The note is in their tooltip, and the Front Page band says "Index funds, not index levels".
+- **Free plan charts**: 5D, 1M and 1Y still show the short note instead of a chart; a test now covers it.
+- Database: no changes. Railway: nothing new; search uses your existing `FINNHUB_API_KEY`.
+- Screenshots (demo prices, TEST user, on `tickers-v1`): `screenshots/tickers-{phone,desktop}-{search,stock,index-cards}.png`.
+
 # What changed (live-v1)
 
 | Job | What | Commit on news-v1 |

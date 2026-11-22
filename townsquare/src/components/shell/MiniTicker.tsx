@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { WireQuote } from "./LiveWire";
+import { INDEX_OF, proxyNote } from "@/lib/markets/universe";
 
-const SHORT: Record<string, string> = { SPY: "S&P", QQQ: "NDQ", DIA: "DOW", IWM: "RUT" };
 
 /** A tiny market ticker for the phone top bar: one index at a time, rotating. Links to the Market Board. */
 export function MiniTicker({ quotes: initial }: { quotes: WireQuote[] }) {
@@ -29,9 +29,9 @@ export function MiniTicker({ quotes: initial }: { quotes: WireQuote[] }) {
   if (!q) return <span className="w-[84px]" />;
   const up = q.changePct >= 0;
   return (
-    <Link href="/markets" title="Open the Market Board" className="flex h-11 w-[84px] flex-col items-end justify-center px-1">
+    <Link href="/markets" title={INDEX_OF[q.symbol] ? `${proxyNote(q.symbol)}. Open the Trading Floor` : "Open the Trading Floor"} className="flex h-11 w-[84px] flex-col items-end justify-center px-1">
       <span key={q.symbol} className="mono flex flex-col items-end leading-none" style={{ animation: "wire-in 380ms var(--ease-out) both" }}>
-        <span className="text-[9.5px] font-semibold tracking-[0.08em] text-[#8893ad]">{SHORT[q.symbol] ?? q.symbol}</span>
+        <span className="text-[9.5px] font-semibold tracking-[0.08em] text-[#8893ad]">{q.symbol}</span>
         <span className={`mt-1 text-[11.5px] font-semibold ${up ? "text-[#34d399]" : "text-[#ff6b81]"}`}><span aria-hidden="true">{up ? "▲" : "▼"}</span><span className="sr-only">{up ? "up" : "down"}</span> {Math.abs(q.changePct).toFixed(2)}%</span>
         <span className="sr-only">. Open the Market Board</span>
       </span>

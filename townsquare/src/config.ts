@@ -38,6 +38,8 @@ export const RATE_LIMITS = {
   sponsorEvent: [[1, 30 * 60_000]],
   /** Muting or unmuting all AI accounts. */
   aiMute: [[20, 60 * 60_000]],
+  /** Stock symbol search on the Markets page, per signed-in user (or per IP when signed out). */
+  marketSearch: [[30, 60_000], [400, 60 * 60_000]],
 } as const satisfies Record<string, readonly (readonly [number, number])[]>;
 
 /**

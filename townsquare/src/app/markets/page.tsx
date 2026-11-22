@@ -7,11 +7,12 @@ import { INDEX_ETFS, MACRO_ETFS, SECTOR_ETFS, STOCKS, SYMBOL_RE } from "@/lib/ma
 import { listStories } from "@/lib/news";
 import { getHistory } from "@/lib/markets/history";
 import { MarketData } from "@/components/markets/MarketData";
+import { SymbolSearch } from "@/components/markets/SymbolSearch";
 import { Breadth, FocusChart, Heatmap, IndexCard, Movers, Watchlist } from "@/components/markets/Panels";
 import { BellClock, BigBoard, BigBoardCrawl, FloorStats, MacroStrip, SectorBoard } from "@/components/markets/Floor";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Markets", description: "The trading floor: S&P 500, Nasdaq, Dow, all 11 sectors and 110 large-cap stocks on a live big board, plus your watchlist." };
+export const metadata = { title: "Markets", description: `The Trading Floor: index funds, all 11 sectors and ${STOCKS.length} large-cap stocks on a live big board, any U.S. stock by search, and your watchlist.` };
 
 export default async function MarketsPage({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
   const want = ((await searchParams).s ?? "").toUpperCase();
@@ -40,7 +41,10 @@ export default async function MarketsPage({ searchParams }: { searchParams: Prom
               </h1>
               <p className="mt-2 max-w-xl text-[14px] text-white/60">{STOCKS.length} large-cap U.S. stocks across all 11 sectors, the major indexes, and your watchlist, ticking on one board.</p>
             </div>
-            <Breadth />
+            <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:items-end">
+              <SymbolSearch />
+              <Breadth />
+            </div>
           </header>
 
           <div className="mt-5"><BellClock /></div>
@@ -85,7 +89,7 @@ export default async function MarketsPage({ searchParams }: { searchParams: Prom
             {mode === "demo"
               ? "Demo mode: every price on this page is simulated and does not reflect real trading. Set FINNHUB_API_KEY to show real quotes. "
               : "Quotes from Finnhub may be delayed. "}
-            Index levels are shown with ETF proxies (SPY, QQQ, DIA, IWM) and sectors with the Select Sector SPDR ETFs. WorldNet News is not affiliated with any stock exchange. Nothing here is investment advice.
+            Index cards show the price of funds that track each index (SPY, QQQ, DIA, IWM), not the index levels themselves, and sectors with the Select Sector SPDR ETFs. WorldNet News is not affiliated with any stock exchange. Nothing here is investment advice.
           </p>
         </div>
       </MarketData>

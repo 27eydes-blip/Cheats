@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { Quote } from "@/lib/markets/provider";
 import { addWatchAction, removeWatchAction } from "@/actions/markets";
-import { ALL_TICKERS, SECTORS, STOCKS } from "@/lib/markets/universe";
+import { ALL_TICKERS, INDEX_OF, SECTORS, STOCKS, proxyNote } from "@/lib/markets/universe";
 import { CloseIcon, PlusIcon } from "../icons";
 import { useToast, useViewer } from "../providers";
 import { AreaChart, MiniLine, PriceChart, type Bar } from "./Charts";
@@ -31,15 +31,16 @@ export function IndexCard({ symbol }: { symbol: string }) {
       aria-pressed={selected === symbol}
       className={`group relative overflow-hidden rounded-[var(--r-lg)] border bg-[#0b1220]/80 p-4 text-left transition-all duration-300 hover:-translate-y-0.5 ${selected === symbol ? "border-[#22d3ee] shadow-[0_0_0_1px_#22d3ee,0_10px_40px_rgb(34_211_238/0.18)]" : "border-white/10 hover:border-white/25"}`}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[13px] font-bold text-white">{q.name}</p>
-          <p className="mono text-[10.5px] tracking-wider text-white/50">{symbol} · ETF PROXY</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[13px] font-bold text-white">{INDEX_OF[symbol]?.title ?? q.name}</p>
+          <p className="text-[11.5px] text-white/70">{q.name} · <span className="mono">{symbol}</span></p>
         </div>
-        <span className={`mono rounded-[6px] px-1.5 py-0.5 text-[11px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
+        <span className={`mono shrink-0 rounded-[6px] px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
       </div>
       <p key={f.key} className={`mono mt-3 inline-block rounded-[6px] px-1 -ml-1 text-[30px] leading-none font-semibold ${up(q) ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
       <p className={`mono mt-1 text-[12px] ${tone(q)}`}>{fmtChg(q.change)} {status.open ? "today" : "last session"}</p>
+      <p className="mt-1 text-[11px] text-[var(--wn-cyan-ink)]" data-proxy-note>{proxyNote(symbol)}</p>
       <div className="mt-3"><AreaChart values={q.series} prevClose={q.prevClose} height={64} label={`${q.name} intraday`} /></div>
       <div className="mt-3">
         <div className="relative h-1 rounded-full bg-white/10">
@@ -105,6 +106,7 @@ export function FocusChart() {
           <h2 className="mt-1 flex items-baseline gap-3 font-display text-[clamp(1.8rem,1.3rem+1.6vw,2.6rem)] leading-none font-semibold text-white">
             {q.symbol}<span className="font-sans text-[15px] font-medium text-white/60">{q.name}</span>
           </h2>
+          {INDEX_OF[q.symbol] && <p className="mt-1 text-[12px] text-[var(--wn-cyan-ink)]">{proxyNote(q.symbol)}</p>}
         </div>
         <div className="text-right">
           <p key={f.key} className={`mono inline-block rounded-[6px] px-1 text-[clamp(2rem,1.4rem+2vw,3rem)] leading-none font-semibold ${rUp ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>

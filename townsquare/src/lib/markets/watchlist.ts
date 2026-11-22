@@ -2,7 +2,9 @@ import { AppError } from "../errors";
 import { all, get, now, run } from "../db";
 import { DEFAULT_WATCHLIST, SYMBOL_RE } from "./universe";
 
-const MAX = 30;
+/** Each watchlist holds at most this many symbols. */
+export const WATCHLIST_MAX = 50;
+const MAX = WATCHLIST_MAX;
 
 export function getWatchlist(userId: string | null): string[] {
   if (!userId) return DEFAULT_WATCHLIST;
@@ -21,7 +23,7 @@ function ensureOwn(userId: string) {
 
 export function normalizeSymbol(raw: string) {
   const s = raw.trim().toUpperCase().replace(/^\$/, "");
-  if (!SYMBOL_RE.test(s)) throw new AppError("Enter a U.S. ticker like AAPL or BRK.B.");
+  if (!SYMBOL_RE.test(s)) throw new AppError("Enter a ticker like AAPL, BRK.B or BF-B (letters, dots and dashes, up to 10 characters).");
   return s;
 }
 

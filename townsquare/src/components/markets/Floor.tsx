@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { etMinutes, upcomingCalendar, etDate } from "@/lib/markets/clock";
 import { boardRows, breadthOf, fmtCountdown, rangePos, sectorSummaries, sessionRail, type SortDir, type SortKey } from "@/lib/markets/floor";
 import type { Quote } from "@/lib/markets/provider";
-import { INDEX_ETFS, MACRO_ETFS, MACRO_LABEL, SECTORS, STOCKS } from "@/lib/markets/universe";
+import { INDEX_ETFS, MACRO_ETFS, MACRO_LABEL, SECTORS, STOCKS, proxyNote } from "@/lib/markets/universe";
 import { BellIcon, SearchIcon } from "../icons";
 import { MiniLine } from "./Charts";
 import { fmtChg, fmtPct, fmtPrice, useFlash, useMarket } from "./MarketData";
@@ -127,7 +127,7 @@ export function BigBoardCrawl() {
   if (!items.length) return null;
   const row = (hidden: boolean) => (
     <ul className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
-      {indexes.map((q) => <LedItem key={q.symbol} q={q} label={q.name.toUpperCase()} />)}
+      {indexes.map((q) => <LedItem key={q.symbol} q={q} />)}
       {mine.map((q) => <LedItem key={q.symbol} q={q} mine />)}
       {rest.map((q) => <LedItem key={q.symbol} q={q} />)}
     </ul>
@@ -209,10 +209,11 @@ export function SectorBoard() {
         <p className="text-[12px] text-white/50">Moves from each sector&apos;s ETF. Pick a sector to filter the big board.</p>
       </div>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        <li className="rounded-[10px] border border-white/10 bg-black/30 p-3">
-          <p className="text-[12.5px] font-bold text-white">S&amp;P 500</p>
+        <li className="rounded-[10px] border border-white/10 bg-black/30 p-3" title={proxyNote("SPY")}>
+          <p className="text-[12.5px] font-bold text-white">S&amp;P 500 ETF</p>
           <p className="mono text-[10px] text-white/50">SPY · BENCHMARK</p>
           <p className={`led mt-2 text-[22px] leading-none ${spy ? (spy.changePct >= 0 ? "led-up" : "led-down") : "text-white/40"}`}>{spy ? fmtPct(spy.changePct) : "—"}</p>
+          <p className="mt-1.5 text-[10.5px] leading-tight text-white/55">{proxyNote("SPY")}</p>
         </li>
         {secs.map((s) => {
           const on = sector === s.key;

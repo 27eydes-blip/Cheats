@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveEvents } from "../live";
+import { INDEX_OF, fundLabel, proxyNote } from "@/lib/markets/universe";
 import { indexAfterUpdate, nextIndex, orderWire, relTime, ROTATE_MS, ROTATE_REDUCED_MS, type WireItem as Item } from "@/lib/wire-logic";
 
 export type WireItem = Item;
@@ -11,7 +12,6 @@ export type WireQuote = { symbol: string; name: string; price: number; changePct
 
 /** Stable default so the sync effect below doesn't see a new array every render. */
 const NO_QUOTES: WireQuote[] = [];
-const INDEX: Record<string, string> = { SPY: "S&P 500", QQQ: "NASDAQ", DIA: "DOW", IWM: "RUSSELL" };
 
 /** True when the reader asked for less motion (false during server render). */
 export function useReducedMotion() {
@@ -125,8 +125,8 @@ export function LiveWire({ items: rawItems, quotes: initialQuotes = NO_QUOTES, d
         const up = q.changePct >= 0;
         return (
           <li key={q.symbol} className="flex items-center pr-5">
-            <Link href={`/markets?s=${q.symbol}`} tabIndex={hidden ? -1 : undefined} data-tap="wire" className="wire-num -my-1.5 flex h-11 items-center gap-1.5 text-[11.5px] whitespace-nowrap text-ink-3 hover:text-ink-1">
-              <span className="font-semibold text-ink-2">{INDEX[q.symbol] ?? q.symbol}</span>
+            <Link href={`/markets/${q.symbol}`} tabIndex={hidden ? -1 : undefined} title={INDEX_OF[q.symbol] ? proxyNote(q.symbol) : q.name} data-tap="wire" className="wire-num -my-1.5 flex h-11 items-center gap-1.5 text-[11.5px] whitespace-nowrap text-ink-3 hover:text-ink-1">
+              <span className="font-semibold text-ink-2">{fundLabel(q.symbol)}</span>
               <span>{q.price.toFixed(2)}</span>
               <span className={up ? "text-[#34d399]" : "text-[#ff6b81]"}>
                 <span aria-hidden="true">{up ? "▲" : "▼"}</span>

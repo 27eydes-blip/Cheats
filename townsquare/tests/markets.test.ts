@@ -51,7 +51,7 @@ describe("watchlist", () => {
     expect(addToWatchlist(u.id, " $nflx ")).toContain("NFLX");
     expect(removeFromWatchlist(u.id, "AAPL")).not.toContain("AAPL");
     expect(getWatchlist(u.id)).toEqual([...DEFAULT_WATCHLIST.filter((s) => s !== "AAPL"), "NFLX"]);
-    expect(() => addToWatchlist(u.id, "not a ticker")).toThrow("U.S. ticker");
+    expect(() => addToWatchlist(u.id, "not a ticker")).toThrow("Enter a ticker");
     expect(addToWatchlist(u.id, "brk.b")).toContain("BRK.B");
   });
 });

@@ -32,7 +32,7 @@ function useLiveQuotes(initial: Quote[]) {
   return { quotes, flash };
 }
 
-const INDEX_LABEL: Record<string, string> = { SPY: "S&P 500", QQQ: "Nasdaq", DIA: "Dow", IWM: "Russell" };
+import { INDEX_OF, fundLabel, proxyNote } from "@/lib/markets/universe";
 
 /** Front Page band: the four indexes on navy, linking to the Market Board. */
 export function MarketStrip({ initial, mode, label }: { initial: Quote[]; mode: MarketMode; label: string }) {
@@ -50,7 +50,7 @@ export function MarketStrip({ initial, mode, label }: { initial: Quote[]; mode: 
           return (
             <li key={q.symbol} className="flex shrink-0 items-center gap-3 border-r border-[var(--wn-glass-border)] px-4 py-2 last:border-r-0 lg:flex-1">
               <span>
-                <span className="block text-[12px] font-bold text-ink-2">{INDEX_LABEL[q.symbol] ?? q.symbol}</span>
+                <span className="block text-[12px] font-bold text-ink-2" title={INDEX_OF[q.symbol] ? proxyNote(q.symbol) : undefined}>{fundLabel(q.symbol)}</span>
                 <span key={f?.n} className={`mono block rounded-[6px] text-[13px] ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>
               </span>
               <span className={`mono text-[12px] font-bold ${up ? "text-[#34d399]" : "text-[#ff6b81]"}`}>{up ? "▲" : "▼"} {fmtPct(q.changePct)}</span>
@@ -59,7 +59,10 @@ export function MarketStrip({ initial, mode, label }: { initial: Quote[]; mode: 
           );
         })}
       </ul>
-      <span className="hidden shrink-0 items-center px-4 text-[12px] font-semibold text-[var(--wn-cyan-ink)] group-hover:underline sm:flex">Market Board →</span>
+      <span className="hidden shrink-0 flex-col justify-center px-4 text-right sm:flex">
+        <span className="text-[12px] font-semibold text-[var(--wn-cyan-ink)] group-hover:underline">Trading Floor →</span>
+        {quotes.some((q) => INDEX_OF[q.symbol]) && <span className="text-[10.5px] text-ink-3">Index funds, not index levels</span>}
+      </span>
     </Link>
   );
 }
@@ -79,7 +82,7 @@ export function StoryTickers({ initial, mode }: { initial: Quote[]; mode: Market
           const f = flash[q.symbol];
           return (
             <li key={q.symbol}>
-              <Link href={`/markets?s=${q.symbol}`} className="flex items-center justify-between gap-2 rounded-[var(--r-lg)] border border-rule bg-paper-2 px-3 py-2 transition-colors hover:border-navy-ink">
+              <Link href={`/markets/${q.symbol}`} className="flex items-center justify-between gap-2 rounded-[var(--r-lg)] border border-rule bg-paper-2 px-3 py-2 transition-colors hover:border-navy-ink">
                 <span className="min-w-0">
                   <span className="mono block text-[13px] font-bold text-ink-1">{q.symbol}</span>
                   <span key={f?.n} className={`mono block rounded-[6px] text-[12px] text-ink-2 ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>

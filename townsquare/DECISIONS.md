@@ -361,3 +361,16 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Phones**: at 390px, LATEST, the BREAKING tag, the outlet and the time leave almost no room for the headline, so the outlet is left off the visible line (it stays in the link for screen readers). The time stays.
 - **Tap targets**: links are 44px tall with 6px negative margins, so the bar stays 32px with no layout shift. The browser test taps 2px from the top edge to prove the overhang works.
 - **Markets page**: the site-wide strip carries news only there, and the page keeps a single stock tape (the LED board, now with the indexes and your watchlist first).
+
+## tickers-v1 (overnight job 1): Look up any stock
+
+- **Sector choices** follow GICS: Uber is in Industrials, Airbnb in Consumer Discretionary, Coinbase and Robinhood in Financials, and Reddit and Roblox in Communication. Their `base` prices are only starting points for the demo simulator.
+- **"US-listed stocks and ETFs" filter**: Finnhub `/search` with `exchange=US`, keeping the types Common Stock, ADR, REIT and ETP. That drops warrants, units, rights, preferreds and foreign lines. Symbols must also pass the ticker rule.
+- **Exchange names** come from `/stock/symbol?exchange=US` (one request a day, held in memory) instead of one profile call per result, which could have used a dozen budget calls per search. Until that list has loaded the exchange shows "US".
+- **When the budget is spent, search falls back to the board's 130 tickers** and says it is busy, instead of waiting or failing. The quote limiter already keeps prices ahead of searches: search and quotes share the same 50-per-minute bucket, and search results are cached for 10 minutes.
+- **Per-user limit**: 30 searches a minute and 400 an hour, using the existing database-backed limiter (per IP when signed out). Typing is debounced by 250 ms, so a normal search is 1–3 requests.
+- **Ticker rule**: letters, with single dots or dashes between letter groups, at most 10 characters. Digits are not allowed (as you asked), so tickers like "1A" are rejected.
+- **Watchlist limit raised to 50**, as asked. Existing lists are untouched.
+- **Index names**: `INDEX_ETFS` now carry the fund's real name. `INDEX_OF` keeps the index each fund tracks, and `proxyNote()` and `fundLabel()` are used everywhere a fund price appears. One-line strips use the fund label instead of the long note; the note is in the tooltip.
+- **Unknown tickers in demo mode** get a simulated price, labeled DEMO, like every demo price. With a real key, a symbol Finnhub doesn't know gets "No price for X yet".
+- **Bad ticker addresses** (`/markets/123`) show the not-found page. Because `/markets` has a loading screen, the response streams with status 200, as other routes with loading screens already do.

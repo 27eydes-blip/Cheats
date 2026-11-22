@@ -77,7 +77,7 @@ describe("Latest ticker", () => {
     expect(document.querySelectorAll(".wire-breaking").length).toBe(1);
     // Market segment: separate, with up/down arrows.
     expect(screen.getAllByRole("link", { name: /S&P 500/ })[0].textContent).toMatch(/▼.*-0\.42%/);
-    expect(screen.getAllByRole("link", { name: /NASDAQ/ })[0].textContent).toMatch(/▲.*\+0\.31%/);
+    expect(screen.getAllByRole("link", { name: /Nasdaq-100 ETF · QQQ/ })[0].textContent).toMatch(/▲.*\+0\.31%/);
   });
 
   it("the progress line moves to the next headline, and hover or touch pauses it", () => {

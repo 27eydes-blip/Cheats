@@ -5,12 +5,28 @@
  */
 export type Ticker = { symbol: string; name: string; sector: string; size: 1 | 2 | 3; base: number; etf?: boolean };
 
+/**
+ * The major indexes, shown through the exchange-traded funds that track them.
+ * Their prices are the FUND's price, not the index level, so the `name` is the
+ * fund's name and every place that shows one must say so (see `proxyNote`).
+ */
 export const INDEX_ETFS: Ticker[] = [
-  { symbol: "SPY", name: "S&P 500", sector: "Index", size: 3, base: 612, etf: true },
-  { symbol: "QQQ", name: "Nasdaq-100", sector: "Index", size: 3, base: 528, etf: true },
-  { symbol: "DIA", name: "Dow Jones", sector: "Index", size: 3, base: 441, etf: true },
-  { symbol: "IWM", name: "Russell 2000", sector: "Index", size: 3, base: 228, etf: true },
+  { symbol: "SPY", name: "SPDR S&P 500 ETF Trust", sector: "Index", size: 3, base: 612, etf: true },
+  { symbol: "QQQ", name: "Invesco QQQ Trust", sector: "Index", size: 3, base: 528, etf: true },
+  { symbol: "DIA", name: "SPDR Dow Jones Industrial Average ETF", sector: "Index", size: 3, base: 441, etf: true },
+  { symbol: "IWM", name: "iShares Russell 2000 ETF", sector: "Index", size: 3, base: 228, etf: true },
 ];
+/** The index each fund tracks, and a short fund label for tight spaces ("S&P 500 ETF"). */
+export const INDEX_OF: Record<string, { index: string; title: string; short: string }> = {
+  SPY: { index: "S&P 500", title: "S&P 500", short: "S&P 500 ETF" },
+  QQQ: { index: "Nasdaq-100", title: "Nasdaq-100", short: "Nasdaq-100 ETF" },
+  DIA: { index: "Dow Jones Industrial Average", title: "Dow Jones", short: "Dow ETF" },
+  IWM: { index: "Russell 2000", title: "Russell 2000", short: "Russell 2000 ETF" },
+};
+/** "Tracked via SPY ETF, not the index level" — required wherever a fund stands in for an index. */
+export const proxyNote = (symbol: string) => `Tracked via ${symbol} ETF, not the index level`;
+/** Compact label for tickers and strips: the fund, never the bare index name ("S&P 500 ETF · SPY"). */
+export const fundLabel = (symbol: string) => (INDEX_OF[symbol] ? `${INDEX_OF[symbol].short} · ${symbol}` : symbol);
 
 /** The 11 sectors, in board order, each with the sector ETF used as its benchmark. */
 export const SECTORS = [
@@ -48,16 +64,19 @@ export const STOCKS: Ticker[] = [
   s("CRM", "Salesforce", "Technology", 1, 288), s("ADBE", "Adobe", "Technology", 1, 512), s("CSCO", "Cisco", "Technology", 1, 58),
   s("ACN", "Accenture", "Technology", 1, 361), s("IBM", "IBM", "Technology", 1, 214), s("QCOM", "Qualcomm", "Technology", 1, 162),
   s("TXN", "Texas Instruments", "Technology", 1, 201), s("INTC", "Intel", "Technology", 1, 24), s("MU", "Micron", "Technology", 1, 102),
-  s("NOW", "ServiceNow", "Technology", 1, 1012), s("PLTR", "Palantir", "Technology", 1, 64),
+  s("NOW", "ServiceNow", "Technology", 1, 1012), s("PLTR", "Palantir", "Technology", 1, 64), s("NET", "Cloudflare", "Technology", 1, 98),
+  s("SNOW", "Snowflake", "Technology", 1, 162), s("DDOG", "Datadog", "Technology", 1, 128), s("SHOP", "Shopify", "Technology", 1, 104),
   // Communication
   s("GOOGL", "Alphabet", "Communication", 3, 176), s("META", "Meta Platforms", "Communication", 3, 584), s("NFLX", "Netflix", "Communication", 2, 742),
   s("DIS", "Disney", "Communication", 1, 101), s("TMUS", "T-Mobile US", "Communication", 1, 231), s("VZ", "Verizon", "Communication", 1, 42),
-  s("T", "AT&T", "Communication", 1, 22), s("CMCSA", "Comcast", "Communication", 1, 42),
+  s("T", "AT&T", "Communication", 1, 22), s("CMCSA", "Comcast", "Communication", 1, 42), s("RDDT", "Reddit", "Communication", 1, 141),
+  s("RBLX", "Roblox", "Communication", 1, 58),
   // Consumer discretionary
   s("AMZN", "Amazon", "Consumer", 3, 198), s("TSLA", "Tesla", "Consumer", 3, 251), s("HD", "Home Depot", "Consumer", 2, 398),
   s("MCD", "McDonald's", "Consumer", 1, 291), s("NKE", "Nike", "Consumer", 1, 79), s("LOW", "Lowe's", "Consumer", 1, 262),
   s("SBUX", "Starbucks", "Consumer", 1, 97), s("BKNG", "Booking Holdings", "Consumer", 1, 4870), s("TJX", "TJX Companies", "Consumer", 1, 119),
   s("CMG", "Chipotle", "Consumer", 1, 58), s("GM", "General Motors", "Consumer", 1, 54), s("F", "Ford", "Consumer", 1, 11),
+  s("ABNB", "Airbnb", "Consumer", 1, 136),
   // Consumer staples
   s("WMT", "Walmart", "Staples", 2, 84), s("COST", "Costco", "Staples", 2, 902), s("PG", "Procter & Gamble", "Staples", 2, 168),
   s("KO", "Coca-Cola", "Staples", 1, 64), s("PEP", "PepsiCo", "Staples", 1, 162), s("PM", "Philip Morris", "Staples", 1, 128),
@@ -67,7 +86,7 @@ export const STOCKS: Ticker[] = [
   s("MA", "Mastercard", "Financials", 2, 521), s("BAC", "Bank of America", "Financials", 2, 44), s("WFC", "Wells Fargo", "Financials", 1, 71),
   s("GS", "Goldman Sachs", "Financials", 1, 571), s("MS", "Morgan Stanley", "Financials", 1, 128), s("C", "Citigroup", "Financials", 1, 68),
   s("AXP", "American Express", "Financials", 1, 281), s("BLK", "BlackRock", "Financials", 1, 1012), s("SCHW", "Charles Schwab", "Financials", 1, 79),
-  s("PYPL", "PayPal", "Financials", 1, 84),
+  s("PYPL", "PayPal", "Financials", 1, 84), s("COIN", "Coinbase", "Financials", 1, 268), s("HOOD", "Robinhood", "Financials", 1, 38),
   // Health care
   s("LLY", "Eli Lilly", "Health Care", 3, 812), s("UNH", "UnitedHealth", "Health Care", 2, 571), s("JNJ", "Johnson & Johnson", "Health Care", 2, 156),
   s("ABBV", "AbbVie", "Health Care", 1, 178), s("MRK", "Merck", "Health Care", 1, 101), s("TMO", "Thermo Fisher", "Health Care", 1, 528),
@@ -81,7 +100,7 @@ export const STOCKS: Ticker[] = [
   s("GE", "GE Aerospace", "Industrials", 2, 181), s("CAT", "Caterpillar", "Industrials", 2, 389), s("RTX", "RTX", "Industrials", 1, 121),
   s("UNP", "Union Pacific", "Industrials", 1, 236), s("HON", "Honeywell", "Industrials", 1, 221), s("BA", "Boeing", "Industrials", 1, 154),
   s("DE", "Deere", "Industrials", 1, 412), s("LMT", "Lockheed Martin", "Industrials", 1, 531), s("UPS", "UPS", "Industrials", 1, 132),
-  s("FDX", "FedEx", "Industrials", 1, 281), s("DAL", "Delta Air Lines", "Industrials", 1, 62),
+  s("FDX", "FedEx", "Industrials", 1, 281), s("DAL", "Delta Air Lines", "Industrials", 1, 62), s("UBER", "Uber", "Industrials", 1, 72),
   // Materials
   s("LIN", "Linde", "Materials", 2, 452), s("SHW", "Sherwin-Williams", "Materials", 1, 378), s("APD", "Air Products", "Materials", 1, 318),
   s("FCX", "Freeport-McMoRan", "Materials", 1, 44), s("NEM", "Newmont", "Materials", 1, 46), s("ECL", "Ecolab", "Materials", 1, 247),
@@ -99,8 +118,11 @@ export const ALL_TICKERS = [...INDEX_ETFS, ...SECTOR_ETFS, ...MACRO_ETFS, ...STO
 export const TICKER_MAP = new Map(ALL_TICKERS.map((t) => [t.symbol, t]));
 export const DEFAULT_WATCHLIST = ["AAPL", "NVDA", "MSFT", "TSLA", "AMZN", "JPM"];
 
-/** Valid U.S. ticker format (e.g. AAPL, BRK.B). */
-export const SYMBOL_RE = /^[A-Z]{1,5}(\.[A-Z])?$/;
+/**
+ * Valid ticker: starts with a letter; letters, dots and dashes only; at most
+ * 10 characters; no dot or dash at the end or twice in a row (AAPL, BRK.B, BF-B).
+ */
+export const SYMBOL_RE = /^(?=.{1,10}$)[A-Z]+(?:[.-][A-Z]+)*$/;
 
 /** Live-data refresh priority: indexes first, then sector and macro ETFs, then stocks. */
 export function priorityOf(symbol: string): 0 | 1 | 2 {
