@@ -6,7 +6,8 @@ let path = "/";
 vi.mock("next/navigation", () => ({ usePathname: () => path, useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 vi.mock("@/actions/auth", () => ({ logoutAction: vi.fn() }));
-vi.mock("@/actions/menu", () => ({ switchAccountAction: vi.fn() }));
+vi.mock("@/actions/menu", () => ({ switchAccountAction: vi.fn(), feedTabAction: vi.fn() }));
+vi.mock("@/components/providers", () => ({ useToast: () => vi.fn(), useViewer: () => null }));
 
 import { SideMenu } from "@/components/shell/SideMenu";
 import { activeTab, isActive, menuItems, TABS } from "@/components/shell/menu";
@@ -97,5 +98,35 @@ describe("SideMenu drawer", () => {
     expect(getByRole("link", { name: "Join" })).toBeTruthy();
     expect(queryByText("Switch account")).toBeNull();
     expect(queryByText("Vault")).toBeNull();
+  });
+});
+
+describe("one feed tab row and Your Topics", () => {
+  it("the home feed has exactly two tabs: For You (default) and Friends", async () => {
+    const { FeedTabs } = await import("@/components/feed/FeedTabs");
+    const { getAllByRole } = render(<FeedTabs active={{ kind: "foryou" }} />);
+    const tabs = getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["For You", "Friends"]);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(tabs[1].getAttribute("href")).toBe("/?tab=friends");
+  });
+
+  it("puts picked topics and teams in the side menu as links to their pages", () => {
+    const team = { id: "nfl-kc", league: "nfl", abbr: "KC", city: "Kansas City", name: "Chiefs", fullName: "Kansas City Chiefs", primary: "#E31837", secondary: "#FFB81C", logo: null } as never;
+    const { getByRole, getByText } = render(<SideMenu open onClose={() => {}} viewer={viewer} stats={stats} topics={[{ kind: "topic", key: "markets", label: "Markets" }, { kind: "team", key: "nfl-kc", label: "Chiefs", team }] as never} />);
+    expect(getByText("Your Topics")).toBeTruthy();
+    expect(getByRole("link", { name: /Business/ }).getAttribute("href")).toBe("/topics/business");
+    expect(getByRole("link", { name: /Chiefs/ }).getAttribute("href")).toBe("/sports/nfl-kc");
+    expect(getByRole("button", { name: "Edit" })).toBeTruthy();
+  });
+
+  it("lists every topic once in the top nav, linking to topic pages", async () => {
+    const { CHANNELS, activeChannel } = await import("@/components/shell/channels");
+    expect(CHANNELS.map((c) => c.label)).toEqual(["Politics", "World", "Business", "Tech", "Sports", "Culture", "Markets", "Live", "Desks"]);
+    expect(new Set(CHANNELS.map((c) => c.label)).size).toBe(CHANNELS.length);
+    expect(CHANNELS[0].href).toBe("/topics/politics");
+    expect(activeChannel("/topics/business")).toBe("markets");
+    expect(activeChannel("/markets")).toBe("stockboard");
+    expect(activeChannel("/")).toBeNull();
   });
 });

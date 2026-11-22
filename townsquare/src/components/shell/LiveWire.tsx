@@ -51,7 +51,7 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
     <ul className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
       {items.map((it, i) => (
         <li key={`w${i}`} className="flex items-center gap-2.5 pr-8">
-          {it.label && !(breaking && i === 0) && (
+          {(it.label === "Breaking" || it.label === "Alert") && !(breaking && i === 0) && (
             <span className={`rounded-[4px] px-1 py-px text-[9.5px] font-bold tracking-[0.1em] uppercase ${it.label === "Breaking" || it.label === "Alert" ? "bg-[var(--wn-red-fill)] text-white" : "text-ink-3 ring-1 ring-[var(--hairline)]"}`}>
               {it.label}
             </span>
@@ -86,7 +86,7 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
       role="region"
       aria-label="Live Wire"
       aria-roledescription="ticker"
-      className={`relative border-b border-[var(--hairline)] bg-[var(--wire-bg)] text-[var(--wire-fg)] ${slot === "layout" && path === "/" ? "max-lg:hidden" : slot === "home" ? "lg:hidden" : ""}`}
+      className={`relative border-b border-[var(--hairline)] bg-[var(--wire-bg)] text-[var(--wire-fg)] ${slot === "home" ? "hidden" : ""}`}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}

@@ -6,6 +6,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 |---|---|---|
 | 1 | Feed fixes, outlet changes, Control Room feed status | `7572c29` |
 | 2 | Search crash fix, error boundary, client error logging | `f64b71f` |
+| 3 | One feed tab row, topics in the top nav, Your Topics | (see below) |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -23,6 +24,14 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - I couldn't reproduce the crash here; see DECISIONS.md (Part 2) for the likely causes and what changed for each.
 - Railway: nothing to add.
 - Screenshots: `screenshots/part2-phone-home.png`, `part2-phone-search.png`, `part2-desktop-home.png`, `part2-desktop-search.png`.
+
+## Part 3: One tab row
+- The home page has one tab row: **For You** (default) and **Friends**.
+- Topics (Politics, World, Business, Tech, Sports, Culture) plus Markets, Live and Desks are in **one top nav** on phones and desktop; each topic opens its own compact page (`/topics/politics` and so on).
+- The topics and teams you pick are now **Your Topics** in the side menu and desktop rail, with an Edit button.
+- The ticker shows once and no longer repeats category labels.
+- Old links (`/?c=Politics`, `/?tab=t-tech`, `/?tab=team-…`) redirect to the new pages.
+- Railway: nothing to add.
 
 ---
 

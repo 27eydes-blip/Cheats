@@ -180,3 +180,13 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Error reporting.** Client-side crashes (search, any page, and the root layout through a new `global-error.tsx`) are now sent to `/api/client-error` and written to the server log as `[client-error] …` with the message and stack. If the crash happens again, Railway → your service → Logs will show exactly what failed. Nothing is stored; rate-limited per address.
 - **Zero results** now clearly say "Nothing on the wire for …" (before, the "See all results" link hid the empty state).
 - **Other client-side risks in recent commits.** I re-checked everything added in news-v1. One real bug: in long feeds the first rows were never measured (their measuring hook ran before the measurer existed), so scroll spacing could drift; fixed. Nothing else could throw in the browser.
+
+## Part 3 — One tab row
+
+- **Feed tabs: For You (default) and Friends only.** "Following" would be the same thing as Friends (dispatches from people you follow), so I didn't add it; `?tab=following` still works as an alias.
+- **One top nav** on every screen size: Politics, World, Business, Tech, Sports, Culture | Markets, Live, Desks. "Front Page" is gone from it (the logo, Home and For You already go there). It scrolls sideways on phones. I kept your list exactly; U.S. stories have a page (`/topics/us`) reachable from Your Topics, but no top-nav item.
+- **Topic pages.** Each topic opens `/topics/<name>`: the topic's top story, then the timeline filtered to that topic, in the same compact style (with the quiet sidebar on desktop). These replace the old card-heavy channel pages (`/?c=Politics`), which didn't match the compact feed. **Business** is the business/economy news topic; **Markets** is the stock board.
+- **Old links keep working**: `/?c=Politics` → `/topics/politics`, `/?tab=t-tech` → `/topics/tech`, `/?tab=team-nfl-kc` → `/sports/nfl-kc`.
+- **Your Topics.** The topics and teams you pick (the old "+" tabs, same saved data) are now a "Your Topics" list in the side menu (phones) and the left rail (desktop), each linking to its page, with an Edit button that opens the same picker. They still drive followed-topic alerts.
+- **Phone layout:** thin top bar → topic nav → ticker → For You | Friends (sticks under the top bar) → feed. The ticker shows once (the phone home page used to have its own copy), and it no longer repeats category labels on every item; only a small BREAKING tag remains.
+- **The home page always shows the feed**, even when there are no stories yet. Before, an empty story list replaced the whole home page with "Quiet on the national desk", which would hide everyone's dispatches on a fresh live site.
