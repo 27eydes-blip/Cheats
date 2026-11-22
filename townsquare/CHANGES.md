@@ -5,7 +5,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 | Part | What | Commit on news-v1 |
 |---|---|---|
 | 1 | Feed fixes, outlet changes, Control Room feed status | `7572c29` |
-| 2 | Search crash fix, error boundary, client error logging | (see below) |
+| 2 | Search crash fix, error boundary, client error logging | `f64b71f` |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -22,6 +22,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - Zero results now say "Nothing on the wire for …".
 - I couldn't reproduce the crash here; see DECISIONS.md (Part 2) for the likely causes and what changed for each.
 - Railway: nothing to add.
+- Screenshots: `screenshots/part2-phone-home.png`, `part2-phone-search.png`, `part2-desktop-home.png`, `part2-desktop-search.png`.
 
 ---
 
