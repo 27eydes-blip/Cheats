@@ -21,7 +21,9 @@ export function CoverageBar({ storyKey, coverage, items, size = "sm" }: { storyK
   const [error, setError] = useState(false);
   if (!coverage.total) return null;
   const c = coverage;
-  const label = `${c.total} outlet${c.total === 1 ? "" : "s"}${c.rated ? `: ${pct(c.shares.left)}% left, ${pct(c.shares.center)}% center, ${pct(c.shares.right)}% right` : ""}${c.flag ? `. ${c.flag.text}` : ""}. Show the outlets`;
+  // Starts with the visible text (so voice control users can say it), then spells it out.
+  const visible = `${c.rated ? `L ${pct(c.shares.left)} · C ${pct(c.shares.center)} · R ${pct(c.shares.right)} · ` : ""}${c.total} outlet${c.total === 1 ? "" : "s"}`;
+  const label = `${visible}${c.rated ? `: ${pct(c.shares.left)}% left, ${pct(c.shares.center)}% center, ${pct(c.shares.right)}% right` : ""}${c.flag ? `. ${c.flag.text}` : ""}. Show the outlets`;
   const show = () => {
     setOpen(true);
     if (!list) fetch(`/api/stories/${encodeURIComponent(storyKey)}/coverage`).then((r) => (r.ok ? r.json() : Promise.reject())).then((d: { items: CoverageItem[] }) => setList(d.items)).catch(() => setError(true));

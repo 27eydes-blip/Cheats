@@ -32,6 +32,8 @@ for (const [name, path] of PUBLIC) {
     await page.goto(path, { waitUntil: "networkidle" });
     // Feed order depends on seeded timestamps and ranking that can tie; mask the rows and check the layout around them.
     const extra = name === "byline" || name === "front-page" ? [page.locator("[role=feed]")] : [];
+    // The profile's feed length also varies with seeded data; pin its height so the page below it doesn't move.
+    if (name === "byline") await page.addStyleTag({ content: "[role=feed]{min-height:1600px} [role=feed] ~ *{display:none}" });
     await expect(page).toHaveScreenshot(`${name}.png`, { mask: [...mask(page), ...extra] });
   });
 }
