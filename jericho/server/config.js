@@ -40,6 +40,8 @@ export function publicConfig() {
   return {
     assistantName: settings.assistantName,
     wakeWords: settings.wakeWords,
+    endPhrases: settings.endPhrases || [],
+    conversationTimeoutSeconds: settings.conversationTimeoutSeconds ?? 30,
     speechLang: settings.speechLang,
     elevenLabsEnabled: Boolean(secrets.elevenLabsKey),
   };

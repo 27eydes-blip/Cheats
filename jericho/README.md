@@ -31,6 +31,13 @@ Open **http://localhost:3000** in Chrome or Safari, tap **Start**, allow the mic
 "Jericho, turn off the bedroom lights". The text box at the bottom works too, which is handy if
 speech recognition misbehaves.
 
+After the wake word Jericho stays in a **conversation**: the orb says **Listening** and you can
+keep talking without saying its name. The conversation ends, and the orb goes back to **Say
+Jericho**, after 30 seconds of quiet (`conversationTimeoutSeconds`), or straight away when you
+say "thanks Jericho", "that's all" or "go to sleep" (`endPhrases`). "Turn off the lights, that's
+all" does the request first, then ends. The mic is switched off while Jericho is talking, so it
+can't answer itself.
+
 Try:
 
 - "Jericho, turn on the kitchen lights": the terminal prints `💡 [MOCK LIGHTS] kitchen -> ON`.
@@ -71,6 +78,8 @@ None of these are secret. Keys live only in `.env`.
 |---|---|
 | `elevenlabs.voiceId` | The ElevenLabs voice. Copy any voice ID from your ElevenLabs Voices page. Changes apply on the next reply, no restart needed. |
 | `elevenlabs.modelId` | `eleven_flash_v2_5` is the fastest. Use `eleven_multilingual_v2` for higher quality but more delay. |
+| `conversationTimeoutSeconds` | How long Jericho keeps listening without the wake word after you or it last spoke. Default 30. A pending yes/no question waits its own 60 seconds. |
+| `endPhrases` | Phrases that end the conversation right away. Add your own. |
 | `wakeWords` | Words that wake the assistant: "jericho", "jer" and common mishearings ("jerico", "jerry co", "jerr"…). Add more to the array any time; a space also matches a hyphen or no gap, so "jerry co" covers "jerry-co" and "jerryco". Whole words only: "Jerry", "Jeremy" and "jersey" don't trigger it. Reload the page after editing. |
 | `claude.model` / `claude.effort` | Default is `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. Raise effort to `medium` if answers feel too shallow. |
 | `claude.fallbacks` | On by default. If the main model declines a request on safety grounds, the API retries it on a fallback model inside the same call. Set to `false` to turn it off. |

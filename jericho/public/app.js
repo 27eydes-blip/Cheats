@@ -38,11 +38,22 @@ async function api(path, body) {
 }
 
 // ---- UI helpers ---------------------------------------------------------------
-let mode = "off"; // off | idle | command | thinking | speaking | confirm
+// off      not started (tap the orb)
+// idle     waiting for the wake word
+// active   in a conversation: no wake word needed until the timeout runs out
+// thinking / speaking / confirm   as they say
+let mode = "off";
 function setMode(m, status) {
   mode = m;
   orb.dataset.state = m;
-  orbLabel.textContent = { off: "Start", idle: "Listening", command: "Go ahead", thinking: "…", speaking: "Speaking", confirm: "Yes / No?" }[m];
+  orbLabel.textContent = {
+    off: "Start",
+    idle: `Say ${config.assistantName}`,
+    active: "Listening",
+    thinking: "…",
+    speaking: "Speaking",
+    confirm: "Yes / No?",
+  }[m];
   confirmBox.hidden = m !== "confirm";
   if (status) statusEl.textContent = status;
 }
@@ -55,11 +66,19 @@ function addLog(who, text) {
 }
 
 // ---- config ---------------------------------------------------------------------
-let config = { assistantName: "Jericho", wakeWords: ["jericho", "jer"], speechLang: "en-US", elevenLabsEnabled: false };
+let config = {
+  assistantName: "Jericho",
+  wakeWords: ["jericho", "jer"],
+  endPhrases: ["thanks jericho", "that's all", "go to sleep"],
+  conversationTimeoutSeconds: 30,
+  speechLang: "en-US",
+  elevenLabsEnabled: false,
+};
 api("/api/config")
   .then((c) => {
-    config = c;
+    config = { ...config, ...c };
     $("name").textContent = c.assistantName;
+    if (mode === "off" || mode === "idle") setMode(mode);
     document.title = c.assistantName;
   })
   .catch((e) => (statusEl.textContent = e.message));
@@ -69,6 +88,19 @@ const audio = new Audio();
 audio.preload = "auto";
 let audioCtx;
 let speechQueue = Promise.resolve();
+
+function sleepTone() {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.frequency.setValueAtTime(660, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(330, audioCtx.currentTime + 0.25);
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.32);
+}
 
 function beep() {
   if (!audioCtx) return;
@@ -111,8 +143,9 @@ function elevenLabsVoice(text) {
 
 function speak(text) {
   speechQueue = speechQueue.then(async () => {
-    const after = mode === "confirm" ? "confirm" : "idle";
-    stopListening(); // don't let Jericho hear itself
+    lastSpoken = normalize(text);
+    stopConversationTimer();
+    stopListening(); // the mic is off while Jericho talks, so it can't hear itself
     setMode("speaking");
     try {
       if (!config.elevenLabsEnabled) throw new Error("no key");
@@ -120,30 +153,79 @@ function speak(text) {
     } catch {
       await browserVoice(text);
     }
-    if (after === "confirm") setMode("confirm", "Say “yes” or “confirm” to go ahead.");
-    else if (running) setMode("idle", `Say “${config.assistantName}”…`);
-    else setMode("off", "Tap start to talk to me.");
-    if (running) startListening();
+    afterSpeaking();
   });
   return speechQueue;
 }
 
+function afterSpeaking() {
+  if (confirmPending) setMode("confirm", "Say “yes” or “confirm” to go ahead.");
+  else if (endAfterReply) endConversation();
+  else if (conversation && running) {
+    setMode("active", "Listening… (no need to say my name)");
+    restartConversationTimer(); // Jericho finished talking: timer starts again
+  } else if (running) setMode("idle", `Say “${config.assistantName}”…`);
+  else setMode("off", "Tap start to talk to me.");
+  endAfterReply = false;
+  // Short pause before the mic comes back, so the tail of the audio isn't picked up.
+  if (running) setTimeout(() => mode !== "speaking" && startListening(), 350);
+}
+
+// ---- conversation (stays open after the wake word) ------------------------------
+let conversation = false;
+let conversationTimer;
+let endAfterReply = false;
+
+function restartConversationTimer() {
+  clearTimeout(conversationTimer);
+  if (!conversation) return;
+  conversationTimer = setTimeout(() => {
+    if (mode === "active") endConversation();
+  }, (config.conversationTimeoutSeconds || 30) * 1000);
+}
+function stopConversationTimer() {
+  clearTimeout(conversationTimer);
+}
+function startConversation() {
+  conversation = true;
+  setMode("active", "Listening… (no need to say my name)");
+  restartConversationTimer();
+}
+function endConversation() {
+  conversation = false;
+  stopConversationTimer();
+  if (running) {
+    sleepTone();
+    setMode("idle", `Say “${config.assistantName}”…`);
+  } else setMode("off", "Tap start to talk to me.");
+}
+
 // ---- brain round trips ----------------------------------------------------------
 let confirmTimer;
-async function send(kind, text) {
+let confirmPending = false;
+async function send(kind, text, { endAfter = false } = {}) {
   addLog("you", text);
+  stopConversationTimer();
   setMode("thinking", "Thinking…");
   try {
     const r = await api(kind === "confirm" ? "/api/confirm" : "/api/ask", { sessionId, text });
     addLog("jericho", r.reply);
     clearTimeout(confirmTimer);
-    if (r.awaitingConfirmation) {
-      mode = "confirm"; // speak() returns to confirm mode afterwards
-      confirmTimer = setTimeout(() => { if (mode === "confirm") setMode("idle", "Confirmation timed out."); }, 60_000);
+    confirmPending = Boolean(r.awaitingConfirmation);
+    endAfterReply = endAfter && !confirmPending; // never skip past a pending yes/no
+    if (confirmPending) {
+      confirmTimer = setTimeout(() => {
+        if (mode === "confirm") {
+          confirmPending = false;
+          conversation = false;
+          setMode("idle", "Confirmation timed out.");
+        }
+      }, 60_000);
     }
     await speak(r.reply);
   } catch (e) {
     addLog("note", e.message);
+    confirmPending = false;
     await speak("Sorry, I couldn't reach the server.");
   }
 }
@@ -152,35 +234,74 @@ async function send(kind, text) {
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 let wantListening = false;
-let commandTimer;
+let lastSpoken = "";
 
-function wakeRegex() {
-  // Longest first, so "jerry co" wins over "jer". A space in a wake word also
+function normalize(t) {
+  return String(t).toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function escapeWords(list) {
+  // Longest first, so "jerry co" wins over "jer". A space in a phrase also
   // matches a hyphen or no gap at all ("jerry co" = "jerry-co" = "jerryco").
-  const words = [...config.wakeWords]
+  return [...list]
     .sort((a, b) => b.length - a.length)
     .map((w) => w.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "[\\s-]*"))
     .join("|");
-  return new RegExp(`\\b(?:hey\\s+|ok\\s+|okay\\s+)?(?:${words})\\b[\\s,.!?]*`, "i");
+}
+
+function wakeRegex(flags = "i") {
+  return new RegExp(`\\b(?:hey\\s+|ok\\s+|okay\\s+)?(?:${escapeWords(config.wakeWords)})\\b[\\s,.!?]*`, flags);
+}
+
+/** If the utterance contains an end phrase, return what's left once it (and any wake word) is removed. */
+function splitEndPhrase(text) {
+  const t = normalize(text);
+  const re = new RegExp(`\\b(?:${escapeWords(config.endPhrases || [])})\\b`, "i");
+  if (!config.endPhrases?.length || !re.test(t)) return null;
+  return t.replace(re, " ").replace(wakeRegex("gi"), " ").replace(/\s+/g, " ").trim();
+}
+
+/** Did the mic just pick up Jericho's own last reply (speakerphone echo)? */
+function isEcho(text) {
+  const t = normalize(text);
+  return t.length > 8 && lastSpoken.includes(t);
 }
 
 function onHeard(raw) {
   const text = raw.trim();
-  if (!text) return;
-  if (mode === "confirm") return send("confirm", text);
-  if (mode === "command") {
-    clearTimeout(commandTimer);
-    return send("ask", text.replace(wakeRegex(), "").trim() || text);
+  if (!text || isEcho(text)) return;
+
+  // Safety confirmations work exactly as before: whatever you say goes to the
+  // server, which only accepts a clear yes. "That's all" here is a no, then sleep.
+  if (mode === "confirm") {
+    const ending = splitEndPhrase(text) !== null;
+    return send("confirm", text, { endAfter: ending });
   }
-  if (mode !== "idle") return;
+
+  if (mode === "active") {
+    restartConversationTimer(); // you spoke: timer starts again
+    const rest = splitEndPhrase(text);
+    if (rest !== null) {
+      // "Thanks Jericho" ends it now. "Lights off, that's all" does the request first.
+      return rest.length > 2 ? send("ask", rest, { endAfter: true }) : endConversation();
+    }
+    const request = text.replace(wakeRegex(), " ").trim();
+    if (request.length > 1) return send("ask", request);
+    beep(); // just the wake word again: still listening
+    return;
+  }
+
+  if (mode !== "idle") return; // thinking or speaking: ignore
+  if (splitEndPhrase(text) !== null) return; // "thanks Jericho" while asleep: stay asleep
   const m = wakeRegex().exec(text);
   if (!m) return; // not for us
   const rest = text.slice(m.index + m[0].length).trim();
-  if (rest.length > 1) return send("ask", rest); // "Jericho, turn on the lights"
-  // Just "Jericho": wait for the request.
-  beep();
-  setMode("command", "Yes?");
-  commandTimer = setTimeout(() => { if (mode === "command") setMode("idle", `Say “${config.assistantName}”…`); }, 8000);
+  if (rest.length > 1) {
+    conversation = true; // "Jericho, turn on the lights": answer, then keep listening
+    return send("ask", rest);
+  }
+  beep(); // just "Jericho": wait for the request
+  startConversation();
 }
 
 function startListening() {
@@ -205,6 +326,7 @@ if (SR) {
       else interim += r[0].transcript;
     }
     heardEl.textContent = interim;
+    if (interim && mode === "active") restartConversationTimer();
   };
   rec.onerror = (e) => {
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
@@ -234,6 +356,8 @@ function silentWav() {
 orb.addEventListener("click", () => {
   if (running) {
     running = false;
+    conversation = false;
+    stopConversationTimer();
     stopListening();
     speechSynthesis?.cancel();
     audio.pause();
@@ -262,7 +386,9 @@ $("typed").addEventListener("submit", (e) => {
   const text = input.value.trim();
   if (!text) return;
   input.value = "";
-  send(mode === "confirm" ? "confirm" : "ask", text);
+  if (mode === "confirm") return send("confirm", text);
+  if (mode === "active" || mode === "idle") conversation = running; // typing counts as talking
+  send("ask", text);
 });
 
 // ---- announcements (e.g. "Claude Code finished") -------------------------------

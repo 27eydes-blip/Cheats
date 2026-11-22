@@ -13,6 +13,16 @@
     "jerryco",
     "jerr"
   ],
+  "conversationTimeoutSeconds": 30,
+  "endPhrases": [
+    "thanks jericho",
+    "thank you jericho",
+    "thanks jer",
+    "thank you jer",
+    "that's all",
+    "that is all",
+    "go to sleep"
+  ],
   "speechLang": "en-US",
 
   "claude": {
