@@ -14,7 +14,6 @@ import { listTeams } from "@/lib/sports/teams";
 import { logoProvider } from "@/lib/sports/logo-provider";
 import { TeamLogos } from "./TeamLogos";
 import { getAds } from "@/lib/ads";
-import { AdsControl } from "./AdsControl";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -52,6 +51,7 @@ export default async function Admin() {
         <Link href="/admin/news" className="btn-outline !min-h-10 !text-[14px]">News feeds and outlets</Link>
         <Link href="/admin/notes" className="btn-outline !min-h-10 !text-[14px]">Context notes review</Link>
         <Link href="/admin/alerts" className="btn-outline !min-h-10 !text-[14px]">Breaking alerts</Link>
+        <Link href="/admin/sponsors" className="btn-outline !min-h-10 !text-[14px]">Sponsors</Link>
       </nav>
 
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-x-6 gap-y-6 px-4 sm:px-6 lg:grid-cols-4">
@@ -101,9 +101,9 @@ export default async function Admin() {
       </section>
 
       <section aria-labelledby="ads" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">
-        <h2 id="ads" className="font-display text-h1 font-semibold">Sponsored cards</h2>
-        <p className="text-[13.5px] text-ink-3">Off by default. When on, cards carry a &ldquo;Sponsored&rdquo; label and a tinted border, are never ranked or boosted, and only appear in For You.</p>
-        <AdsControl config={getAds()} />
+        <h2 id="ads" className="font-display text-h1 font-semibold">Sponsors</h2>
+        <p className="text-[13.5px] text-ink-3">Sponsored cards are {getAds().enabled ? "on" : "off"}; {getAds().cards.length} showing. Create and edit sponsors, images, dates and counters on the Sponsors page.</p>
+        <Link href="/admin/sponsors" className="btn-outline mt-3 !min-h-10 !text-[14px]">Open Sponsors</Link>
       </section>
 
       <section aria-labelledby="teamlogos" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">

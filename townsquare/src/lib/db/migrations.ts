@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { applyOutletUpdates, seedOutlets } from "../newsroom/outlets";
+import { seedSponsors } from "../sponsors-seed";
 
 /**
  * Numbered, append-only migrations. Each runs once per database and is
@@ -356,6 +357,32 @@ ALTER TABLE news_sources ADD COLUMN pending_check INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE news_sources ADD COLUMN feed_note TEXT NOT NULL DEFAULT ''
 `,
     after: (db) => applyOutletUpdates(db),
+  },
+  {
+    // Additive: a sponsors table. Existing sponsored cards are copied in (the old setting stays untouched).
+    id: 10,
+    name: "sponsors",
+    sql: `
+CREATE TABLE IF NOT EXISTS sponsors (
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  headline     TEXT NOT NULL,
+  body         TEXT NOT NULL DEFAULT '',
+  link_url     TEXT NOT NULL,
+  button_label TEXT NOT NULL DEFAULT 'Learn more',
+  image_key    TEXT,
+  image_alt    TEXT NOT NULL DEFAULT '',
+  placeholder  TEXT,
+  starts_at    INTEGER,
+  ends_at      INTEGER,
+  active       INTEGER NOT NULL DEFAULT 1,
+  views        INTEGER NOT NULL DEFAULT 0,
+  clicks       INTEGER NOT NULL DEFAULT 0,
+  created_at   INTEGER NOT NULL,
+  updated_at   INTEGER NOT NULL
+)
+`,
+    after: (db) => seedSponsors(db),
   },
 ];
 

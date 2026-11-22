@@ -64,7 +64,7 @@ export async function sponsoredCardAction(form: FormData) {
   return attempt(async () => {
     const u = await requireViewer();
     if (form.get("remove")) removeSponsoredCard(u, String(form.get("remove")));
-    else addSponsoredCard(u, { sponsor: String(form.get("sponsor") ?? ""), title: String(form.get("title") ?? ""), body: String(form.get("body") ?? ""), url: String(form.get("url") ?? "") });
+    else await addSponsoredCard(u, { sponsor: String(form.get("sponsor") ?? ""), title: String(form.get("title") ?? ""), body: String(form.get("body") ?? ""), url: String(form.get("url") ?? "") });
     revalidatePath("/", "layout");
   });
 }

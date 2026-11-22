@@ -34,6 +34,8 @@ export const RATE_LIMITS = {
   note: [[3, 60 * 60_000], [5, 24 * 60 * 60_000]],
   noteRating: [[30, 10 * 60_000], [200, 24 * 60 * 60_000]],
   noteFlag: [[10, 60 * 60_000]],
+  /** Sponsor views and clicks count once per visitor per sponsor every 30 minutes. */
+  sponsorEvent: [[1, 30 * 60_000]],
 } as const satisfies Record<string, readonly (readonly [number, number])[]>;
 
 /**

@@ -6,7 +6,8 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 |---|---|---|
 | 1 | Feed fixes, outlet changes, Control Room feed status | `7572c29` |
 | 2 | Search crash fix, error boundary, client error logging | `f64b71f` |
-| 3 | One feed tab row, topics in the top nav, Your Topics | (see below) |
+| 3 | One feed tab row, topics in the top nav, Your Topics | `14d8e8f` |
+| 4 | Sponsors with images, editor with preview, Glydrift | (see below) |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -32,6 +33,14 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - The ticker shows once and no longer repeats category labels.
 - Old links (`/?c=Politics`, `/?tab=t-tech`, `/?tab=team-…`) redirect to the new pages.
 - Railway: nothing to add.
+- Screenshots: `screenshots/part3-{phone,desktop}-{home,tabs,menu,topic}.png` (home, tab layout, side menu with Your Topics, a topic page).
+
+## Part 4: Sponsor images
+- **Control Room → Sponsors**: create and edit sponsors with name, headline, body, link, button label, image upload (JPG, PNG or WebP up to 5 MB) with alt text, start and end dates, an on/off switch, and view and click counters, with a live phone and desktop preview.
+- Uploads are resized on the server to 1200×630 and 600×315, metadata stripped, and saved on the Railway volume.
+- Sponsored cards keep the quiet "Sponsored" label and show the image under the text; with no image they're a clean text card with the sponsor's initial.
+- A **Glydrift** sponsor is ready with a placeholder graphic. Sponsored cards are still **off** until you switch them on at the top of the Sponsors page.
+- Railway: nothing to add (images use the existing `UPLOAD_DIR` volume).
 
 ---
 

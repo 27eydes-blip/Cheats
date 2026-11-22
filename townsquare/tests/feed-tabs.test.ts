@@ -95,10 +95,11 @@ describe("sponsored cards", () => {
     const a = await makeUser();
     for (let i = 0; i < 6; i++) story(`s${i}`, "Tech");
     const boss = await admin();
+    run("DELETE FROM sponsors"); // start without the seeded Glydrift sponsor
     expect(getAds()).toEqual({ enabled: false, cards: [] });
     expect(() => setAdsEnabled(a, true)).toThrow(/Admins/);
-    expect(() => addSponsoredCard(boss, { sponsor: "Acme", title: "Hi", body: "", url: "javascript:alert(1)" })).toThrow(/web address/);
-    addSponsoredCard(boss, { sponsor: "Acme", title: "Try Acme", body: "Fine goods.", url: "https://acme.example/" });
+    await expect(addSponsoredCard(boss, { sponsor: "Acme", title: "Hi", body: "", url: "javascript:alert(1)" })).rejects.toThrow(/web address/);
+    await addSponsoredCard(boss, { sponsor: "Acme", title: "Try Acme", body: "Fine goods.", url: "https://acme.example/" });
     expect(forYou(null).items.some((i) => i.kind === "sponsored")).toBe(false); // cards exist, switch still off
     setAdsEnabled(boss, true);
     const items = forYou(null).items;
