@@ -1,3 +1,55 @@
+# What changed (news-v1)
+
+Branch `news-v1`, built on `design-v2`. Every earlier feature still works. Details and reasons: `DECISIONS.md`, Parts H–K.
+
+## What you need to add in Railway
+
+Service → Variables. Never put these in code.
+
+| Variable | Needed? | What to put |
+|---|---|---|
+| `VAPID_PUBLIC_KEY` | **Yes, for push alerts** | Run `npm run push:keys` on your computer (in the `townsquare` folder) and copy the first line. |
+| `VAPID_PRIVATE_KEY` | **Yes, for push alerts** | The second line from the same command. Keep it secret. |
+| `VAPID_SUBJECT` | **Yes, for push alerts** | `mailto:` plus an email you read (e.g. `mailto:alerts@yourdomain.com`), or your site's `https://` address. |
+| `APP_URL` | Recommended (you may already have it) | Your public address, e.g. `https://worldnet.up.railway.app`. Used in the feed reader's contact line and as the push contact fallback. |
+| `NEWS_API_KEY` | Optional | A licensed news API key (NewsAPI.org format) to add AP and Reuters. NewsAPI's free plan is for development only; production needs a paid plan. Without it, the other 51 outlets still work. |
+| `NEWS_DEMO` | **Do not set** | Leave it unset on Railway so the fictional demo stories stay off. |
+
+Optional tuning (defaults are fine): `NEWS_INGEST_INTERVAL_MIN` (10), `NEWS_API_INTERVAL_MIN` (20), `BREAKING_AUTO_SCORE` (85), `FOLLOW_ALERT_SCORE` (55), and `NEWS_INGEST=off` (only if you run `npm run news:ingest` as a separate cron service).
+
+Also:
+- Keep **one replica** and the existing volume for the database (the news scheduler runs inside the app).
+- To try this version, point the Railway service's branch at `news-v1`.
+- After the first deploy, open **Control Room → News feeds**. The first sync runs about 15 seconds after start. Feeds that fail show their error there; pause, fix or remove them. Feed fetching could not be tested from my workspace (the network blocks those sites), so check this page first.
+
+## 1. Real news
+- Every 10 minutes the app reads the official RSS feeds of 51 outlets across the spectrum (wire, national papers, TV, public media, left, center and right sites, international, sports, tech), plus AP and Reuters through a licensed API when `NEWS_API_KEY` is set.
+- Only the headline, a snippet under 280 characters, the outlet, the time, a link out, and a feed-supplied image (credited) are stored. robots.txt is checked, feeds are cached with conditional requests, and failing feeds back off.
+- Articles about the same event are grouped into one Story with a neutral headline built from what the outlets agree on, a category (US, World, Politics, Markets, Sports, Tech), and importance and freshness scores. Real stories now fill For You, the topic tabs, story pages and the ticker.
+- The fictional sample stories are now demo data: off in production, with a switch in the Control Room for local testing.
+- **Control Room → News feeds**: add a feed (with a Test button that shows the first headlines), test, sync, pause or remove any feed, edit lean ratings and their sources, see the last sync time, per-feed errors and recent runs.
+
+## 2. Coverage spread
+- Each story shows a slim bar: the share of left, center and right outlets covering it, plus the outlet count ("L 40 · C 30 · R 30 · 10 outlets").
+- Tap it to see every outlet grouped by lean, each linking to its own article. The story page shows the same list under "Who's covering this".
+- Neutral flags such as "Mostly covered by Right-leaning outlets" or "Few Left-leaning outlets covering this". Lean labels are approximate, from public third-party ratings, and editable.
+
+## 3. Context notes
+- Signed-in people (accounts 3+ days old) can add a short note with a required source link to any dispatch or story. Others rate it Helpful, Somewhat helpful or Not helpful, with a reason.
+- A note goes public only when raters who usually disagree both find it helpful (a bridging score from past rating patterns). It shows under the dispatch with its source and a "Why am I seeing this?" page, and can lose public status if ratings change.
+- Rate limits, new-account limits, reporting, and **Control Room → Context notes** to review reports and suspicious activity.
+
+## 4. Push alerts
+- **Settings → Alerts**: turn alerts on per device (the browser only asks for permission then), choose breaking news, responses, mentions, new followers, and big stories on your pinned topics and teams; set quiet hours and a daily breaking limit; send yourself a test alert.
+- **Control Room → Breaking alerts**: pick a story or write custom text, preview it as it will look on a phone, and send. A story can never be sent twice. Very big stories are sent automatically (at most one per sync, six a day).
+- Expired subscriptions are removed automatically. On iPhone, people add the site to the Home Screen first.
+
+## Quality
+- 152 unit tests (new: feed parsing, clustering and headlines, ingest with a fake network, coverage and flags, the bridging score, notes rules, the push sender), 28/28 end-to-end steps, 44/44 visual snapshots (updated for the coverage bar and notes), accessibility 100 on the home, story, help, alerts and new Control Room pages.
+- Database: migration 8, mirrored in `supabase/schema.sql`.
+
+---
+
 # What changed (design-v2)
 
 All of this is on the `design-v2` branch. Every earlier feature still works.
