@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f14">
+  <title>Jarvis</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1 id="name">Jarvis</h1>
+      <p id="status" role="status">Tap start, then say “Jarvis”.</p>
+    </header>
+
+    <button id="orb" class="orb" aria-label="Start listening">
+      <span class="ring"></span>
+      <span id="orb-label">Start</span>
+    </button>
+
+    <p id="heard" class="heard" aria-live="polite"></p>
+
+    <div id="confirm" class="confirm" hidden>
+      <button id="yes" class="yes">Yes</button>
+      <button id="no" class="no">No</button>
+    </div>
+
+    <ol id="log" class="log" aria-label="Conversation"></ol>
+
+    <form id="typed" class="typed" autocomplete="off">
+      <input id="typed-text" placeholder="Or type a request…" aria-label="Type a request">
+      <button type="submit">Send</button>
+    </form>
+  </main>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "port": 3000,
+  "host": "0.0.0.0",
+
+  "assistantName": "Jarvis",
+  "wakeWords": ["jarvis", "jervis", "javis", "jarvas"],
+  "speechLang": "en-US",
+
+  "claude": {
+    "model": "claude-opus-5-5",
+    "effort": "low",
+    "maxToolRounds": 6,
+    "conversationIdleMinutes": 10
+  },
+
+  "elevenlabs": {
+    "voiceId": "JBFqnCBsd6RMkjVDRZzb",
+    "modelId": "eleven_flash_v2_5",
+    "outputFormat": "mp3_44100_128",
+    "stability": 0.5,
+    "similarityBoost": 0.75
+  },
+
+  "lights": {
+    "provider": "mock",
+    "rooms": ["living room", "bedroom", "kitchen", "office"]
+  },
+
+  "claudeCode": {
+    "command": "claude",
+    "projectsDir": "~/jarvis-projects",
+    "permissionMode": "acceptEdits",
+    "extraArgs": [],
+    "timeoutMinutes": 30
+  },
+
+  "confirmation": {
+    "yesWords": ["yes", "yeah", "yep", "confirm", "confirmed", "affirmative", "do it", "go ahead"],
+    "timeoutSeconds": 60
+  },
+
+  "logFile": "logs/actions.log"
+}
