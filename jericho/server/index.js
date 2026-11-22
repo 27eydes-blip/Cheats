@@ -8,6 +8,7 @@ import path from "node:path";
 import { Brain } from "./brain.js";
 import { publicConfig, ROOT, secrets, settings } from "./config.js";
 import { logAction, logPath } from "./logger.js";
+import * as memory from "./memory.js";
 import { jobEvents } from "./tools/claudeCode.js";
 import { streamSpeech } from "./tts.js";
 
@@ -46,7 +47,8 @@ async function readJson(req) {
 }
 
 function serveStatic(url, res) {
-  const rel = url.pathname === "/" ? "index.html" : decodeURIComponent(url.pathname).replace(/^\/+/, "");
+  const pages = { "/": "index.html", "/memory": "memory.html" };
+  const rel = pages[url.pathname] || decodeURIComponent(url.pathname).replace(/^\/+/, "");
   const file = path.resolve(PUBLIC_DIR, rel);
   if (!file.startsWith(PUBLIC_DIR + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     res.writeHead(404).end("Not found");
@@ -70,6 +72,26 @@ async function handler(req, res) {
       const result =
         url.pathname === "/api/ask" ? await brain.handle(String(sessionId), text.trim()) : await brain.confirm(String(sessionId), text.trim());
       return sendJson(res, 200, result);
+    }
+
+    // ---- memory page + conversation learning ----
+    if (req.method === "GET" && url.pathname === "/api/memory") {
+      return sendJson(res, 200, { memories: memory.listMemories(), style: memory.getStyle() });
+    }
+    if (req.method === "POST" && url.pathname === "/api/memory/delete") {
+      const { id } = await readJson(req);
+      return sendJson(res, 200, memory.deleteMemory(String(id), "memory-page"));
+    }
+    if (req.method === "POST" && url.pathname === "/api/style/delete") {
+      const { section, index } = await readJson(req);
+      return sendJson(res, 200, memory.deleteStyleItem(String(section), Number(index), "memory-page"));
+    }
+    if (req.method === "POST" && url.pathname === "/api/memory/wipe") {
+      return sendJson(res, 200, memory.wipeAll("memory-page"));
+    }
+    if (req.method === "POST" && url.pathname === "/api/conversation-end") {
+      const { sessionId } = await readJson(req);
+      return sendJson(res, 200, { learning: brain.conversationEnded(String(sessionId || "")) });
     }
 
     if (req.method === "GET" && url.pathname === "/api/tts") {

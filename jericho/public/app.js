@@ -1,5 +1,6 @@
-// Jericho in the browser: ears (speech recognition + wake word) and mouth (audio playback).
-// All thinking and all API keys live on the server.
+// Jericho in the browser: ears (speech recognition + wake word), mouth (audio playback)
+// and the gold visualizer. All thinking and all API keys live on the server.
+import { createVisualizer } from "./visualizer.js";
 
 const $ = (id) => document.getElementById(id);
 const orb = $("orb");
@@ -8,6 +9,7 @@ const statusEl = $("status");
 const heardEl = $("heard");
 const logEl = $("log");
 const confirmBox = $("confirm");
+const viz = createVisualizer($("viz"));
 
 // ---- identity & access token -------------------------------------------------
 const store = {
@@ -46,16 +48,18 @@ let mode = "off";
 function setMode(m, status) {
   mode = m;
   orb.dataset.state = m;
+  viz.setState(m);
   orbLabel.textContent = {
     off: "Start",
     idle: `Say ${config.assistantName}`,
     active: "Listening",
-    thinking: "…",
+    thinking: "Thinking",
     speaking: "Speaking",
     confirm: "Yes / No?",
   }[m];
+  orb.setAttribute("aria-label", m === "off" ? "Start listening" : "Pause listening");
   confirmBox.hidden = m !== "confirm";
-  if (status) statusEl.textContent = status;
+  if (status !== undefined) statusEl.textContent = status;
 }
 function addLog(who, text) {
   const li = document.createElement("li");
@@ -114,7 +118,27 @@ function beep() {
   osc.stop(audioCtx.currentTime + 0.2);
 }
 
+// ElevenLabs audio goes through an AnalyserNode so the bars follow the real voice.
+let voiceAnalyser = null;
+function routeVoiceThroughAnalyser() {
+  if (voiceAnalyser) return true;
+  if (!audioCtx || audioCtx.state !== "running") return false; // a suspended graph would mute the voice
+  try {
+    const source = audioCtx.createMediaElementSource(audio);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.72;
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    voiceAnalyser = analyser;
+  } catch {
+    /* not supported: the bars fall back to a fake pulse */
+  }
+  return Boolean(voiceAnalyser);
+}
+
 function browserVoice(text) {
+  viz.setSpeechSource(null, true); // no audio to analyse: smooth fake pulse
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window)) return resolve();
     speechSynthesis.cancel();
@@ -125,7 +149,10 @@ function browserVoice(text) {
   });
 }
 
-function elevenLabsVoice(text) {
+async function elevenLabsVoice(text) {
+  if (audioCtx && audioCtx.state !== "running") await audioCtx.resume().catch(() => {});
+  const routed = routeVoiceThroughAnalyser();
+  viz.setSpeechSource(routed ? voiceAnalyser : null, !routed);
   return new Promise((resolve, reject) => {
     const q = new URLSearchParams({ text, token });
     let started = false;
@@ -146,13 +173,14 @@ function speak(text) {
     lastSpoken = normalize(text);
     stopConversationTimer();
     stopListening(); // the mic is off while Jericho talks, so it can't hear itself
-    setMode("speaking");
+    setMode("speaking", "");
     try {
       if (!config.elevenLabsEnabled) throw new Error("no key");
       await elevenLabsVoice(text);
     } catch {
       await browserVoice(text);
     }
+    viz.setSpeechSource(null, false);
     afterSpeaking();
   });
   return speechQueue;
@@ -191,7 +219,13 @@ function startConversation() {
   setMode("active", "Listening… (no need to say my name)");
   restartConversationTimer();
 }
+/** Tell the server a conversation finished, so it can learn how you talk (one small call). */
+function conversationFinished() {
+  api("/api/conversation-end", { sessionId }).catch(() => {});
+}
+
 function endConversation() {
+  if (conversation) conversationFinished();
   conversation = false;
   stopConversationTimer();
   if (running) {
@@ -217,6 +251,7 @@ async function send(kind, text, { endAfter = false } = {}) {
       confirmTimer = setTimeout(() => {
         if (mode === "confirm") {
           confirmPending = false;
+          if (conversation) conversationFinished();
           conversation = false;
           setMode("idle", "Confirmation timed out.");
         }
@@ -327,6 +362,7 @@ if (SR) {
     }
     heardEl.textContent = interim;
     if (interim && mode === "active") restartConversationTimer();
+    micPulse = Math.min(1, micPulse + 0.18); // works even where we can't meter the mic
   };
   rec.onerror = (e) => {
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
@@ -337,6 +373,46 @@ if (SR) {
   // Browsers stop listening every so often; quietly restart.
   rec.onend = () => { if (wantListening) setTimeout(() => wantListening && startListening(), 250); };
 }
+
+// ---- mic volume for the visualizer -----------------------------------------------
+// Desktop: a real level meter on the mic. Phones: speech recognition and a second mic
+// stream can fight over the microphone, so there the bars react to recognition activity.
+const isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+let micStream = null;
+let micAnalyser = null;
+let micPulse = 0;
+let micBuf = null;
+
+async function startMicMeter() {
+  if (isPhone || micStream || !navigator.mediaDevices?.getUserMedia || !audioCtx) return;
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    if (!running) return stopMicMeter();
+    micAnalyser = audioCtx.createAnalyser();
+    micAnalyser.fftSize = 512;
+    audioCtx.createMediaStreamSource(micStream).connect(micAnalyser); // analysed only, never played
+    micBuf = new Float32Array(micAnalyser.fftSize);
+  } catch {
+    micStream = null;
+  }
+}
+function stopMicMeter() {
+  micStream?.getTracks().forEach((t) => t.stop());
+  micStream = null;
+  micAnalyser = null;
+}
+(function meterLoop() {
+  let level = 0;
+  if (micAnalyser && micBuf) {
+    micAnalyser.getFloatTimeDomainData(micBuf);
+    let sum = 0;
+    for (let i = 0; i < micBuf.length; i++) sum += micBuf[i] * micBuf[i];
+    level = Math.sqrt(sum / micBuf.length) * 4;
+  }
+  micPulse *= 0.92;
+  viz.setMicLevel(Math.min(1, Math.max(level, micPulse * 0.5)));
+  requestAnimationFrame(meterLoop);
+})();
 
 // ---- controls -------------------------------------------------------------------
 let running = false;
@@ -356,7 +432,9 @@ function silentWav() {
 orb.addEventListener("click", () => {
   if (running) {
     running = false;
+    if (conversation) conversationFinished();
     conversation = false;
+    stopMicMeter();
     stopConversationTimer();
     stopListening();
     speechSynthesis?.cancel();
@@ -376,6 +454,7 @@ orb.addEventListener("click", () => {
   }
   setMode("idle", `Say “${config.assistantName}”…`);
   startListening();
+  startMicMeter();
 });
 
 $("yes").addEventListener("click", () => mode === "confirm" && send("confirm", "yes"));

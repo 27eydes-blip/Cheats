@@ -1,6 +1,7 @@
 // Tool registry. To add a tool: write { definition, risky, describe?, run } and list it here.
 import { claudeCodeStatusTool, claudeCodeTool } from "./claudeCode.js";
 import { lightsTool } from "./lights.js";
+import { forgetTool, recallTool, rememberTool } from "./memory.js";
 import { calendarAddTool, calendarListTool, musicTool } from "./placeholders.js";
 
 const all = [
@@ -10,6 +11,9 @@ const all = [
   calendarListTool,
   calendarAddTool,
   musicTool,
+  rememberTool,
+  recallTool,
+  forgetTool,
 ];
 
 export const tools = new Map(all.map((t) => [t.definition.name, t]));

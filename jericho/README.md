@@ -70,6 +70,38 @@ Phone notes: tap **Start** each time you open the page, because phones only allo
 tap. Keep the screen on, because phones stop listening when the screen locks. Android Chrome
 may beep when it restarts listening.
 
+## The visualizer
+
+The circle in the middle is drawn live on a canvas:
+
+- **Say Jericho** (waiting): small dim bars, the core breathes slowly.
+- **Listening**: brighter core, the bars twitch with your microphone. On phones, the bars react
+  to what speech recognition hears instead, because a second mic stream can upset recognition.
+- **Thinking**: the outer ring spins faster and the bars ripple round the circle.
+- **Speaking**: the bars and core follow Jericho's actual ElevenLabs audio, through a Web Audio
+  analyser. With the browser's built-in voice there's no audio to measure, so they pulse smoothly.
+
+With "reduce motion" switched on in your phone or computer settings, it moves slower and less.
+
+## Memory and learning how you talk
+
+- "Jericho, remember that I take my coffee black" saves a memory to `data/memory.json`, with the
+  text, a topic and the date.
+- "What do you remember about coffee?" searches them.
+- "Forget the coffee thing": Jericho reads back the memory and waits for your yes, like other risky
+  actions.
+- Jericho won't store passwords, API keys, card numbers or ID numbers, even if you ask. This is
+  checked in code (`server/secrets.js`), not just by Claude. Anything that looks like one is also
+  blanked out in the action log.
+- After each conversation ends, one small Claude call updates `data/style.json`, under about
+  300 words. It covers phrases you use, how long your requests are, how you like replies, and
+  words the mic mishears with what you meant. These notes and the 100 most recent memories go
+  into Jericho's instructions, so replies fit you and misheard words get understood.
+- Open **/memory** (the **Memory** button at the top) to see both files, delete single items, or
+  wipe everything.
+- `data/` is git-ignored, so none of it is ever committed. Every save, delete and wipe goes in
+  the action log.
+
 ## Settings (`settings.json`)
 
 None of these are secret. Keys live only in `.env`.
@@ -118,8 +150,14 @@ server/tools/index.js     tool registry (add new tools here)
 server/tools/lights.js    lights tool → lights/mock.js | hue.js | kasa.js
 server/tools/claudeCode.js  runs `claude -p` in a project folder, announces when done
 server/tools/placeholders.js  calendar + music stubs
-public/                   the web page (index.html, app.js, style.css)
-test/brain.test.js        offline tests with a fake Claude client
+server/tools/memory.js    remember / recall / forget tools
+server/memory.js          data/memory.json + data/style.json (read, save, delete, wipe)
+server/style.js           the after-conversation call that updates style notes
+server/secrets.js         detects passwords, keys, card and ID numbers
+public/                   the web page (index.html, app.js, visualizer.js, style.css)
+public/memory.html, memory.js  the /memory page
+data/                     your memories and style notes (git-ignored)
+test/                     offline tests with a fake Claude client
 ```
 
 ## Adding a tool
