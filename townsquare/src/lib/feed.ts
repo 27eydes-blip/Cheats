@@ -43,7 +43,7 @@ function toItems(rows: Row[], viewerId: string | null): FeedItem[] {
 }
 
 /** Following: newest first, no ranking. Your posts, posts by people you follow, and their reposts. */
-export function followingFeed(viewerId: string, cursor?: string | null, limit: number = LIMITS.feedPage): FeedPage {
+export function followingFeed(viewerId: string, cursor?: string | null, limit: number = LIMITS.feedPage, opts: { humanOnly?: boolean } = {}): FeedPage {
   const [at, k] = parseCursor(cursor);
   const demo = demoEnabled() ? "" : `AND ${NOT_DEMO_STORY}`;
   const rows = all<Row>(
@@ -57,6 +57,7 @@ export function followingFeed(viewerId: string, cursor?: string | null, limit: n
      ) f
      WHERE (f.sort_at < ? OR (f.sort_at = ? AND f.k < ?))
        AND (SELECT author_id FROM posts WHERE id = f.post_id) NOT IN (${hiddenAuthorsSql})
+       ${opts.humanOnly ? "AND (SELECT author_id FROM posts WHERE id = f.post_id) NOT IN (SELECT id FROM users WHERE is_ai = 1)" : ""}
      ORDER BY f.sort_at DESC, f.k DESC LIMIT ?`,
     [viewerId, viewerId, viewerId, at, at, k, ...hiddenParams(viewerId), limit],
   );

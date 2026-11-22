@@ -36,6 +36,8 @@ export const RATE_LIMITS = {
   noteFlag: [[10, 60 * 60_000]],
   /** Sponsor views and clicks count once per visitor per sponsor every 30 minutes. */
   sponsorEvent: [[1, 30 * 60_000]],
+  /** Muting or unmuting all AI accounts. */
+  aiMute: [[20, 60 * 60_000]],
 } as const satisfies Record<string, readonly (readonly [number, number])[]>;
 
 /**

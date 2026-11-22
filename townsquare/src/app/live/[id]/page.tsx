@@ -9,7 +9,7 @@ import { LiveChat } from "@/components/live/LiveChat";
 import { FollowButton } from "@/components/FollowButton";
 import { BackIcon, EyeIcon, MicIcon, PlayIcon } from "@/components/icons";
 import { Avatar } from "@/components/ui/Avatar";
-import { LiveBadge, VerifiedSeal } from "@/components/ui/Badge";
+import { LiveBadge, AiBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { all } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function LivePlayer({ params }: { params: Promise<{ id: str
           <div className="mt-4 flex items-center gap-3 border-l-2 border-gold bg-paper-2 p-3">
             <Avatar url={e.host.avatarUrl} name={e.host.displayName} handle={e.host.handle} size={46} live={e.isLive} />
             <Link href={`/u/${e.host.handle}`} className="min-w-0 flex-1">
-              <span className="flex items-center gap-1 font-semibold">{e.host.displayName}{e.host.verified && <VerifiedSeal size={15} />}</span>
+              <span className="flex items-center gap-1 font-semibold">{e.host.displayName}{e.host.verified && <VerifiedSeal size={15} />}{e.host.ai && <AiBadge />}</span>
               <span className="block text-[13.5px] text-ink-3">Host · @{e.host.handle}</span>
             </Link>
             <FollowButton userId={e.host.id} following={follows} small />

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { applyOutletUpdates, seedOutlets } from "../newsroom/outlets";
 import { seedSponsors } from "../sponsors-seed";
+import { seedAiAccounts } from "../ai/seed";
 
 /**
  * Numbered, append-only migrations. Each runs once per database and is
@@ -383,6 +384,74 @@ CREATE TABLE IF NOT EXISTS sponsors (
 )
 `,
     after: (db) => seedSponsors(db),
+  },
+  {
+    // Additive: AI newsroom accounts (flag on users, settings, a generation log, spend and run records).
+    // Nothing existing is changed. The kill switch is stored OFF.
+    id: 11,
+    name: "ai_newsroom",
+    sql: `
+ALTER TABLE users ADD COLUMN is_ai INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS ai_accounts (
+  user_id       TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  slug          TEXT NOT NULL UNIQUE,
+  niche         TEXT NOT NULL,
+  style_guide   TEXT NOT NULL DEFAULT '',
+  paused        INTEGER NOT NULL DEFAULT 0,
+  post_hours    TEXT NOT NULL DEFAULT 'all',
+  max_per_hour  INTEGER NOT NULL DEFAULT 2,
+  format_cursor INTEGER NOT NULL DEFAULT 0,
+  last_run_at   INTEGER,
+  created_at    INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ai_runs (
+  account_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  slot        TEXT NOT NULL,
+  started_at  INTEGER NOT NULL,
+  finished_at INTEGER,
+  outcome     TEXT NOT NULL DEFAULT 'running',
+  note        TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (account_id, slot)
+);
+CREATE TABLE IF NOT EXISTS ai_posts (
+  id           TEXT PRIMARY KEY,
+  account_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  slot         TEXT NOT NULL,
+  story_key    TEXT,
+  format       TEXT NOT NULL,
+  body         TEXT NOT NULL DEFAULT '',
+  sources      TEXT NOT NULL DEFAULT '[]',
+  status       TEXT NOT NULL CHECK (status IN ('posted','queued','blocked','held','rejected','deleted','skipped','error')),
+  reason       TEXT NOT NULL DEFAULT '',
+  verification TEXT NOT NULL DEFAULT '{}',
+  post_id      TEXT REFERENCES posts(id) ON DELETE SET NULL,
+  model        TEXT,
+  cost_usd     REAL NOT NULL DEFAULT 0,
+  created_at   INTEGER NOT NULL,
+  decided_at   INTEGER,
+  decided_by   TEXT
+);
+CREATE INDEX IF NOT EXISTS ai_posts_recent ON ai_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS ai_posts_post ON ai_posts(post_id);
+CREATE INDEX IF NOT EXISTS ai_posts_account_story ON ai_posts(account_id, story_key);
+CREATE UNIQUE INDEX IF NOT EXISTS ai_posts_one_per_story ON ai_posts(story_key) WHERE story_key IS NOT NULL AND status IN ('posted','queued');
+CREATE TABLE IF NOT EXISTS ai_usage (
+  id            TEXT PRIMARY KEY,
+  at            INTEGER NOT NULL,
+  account_id    TEXT,
+  purpose       TEXT NOT NULL,
+  model         TEXT NOT NULL,
+  input_tokens  INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  cost_usd      REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS ai_usage_at ON ai_usage(at);
+CREATE TABLE IF NOT EXISTS ai_mutes (
+  user_id    TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL
+)
+`,
+    after: (db) => seedAiAccounts(db),
   },
 ];
 

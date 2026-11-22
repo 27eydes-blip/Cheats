@@ -14,7 +14,7 @@ export type ForYouItem =
   | { key: string; kind: "post"; post: PostView; repostedBy: null; reason?: string; topic: string | null; promoted?: boolean }
   | { key: string; kind: "story"; story: StorySummary; reason?: string; topic: string | null; rising?: boolean }
   | { key: string; kind: "sponsored"; ad: SponsoredCard; topic: null };
-export type ForYouOpts = { excludeStory?: string; /** topic tab: only this topic */ topic?: string; /** team tab: only stories tagged with this team, and dispatches on them */ teamId?: string };
+export type ForYouOpts = { excludeStory?: string; /** topic tab: only this topic */ topic?: string; /** team tab: only stories tagged with this team, and dispatches on them */ teamId?: string; /** "Human only": leave out AI newsroom accounts */ humanOnly?: boolean };
 export type ForYouPage = { items: ForYouItem[]; nextCursor: string | null };
 
 const H = 3_600_000;
@@ -55,7 +55,7 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
     `SELECT p.id, p.author_id, p.created_at, s.section, p.promoted, p.story_key FROM posts p
      JOIN users u ON u.id = p.author_id LEFT JOIN stories s ON s.key = p.story_key
      WHERE p.deleted_at IS NULL AND p.removed_at IS NULL AND p.community_id IS NULL AND p.reply_to_id IS NULL
-       AND u.status = 'active' AND p.created_at > ? AND p.author_id NOT IN (${hiddenAuthorsSql}) ${demoEnabled() ? "" : `AND ${NOT_DEMO_STORY}`}
+       AND u.status = 'active' ${opts.humanOnly ? "AND COALESCE(u.is_ai, 0) = 0" : ""} AND p.created_at > ? AND p.author_id NOT IN (${hiddenAuthorsSql}) ${demoEnabled() ? "" : `AND ${NOT_DEMO_STORY}`}
        ${viewerId ? "AND (u.is_private = 0 OR p.author_id = ? OR EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = ? AND f.followee_id = p.author_id))" : "AND u.is_private = 0"}
      ORDER BY p.created_at DESC LIMIT 400`,
     [t - 7 * 24 * H, ...hiddenParams(viewerId), ...(viewerId ? [viewerId, viewerId] : [])],

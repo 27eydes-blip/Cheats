@@ -6,7 +6,7 @@ import { FollowButton } from "../FollowButton";
 import { PostCard } from "../PostCard";
 import { Time } from "../Time";
 import { Avatar } from "../ui/Avatar";
-import { CategoryTag, Kicker, LiveBadge, SourceLabel, VerifiedSeal } from "../ui/Badge";
+import { CategoryTag, Kicker, LiveBadge, SourceLabel, AiBadge, VerifiedSeal } from "../ui/Badge";
 import { Sparkline } from "../ui/Sparkline";
 import { MiniSplit, StanceMeter } from "../ui/Stance";
 import { DebateCard } from "./DebateCard";
@@ -161,7 +161,7 @@ export function VoicesTile({ voices }: { voices: Voice[] }) {
             <Link href={`/u/${v.handle}`} className="flex min-w-0 flex-1 gap-3">
               <Avatar url={v.avatarUrl} name={v.displayName} handle={v.handle} size={42} />
               <span className="min-w-0">
-                <span className="flex items-center gap-1 text-[15px] font-bold">{v.displayName}{v.verified && <VerifiedSeal size={14} />}</span>
+                <span className="flex items-center gap-1 text-[15px] font-bold">{v.displayName}{v.verified && <VerifiedSeal size={14} />}{v.ai && <AiBadge />}</span>
                 <span className="line-clamp-1 block text-[13px] text-ink-2">{v.bio}</span>
                 <span className="mono mt-0.5 block text-[10.5px] text-gold-ink">{credibility(v)}</span>
               </span>

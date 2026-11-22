@@ -6,7 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { Debate } from "@/lib/takes";
 import { stanceAction } from "@/actions/stance";
 import { Avatar } from "../ui/Avatar";
-import { VerifiedSeal } from "../ui/Badge";
+import { AiBadge, VerifiedSeal } from "../ui/Badge";
 import { CountdownRing } from "../ui/CountdownRing";
 import { StanceChip } from "../ui/Stance";
 import { useToast, useViewer } from "../providers";
@@ -63,7 +63,7 @@ export function DebateCard({ d, compact }: { d: Debate; compact?: boolean }) {
       <Link href={`/u/${p.author.handle}`} className={`flex items-center gap-2.5 ${s === "b" ? "sm:flex-row-reverse" : ""}`}>
         <Avatar url={p.author.avatarUrl} name={p.author.displayName} handle={p.author.handle} size={compact ? 34 : 40} stance={p.stance === "agree" || p.stance === "disagree" ? p.stance : null} />
         <span className="min-w-0">
-          <span className="flex items-center gap-1 text-[14px] font-semibold">{p.author.displayName}{p.author.verified && <VerifiedSeal size={13} />}</span>
+          <span className="flex items-center gap-1 text-[14px] font-semibold">{p.author.displayName}{p.author.verified && <VerifiedSeal size={13} />}{p.author.ai && <AiBadge />}</span>
           {p.stance && <StanceChip stance={p.stance} />}
         </span>
       </Link>

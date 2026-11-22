@@ -16,7 +16,7 @@ import { RichText } from "./RichText";
 import { LocalDate, Time } from "./Time";
 import { AnimatedNumber } from "./ui/AnimatedNumber";
 import { Avatar } from "./ui/Avatar";
-import { VerifiedSeal } from "./ui/Badge";
+import { AiBadge, VerifiedSeal } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { useConfirm } from "./ui/Confirm";
 import { Menu, type MenuItem } from "./ui/Menu";
@@ -24,6 +24,7 @@ import { StanceChip, StanceMeter } from "./ui/Stance";
 import { Reactions } from "./post/Reactions";
 import { FlashBadge } from "./post/FlashBadge";
 import { NoteCard } from "./notes/NoteCard";
+import { AiSources } from "./ai/AiSources";
 import { celebrate } from "./Celebrate";
 import { shareAction } from "@/actions/social";
 import { HelpIcon, AmplifyIcon, AnswerIcon, BlockIcon, EditIcon, FlagIcon, LinkIcon, MoreIcon, MuteIcon, PinIcon, QuoteIcon, SaveIcon, ShareIcon, TrashIcon } from "./icons";
@@ -35,7 +36,7 @@ export function AuthorLine({ author, createdAt, editedAt, big }: { author: UserM
     <div className="flex min-w-0 items-baseline gap-x-1 whitespace-nowrap">
       <Link href={`/u/${author.handle}`} className={`inline-flex min-h-6 min-w-0 shrink items-center gap-1 font-semibold text-ink-1 hover:underline ${big ? "text-[16px]" : "text-[15px]"}`} onClick={(e) => e.stopPropagation()}>
         <span className="truncate">{author.displayName}</span>
-        {author.verified && <VerifiedSeal size={big ? 16 : 14} />}
+        {author.verified && <VerifiedSeal size={big ? 16 : 14} />}{author.ai && <AiBadge />}
       </Link>
       <span className="min-w-0 shrink-[2] truncate text-[14px] text-ink-3">@{author.handle}</span>
       {!big && (
@@ -310,7 +311,8 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
                 {post.body && <Expandable long={!focus && (post.body.length > 200 || post.body.split("\n").length > 5)} big={focus}><RichText text={post.body} /></Expandable>}
                 {!compact && post.media.length > 0 && <MediaGrid media={post.media} />}
                 {!compact && post.link && <LinkCard link={post.link} />}
-                {post.source && (
+                {post.aiSources && post.aiSources.length > 0 && <AiSources sources={post.aiSources} />}
+                {post.source && !post.aiSources?.length && (
                   <a href={post.source.url} target="_blank" rel="noopener noreferrer nofollow" onClick={(e) => e.stopPropagation()} className="tap mt-1 inline-flex max-w-full items-center gap-1 text-[13px] text-ink-3 hover:text-ink-1 hover:underline" title={post.source.url}>
                     <LinkIcon size={13} /> <span className="truncate">Source: {post.source.domain}</span>
                   </a>

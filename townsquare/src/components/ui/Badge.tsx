@@ -82,3 +82,16 @@ export function Rule({ label, className = "" }: { label?: string; className?: st
     </div>
   );
 }
+
+/**
+ * The AI account badge. Shown next to every AI newsroom account name: posts,
+ * profiles, search, lists and notifications. Links to the About page.
+ */
+export function AiBadge({ className = "", size = "sm", link = false }: { className?: string; size?: "sm" | "md"; link?: boolean }) {
+  const cls = `inline-flex shrink-0 items-center rounded-[5px] bg-[#e8eefc] px-[5px] font-sans font-extrabold tracking-[0.06em] text-[#123a99] ring-1 ring-[#123a99]/25 ${size === "md" ? "h-[20px] text-[12px]" : "h-[16px] text-[10.5px]"} ${className}`;
+  return link ? (
+    <a href="/about/ai" className={cls} title="AI account: how it works" aria-label="AI account (how it works)">AI</a>
+  ) : (
+    <span className={cls} title="AI account" aria-label="AI account" role="img">AI</span>
+  );
+}

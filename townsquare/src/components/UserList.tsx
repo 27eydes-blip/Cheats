@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { UserListItem } from "@/lib/social";
 import { Avatar } from "./ui/Avatar";
-import { VerifiedSeal } from "./ui/Badge";
+import { AiBadge, VerifiedSeal } from "./ui/Badge";
 import { EmptyState } from "./ui/States";
 import { FollowButton } from "./FollowButton";
 
@@ -16,7 +16,7 @@ export function UserList({ users, empty = "No one here yet." }: { users: UserLis
             <span className="min-w-0">
               <span className="flex items-center gap-1 font-semibold">
                 <span className="truncate">{u.displayName}</span>
-                {u.verified && <VerifiedSeal size={15} />}
+                {u.verified && <VerifiedSeal size={15} />}{u.ai && <AiBadge />}
               </span>
               <span className="block truncate text-[14px] text-ink-3">@{u.handle}</span>
               {u.bio && <span className="mt-1 line-clamp-2 block text-[14.5px] text-ink-2">{u.bio}</span>}

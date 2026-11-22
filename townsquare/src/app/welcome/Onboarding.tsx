@@ -8,7 +8,7 @@ import { finishOnboardingAction } from "@/actions/communities";
 import { FollowButton } from "@/components/FollowButton";
 import { CheckIcon } from "@/components/icons";
 import { Avatar } from "@/components/ui/Avatar";
-import { VerifiedSeal } from "@/components/ui/Badge";
+import { AiBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Illustration } from "@/components/ui/States";
 import { useToast } from "@/components/providers";
@@ -84,7 +84,7 @@ export function Onboarding({ name, interests, initialInterests, initialTown, peo
               <li key={u.id} className="flex items-center gap-3 p-3.5">
                 <Avatar url={u.avatarUrl} name={u.displayName} handle={u.handle} size={46} />
                 <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1 font-semibold"><span className="truncate">{u.displayName}</span>{u.verified && <VerifiedSeal size={14} />}</p>
+                  <p className="flex items-center gap-1 font-semibold"><span className="truncate">{u.displayName}</span>{u.verified && <VerifiedSeal size={14} />}{u.ai && <AiBadge />}</p>
                   <p className="truncate text-[13.5px] text-ink-3">{u.bio || `@${u.handle}`}</p>
                   {u.verified && <p className="mono text-[10.5px] text-gold-ink">Verified Voice</p>}
                 </div>

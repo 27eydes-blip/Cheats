@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { CommentNode } from "@/lib/communities";
 import { Avatar } from "../ui/Avatar";
-import { VerifiedSeal } from "../ui/Badge";
+import { AiBadge, VerifiedSeal } from "../ui/Badge";
 import { ReplyIcon } from "../icons";
 import { RichText } from "../RichText";
 import { Time } from "../Time";
@@ -42,7 +42,7 @@ function Comment({ node }: { node: CommentNode }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-1.5 text-[13.5px]">
             <Link href={`/u/${node.author.handle}`} className="font-semibold hover:underline">{node.author.displayName}</Link>
-            {node.author.verified && <VerifiedSeal size={13} />}
+            {node.author.verified && <VerifiedSeal size={13} />}{node.author.ai && <AiBadge />}
             <span className="text-ink-3">· <Time ms={node.createdAt} /></span>
             {!open && (
               <button type="button" onClick={() => setOpen(true)} className="ml-1 rounded-[8px] bg-gold-soft px-2 py-0.5 text-[12px] font-semibold text-gold-ink">

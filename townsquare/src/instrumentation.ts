@@ -5,4 +5,6 @@ export async function register() {
   registerNewsAlerts();
   const { startNewsScheduler } = await import("./lib/newsroom/scheduler");
   startNewsScheduler();
+  const { startAiScheduler } = await import("./lib/ai/scheduler");
+  startAiScheduler();
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Suggestion } from "@/lib/social";
 import { FollowButton } from "../FollowButton";
 import { Avatar } from "../ui/Avatar";
-import { VerifiedSeal } from "../ui/Badge";
+import { AiBadge, VerifiedSeal } from "../ui/Badge";
 
 /** "People you may know": mutual connections and shared interests, each with its reason. */
 export function Suggestions({ people, title = "People you may know", compact }: { people: Suggestion[]; title?: string; compact?: boolean }) {
@@ -22,7 +22,7 @@ export function Suggestions({ people, title = "People you may know", compact }: 
             <Link href={`/u/${u.handle}`} className="flex min-h-11 min-w-0 flex-1 items-center gap-3">
               <Avatar url={u.avatarUrl} name={u.displayName} handle={u.handle} size={compact ? 40 : 42} />
               <span className="min-w-0">
-                <span className="flex items-center gap-1 text-[14.5px] font-bold">{u.displayName}{u.verified && <VerifiedSeal size={14} />}</span>
+                <span className="flex items-center gap-1 text-[14.5px] font-bold">{u.displayName}{u.verified && <VerifiedSeal size={14} />}{u.ai && <AiBadge />}</span>
                 <span className="block truncate text-[12.5px] text-ink-3">{u.reason}</span>
               </span>
             </Link>

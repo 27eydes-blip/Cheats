@@ -1,3 +1,5 @@
+import { aiUserIds } from "./ai/flags";
+import { aiSourcesFor } from "./ai/newsroom";
 import { publishedNotesForPosts } from "./notes/notes";
 import { deleteFiles } from "./media";
 import type { ReactionKind } from "./reactions-meta";
@@ -55,6 +57,8 @@ export type PostView = {
   reactions: Record<ReactionKind, number>;
   /** A context note that raters across viewpoints found helpful (shown under the dispatch). */
   note: { id: string; body: string; sourceUrl: string; sourceDomain: string } | null;
+  /** AI newsroom dispatches: the ingested articles the dispatch was generated from. */
+  aiSources: { outlet: string; title: string; url: string }[] | null;
   viewer: { liked: boolean; reposted: boolean; bookmarked: boolean; isAuthor: boolean; canEdit: boolean; reaction: ReactionKind | null };
 };
 
@@ -173,6 +177,8 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       : [],
   );
   const notes = depth === 0 ? publishedNotesForPosts(uniq) : new Map();
+  const aiIds = aiUserIds();
+  const aiSources = aiSourcesFor(rows.filter((r) => aiIds.has(r.author_id)).map((r) => r.id));
   const out: PostView[] = [];
   for (const id of ids) {
     const r = byId.get(id);
@@ -194,6 +200,7 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
       source: !gone && r.source_url ? { url: r.source_url, domain: r.source_domain ?? "" } : null,
       flashExpiresAt: r.expires_at,
       note: gone ? null : notes.get(r.id) ?? null,
+      aiSources: gone ? null : aiSources.get(r.id) ?? null,
       poll:
         poll && !gone
           ? {

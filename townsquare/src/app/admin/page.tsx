@@ -52,6 +52,7 @@ export default async function Admin() {
         <Link href="/admin/notes" className="btn-outline !min-h-10 !text-[14px]">Context notes review</Link>
         <Link href="/admin/alerts" className="btn-outline !min-h-10 !text-[14px]">Breaking alerts</Link>
         <Link href="/admin/sponsors" className="btn-outline !min-h-10 !text-[14px]">Sponsors</Link>
+        <Link href="/admin/ai" className="btn-outline !min-h-10 !text-[14px]">AI newsroom</Link>
       </nav>
 
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-x-6 gap-y-6 px-4 sm:px-6 lg:grid-cols-4">
