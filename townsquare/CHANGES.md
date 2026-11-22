@@ -7,7 +7,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 | 1 | Feed fixes, outlet changes, Control Room feed status | `7572c29` |
 | 2 | Search crash fix, error boundary, client error logging | `f64b71f` |
 | 3 | One feed tab row, topics in the top nav, Your Topics | `14d8e8f` |
-| 4 | Sponsors with images, editor with preview, Glydrift | (see below) |
+| 4 | Sponsors with images, editor with preview, Glydrift | `aa7e47c` |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -41,6 +41,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - Sponsored cards keep the quiet "Sponsored" label and show the image under the text; with no image they're a clean text card with the sponsor's initial.
 - A **Glydrift** sponsor is ready with a placeholder graphic. Sponsored cards are still **off** until you switch them on at the top of the Sponsors page.
 - Railway: nothing to add (images use the existing `UPLOAD_DIR` volume).
+- Screenshots: `screenshots/part4-{phone,desktop}-{sponsored,sponsor-editor,sponsor-list}.png` (a sponsored card with its image in the feed, the editor with live previews, the sponsor list with counters).
 
 ---
 
