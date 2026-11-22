@@ -480,7 +480,7 @@ export function aiCounts() {
 }
 
 export const lastRuns = () =>
-  new Map(all<{ account_id: string; slot: string; outcome: string; note: string }>("SELECT account_id, slot, outcome, note FROM ai_runs r WHERE slot = (SELECT max(slot) FROM ai_runs WHERE account_id = r.account_id)").map((r) => [r.account_id, r]));
+  new Map(all<{ account_id: string; slot: string; outcome: string; note: string }>("SELECT account_id, slot, outcome, note FROM ai_runs r WHERE slot = (SELECT max(slot) FROM ai_runs WHERE account_id = r.account_id)").map((r) => [r.account_id, { slot: r.slot, outcome: r.outcome, note: r.note }]));
 
 // ------------------------------------------------------------------ readers
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { all, get, now, run } from "@/lib/db";
-import { aiSettings, aiSourcesFor, approveAiPost, deleteAiPost, groundingCheck, inPostingHours, listAccounts, needsConfirmation, parseHours, pickStories, rejectAiPost, runAiHour, setAiMuted, setAiSettings, slotOf, spend, updateAccount } from "@/lib/ai/newsroom";
+import { aiLog, lastRuns, aiSettings, aiSourcesFor, approveAiPost, deleteAiPost, groundingCheck, inPostingHours, listAccounts, needsConfirmation, parseHours, pickStories, rejectAiPost, runAiHour, setAiMuted, setAiSettings, slotOf, spend, updateAccount } from "@/lib/ai/newsroom";
 import { PERSONAS } from "@/lib/ai/personas";
 import { costUsd, type AiWriter, type DraftInput } from "@/lib/ai/writer";
 import { isAiUser } from "@/lib/ai/flags";
@@ -288,5 +288,16 @@ describe("reader controls", () => {
     expect(ids(forYou(viewer.id))).not.toContain(aiPost);
     setAiMuted(viewer.id, false);
     expect(ids(forYou(viewer.id))).toContain(aiPost);
+  });
+});
+
+describe("Control Room data", () => {
+  it("hands plain objects to the client page (database rows have no prototype)", async () => {
+    story("Senate advances spending bill", "Politics", [{ outlet: "Wire A" }]);
+    await runAiHour({ writer: fakeWriter().w, t: T });
+    const runs = [...lastRuns().values()];
+    expect(runs.length).toBeGreaterThan(0);
+    for (const r of runs) expect(Object.getPrototypeOf(r)).toBe(Object.prototype);
+    for (const r of aiLog()) expect(Object.getPrototypeOf(r)).toBe(Object.prototype);
   });
 });
