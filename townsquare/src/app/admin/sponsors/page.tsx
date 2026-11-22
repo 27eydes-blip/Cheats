@@ -15,6 +15,8 @@ export default async function SponsorsPage() {
   const sponsors = listSponsors().map((s) => ({
     id: s.id, name: s.name, headline: s.headline, body: s.body, url: s.link_url, button: s.button_label, alt: s.image_alt, startsAt: s.starts_at, endsAt: s.ends_at,
     active: !!s.active, live: s.live, views: s.views, clicks: s.clicks, placeholder: !!s.placeholder && !s.image_key, card: s.card,
+    bannerHeadline: s.banner_headline, bannerText: s.banner_text, focalX: s.focal_x, focalY: s.focal_y, hasMotion: !!s.motion_key,
+    needsImage: !s.image_key,
   }));
   return (
     <Frame width="medium">

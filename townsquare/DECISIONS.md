@@ -384,3 +384,14 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Biggest movers** = the three largest moves either way, with a thin outline that pulses slowly every 2.6 s.
 - **Phones**: "flat" means (hover: none) or a width of 640px or less: no translateZ and no tilt, keeping the shadows and glow. Touch-and-hold (0.38 s) shows the card; a normal tap opens the chart.
 - **Hover cards open on keyboard focus only** (`:focus-visible`), so a tap that moves focus doesn't leave a card open on a phone.
+
+## ads-v1 (overnight job 3): Sponsored banners
+
+- **Heights**: 140px below a 560px-wide feed column and 160px above it. I used a container query on the card, so the Control Room previews match the feed. The image is a 16:5 server crop (800 and 1600 wide).
+- **Readability**: a fixed dark wash covers the left side (94% to 86% across the text area), so headline contrast never depends on the image. The text block is limited to the left 64%.
+- **Focal point**: stored as 0..1 coordinates per sponsor (default center). The crop is the largest 16:5 window centered on the point and clamped to the edges. New uploads keep a metadata-stripped original (up to 2400px) so the crop can move freely. Older uploads crop from their 1200×630 version, and the placeholder from its generated art. The picker shows that same source image.
+- **Brand color**: sharp's dominant color, saved when an image is uploaded (or when an older sponsor's banner is first made), then darkened in 8% steps until white text passes 4.5:1. Near-grays fall back to the site's blue.
+- **"Slow connection"** means data saver on, or a reported connection type of slow-2g, 2g or 3g.
+- **Hide this ad** is per device (browser storage), because the feed has no per-user ad table and adding one wasn't needed. **Why am I seeing this?** is a short dialog. Ads are the same for everyone, not personalized.
+- **Spacing**: the existing slots (4th, then every 10th) already meet "not in the first two, at most one per 8", so they were kept and are now tested.
+- **Existing sponsors**: the migration fills empty banner fields only (hand-written copy for Glydrift, shortened copy for the others), so nothing you wrote is overwritten.

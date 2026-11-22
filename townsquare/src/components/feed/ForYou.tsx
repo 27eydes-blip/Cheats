@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { muteTopicAction, notInterestedAction, showMoreAction, trackAction } from "@/actions/feed";
-import type { SponsoredCard as SponsoredCardData } from "@/lib/ads";
 import type { ForYouItem } from "@/lib/foryou";
 import type { TrackEvent } from "@/lib/interests";
 import { MoreIcon, MuteIcon, PlusIcon, CloseIcon } from "../icons";
@@ -116,67 +115,4 @@ export function TrackOpen({ type, id }: { type: "post" | "story"; id: string }) 
   return null;
 }
 
-const track = (id: string, kind: "view" | "click", preview?: boolean) => {
-  if (preview) return;
-  const url = `/api/sponsors/${encodeURIComponent(id)}/event?kind=${kind}`;
-  try {
-    if (navigator.sendBeacon) navigator.sendBeacon(url);
-    else void fetch(url, { method: "POST", keepalive: true }).catch(() => {});
-  } catch {
-    /* counting must never break the card */
-  }
-};
-
-/**
- * A sponsored card: always labeled "Sponsored", quieter than a dispatch, in
- * the same compact row layout. Text first, then the image (1200×630, 12px
- * corners, lazy, fixed aspect ratio). Without an image, or if it fails to
- * load, it's a clean text card with the sponsor's initial. Links open in a
- * new tab with rel="noopener sponsored". A view counts after the card is
- * half on screen for a second; clicks count on tap.
- */
-export function SponsoredCard({ ad, preview }: { ad: SponsoredCardData; /** Control Room preview: no counting */ preview?: boolean }) {
-  const ref = useRef<HTMLElement>(null);
-  const [imgOk, setImgOk] = useState(true);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || preview || typeof IntersectionObserver === "undefined") return;
-    let t: ReturnType<typeof setTimeout> | null = null;
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) t = setTimeout(() => (track(ad.id, "view"), io.disconnect()), 1000);
-      else if (t) clearTimeout(t);
-    }, { threshold: 0.5 });
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      if (t) clearTimeout(t);
-    };
-  }, [ad.id, preview]);
-  const link = { href: ad.url, target: "_blank", rel: "noopener sponsored", onClick: () => track(ad.id, "click", preview) };
-  const initial = (ad.sponsor.trim()[0] ?? "S").toUpperCase();
-  return (
-    <aside ref={ref} aria-label={`Sponsored by ${ad.sponsor}`} className="flex gap-3 px-4 py-2.5">
-      <span aria-hidden="true" className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[16px] font-bold text-ink-2 ring-1 ring-[var(--hairline)]">{initial}</span>
-      <div className="min-w-0 flex-1">
-        <p className="flex min-w-0 items-center gap-1.5 text-[13px] leading-[20px] text-ink-3">
-          <span className="truncate font-semibold text-ink-2">{ad.sponsor}</span>
-          <span aria-hidden="true">·</span>
-          <span className="shrink-0 rounded-[4px] px-1 py-px text-[11.5px] font-semibold ring-1 ring-[var(--hairline)]">Sponsored</span>
-        </p>
-        <a {...link} className="group block min-h-11">
-          <span className="block text-[15px] leading-[21px] font-semibold text-ink-1 group-hover:underline">{ad.title}</span>
-          {ad.body && <span className="block text-[14px] leading-[20px] text-ink-2">{ad.body}</span>}
-        </a>
-        {ad.image && imgOk && (
-          <a {...link} tabIndex={-1} className="mt-2 block max-w-[520px] overflow-hidden rounded-[12px] ring-1 ring-[var(--hairline)]" style={{ aspectRatio: "1200 / 630" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ad.image.w600} srcSet={`${ad.image.w600} 600w, ${ad.image.w1200} 1200w`} sizes="(max-width: 640px) 100vw, 520px" alt={ad.image.alt} width={1200} height={630} loading="lazy" decoding="async" onError={() => setImgOk(false)} className="block h-full w-full object-cover" />
-          </a>
-        )}
-        <a {...link} className="tap mt-1.5 inline-flex min-h-8 items-center rounded-full px-3 text-[13px] font-semibold text-ink-1 ring-1 ring-[var(--hairline)] hover:bg-white/[0.04]">
-          {ad.button || "Learn more"} <span aria-hidden="true" className="ml-1 text-ink-3">↗</span><span className="sr-only"> (opens {ad.sponsor} in a new tab)</span>
-        </a>
-      </div>
-    </aside>
-  );
-}
+export { SponsoredCard } from "./SponsoredBanner";

@@ -56,10 +56,10 @@ describe("sponsors", () => {
     const a = await admin();
     await expect(saveSponsor(a, null, { ...input, alt: "", image: await img("png") })).rejects.toThrow(/alt text/);
     const id = await saveSponsor(a, null, { ...input, image: await img("png") });
-    expect(files()).toHaveLength(2);
+    expect(files()).toHaveLength(3); // 1200, 600 and the kept original (for banner crops)
     expect((await sharp((await sponsorImageBytes(id, 1200))!).metadata()).width).toBe(1200);
     await saveSponsor(a, id, { ...input, image: await img("jpeg") });
-    expect(files()).toHaveLength(2); // old versions removed
+    expect(files()).toHaveLength(3); // old versions removed
     const card = getAds().cards.find((c) => c.id === id)!;
     expect(card).toMatchObject({ sponsor: "Acme", title: "Try Acme", button: "Shop" });
     expect(card.image!.w600).toMatch(new RegExp(`^/api/sponsors/${id}/image\\?w=600&v=`));

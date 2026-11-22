@@ -1,3 +1,32 @@
+# What changed (ads-v1, overnight job 3)
+
+Shipped to `news-v1`; the commit hash is in OVERNIGHT.md.
+
+## Brief, premium sponsored banners
+- **One compact banner** replaces the tall image-under-text card: 140px tall on phones and 160px in wider columns (a wide 16:5 crop), about a third of the old height.
+  - The image fills the card, with a dark gradient from the left so the words always read: white text stays above 4.5:1 contrast over any image.
+  - A bold headline (up to 8 words) and one short line (up to 40 characters).
+  - One pill button on the right ("Play now", "Learn more"…), 44px tall.
+- **Always clearly an ad**: a "Sponsored" tag and the sponsor's name in the top corner of every banner, plus a new ••• menu with **Hide this ad** (remembered on that device) and **Why am I seeing this?** (a short, honest explanation).
+- **The whole card is one link**: it opens in a new tab with `rel="sponsored noopener"`.
+- **Tasteful motion**:
+  - A soft sheen sweeps across once when the banner first scrolls into view.
+  - It lifts gently on hover or press.
+  - The button glows softly in a color taken from the sponsor's image, darkened as needed so its white text passes AA. Grayscale images use the site's blue.
+- **Optional short loop**: an animated WebP or a short muted MP4 under 2 MB. It plays silently on a loop only while the banner is on screen, and never with reduced motion, data saver or a slow connection; those viewers see the still image.
+- **No layout shift**: the height is reserved before the image loads, images are lazy-loaded, and banner crops are made once on the server and cached.
+- **Sponsor editor (Control Room → Sponsors)**:
+  - New **Banner headline** and **One short line** fields with live word and character counters.
+  - A **focal-point picker**: tap, drag or use the arrow keys on the image, and the bright band shows exactly what the banner keeps.
+  - An optional motion upload.
+  - Live banner previews at phone (390px) and desktop widths.
+  - Sponsors without a real image are flagged "Needs a real image".
+  - Scheduling, counters and image checks are unchanged.
+- **Ad spacing**: never in the first two feed items, and at most one in any run of 8 (the slots are still the 4th item, then every 10th).
+- **Existing sponsors** got banner copy automatically. Glydrift: "Can you beat the Abyss?" / "Play free at Glydrift.com". Others: their own headline shortened to 8 words and body to 40 characters, ready to edit.
+- **Database**: migration 15, additive. New sponsor columns: banner headline and line, focal point, brand color, motion. New uploads also keep a metadata-free original for re-cropping.
+- Screenshots (TEST sponsors, on `ads-v1`): `screenshots/ads-{phone,desktop}-{feed,banner}.png` and `screenshots/ads-desktop-editor.png`.
+
 # What changed (heatmap-v1, overnight job 2)
 
 Shipped to `news-v1`; the commit hash is in OVERNIGHT.md.

@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { applyOutletUpdates, seedOutlets } from "../newsroom/outlets";
-import { seedSponsors } from "../sponsors-seed";
+import { bannerizeSponsors, seedSponsors } from "../sponsors-seed";
 import { seedAiAccounts } from "../ai/seed";
 import { addMissingTeams, seedAliases } from "../sports/names";
 
@@ -546,6 +546,22 @@ CREATE INDEX IF NOT EXISTS games_status_start ON games(status, starts_at)
       // The old 6-hour rule wrote this into the detail; it is now worked out when the game is shown.
       db.exec("UPDATE games SET detail = '' WHERE detail = 'Awaiting final score'");
     },
+  },
+  {
+    // Additive: the compact sponsored banner (short copy, focal point, brand color, optional short motion).
+    // Existing sponsors get short banner copy derived from what they have; nothing else changes.
+    id: 15,
+    name: "sponsor_banners",
+    sql: `
+ALTER TABLE sponsors ADD COLUMN banner_headline TEXT NOT NULL DEFAULT '';
+ALTER TABLE sponsors ADD COLUMN banner_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE sponsors ADD COLUMN focal_x REAL NOT NULL DEFAULT 0.5;
+ALTER TABLE sponsors ADD COLUMN focal_y REAL NOT NULL DEFAULT 0.5;
+ALTER TABLE sponsors ADD COLUMN accent TEXT;
+ALTER TABLE sponsors ADD COLUMN motion_key TEXT;
+ALTER TABLE sponsors ADD COLUMN motion_type TEXT
+`,
+    after: (db) => bannerizeSponsors(db),
   },
 ];
 
