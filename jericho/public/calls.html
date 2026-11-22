@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0907">
+  <meta name="color-scheme" content="dark">
+  <title>Jericho Calls</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header class="top">
+      <h1>Calls</h1>
+      <a class="top-link" href="/">Back to Jericho</a>
+    </header>
+    <p id="status" class="status" role="status"></p>
+    <section class="panel">
+      <h2>Past calls</h2>
+      <p class="hint" id="mode-hint">Saved in <code>data/calls.json</code>, never committed.</p>
+      <ul id="calls" class="items"></ul>
+    </section>
+  </main>
+  <script src="calls.js" type="module"></script>
+</body>
+</html>

@@ -67,6 +67,7 @@ function addLog(who, text) {
   li.textContent = text;
   logEl.prepend(li);
   while (logEl.children.length > 30) logEl.lastChild.remove();
+  return li;
 }
 
 // ---- config ---------------------------------------------------------------------
@@ -88,8 +89,10 @@ api("/api/config")
   .catch((e) => (statusEl.textContent = e.message));
 
 // ---- voice out ---------------------------------------------------------------------
-const audio = new Audio();
-audio.preload = "auto";
+// Replies arrive a sentence at a time. Two audio players take turns: while one speaks a
+// sentence, the other is already downloading the next, so there's no gap between them.
+const players = [new Audio(), new Audio()];
+for (const p of players) p.preload = "auto";
 let audioCtx;
 let speechQueue = Promise.resolve();
 
@@ -120,69 +123,145 @@ function beep() {
 
 // ElevenLabs audio goes through an AnalyserNode so the bars follow the real voice.
 let voiceAnalyser = null;
-function routeVoiceThroughAnalyser() {
-  if (voiceAnalyser) return true;
+const routed = new Set();
+function routeThroughAnalyser(player) {
+  if (routed.has(player)) return true;
   if (!audioCtx || audioCtx.state !== "running") return false; // a suspended graph would mute the voice
   try {
-    const source = audioCtx.createMediaElementSource(audio);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.72;
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    voiceAnalyser = analyser;
+    if (!voiceAnalyser) {
+      voiceAnalyser = audioCtx.createAnalyser();
+      voiceAnalyser.fftSize = 256;
+      voiceAnalyser.smoothingTimeConstant = 0.72;
+      voiceAnalyser.connect(audioCtx.destination);
+    }
+    audioCtx.createMediaElementSource(player).connect(voiceAnalyser);
+    routed.add(player);
   } catch {
     /* not supported: the bars fall back to a fake pulse */
   }
-  return Boolean(voiceAnalyser);
+  return routed.has(player);
 }
 
-function browserVoice(text) {
+const ttsUrl = (text) => `/api/tts?${new URLSearchParams({ text, token })}`;
+let currentPlayer = null;
+
+/** The player holding this sentence's audio, or a free one that starts loading it now. */
+function assignPlayer(text, avoid) {
+  const url = ttsUrl(text);
+  let player = players.find((p) => p.dataset.url === url);
+  if (!player) {
+    player = players.find((p) => p !== avoid && !p.dataset.url) || players.find((p) => p !== avoid) || players[0];
+    player.dataset.url = url;
+    player.src = url;
+    player.load();
+  }
+  return player;
+}
+
+/** Start downloading the next sentence on the player that isn't speaking. */
+function preload(text) {
+  assignPlayer(text, currentPlayer);
+}
+
+function browserVoice(text, stats) {
   viz.setSpeechSource(null, true); // no audio to analyse: smooth fake pulse
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window)) return resolve();
-    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = config.speechLang;
+    u.onstart = () => { stats.firstAudio ??= performance.now(); };
     u.onend = u.onerror = () => resolve();
     speechSynthesis.speak(u);
   });
 }
 
-async function elevenLabsVoice(text) {
+async function elevenLabsVoice(text, stats, next) {
   if (audioCtx && audioCtx.state !== "running") await audioCtx.resume().catch(() => {});
-  const routed = routeVoiceThroughAnalyser();
-  viz.setSpeechSource(routed ? voiceAnalyser : null, !routed);
+  const player = assignPlayer(text, null);
+  currentPlayer = player;
+  if (next) preload(next); // the other player fetches the next sentence while this one speaks
+  const isRouted = routeThroughAnalyser(player);
+  viz.setSpeechSource(isRouted ? voiceAnalyser : null, !isRouted);
   return new Promise((resolve, reject) => {
-    const q = new URLSearchParams({ text, token });
     let started = false;
-    const cleanup = () => { audio.onended = audio.onerror = audio.onplaying = null; clearTimeout(stall); };
+    const cleanup = () => {
+      player.onended = player.onerror = player.onplaying = null;
+      player.dataset.url = "";
+      clearTimeout(stall);
+    };
     // If audio hasn't started within 7s, give up and use the browser voice.
-    const stall = setTimeout(() => { if (!started) { cleanup(); audio.pause(); reject(new Error("TTS stalled")); } }, 7000);
-    audio.onplaying = () => { started = true; };
-    audio.onended = () => { cleanup(); resolve(); };
-    audio.onerror = () => { cleanup(); reject(new Error("TTS failed")); };
-    // The server streams MP3 as ElevenLabs generates it, so playback starts early.
-    audio.src = `/api/tts?${q}`;
-    audio.play().catch((e) => { cleanup(); reject(e); });
+    const stall = setTimeout(() => { if (!started) { cleanup(); player.pause(); reject(new Error("TTS stalled")); } }, 7000);
+    player.onplaying = () => { started = true; stats.firstAudio ??= performance.now(); };
+    player.onended = () => { cleanup(); resolve(); };
+    player.onerror = () => { cleanup(); reject(new Error("TTS failed")); };
+    player.play().catch((e) => { cleanup(); reject(e); });
   });
 }
 
-function speak(text) {
-  speechQueue = speechQueue.then(async () => {
-    lastSpoken = normalize(text);
-    stopConversationTimer();
-    stopListening(); // the mic is off while Jericho talks, so it can't hear itself
-    setMode("speaking", "");
-    try {
-      if (!config.elevenLabsEnabled) throw new Error("no key");
-      await elevenLabsVoice(text);
-    } catch {
-      await browserVoice(text);
+/** One reply from Jericho: sentences are pushed in as they arrive and spoken in order. */
+function createTurn() {
+  let wake = null;
+  const turn = {
+    queue: [],
+    done: false,
+    useBrowser: !config.elevenLabsEnabled,
+    playing: false,
+    stats: { voices: new Set() },
+    push(sentence) {
+      turn.queue.push(sentence);
+      if (turn.playing && turn.queue.length === 1 && !turn.useBrowser) preload(sentence);
+      wake?.();
+    },
+    finish() {
+      turn.done = true;
+      wake?.();
+    },
+    next: () => new Promise((r) => (wake = r)),
+  };
+  return turn;
+}
+
+async function playTurn(turn) {
+  lastSpoken = "";
+  for (;;) {
+    if (turn.queue.length === 0) {
+      if (turn.done) break;
+      if (mode === "speaking") setMode("thinking", ""); // more of the reply is on its way
+      await turn.next();
+      continue;
     }
-    viz.setSpeechSource(null, false);
-    afterSpeaking();
-  });
+    const sentence = turn.queue.shift();
+    if (mode !== "speaking") {
+      stopConversationTimer();
+      stopListening(); // the mic is off while Jericho talks, so it can't hear itself
+      setMode("speaking", "");
+    }
+    turn.playing = true;
+    lastSpoken = `${lastSpoken} ${normalize(sentence)}`;
+    if (!turn.useBrowser) {
+      try {
+        await elevenLabsVoice(sentence, turn.stats, turn.queue[0]);
+        turn.stats.voices.add("elevenlabs");
+        continue;
+      } catch {
+        turn.useBrowser = true; // ElevenLabs failed: browser voice for the rest of this reply
+      }
+    }
+    await browserVoice(sentence, turn.stats);
+    turn.stats.voices.add("browser");
+  }
+  turn.playing = false;
+  turn.stats.end = performance.now();
+  viz.setSpeechSource(null, false);
+  afterSpeaking();
+}
+
+/** Speak a whole piece of text (announcements, errors). */
+function speak(text) {
+  const turn = createTurn();
+  turn.push(text);
+  turn.finish();
+  speechQueue = speechQueue.then(() => playTurn(turn));
   return speechQueue;
 }
 
@@ -237,32 +316,97 @@ function endConversation() {
 // ---- brain round trips ----------------------------------------------------------
 let confirmTimer;
 let confirmPending = false;
+let lastUtterance = null; // timing of the last thing you said (see the ears section)
+
 async function send(kind, text, { endAfter = false } = {}) {
   addLog("you", text);
   stopConversationTimer();
   setMode("thinking", "Thinking…");
+  const turn = createTurn();
+  const spoken = lastUtterance && performance.now() - lastUtterance.final < 2000 ? lastUtterance : null;
+  lastUtterance = null;
+  Object.assign(turn.stats, { final: spoken?.final ?? performance.now(), first: spoken?.first, last: spoken?.last });
+  const playing = (speechQueue = speechQueue.then(() => playTurn(turn)));
+
+  let result = { awaitingConfirmation: false };
+  let bubble = null;
   try {
-    const r = await api(kind === "confirm" ? "/api/confirm" : "/api/ask", { sessionId, text });
-    addLog("jericho", r.reply);
-    clearTimeout(confirmTimer);
-    confirmPending = Boolean(r.awaitingConfirmation);
-    endAfterReply = endAfter && !confirmPending; // never skip past a pending yes/no
-    if (confirmPending) {
-      confirmTimer = setTimeout(() => {
-        if (mode === "confirm") {
-          confirmPending = false;
-          if (conversation) conversationFinished();
-          conversation = false;
-          setMode("idle", "Confirmation timed out.");
+    const res = await fetch(kind === "confirm" ? "/api/confirm" : "/api/ask", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-jericho-token": token },
+      body: JSON.stringify({ sessionId, text }),
+    });
+    if (res.status === 401) throw new Error("Access token missing or wrong. Open the page with ?token=…");
+    if (!res.ok || !res.body) throw new Error(`Server error ${res.status}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line) continue;
+        const msg = JSON.parse(line);
+        if (msg.type === "sentence") {
+          turn.stats.firstSentence ??= performance.now();
+          turn.push(msg.text);
+          bubble ||= addLog("jericho", "");
+          bubble.textContent = bubble.textContent ? `${bubble.textContent} ${msg.text}` : msg.text;
+        } else if (msg.type === "done") {
+          result = msg;
         }
-      }, 60_000);
+      }
     }
-    await speak(r.reply);
   } catch (e) {
     addLog("note", e.message);
-    confirmPending = false;
-    await speak("Sorry, I couldn't reach the server.");
+    turn.push("Sorry, I couldn't reach the server.");
   }
+
+  clearTimeout(confirmTimer);
+  confirmPending = Boolean(result.awaitingConfirmation);
+  endAfterReply = endAfter && !confirmPending; // never skip past a pending yes/no
+  if (confirmPending) {
+    confirmTimer = setTimeout(() => {
+      if (mode === "confirm") {
+        confirmPending = false;
+        if (conversation) conversationFinished();
+        conversation = false;
+        setMode("idle", "Confirmation timed out.");
+      }
+    }, 60_000);
+  }
+  turn.finish();
+  await playing;
+  reportTiming(turn.stats, result.timings);
+}
+
+/** Logs how long each step took, so slow spots show up in logs/actions.log. */
+function reportTiming(st, server) {
+  const d = (a, b) => (a != null && b != null ? Math.round(b - a) : undefined);
+  const voices = [...st.voices];
+  api("/api/timing", {
+    sessionId,
+    listeningMs: d(st.first, st.final),
+    stoppedTalkingToFinalMs: d(st.last, st.final),
+    thinkingMs: d(st.final, st.firstSentence),
+    firstAudioMs: d(st.final, st.firstAudio),
+    stoppedTalkingToAudioMs: d(st.last, st.firstAudio),
+    totalMs: d(st.final, st.end),
+    voice: voices.length > 1 ? "mixed" : voices[0],
+    server,
+  }).catch(() => {});
+}
+
+/** The wake word was heard: let the server warm Claude's cache for this conversation. */
+let lastWarm = -Infinity;
+function warmUp() {
+  if (performance.now() - lastWarm < 60_000) return;
+  lastWarm = performance.now();
+  api("/api/warm", { sessionId }).catch(() => {});
 }
 
 // ---- ears --------------------------------------------------------------------------
@@ -302,7 +446,45 @@ function isEcho(text) {
   return t.length > 8 && lastSpoken.includes(t);
 }
 
+// Shows the thinking animation as soon as you stop talking, before the browser has
+// finished its final transcript (which can take most of a second).
+let heardTimes = { first: null, last: null };
+let settleTimer;
+let preThinkingFrom = null;
+
+function onInterim(text) {
+  const now = performance.now();
+  heardTimes.first ??= now;
+  heardTimes.last = now;
+  const forUs = mode === "active" || mode === "confirm" || (mode === "idle" && wakeRegex().test(text));
+  if (mode === "idle" && wakeRegex().test(text)) warmUp();
+  clearTimeout(settleTimer);
+  if (!forUs) return;
+  settleTimer = setTimeout(() => {
+    if (mode !== "active" && mode !== "confirm" && mode !== "idle") return;
+    if (mode === "idle" && !wakeRegex().test(text)) return;
+    preThinkingFrom = mode;
+    stopConversationTimer();
+    setMode("thinking", "");
+    // If no final transcript turns up, go back to how things were.
+    settleTimer = setTimeout(() => {
+      if (preThinkingFrom && mode === "thinking") {
+        setMode(preThinkingFrom, preThinkingFrom === "confirm" ? "Say “yes” or “confirm” to go ahead." : undefined);
+        if (preThinkingFrom === "active") restartConversationTimer();
+        preThinkingFrom = null;
+      }
+    }, 2500);
+  }, 600);
+}
+
 function onHeard(raw) {
+  clearTimeout(settleTimer);
+  if (preThinkingFrom) {
+    mode = preThinkingFrom; // carry on as if the animation hadn't switched yet
+    preThinkingFrom = null;
+  }
+  lastUtterance = { first: heardTimes.first, last: heardTimes.last ?? performance.now(), final: performance.now() };
+  heardTimes = { first: null, last: null };
   const text = raw.trim();
   if (!text || isEcho(text)) return;
 
@@ -336,6 +518,7 @@ function onHeard(raw) {
     return send("ask", rest);
   }
   beep(); // just "Jericho": wait for the request
+  warmUp();
   startConversation();
 }
 
@@ -361,6 +544,7 @@ if (SR) {
       else interim += r[0].transcript;
     }
     heardEl.textContent = interim;
+    if (interim) onInterim(interim);
     if (interim && mode === "active") restartConversationTimer();
     micPulse = Math.min(1, micPulse + 0.18); // works even where we can't meter the mic
   };
@@ -438,7 +622,7 @@ orb.addEventListener("click", () => {
     stopConversationTimer();
     stopListening();
     speechSynthesis?.cancel();
-    audio.pause();
+    for (const p of players) p.pause();
     setMode("off", "Paused. Tap to start again.");
     return;
   }
@@ -446,8 +630,10 @@ orb.addEventListener("click", () => {
   // This tap unlocks audio playback on phones.
   audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
   audioCtx.resume();
-  audio.src = silentWav();
-  audio.play().catch(() => {});
+  for (const p of players) {
+    p.src = silentWav();
+    p.play().catch(() => {});
+  }
   if (!SR) {
     setMode("idle", "Speech recognition isn't supported here (try Chrome or Safari). You can type instead.");
     return;

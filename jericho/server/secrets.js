@@ -2,7 +2,7 @@
 // store them), style notes (drop them) and the action log (redact them).
 const SENSITIVE_WORDS =
   /\b(pass ?words?|passcodes?|pin (?:codes?|numbers?|is)|my pin|(?:door|alarm|gate|safe|locker|garage|lock) codes?|lock combination|api ?keys?|secret keys?|access tokens?|auth tokens?|private keys?|credit cards?|debit cards?|card numbers?|cvv|cvc|security codes?|social security|ssn|passport (?:number|no)|driver'?s? licen[cs]e|licen[cs]e number|national id|id number|tax id|bank account number|routing number|iban|seed phrase|recovery phrase)\b/i;
-const KEY_LIKE = /\b(sk[-_][a-z0-9_-]{12,}|sk-ant-[a-z0-9_-]+|ghp_[a-z0-9]{20,}|xox[abp]-[a-z0-9-]+|AKIA[A-Z0-9]{16}|eyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,})/i;
+const KEY_LIKE = /\b(AC[0-9a-f]{32}|SK[0-9a-f]{32}|[0-9a-f]{32}|sk[-_][a-z0-9_-]{12,}|sk-ant-[a-z0-9_-]+|ghp_[a-z0-9]{20,}|xox[abp]-[a-z0-9-]+|AKIA[A-Z0-9]{16}|eyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,})/i;
 const SSN = /\b\d{3}[- ]\d{2}[- ]\d{4}\b/;
 
 function luhn(digits) {

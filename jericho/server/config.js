@@ -30,6 +30,11 @@ export const secrets = {
   // The pre-rename variable is still honoured so an existing .env doesn't silently
   // turn the access token off.
   accessToken: process.env.JERICHO_ACCESS_TOKEN || process.env.JARVIS_ACCESS_TOKEN || "",
+  // Phone calls (Twilio). Read here only; never sent to the browser or written to logs.
+  twilioSid: process.env.TWILIO_ACCOUNT_SID || "",
+  twilioToken: process.env.TWILIO_AUTH_TOKEN || "",
+  twilioNumber: process.env.TWILIO_PHONE_NUMBER || "",
+  myPhoneNumber: process.env.MY_PHONE_NUMBER || "",
 };
 if (!process.env.JERICHO_ACCESS_TOKEN && process.env.JARVIS_ACCESS_TOKEN) {
   console.warn("⚠️  Rename JARVIS_ACCESS_TOKEN to JERICHO_ACCESS_TOKEN in .env (the old name still works for now).");

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { fakeClient, say, use } from "./fake-client.js";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-test-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
@@ -17,30 +18,12 @@ fs.writeFileSync(
   }),
 );
 process.env.JERICHO_SETTINGS = settingsFile;
+process.env.JERICHO_DATA_DIR = path.join(tmp, "data");
 
 const { Brain } = await import("../server/brain.js");
 const { isYes } = await import("../server/safety.js");
 const { jobEvents, resolveProjectFolder } = await import("../server/tools/claudeCode.js");
 
-/** Fake Anthropic client that replays scripted responses and records requests. */
-function fakeClient(script) {
-  const calls = [];
-  return {
-    calls,
-    beta: {
-      messages: {
-        async create(req) {
-          calls.push(structuredClone(req));
-          const next = script.shift();
-          if (!next) throw new Error("No more scripted responses");
-          return next;
-        },
-      },
-    },
-  };
-}
-const say = (text) => ({ stop_reason: "end_turn", content: [{ type: "text", text }] });
-const use = (id, name, input) => ({ stop_reason: "tool_use", content: [{ type: "tool_use", id, name, input }] });
 
 test("safe tool runs straight away (mock lights)", async () => {
   const client = fakeClient([use("t1", "lights", { action: "on", room: "kitchen" }), say("Kitchen lights are on.")]);

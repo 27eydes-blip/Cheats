@@ -102,6 +102,110 @@ With "reduce motion" switched on in your phone or computer settings, it moves sl
 - `data/` is git-ignored, so none of it is ever committed. Every save, delete and wipe goes in
   the action log.
 
+## Speed
+
+- Claude's reply is streamed. Each sentence is sent to ElevenLabs as soon as it's complete, and
+  the next sentence starts downloading while the current one plays.
+- The thinking animation starts about 0.6 seconds after you stop talking, before the browser has
+  finished writing down what you said.
+- While a page is open, the server keeps its connections to Claude and ElevenLabs open. When it
+  hears the wake word, it gets Claude's prompt cache ready for the request that's coming.
+- Every reply adds a `timing` line to `logs/actions.log`:
+  - `listeningMs`: how long you talked.
+  - `stoppedTalkingToFinalMs`: how long the browser took to finish the transcript.
+  - `thinkingMs`: from your words to Jericho's first sentence.
+  - `firstAudioMs`: from your words to the first sound.
+  - `stoppedTalkingToAudioMs`: the delay you actually feel.
+  - `server`: Claude's own timings and which models answered.
+
+## Phone calls
+
+"Jericho, call Luigi's and book a table for four at seven" works like this:
+
+1. Jericho fills in anything missing. It looks up the number, or asks you, and never guesses one.
+   For bookings it needs the date, time, party size and name.
+2. It checks the call against the rules below. A blocked call is refused straight away, without
+   asking you anything.
+3. It reads back the number digit by digit, the goal, and what it will say, then asks "Should I
+   dial?". Nothing is dialed without your yes.
+4. On the call it always opens with "Hi, I'm an AI assistant calling on behalf of Sammy". The
+   opening is written into the code, and it never claims to be human. It speaks with your
+   ElevenLabs voice and listens with Twilio's speech recognition. A Claude agent handles the
+   conversation.
+5. When the call ends, Jericho tells you the outcome out loud: booked, no answer, busy, they need
+   a callback, or voicemail. The call is saved to `data/calls.json` and shown on the **Calls**
+   page (`/calls`), with a transcript.
+
+**Rules (checked in code, in `server/calls/policy.js`):**
+- **What it calls for:** only reservations, checking hours, appointments or one simple question.
+  No emergency or short numbers (911, 988, the x11 numbers), no premium-rate numbers (900, 976),
+  and only countries listed in `allowedCountryCodes`.
+- **What it refuses:** anything that looks like impersonation, harassment, pranks, scams, sales,
+  or paying money. This is checked by keyword and then by a quick Claude review. If that review
+  can't run, the call doesn't happen.
+- **Limits:** `maxCallsPerDay` (3), `maxCallsPerNumberPerDay` (2), and `maxMinutes` (5). Twilio
+  enforces the time limit itself, and the agent starts wrapping up 30 seconds before it.
+- **What it won't do on a call:** give card details or agree to a deposit. If the place needs
+  that, the outcome is "needs callback".
+- **Privacy:** Twilio keys and your number stay in `.env`. They never reach the browser and are
+  blanked out of the log. Every webhook from Twilio must carry Twilio's signature.
+
+**Test mode** (`calls.testMode: true`, the default) runs the whole flow without dialing: rules,
+read-back, yes, then a pretend restaurant played by Claude. `testScenario` can be `random`,
+`booked`, `alternative`, `callback`, `hours` or `no_answer`. Test calls cost a few cents in
+Claude usage and no Twilio money.
+
+### Setting up Twilio (real calls)
+
+1. **Make an account** at twilio.com. Verify your email and your own mobile number when it asks.
+   That number becomes your first *verified caller ID*.
+2. **Get a number:** in the Console, go to Phone Numbers, Buy a number. Pick a local US number
+   with **Voice**. The trial gives you one free.
+3. **Copy your keys:** the Console home page shows the **Account SID** and **Auth Token**. Put
+   them in `.env` along with the number you bought and your own mobile:
+   ```
+   TWILIO_ACCOUNT_SID=AC...
+   TWILIO_AUTH_TOKEN=...
+   TWILIO_PHONE_NUMBER=+1...
+   MY_PHONE_NUMBER=+1...
+   ```
+4. **Verify more numbers (trial only):** a trial account can only call verified numbers. To add
+   one, go to Phone Numbers, Manage, Verified Caller IDs, Add a new Caller ID. Twilio texts a
+   code to that phone.
+5. **Give Twilio a way to reach Jericho.** Twilio needs a public https address for your laptop.
+   Pick one:
+   - **Tailscale Funnel:** `tailscale funnel 3000` gives you `https://<laptop>.<tailnet>.ts.net`.
+   - **ngrok:** install it, claim the free static domain, then run
+     `ngrok http --url=<your-name>.ngrok-free.app 3000`.
+
+   Put the address in `settings.json` as `calls.publicUrl`, with no trailing slash. Also set
+   `JERICHO_ACCESS_TOKEN` in `.env`. Jericho refuses real calls without it, because the page is
+   now reachable from the internet.
+6. **Switch on real calls:** set `calls.testMode` to `false` and restart. The startup message
+   says `Phone calls: LIVE via Twilio`.
+7. **First real test:** say "Jericho, call my phone to book a table for two at eight". Calling
+   your own `MY_PHONE_NUMBER` is allowed as a rehearsal, and you play the restaurant. On a trial
+   account, Twilio first plays a short trial notice and asks you to press a key.
+8. **Calling real businesses:** you need to upgrade the account (Console, Upgrade, add a card),
+   since a trial can only reach verified numbers. Upgrading also removes the trial notice.
+
+**What it costs** (US prices; check twilio.com/en-us/voice/pricing/us before relying on them):
+
+| Item | Price |
+|---|---|
+| Twilio phone number | about $1.15 a month |
+| Outbound call | about $0.014 a minute, billed per started minute |
+| Twilio speech recognition | roughly 2 cents per reply it transcribes |
+| Claude (agent and safety review) | roughly 10 to 20 cents for a typical 2 to 3 minute call |
+| ElevenLabs | a few hundred characters per call, from your plan |
+
+A typical booking call comes to roughly 25 to 50 cents in total. The trial credit covers a lot of
+practice. Test mode costs only the Claude part.
+
+**Legal note:** Jericho tells every business up front that it's an AI and doesn't record audio.
+Rules for automated and AI-voice calls vary by country and state. Calling businesses for your own
+bookings is the ordinary case, but check what applies where you live.
+
 ## Settings (`settings.json`)
 
 None of these are secret. Keys live only in `.env`.
@@ -109,16 +213,21 @@ None of these are secret. Keys live only in `.env`.
 | Setting | What it does |
 |---|---|
 | `elevenlabs.voiceId` | The ElevenLabs voice. Copy any voice ID from your ElevenLabs Voices page. Changes apply on the next reply, no restart needed. |
-| `elevenlabs.modelId` | `eleven_flash_v2_5` is the fastest. Use `eleven_multilingual_v2` for higher quality but more delay. |
+| `elevenlabs.modelId` | `eleven_flash_v2_5` (default) is the lowest-latency natural voice. `eleven_turbo_v2_5` is a bit richer, `eleven_multilingual_v2` richer still, with more delay. |
+| `elevenlabs.stability` / `similarityBoost` / `style` / `speed` / `useSpeakerBoost` | Voice settings. Lower stability is more expressive, higher is steadier. `speed` runs from 0.7 to 1.2. All of these apply on the next sentence, no restart needed. |
+| `audioCache` | Short phrases (up to `maxWords` words) that come up `minRepeats` times are saved in `data/audio-cache` and replayed from disk. At most `maxFiles` are kept. |
 | `conversationTimeoutSeconds` | How long Jericho keeps listening without the wake word after you or it last spoke. Default 30. A pending yes/no question waits its own 60 seconds. |
 | `endPhrases` | Phrases that end the conversation right away. Add your own. |
 | `wakeWords` | Words that wake the assistant: "jericho", "jer" and common mishearings ("jerico", "jerry co", "jerr"…). Add more to the array any time; a space also matches a hyphen or no gap, so "jerry co" covers "jerry-co" and "jerryco". Whole words only: "Jerry", "Jeremy" and "jersey" don't trigger it. Reload the page after editing. |
-| `claude.model` / `claude.effort` | Default is `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. Raise effort to `medium` if answers feel too shallow. |
+| `claude.model` / `claude.effort` | The model for normal requests: `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. |
+| `claude.hardModel` / `claude.hardEffort` | The stronger model for hard questions: `claude-fable-5-2` at `high` effort. Jericho decides when to use it (a `deep_think` tool) and says "Let me think that through" first. |
+| `claude.webSearch` | Lets Jericho look things up, such as a restaurant's number or hours. About 1 cent per search. |
 | `claude.fallbacks` | On by default. If the main model declines a request on safety grounds, the API retries it on a fallback model inside the same call. Set to `false` to turn it off. |
 | `lights.provider` / `lights.rooms` | `mock` for now. `hue` and `kasa` are stubs with setup notes inside. |
 | `claudeCode.projectsDir` | Claude Code only runs in folders inside this directory. |
 | `claudeCode.permissionMode` | Passed to `claude --permission-mode`. `acceptEdits` lets it write files but not run arbitrary shell commands. Add `"extraArgs": ["--allowedTools", "Bash(npm *)"]` to allow specific commands. |
 | `confirmation.yesWords` / `timeoutSeconds` | What counts as yes, and how long a risky action waits. |
+| `calls.*` | Phone calls, see below. `testMode` is on by default. |
 
 Most settings are read at startup, so restart the server after changing them. The voice settings
 are the exception.
@@ -154,8 +263,16 @@ server/tools/memory.js    remember / recall / forget tools
 server/memory.js          data/memory.json + data/style.json (read, save, delete, wipe)
 server/style.js           the after-conversation call that updates style notes
 server/secrets.js         detects passwords, keys, card and ID numbers
+server/speech.js          sentence splitter + clean-up for natural speech
+server/net.js             keep-alive connections and warm-up pings
+server/calls/policy.js    what may be called: numbers, purposes, limits, safety screen
+server/calls/agent.js     the Claude agent on the phone, and the pretend business for test mode
+server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json, announcements
+server/tools/calls.js     make_call + recent_calls tools
+server/tools/deepThink.js sends hard questions to the stronger model
 public/                   the web page (index.html, app.js, visualizer.js, style.css)
 public/memory.html, memory.js  the /memory page
+public/calls.html, calls.js    the /calls page
 data/                     your memories and style notes (git-ignored)
 test/                     offline tests with a fake Claude client
 ```

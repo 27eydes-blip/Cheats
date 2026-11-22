@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { fakeClient, say, use } from "./fake-client.js";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-mem-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
@@ -15,15 +16,6 @@ const memory = await import("../server/memory.js");
 const { Brain } = await import("../server/brain.js");
 const log = () => fs.readFileSync(path.join(tmp, "actions.log"), "utf8");
 
-function fakeClient(script) {
-  const calls = [];
-  return {
-    calls,
-    beta: { messages: { async create(req) { calls.push(structuredClone(req)); const n = script.shift(); if (!n) throw new Error("no script"); return n; } } },
-  };
-}
-const say = (text) => ({ stop_reason: "end_turn", content: [{ type: "text", text }] });
-const use = (id, name, input) => ({ stop_reason: "tool_use", content: [{ type: "tool_use", id, name, input }] });
 
 test("remember saves to data/memory.json and logs it; memories reach the instructions", async () => {
   const client = fakeClient([use("t1", "remember", { text: "Takes coffee black", topic: "food" }), say("Got it."), say("Black, no sugar.")]);

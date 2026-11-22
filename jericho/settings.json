@@ -1,7 +1,6 @@
 {
   "port": 3000,
   "host": "0.0.0.0",
-
   "assistantName": "Jericho",
   "wakeWords": [
     "jericho",
@@ -24,27 +23,41 @@
     "go to sleep"
   ],
   "speechLang": "en-US",
-
   "claude": {
     "model": "claude-opus-5-5",
     "effort": "low",
-    "maxToolRounds": 6,
+    "hardModel": "claude-fable-5-2",
+    "hardEffort": "high",
+    "webSearch": true,
+    "fallbacks": true,
+    "maxToolRounds": 8,
     "conversationIdleMinutes": 10
   },
-
   "elevenlabs": {
     "voiceId": "Qy7xBgqsDA40HK0hK0SY",
     "modelId": "eleven_flash_v2_5",
     "outputFormat": "mp3_44100_128",
     "stability": 0.5,
-    "similarityBoost": 0.75
+    "similarityBoost": 0.75,
+    "style": 0,
+    "speed": 1.0,
+    "useSpeakerBoost": true
   },
-
+  "audioCache": {
+    "enabled": true,
+    "maxWords": 8,
+    "minRepeats": 2,
+    "maxFiles": 300
+  },
   "lights": {
     "provider": "mock",
-    "rooms": ["living room", "bedroom", "kitchen", "office"]
+    "rooms": [
+      "living room",
+      "bedroom",
+      "kitchen",
+      "office"
+    ]
   },
-
   "claudeCode": {
     "command": "claude",
     "projectsDir": "~/jericho-projects",
@@ -52,11 +65,32 @@
     "extraArgs": [],
     "timeoutMinutes": 30
   },
-
   "confirmation": {
-    "yesWords": ["yes", "yeah", "yep", "confirm", "confirmed", "affirmative", "do it", "go ahead"],
+    "yesWords": [
+      "yes",
+      "yeah",
+      "yep",
+      "confirm",
+      "confirmed",
+      "affirmative",
+      "do it",
+      "go ahead"
+    ],
     "timeoutSeconds": 60
   },
-
+  "calls": {
+    "testMode": true,
+    "testScenario": "random",
+    "ownerName": "Sammy",
+    "publicUrl": "",
+    "maxCallsPerDay": 3,
+    "maxCallsPerNumberPerDay": 2,
+    "maxMinutes": 5,
+    "allowedCountryCodes": ["1"],
+    "defaultCountryCode": "1",
+    "agentModel": "claude-opus-5-5",
+    "agentEffort": "low",
+    "language": "en-US"
+  },
   "logFile": "logs/actions.log"
 }

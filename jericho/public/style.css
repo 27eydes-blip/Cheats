@@ -229,3 +229,25 @@ pre.raw {
   color: var(--muted);
 }
 details summary { cursor: pointer; color: var(--muted); font-size: 0.8rem; }
+
+/* ---- /calls page ---- */
+.call > div { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.call strong { color: var(--text); font-weight: 600; }
+.badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--gold-deep);
+  color: var(--gold);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.outcome { display: block; margin-top: 4px; color: var(--gold); font-weight: 600; font-size: 0.85rem; }
+.goal, .summary { display: block; font-size: 0.86rem; }
+.goal { color: var(--muted); }
+.call details { margin-top: 6px; }
+.call .line { margin: 6px 0 0; font-size: 0.84rem; }
+.call .line.agent b { color: var(--gold); }
+.call .line.them b { color: var(--muted); }
+.top-links { display: flex; gap: 8px; }

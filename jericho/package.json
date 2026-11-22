@@ -4,7 +4,9 @@
   "private": true,
   "description": "Personal voice assistant: browser ears, Claude brain, ElevenLabs voice.",
   "type": "module",
-  "engines": { "node": ">=20.12" },
+  "engines": {
+    "node": ">=20.12"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
@@ -12,6 +14,7 @@
     "make-cert": "mkdir -p certs && openssl req -x509 -newkey rsa:2048 -nodes -days 825 -keyout certs/key.pem -out certs/cert.pem -subj /CN=jericho.local"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.12.0"
+    "@anthropic-ai/sdk": "^1.12.0",
+    "undici": "^6.29.1"
   }
 }

@@ -9,6 +9,9 @@ import { Brain } from "./brain.js";
 import { publicConfig, ROOT, secrets, settings } from "./config.js";
 import { logAction, logPath } from "./logger.js";
 import * as memory from "./memory.js";
+import { callAudio, handleTwilio, publicCalls, validTwilioSignature } from "./calls/manager.js";
+import { callSettings } from "./calls/policy.js";
+import { setWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
 import { streamSpeech } from "./tts.js";
 
@@ -37,17 +40,69 @@ function sendJson(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-async function readJson(req) {
+async function readBody(req, limit = 20_000) {
   let body = "";
   for await (const chunk of req) {
     body += chunk;
-    if (body.length > 20_000) throw new Error("Request too large");
+    if (body.length > limit) throw new Error("Request too large");
   }
-  return JSON.parse(body || "{}");
+  return body;
 }
 
+async function readJson(req) {
+  return JSON.parse((await readBody(req)) || "{}");
+}
+
+/** Twilio webhooks: no access token (Twilio can't send one), but every request must carry Twilio's signature. */
+async function twilioRoute(req, res, url) {
+  try {
+    if (req.method === "GET" && url.pathname.startsWith("/twilio/audio/")) {
+      const id = url.pathname.split("/").pop();
+      const buf = /^[0-9a-f]{32}$/.test(id) ? await callAudio(id) : null;
+      if (!buf) return res.writeHead(404).end();
+      return res.writeHead(200, { "content-type": "audio/mpeg", "content-length": buf.length }).end(buf);
+    }
+    const params = Object.fromEntries(new URLSearchParams(await readBody(req, 50_000)));
+    const fullUrl = callSettings().publicUrl + req.url;
+    if (!validTwilioSignature(req.headers["x-twilio-signature"], fullUrl, params)) {
+      logAction("twilio_rejected", { path: url.pathname, reason: "bad signature" });
+      return res.writeHead(403).end("Forbidden");
+    }
+    const kind = { "/twilio/voice": "voice", "/twilio/gather": "gather", "/twilio/status": "status" }[url.pathname];
+    if (!kind) return res.writeHead(404).end();
+    const xml = await handleTwilio(kind, url.searchParams.get("call"), params);
+    res.writeHead(200, { "content-type": xml ? "text/xml" : "text/plain" }).end(xml);
+  } catch (err) {
+    logAction("error", { where: url.pathname, error: err.message });
+    res.writeHead(200, { "content-type": "text/xml" }).end('<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>');
+  }
+}
+
+/** /api/ask and /api/confirm stream one JSON line per sentence, so speaking can start early. */
+async function streamTurn(req, res, url) {
+  const { sessionId, text, t } = await readJson(req);
+  if (!sessionId || typeof text !== "string" || !text.trim()) return sendJson(res, 400, { error: "sessionId and text are required" });
+  res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
+  const send = (obj) => res.write(`${JSON.stringify(obj)}\n`);
+  const hooks = { onSentence: (sentence) => send({ type: "sentence", text: sentence }) };
+  try {
+    const result =
+      url.pathname === "/api/ask"
+        ? await brain.handle(String(sessionId), text.trim(), hooks)
+        : await brain.confirm(String(sessionId), text.trim(), hooks);
+    send({ type: "done", ...result });
+  } catch (err) {
+    logAction("error", { where: url.pathname, error: err.message });
+    send({ type: "sentence", text: "Sorry, something went wrong on my end." });
+    send({ type: "done", reply: "", awaitingConfirmation: false });
+  }
+  res.end();
+}
+
+const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : undefined);
+
 function serveStatic(url, res) {
-  const pages = { "/": "index.html", "/memory": "memory.html" };
+  const pages = { "/": "index.html", "/memory": "memory.html", "/calls": "calls.html" };
   const rel = pages[url.pathname] || decodeURIComponent(url.pathname).replace(/^\/+/, "");
   const file = path.resolve(PUBLIC_DIR, rel);
   if (!file.startsWith(PUBLIC_DIR + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
@@ -60,6 +115,7 @@ function serveStatic(url, res) {
 
 async function handler(req, res) {
   const url = new URL(req.url, "http://localhost");
+  if (url.pathname.startsWith("/twilio/")) return twilioRoute(req, res, url);
   if (!url.pathname.startsWith("/api/")) return serveStatic(url, res);
   if (!authorized(req, url)) return sendJson(res, 401, { error: "Wrong or missing access token" });
 
@@ -67,11 +123,42 @@ async function handler(req, res) {
     if (req.method === "GET" && url.pathname === "/api/config") return sendJson(res, 200, publicConfig());
 
     if (req.method === "POST" && (url.pathname === "/api/ask" || url.pathname === "/api/confirm")) {
-      const { sessionId, text } = await readJson(req);
-      if (!sessionId || typeof text !== "string" || !text.trim()) return sendJson(res, 400, { error: "sessionId and text are required" });
-      const result =
-        url.pathname === "/api/ask" ? await brain.handle(String(sessionId), text.trim()) : await brain.confirm(String(sessionId), text.trim());
-      return sendJson(res, 200, result);
+      return await streamTurn(req, res, url);
+    }
+
+    // The wake word was heard: get Claude's prompt cache ready before the request arrives.
+    if (req.method === "POST" && url.pathname === "/api/warm") {
+      const { sessionId } = await readJson(req);
+      brain.prewarm(String(sessionId || "")).catch(() => {});
+      return sendJson(res, 200, { ok: true });
+    }
+
+    // How long each step took, measured by the page (plus the server's own numbers).
+    if (req.method === "POST" && url.pathname === "/api/timing") {
+      const b = await readJson(req);
+      logAction("timing", {
+        sessionId: String(b.sessionId || ""),
+        listeningMs: num(b.listeningMs),
+        stoppedTalkingToFinalMs: num(b.stoppedTalkingToFinalMs),
+        thinkingMs: num(b.thinkingMs),
+        firstAudioMs: num(b.firstAudioMs),
+        stoppedTalkingToAudioMs: num(b.stoppedTalkingToAudioMs),
+        totalMs: num(b.totalMs),
+        voice: ["elevenlabs", "browser", "mixed"].includes(b.voice) ? b.voice : undefined,
+        server: b.server && {
+          firstTokenMs: num(b.server.firstTokenMs),
+          firstSentenceMs: num(b.server.firstSentenceMs),
+          totalMs: num(b.server.totalMs),
+          rounds: num(b.server.rounds),
+          models: Array.isArray(b.server.models) ? b.server.models.map(String).slice(0, 4) : undefined,
+        },
+      });
+      return sendJson(res, 200, { ok: true });
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/calls") {
+      const cfg = callSettings();
+      return sendJson(res, 200, { testMode: cfg.testMode, calls: publicCalls() });
     }
 
     // ---- memory page + conversation learning ----
@@ -104,10 +191,12 @@ async function handler(req, res) {
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store", connection: "keep-alive" });
       res.write(": connected\n\n");
       listeners.add(res);
+      setWarm(true); // keep connections to Claude and ElevenLabs open while a page is open
       const ping = setInterval(() => res.write(": ping\n\n"), 25_000);
       req.on("close", () => {
         clearInterval(ping);
         listeners.delete(res);
+        if (listeners.size === 0) setWarm(false);
       });
       return;
     }
@@ -137,6 +226,8 @@ server.listen(port, settings.host || "0.0.0.0", () => {
     }
   }
   console.log(`   Actions are logged to ${logPath}`);
+  const calls = callSettings();
+  console.log(`   Phone calls: ${calls.testMode ? "TEST MODE (simulated, nothing is dialed)" : `LIVE via Twilio, webhooks at ${calls.publicUrl || "(calls.publicUrl not set!)"}`}`);
   if (!secrets.accessToken) console.log("   Tip: set JERICHO_ACCESS_TOKEN in .env before opening Jericho from other devices.");
   console.log("");
 });
