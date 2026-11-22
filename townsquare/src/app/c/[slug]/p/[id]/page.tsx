@@ -9,7 +9,7 @@ import { Composer } from "@/components/Composer";
 import { BackIcon } from "@/components/icons";
 import { RichText } from "@/components/RichText";
 import { Avatar } from "@/components/ui/Avatar";
-import { VerifiedSeal } from "@/components/ui/Badge";
+import { AiBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/States";
 import { Time } from "@/components/Time";
 
@@ -35,7 +35,7 @@ export default async function CommunityThread({ params }: { params: Promise<{ sl
           <div className="flex items-center gap-1.5 text-[13.5px] text-ink-3">
             <Avatar url={post.author.avatarUrl} name={post.author.displayName} handle={post.author.handle} size={22} ring={false} />
             <Link href={`/u/${post.author.handle}`} className="font-semibold text-ink-2 hover:underline">{post.author.displayName}</Link>
-            {post.author.verified && <VerifiedSeal size={13} />}· <Time ms={post.createdAt} />
+            {post.author.verified && <VerifiedSeal size={13} />}{post.author.ai && <AiBadge />}· <Time ms={post.createdAt} />
           </div>
           <h1 className="mt-2 font-display text-h1 leading-tight font-semibold text-balance"><RichText text={post.body} /></h1>
           <p className="num mt-3 text-[13.5px] text-ink-3">{post.counts.replies} comments</p>

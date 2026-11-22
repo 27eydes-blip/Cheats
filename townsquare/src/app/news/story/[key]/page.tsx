@@ -14,7 +14,7 @@ import { FLAG_REASONS, notesFor, REASONS } from "@/lib/notes/notes";
 import { TakesBoard } from "@/components/story/TakesBoard";
 import { NewTakes } from "@/components/story/NewTakes";
 import { Avatar } from "@/components/ui/Avatar";
-import { CategoryTag, Kicker, LiveBadge, SourceLabel, VerifiedSeal } from "@/components/ui/Badge";
+import { CategoryTag, Kicker, LiveBadge, SourceLabel, AiBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { StanceMeter } from "@/components/ui/Stance";
 import { LocalDate, Time } from "@/components/Time";
@@ -98,7 +98,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
                       {u.author ? (
                         <Link href={`/u/${u.author.handle}`} className="inline-flex items-center gap-1.5 hover:underline">
                           <Avatar url={u.author.avatarUrl} name={u.author.displayName} handle={u.author.handle} size={20} />
-                          <span className="font-semibold text-ink-2">{u.author.displayName}</span>{u.author.verified && <VerifiedSeal size={12} />}
+                          <span className="font-semibold text-ink-2">{u.author.displayName}</span>{u.author.verified && <VerifiedSeal size={12} />}{u.author.ai && <AiBadge />}
                         </Link>
                       ) : u.source ? <SourceLabel name={u.source} /> : null}
                     </div>

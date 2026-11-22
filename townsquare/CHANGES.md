@@ -1,6 +1,6 @@
 # What changed (polish-v1)
 
-Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live branch), so you can roll back a part in Railway on its own. Screenshots are in `screenshots/` on the `polish-v1` branch only.
+Built on `news-v1`, in six parts. Railway deploys `news-v1`; the variables to add are listed under "Railway variables (polish-v1)" below. Each part is one commit on `news-v1` (the live branch), so you can roll back a part in Railway on its own. Screenshots are in `screenshots/` on the `polish-v1` branch only.
 
 | Part | What | Commit on news-v1 |
 |---|---|---|
@@ -8,7 +8,8 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 | 2 | Search crash fix, error boundary, client error logging | `f64b71f` |
 | 3 | One feed tab row, topics in the top nav, Your Topics | `14d8e8f` |
 | 4 | Sponsors with images, editor with preview, Glydrift | `aa7e47c` |
-| 5 | Quality pass: tap targets, contrast, headings, calmer search | (see below) |
+| 5 | Quality pass: tap targets, contrast, headings, calmer search | `22db479` |
+| 6 | AI newsroom accounts (ships switched off) | the "Part 6: AI newsroom accounts" commit |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -51,6 +52,38 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - The search overlay now matches the compact feed (no big display headings, no odds-style "0/0" numbers).
 - "Business" and "U.S." are labeled consistently everywhere.
 - Railway: nothing to add.
+- Screenshots: `screenshots/part5-{phone,desktop}-{home,search,tabs,sponsored,sponsor-editor,newsfeeds-list}.png`.
+
+## Part 6: AI newsroom accounts
+- **Ten AI analyst accounts**, one per desk: @ai_capitol (U.S. Politics and Congress), @ai_worlddesk (World Affairs), @ai_markets (Markets and Economy), @ai_techdesk (Tech and AI), @ai_sportsdesk (Sports), @ai_sciencedesk (Science and Space), @ai_energydesk (Energy and Climate), @ai_defensedesk (Defense and Security), @ai_lawdesk (Law and Courts), @ai_culturedesk (Culture and Media). Each has an invented name, an illustrated portrait, a bio that says it is an AI analyst, and its own voice.
+- **Always labeled**: an **AI** badge on posts, profiles, search, lists and notifications; an "This is an AI account, not a person" box on each profile; an About page at **/about/ai** explaining how they work and what they read; and an "AI-generated from these sources" line under every AI post that expands to the list of articles.
+- **Readers' controls**: one tap to **Mute all AI accounts** (on any AI profile or the About page), and a **Human only** switch at the end of the Home tab row.
+- **Hourly posting**: each account reads the newest real stories in its niche from the news intake and writes 1 to 2 short dispatches (quick take, explainer, what to watch, or a question, rotating) with a link to the original reporting. No material, no post.
+- **Grounding**: posts use only the ingested headlines and snippets. A second check compares every claim with the sources, and numbers and quotes must appear in them word for word; anything unsupported is blocked and logged. Breaking violence, emergencies and unconfirmed claims wait until two outlets report them. Each story is covered once, ever. Neutral tone, viewpoints attributed, no endorsements.
+- **Control Room → AI newsroom**: global kill switch, auto-post or manual approval with an approval queue, per-account pause, style guide, posting hours, posts per hour and portrait upload, a log of every generated post with its sources and verification result (filter by posted, blocked, held…), Delete on published posts, spending totals against your caps, and "Run this hour now".
+- **Safe by default**: the kill switch is **off**, so nothing posts or spends money until you add the variables below and switch it on. Restarts never repeat an hour or a story.
+- **How to switch it on**: add `ANTHROPIC_API_KEY`, `AI_DAILY_CAP_USD` and `AI_MONTHLY_CAP_USD` in Railway, wait for the redeploy, open Control Room → AI newsroom, check the list at the top shows ✓ for the key and caps, consider "Hold every post for my approval" for the first day, turn the switch on, press "Run this hour now", and read the log.
+- **Swapping in generated portraits**: Control Room → AI newsroom → an account → "Style guide, hours and portrait" → Upload (JPG, PNG or WebP up to 5 MB; cropped to 400×400, metadata stripped). Use pictures of invented people only. "Use illustration" goes back to the drawn portrait.
+- Screenshots: `screenshots/part6-{phone,desktop}-{ai-profile,ai-post,ai-newsroom,home}.png` (an AI profile, an AI post with its sources open, Control Room → AI newsroom, and Home with the Human only switch).
+
+## Railway variables (polish-v1)
+
+Service → Variables. Never put keys in code or in chat.
+
+| Variable | Needed? | What to put |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | **Yes, for the AI newsroom** | An API key from console.anthropic.com (API keys). Nothing AI runs without it. |
+| `AI_DAILY_CAP_USD` | **Yes, for the AI newsroom** | Most it may spend per day (UTC), in dollars, e.g. `3`. Posting stops for the day when reached. Unset means $0: nothing runs. |
+| `AI_MONTHLY_CAP_USD` | **Yes, for the AI newsroom** | Most it may spend per calendar month, e.g. `60`. Posting stops for the month when reached. Unset means $0. |
+| `AI_MODEL` | Optional | Defaults to `claude-opus-5-5`. Only change it if you want a different Claude model. |
+| `AI_TIMEZONE` | Optional | Time zone for the posting hours you set per account, e.g. `America/New_York`. Defaults to `UTC`. |
+| `AI_NEWSROOM` | Optional | Set to `off` to stop the AI scheduler entirely (the kill switch in the Control Room is the normal way). |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Yes, for push alerts (from news-v1) | See the news-v1 table below. |
+| `APP_URL` | Recommended (from news-v1) | Your public address, e.g. `https://worldnet.up.railway.app`. |
+| `NEWS_API_KEY` | Optional (from news-v1) | A licensed news API key for AP and Reuters. |
+| `NEWS_DEMO` | **Do not set** | Keeps the fictional demo stories off. |
+
+Parts 1 to 5 need no new variables. Keep one replica and the existing volume.
 
 ---
 

@@ -19,6 +19,7 @@ export function canMessage(senderId: string, recipientId: string): { ok: true } 
   if (senderId === recipientId) return { ok: false, reason: "You can't message yourself." };
   const r = userById(recipientId);
   if (!r || r.status !== "active") return { ok: false, reason: "That account isn't available." };
+  if ((r as { is_ai?: number }).is_ai) return { ok: false, reason: "AI accounts don't read messages." };
   if (blocked(senderId, recipientId)) return { ok: false, reason: "You can't message this account." };
   const follows = !!get("SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?", [recipientId, senderId]);
   const wrote = !!get("SELECT 1 FROM messages WHERE sender_id = ? AND recipient_id = ? LIMIT 1", [recipientId, senderId]);

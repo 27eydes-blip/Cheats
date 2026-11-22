@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Split } from "@/lib/stance";
 import { Avatar } from "../ui/Avatar";
-import { VerifiedSeal } from "../ui/Badge";
+import { AiBadge, VerifiedSeal } from "../ui/Badge";
 import { StanceChip, type TakeStance } from "../ui/Stance";
 import { CloseIcon, DeskIcon, EditionIcon, RundownIcon, SearchIcon, StudioIcon, TakeIcon } from "../icons";
 import { useViewer } from "../providers";
@@ -15,7 +15,7 @@ import { TeamLogo } from "../sports/TeamLogo";
 
 type Results = {
   stories: { key: string; title: string; section: string; status: string; takes: number; split: Split }[];
-  voices: { handle: string; displayName: string; avatarUrl: string | null; verified: boolean; bio: string }[];
+  voices: { handle: string; displayName: string; avatarUrl: string | null; verified: boolean; ai?: boolean; bio: string }[];
   desks: { slug: string; name: string; description: string }[];
   takes: { id: string; body: string; author: string; stance: TakeStance | null }[];
   teams: TeamView[];
@@ -39,7 +39,7 @@ export function normalizeResults(raw: unknown): Results {
       key: str(s.key), title: str(s.title) || "Untitled story", section: str(s.section) || "News", status: str(s.status), takes: Number(s.takes) || 0,
       split: s.split && typeof s.split === "object" ? { ...EMPTY_SPLIT_C, ...(s.split as Split) } : EMPTY_SPLIT_C,
     })),
-    voices: arr<Record<string, unknown>>(d.voices).filter((v) => v && v.handle).map((v) => ({ handle: str(v.handle), displayName: str(v.displayName) || str(v.handle), avatarUrl: (v.avatarUrl as string) ?? null, verified: !!v.verified, bio: str(v.bio) })),
+    voices: arr<Record<string, unknown>>(d.voices).filter((v) => v && v.handle).map((v) => ({ handle: str(v.handle), displayName: str(v.displayName) || str(v.handle), avatarUrl: (v.avatarUrl as string) ?? null, verified: !!v.verified, ai: !!v.ai, bio: str(v.bio) })),
     desks: arr<Record<string, unknown>>(d.desks).filter((x) => x && x.slug).map((x) => ({ slug: str(x.slug), name: str(x.name) || str(x.slug), description: str(x.description) })),
     takes: arr<Record<string, unknown>>(d.takes).filter((t) => t && t.id).map((t) => ({ id: str(t.id), body: str(t.body), author: str(t.author), stance: STANCES.includes(str(t.stance)) ? (t.stance as TakeStance) : null })),
     teams: arr<TeamView>(d.teams).filter((t) => t && t.id && t.league),
@@ -138,7 +138,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
           node: (
             <span className="flex min-w-0 items-center gap-3">
               <Avatar url={v.avatarUrl} name={v.displayName} handle={v.handle} size={30} />
-              <span className="min-w-0"><span className="flex items-center gap-1 font-semibold">{v.displayName}{v.verified && <VerifiedSeal size={13} />}</span><span className="block truncate text-[12.5px] text-ink-3">{v.bio || `@${v.handle}`}</span></span>
+              <span className="min-w-0"><span className="flex items-center gap-1 font-semibold">{v.displayName}{v.verified && <VerifiedSeal size={13} />}{v.ai && <AiBadge />}</span><span className="block truncate text-[12.5px] text-ink-3">{v.bio || `@${v.handle}`}</span></span>
             </span>
           ),
         });

@@ -1,3 +1,4 @@
+import { AiBadge } from "@/components/ui/Badge";
 import { APP_SHORT } from "@/config";
 import Link from "next/link";
 import { listNotifications, NOTIFICATION_FILTERS, type NotificationView } from "@/lib/notifications";
@@ -66,14 +67,15 @@ function Row({ g }: { g: Group }) {
       <li className={`flex gap-3 px-4 py-3.5 sm:px-6 ${g.read ? "" : "bg-gold-soft/60 shadow-[inset_3px_0_0_var(--gold)]"}`}>
         <Icon type={g.type} />
         <div className="min-w-0 flex-1">
-          <Link href={`/u/${a.handle}`} className="flex items-center gap-2"><Avatar url={a.avatarUrl} name={a.displayName} handle={a.handle} size={28} /><span className="text-[15px]"><b>{a.displayName}</b> {VERB.follow_request}</span></Link>
+          <Link href={`/u/${a.handle}`} className="flex items-center gap-2"><Avatar url={a.avatarUrl} name={a.displayName} handle={a.handle} size={28} /><span className="text-[15px]"><b>{a.displayName}</b>{a.ai && <> <AiBadge className="align-[2px]" /></>} {VERB.follow_request}</span></Link>
           <RequestButtons requesterId={a.id} />
         </div>
       </li>
     );
   }
   const href = n.postId ? `/p/${n.postId}` : g.actors[0] ? `/u/${g.actors[0].handle}` : "#";
-  const names = g.actors.length === 0 ? null : g.actors.length === 1 ? <b>{g.actors[0].displayName}</b> : <><b>{g.actors[0].displayName}</b> and {g.actors.length - 1} other{g.actors.length > 2 ? "s" : ""}</>;
+  const first = g.actors[0] ? <><b>{g.actors[0].displayName}</b>{g.actors[0].ai && <> <AiBadge className="align-[2px]" /></>}</> : null;
+  const names = g.actors.length === 0 ? null : g.actors.length === 1 ? first : <>{first} and {g.actors.length - 1} other{g.actors.length > 2 ? "s" : ""}</>;
   return (
     <li>
       <Link href={href} className={`flex gap-3 px-4 py-3.5 transition-colors hover:bg-paper-2 sm:px-6 ${g.read ? "" : "bg-gold-soft/60 shadow-[inset_3px_0_0_var(--gold)]"}`}>

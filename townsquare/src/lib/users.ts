@@ -1,4 +1,5 @@
 import { seedFromBeats } from "./interests";
+import { aiAvatarUrl, isAiUser } from "./ai/flags";
 import { z } from "zod";
 import { AppError } from "./errors";
 import { all, get, newId, now, run, tx } from "./db";
@@ -36,6 +37,8 @@ export type UserMini = {
   displayName: string;
   avatarUrl: string | null;
   verified: boolean;
+  /** An AI newsroom account (always shown with an "AI" badge). */
+  ai?: boolean;
   /** Hosting something on Live right now. */
   live?: boolean;
 };
@@ -65,7 +68,8 @@ export const canSeeDispatches = (p: ProfileView) => !p.isPrivate || p.viewer.isS
 export const mediaUrl = (id: string | null) => (id ? `/api/media/${id}` : null);
 
 export function toMini(u: Pick<UserRow, "id" | "handle" | "display_name" | "avatar_media_id" | "verified">): UserMini {
-  return { id: u.id, handle: u.handle, displayName: u.display_name, avatarUrl: mediaUrl(u.avatar_media_id), verified: !!u.verified };
+  const ai = isAiUser(u.id);
+  return { id: u.id, handle: u.handle, displayName: u.display_name, avatarUrl: mediaUrl(u.avatar_media_id) ?? (ai ? aiAvatarUrl(u.handle) : null), verified: !!u.verified, ...(ai ? { ai: true } : {}) };
 }
 
 export function userById(id: string) {

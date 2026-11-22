@@ -22,7 +22,7 @@ const LEGACY_CHANNEL: Record<string, string> = { Politics: "politics", World: "w
  * Home: one feed tab row (For You, Friends) directly above the timeline.
  * Topics live in the top nav and have their own pages.
  */
-export default async function Home({ searchParams }: { searchParams: Promise<{ c?: string; tab?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ c?: string; tab?: string; human?: string }> }) {
   const sp = await searchParams;
   if (sp.c && LEGACY_CHANNEL[sp.c]) redirect(topicHref(LEGACY_CHANNEL[sp.c]));
   const parsed = parseHomeTab(sp.tab);
@@ -32,18 +32,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   const vid = viewer?.id ?? null;
   const [lead] = listStories(1, { viewerId: vid });
   const suggestions = vid && tab.kind === "foryou" ? suggestFriends(vid, 3) : [];
-  const initial = tab.kind === "friends" ? (vid ? followingFeed(vid) : { items: [], nextCursor: null }) : forYou(vid, null, undefined, { excludeStory: lead?.key });
-  const source = tab.kind === "friends" ? { tab: "following" } : { tab: "foryou", ...(lead ? { exclude: lead.key } : {}) };
+  const human = sp.human === "1";
+  const initial = tab.kind === "friends" ? (vid ? followingFeed(vid, null, undefined, { humanOnly: human }) : { items: [], nextCursor: null }) : forYou(vid, null, undefined, { excludeStory: lead?.key, humanOnly: human });
+  const source = { ...(tab.kind === "friends" ? { tab: "following" } : { tab: "foryou", ...(lead ? { exclude: lead.key } : {}) }), ...(human ? { human: "1" } : {}) };
   return (
     <div className="mx-auto max-w-[1080px] lg:px-6">
       <h1 className="sr-only">{APP_NAME} home</h1>
       <div className="grid lg:grid-cols-[minmax(0,640px)_minmax(0,330px)] lg:justify-center lg:gap-7">
         <div id="home-feed" className="min-w-0 lg:min-h-screen lg:border-x lg:border-[var(--hairline)]">
-          <FeedTabs active={tab} />
+          <FeedTabs active={tab} human={human} />
           <h2 className="sr-only">{tab.kind === "friends" ? "Friends" : "For You"} timeline</h2>
           {tab.kind === "foryou" && lead && <div role="article" aria-label={lead.title} className="tl-row"><StoryRow s={lead} lead /></div>}
           <Feed
-            key={tab.kind}
+            key={`${tab.kind}${human ? "-human" : ""}`}
             pad={false}
             initial={initial}
             source={source}

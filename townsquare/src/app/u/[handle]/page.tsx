@@ -18,15 +18,18 @@ import { CalendarIcon, LinkIcon, MapPinIcon, MessageIcon, PinIcon } from "@/comp
 import { canMessage } from "@/lib/messages";
 import { CredibilityMeter } from "@/components/profile/CredibilityMeter";
 import { Avatar } from "@/components/ui/Avatar";
-import { LiveBadge, VerifiedSeal } from "@/components/ui/Badge";
+import { LiveBadge, AiBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/States";
 import { ProfileMenu } from "./ProfileMenu";
+import { MuteAllAi } from "@/components/ai/MuteAllAi";
+import { aiMuted } from "@/lib/ai/newsroom";
+import { personaByHandle } from "@/lib/ai/personas";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const p = getProfile((await params).handle, null);
-  return { title: p ? `${p.displayName} (@${p.handle})` : "Profile not found", description: p?.bio || undefined };
+  return { title: p ? `${p.displayName} (@${p.handle})${p.ai ? " · AI account" : ""}` : "Profile not found", description: p?.bio || undefined };
 }
 
 const TABS: { key: string; label: string; ptab: ProfileTab | null }[] = [
@@ -60,6 +63,7 @@ export default async function Profile({ params, searchParams }: { params: Promis
   const firstPage = tab.key === "dispatches" ? { ...initial, items: initial.items.filter((i) => !pins.some((x) => x.id === i.post.id) || i.repostedBy) } : initial;
   const fights = visible && tab.key === "debates" ? debates(vid, 6, undefined, p.id) : [];
   const joined = new Date(p.joinedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const aiNiche = p.ai ? personaByHandle(p.handle)?.niche : null;
 
   return (
     <div style={{ ["--accent-c" as string]: accent.color, ["--accent-ink" as string]: accent.ink }}>
@@ -82,7 +86,7 @@ export default async function Profile({ params, searchParams }: { params: Promis
             <div>
               <h1 className="flex flex-wrap items-center gap-2 font-display text-[clamp(1.8rem,1.5rem+1vw,2.3rem)] leading-none font-extrabold">
                 {p.displayName}
-                {p.verified && <VerifiedSeal size={24} />}
+                {p.verified && <VerifiedSeal size={24} />}{p.ai && <AiBadge />}
               </h1>
               <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[13.5px] text-ink-3">
                 <span className="mono">@{p.handle}</span>
@@ -96,6 +100,18 @@ export default async function Profile({ params, searchParams }: { params: Promis
               </p>
             </div>
             {p.bio && <p className="text-[15px] leading-snug text-ink-1">{p.bio}</p>}
+            {p.ai && (
+              <aside aria-label="About this AI account" className="rounded-[12px] bg-[rgb(47_107_255/0.08)] px-3.5 py-3 ring-1 ring-[rgb(127_163_255/0.3)]">
+                <p className="flex items-center gap-2 text-[14px] font-bold text-ink-1"><AiBadge size="md" /> This is an AI account, not a person</p>
+                <p className="mt-1.5 text-[13.5px] leading-snug text-ink-2">
+                  It writes short dispatches about {aiNiche ?? "the news"} using only articles WorldNet has collected from news outlets. Each post lists its sources and is checked against them before it appears. The name and portrait are invented.
+                </p>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <Link href="/about/ai" className="btn-outline">How it works</Link>
+                  <MuteAllAi muted={aiMuted(viewer?.id ?? null)} signedIn={!!viewer} />
+                </div>
+              </aside>
+            )}
             <ul className="space-y-1.5 text-[13.5px] text-ink-2">
               {p.location && <li className="flex items-center gap-2"><MapPinIcon size={15} className="text-ink-3" />{p.location}</li>}
               {p.links.slice(0, 2).map((l) => (

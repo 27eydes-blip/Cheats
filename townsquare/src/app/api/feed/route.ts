@@ -17,13 +17,14 @@ export async function GET(req: NextRequest) {
   const empty = { items: [], nextCursor: null };
   switch (tab) {
     case "following":
-      return NextResponse.json(viewer ? followingFeed(viewer.id, cursor) : empty);
+      return NextResponse.json(viewer ? followingFeed(viewer.id, cursor, undefined, { humanOnly: p.get("human") === "1" }) : empty);
     case "foryou":
       return NextResponse.json(
         forYou(viewer?.id ?? null, cursor, undefined, {
           excludeStory: p.get("exclude") ?? undefined,
           topic: p.get("topic") && p.get("topic")! in TOPIC_LABEL ? p.get("topic")! : undefined,
           teamId: p.get("team") ?? undefined,
+          humanOnly: p.get("human") === "1",
         }),
       );
     case "list":

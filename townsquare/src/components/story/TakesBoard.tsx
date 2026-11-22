@@ -6,7 +6,7 @@ import { PostCard } from "../PostCard";
 import { AgreeIcon, ContextIcon, DisagreeIcon, QuestionIcon } from "../icons";
 import { RichText } from "../RichText";
 import { Avatar } from "../ui/Avatar";
-import { VerifiedSeal } from "../ui/Badge";
+import { AiBadge, VerifiedSeal } from "../ui/Badge";
 import { StanceMeter } from "../ui/Stance";
 import Link from "next/link";
 
@@ -19,7 +19,7 @@ function ContextNote({ p }: { p: PostView }) {
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <Link href={`/u/${p.author.handle}`} className="flex items-center gap-2 text-[12.5px] text-ink-2">
           <Avatar url={p.author.avatarUrl} name={p.author.displayName} handle={p.author.handle} size={20} />
-          <span className="font-semibold">{p.author.displayName}</span>{p.author.verified && <VerifiedSeal size={12} />}
+          <span className="font-semibold">{p.author.displayName}</span>{p.author.verified && <VerifiedSeal size={12} />}{p.author.ai && <AiBadge />}
         </Link>
         <span className="flex items-center gap-2 text-[12px] text-ink-3">Helpful? <StanceMeter type="post" id={p.id} initial={p.split} /></span>
       </div>

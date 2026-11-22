@@ -5,7 +5,7 @@ import { requireViewerPage } from "@/lib/session";
 import { toMini } from "@/lib/users";
 import { Time } from "@/components/Time";
 import { Avatar } from "@/components/ui/Avatar";
-import { Kicker, VerifiedSeal } from "@/components/ui/Badge";
+import { Kicker, AiBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { Frame, PageTitle } from "@/components/ui/Frame";
 import { EmptyState } from "@/components/ui/States";
 
@@ -34,7 +34,7 @@ export default async function Messages() {
               <Link href={`/messages/${c.peer.handle}`} className={`card card-hover flex min-h-[68px] items-center gap-3 px-3 py-2.5 ${c.unread ? "!border-[var(--wn-blue)]" : ""}`}>
                 <Avatar url={c.peer.avatarUrl} name={c.peer.displayName} handle={c.peer.handle} size={46} />
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 text-[15px] font-bold">{c.peer.displayName}{c.peer.verified && <VerifiedSeal size={14} />}<span className="mono ml-auto shrink-0 text-[11px] font-normal text-ink-3"><Time ms={c.last.createdAt} /></span></span>
+                  <span className="flex items-center gap-1.5 text-[15px] font-bold">{c.peer.displayName}{c.peer.verified && <VerifiedSeal size={14} />}{c.peer.ai && <AiBadge />}<span className="mono ml-auto shrink-0 text-[11px] font-normal text-ink-3"><Time ms={c.last.createdAt} /></span></span>
                   <span className={`block truncate text-[14px] ${c.unread ? "font-semibold text-ink-1" : "text-ink-3"}`}>{c.last.mine ? "You: " : ""}{c.last.body}</span>
                 </span>
                 {c.unread > 0 && <span className="mono min-w-[22px] rounded-full bg-[var(--wn-blue-fill)] px-1.5 text-center text-[11.5px] leading-[22px] font-bold text-white" aria-label={`${c.unread} unread`}>{c.unread}</span>}

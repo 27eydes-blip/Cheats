@@ -29,7 +29,8 @@ const NOW = Date.now();
 const MIN = 60_000;
 const HOUR = 3_600_000;
 
-if (get<{ n: number }>("SELECT count(*) n FROM users")!.n > 0) {
+// AI newsroom accounts are created by a migration, so only people count here.
+if (get<{ n: number }>("SELECT count(*) n FROM users WHERE COALESCE(is_ai, 0) = 0")!.n > 0) {
   // Safe to run on every server start: a database with data is never touched.
   console.log("Database already has users; not seeding. (`npm run reset` wipes and reseeds locally.)");
   process.exit(0);

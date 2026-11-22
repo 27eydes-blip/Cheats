@@ -15,7 +15,9 @@ const TABS: { tab: HomeTab; label: string }[] = [
  * timeline. Swiping left/right on the feed switches between them. Topics are
  * in the top nav; the topics and teams you pick are under Your Topics in the menu.
  */
-export function FeedTabs({ active }: { active: HomeTab }) {
+const withHuman = (href: string, human: boolean) => (human ? `${href}${href.includes("?") ? "&" : "?"}human=1` : href);
+
+export function FeedTabs({ active, human = false }: { active: HomeTab; human?: boolean }) {
   const router = useRouter();
   const index = active.kind === "friends" ? 1 : 0;
 
@@ -36,22 +38,23 @@ export function FeedTabs({ active }: { active: HomeTab }) {
       s = null;
       if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2.2) return;
       const next = TABS[index + (dx < 0 ? 1 : -1)];
-      if (next) router.push(tabHref(next.tab), { scroll: false });
+      if (next) router.push(withHuman(tabHref(next.tab), human), { scroll: false });
     };
     el.addEventListener("touchstart", start, { passive: true });
     el.addEventListener("touchend", end, { passive: true });
     return () => (el.removeEventListener("touchstart", start), el.removeEventListener("touchend", end));
-  }, [index, router]);
+  }, [index, router, human]);
 
   return (
     <div className="sticky top-[var(--sub-top)] z-20 border-b border-[var(--hairline)] bg-[var(--paper)]/95 backdrop-blur-md">
-      <div role="tablist" aria-label="Home feed" className="flex">
+      <div className="flex items-stretch">
+      <div role="tablist" aria-label="Home feed" className="flex min-w-0 flex-1">
         {TABS.map((x, i) => {
           const on = i === index;
           return (
             <Link
               key={x.label}
-              href={tabHref(x.tab)}
+              href={withHuman(tabHref(x.tab), human)}
               scroll={false}
               role="tab"
               aria-selected={on}
@@ -62,6 +65,20 @@ export function FeedTabs({ active }: { active: HomeTab }) {
             </Link>
           );
         })}
+      </div>
+      <Link
+        href={withHuman(tabHref(active), !human)}
+        scroll={false}
+        role="switch"
+        aria-checked={human}
+        title="Hide posts from AI accounts in this feed"
+        className="flex h-11 shrink-0 items-center gap-2 px-3 text-[13px] font-semibold text-ink-2 hover:text-ink-1"
+      >
+        <span aria-hidden="true" className={`relative h-[18px] w-[30px] rounded-full transition-colors ${human ? "bg-[var(--wn-blue-fill)]" : "bg-white/[0.14] ring-1 ring-[var(--hairline)]"}`}>
+          <span className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-[left] ${human ? "left-[14px]" : "left-[2px]"}`} />
+        </span>
+        Human only
+      </Link>
       </div>
     </div>
   );

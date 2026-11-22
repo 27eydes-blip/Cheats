@@ -5,7 +5,7 @@ import { credibility, debates, voices } from "@/lib/takes";
 import { FollowButton } from "@/components/FollowButton";
 import { DebateCard } from "@/components/front/DebateCard";
 import { Avatar } from "@/components/ui/Avatar";
-import { Kicker, LiveBadge, VerifiedSeal } from "@/components/ui/Badge";
+import { Kicker, LiveBadge, AiBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { Frame, PageTitle } from "@/components/ui/Frame";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { MiniSplit } from "@/components/ui/Stance";
@@ -60,7 +60,7 @@ export default async function HotStoriesPage() {
                   <Link href={`/u/${v.handle}`} className="flex min-w-0 flex-1 gap-3">
                     <Avatar url={v.avatarUrl} name={v.displayName} handle={v.handle} size={42} />
                     <span className="min-w-0">
-                      <span className="flex items-center gap-1 font-display text-[17px] font-semibold">{v.displayName}{v.verified && <VerifiedSeal size={14} />}</span>
+                      <span className="flex items-center gap-1 font-display text-[17px] font-semibold">{v.displayName}{v.verified && <VerifiedSeal size={14} />}{v.ai && <AiBadge />}</span>
                       <span className="line-clamp-1 block text-[13px] text-ink-2">{v.bio}</span>
                       <span className="mono block text-[10.5px] text-gold-ink">{credibility(v)}</span>
                     </span>
