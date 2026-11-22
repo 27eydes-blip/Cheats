@@ -39,7 +39,11 @@ jobs:
       - name: Live contact-function log for 10 minutes (submit the form now)
         run: |
           echo "::notice::Log stream open for 10 minutes. Submit the contact form now."
-          timeout 600 npx wrangler pages deployment tail --project-name gleyde-security --environment production --format json > tail.json 2> tail.err || true
+          DEP=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/gleyde-security" \
+            | jq -r '.result.canonical_deployment.id')
+          echo "Watching production deployment $DEP"
+          timeout 600 npx wrangler pages deployment tail "$DEP" --project-name gleyde-security --format json > tail.json 2> tail.err || true
           tail -5 tail.err | grep -v -i token || true
           jq -c 'select(.event.request.url? and ((.event.request.url|test("/api/")))) |
             { at: (.eventTimestamp/1000|todate), method: .event.request.method,
