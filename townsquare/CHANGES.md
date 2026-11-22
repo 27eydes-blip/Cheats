@@ -1,3 +1,37 @@
+# What changed (live-v1)
+
+| Job | What | Commit on news-v1 |
+|---|---|---|
+| 1 | Final scores and live games load faster | `ee3777bc` |
+
+## Job 1: Final scores and live games load faster
+- **Live lane.** Every 30 seconds (`SPORTS_LIVE_INTERVAL_SEC`), separate from the 15-minute sync that keeps schedules and standings, the server refreshes only the games that need it:
+  - games the provider calls live;
+  - games past their expected end that aren't final yet;
+  - games that should have started but haven't been reported.
+
+  With the paid key, one live-score request per sport covers every live game. Games that have dropped off the live feed (which happens when they finish) get a single-game lookup, so finals arrive within about a minute. The free key uses single-game lookups only.
+- **Stays inside the rate limits.**
+  - Every TheSportsDB request now draws on one shared budget: `SPORTS_CALLS_PER_MIN`, default 25 on the free key and 90 on the paid key (TheSportsDB allows 30 and 100).
+  - A 429 pauses all requests for a minute.
+  - When every request in a live-lane round fails, the lane backs off: 30 s, 1 min, 2 min, then up to 5 min.
+  - At most 8 single-game lookups per round.
+- **Request counts in Control Room → Sports data**: the last minute (against the limit), last hour and today, broken down by kind, plus errors, rate limits, what the live lane is watching, its last run, and any back-off.
+- **Honest status.**
+  - When the provider says a game is finished (Match Finished, FT, Final, Game Over, AOT, Full Time…), it shows Final at once and never goes back to live.
+  - "Awaiting final score" appears only once a game is past its expected end and the provider hasn't confirmed the result, and for at most 20 minutes. Expected game lengths: NFL 3h20, college football 3h35, NBA 2h30, NHL 2h40, MLB 3h10, soccer 1h55.
+  - After those 20 minutes the game shows **Final (unconfirmed)** with the last known score and moves to the results.
+  - The awaiting pill is now a quiet outline instead of the red LIVE pill.
+- **Updates without reloading.**
+  - Game cards, the score strip, Game of the Day and the game page poll `/api/sports/changes` every 20 seconds while something is live or about to start. Polling pauses while the tab is hidden.
+  - The endpoint returns only the games that changed since the last answer, and sends a bodiless 304 (via ETag) when nothing changed.
+  - Changed scores flash. When a game moves between lists (it started or finished), the board reloads once.
+- **Server cache**: boards are cached in memory, keyed by league filter and time zone, for up to 15 seconds, and cleared the moment any game changes. Visitors never cause requests to TheSportsDB.
+- **"Updated 12s ago"** on the Scores page, counting from the last time the provider was actually checked.
+- **Database**: migration 14, additive (`games.changed_at`, `games.checked_at`, plus two indexes). It also clears the old stored "Awaiting final score" text, which is now worked out when a game is shown.
+- **Railway**: optional `SPORTS_CALLS_PER_MIN` and `SPORTS_LIVE_INTERVAL_SEC`. Leave both unset to get the defaults.
+- **Screenshots** (TEST teams, on `live-v1`): `screenshots/live-{phone,desktop}-{scores,scores-full,awaiting,unconfirmed,admin-usage}.png`.
+
 # What changed (markets-v1)
 
 Shipped to `news-v1` as one commit: `7dd28cf`.

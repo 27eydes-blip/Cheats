@@ -72,7 +72,7 @@ Teams show generated badges in their colors until you connect a **licensed** log
 | Build command | `npm run build` (Railway runs `npm ci` first) |
 | Start command | `npm run start:server` (seeds a brand-new database once, then starts on `$PORT`) |
 | Volume | mount at `/data` (keeps the database and uploads between deploys) |
-| Variables | `NODE_ENV=production`, `DATABASE_PATH=/data/app.db`, `UPLOAD_DIR=/data/uploads`, `APP_URL=https://<your-app>.up.railway.app`, `ADMIN_EMAILS=<your email>`; optional `FINNHUB_API_KEY` (and `FINNHUB_CALLS_PER_MIN`, default 50) |
+| Variables | `NODE_ENV=production`, `DATABASE_PATH=/data/app.db`, `UPLOAD_DIR=/data/uploads`, `APP_URL=https://<your-app>.up.railway.app`, `ADMIN_EMAILS=<your email>`; optional `FINNHUB_API_KEY` (and `FINNHUB_CALLS_PER_MIN`, default 50), `SPORTS_CALLS_PER_MIN` (default 25 free / 90 paid), `SPORTS_LIVE_INTERVAL_SEC` (default 30) |
 
 In production the sample accounts get private random passwords. Sign up with the email in `ADMIN_EMAILS` to get the Control Room.
 Node 22.13+ is required (`.nvmrc` and `engines` say so).

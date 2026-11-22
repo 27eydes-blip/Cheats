@@ -321,3 +321,29 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Holiday calendar** is a table copied from the NYSE's published 2025–2027 schedule. It must be extended for 2028. After 2027 the clock still works, but it treats unknown holidays as trading days.
 - **Sector move**: the sector ETF when it is quoted, otherwise the average of the sector's stocks (labeled "AVG OF STOCKS").
 - **Big board default sort** is alphabetical, like a real board. Number columns sort largest first on their first click.
+
+## live-v1, Job 1: Faster finals
+
+- **Expected game lengths** (start to final, generous on purpose so "Awaiting" doesn't show while play is still going): NFL 200 min, college football 215, NBA 150, NHL 160, MLB 190, MLS and Premier League 115. Overtime and extra innings can run longer; in that case the provider's live feed still has the game, so it stays "live".
+- **Phase is worked out when a game is read, not stored.** The provider's last word is stored as is. "Awaiting" and "Final (unconfirmed)" come from the clock (`phaseOf` in `status.ts`), so nothing ever has to clean up stale details, and a real final later replaces "unconfirmed" automatically.
+- **Unconfirmed games keep being checked** every 5 minutes for 12 hours after they start, so the confirmed final still arrives.
+- **Cadence**:
+  - Overdue finals: every 30 s (these are what people are waiting for).
+  - Live games: every 30 s with the paid key (one call per sport covers all of them), every 60 s on the free key (one call per game).
+  - Started but not yet reported: every 60 s.
+  - At most 8 single-game lookups per round.
+
+  On the free key, a busy NFL Sunday with 10 live games uses about 10 requests a minute, well under 25.
+- **Budgets**:
+  - Default `SPORTS_CALLS_PER_MIN` is 25 on the free key and 90 on paid keys (TheSportsDB allows 30 and 100).
+  - The 15-minute sync waits for budget (up to 30 s per request); the live lane and key stats never wait, and skip instead.
+  - A 429 pauses everything for 60 s. The live lane backs off only when a whole round failed.
+- **Free key**: the live lane uses `lookupevent.php`, which the free key allows; `livescore` (v2) is paid only. I couldn't call TheSportsDB from this workspace, so this is built against the documented formats and tested with recorded-shape fixtures.
+- **Changed-games endpoint**:
+  - The cursor is the server's clock in milliseconds. Each answer gives the next cursor, with 1 second of overlap so a change written at the same moment is never missed (merging the same game twice is harmless).
+  - Cursors older than 6 hours, or missing, get `{ full: true }` and the client reloads the board.
+  - The ETag is a hash of the changed games plus the last-checked time, so "Updated Xs ago" still moves.
+- **Client merge**: a score or detail change is merged in place and flashes. A status change (started or finished), or a newly live game that isn't on the board, triggers one full board reload, so games land in the right list.
+- **Polling every 20 s** (within the asked 15–30), and only while something is live or starts within 15 minutes.
+- **Cache**: the scoreboard is cached per league filter and time zone, cleared whenever `gamesVersion` changes (any game change or standings write), and kept at most 15 s so clock-based phases stay current. Game of the Day and My Teams are still worked out per visitor, from the cached board.
+- **Usage counts are kept in memory**, per minute for the last hour plus a running total for the day; they reset when the server restarts. That is enough to watch usage without a new table.
