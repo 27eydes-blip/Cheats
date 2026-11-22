@@ -3,6 +3,27 @@
 | Job | What | Commit on news-v1 |
 |---|---|---|
 | 1 | Final scores and live games load faster | `ee3777bc` |
+| 2 | The "Latest" ticker | `433a6ca6` |
+| — | Markets page showed two stock tapes (your report) | `28bce804` |
+
+## Job 2: The "Latest" ticker
+- **Redesigned strip** under the header: 32px tall, one line, with one accent color (blue).
+  - A bold **LATEST** tag with a small pulsing dot.
+  - One headline at a time, crossfading every 6 seconds.
+  - A thin blue progress line along the bottom edge that fills up until the next headline.
+  - Hovering, touching (it resumes 4 seconds after your finger lifts) or keyboard focus pauses it, progress line included.
+- **Each headline** shows the story, the outlet in small caps, and a relative time ("2m ago") in tabular monospace.
+  - The **BREAKING** tag appears only when a story really is breaking: the Control Room banner set to Breaking or Alert, or a live story with an update in the last 30 minutes. At most 3 items are flagged at once.
+  - Breaking items jump to the front, get one soft blue highlight pulse, and are announced to screen readers. A new breaking item arriving live takes the stage at once.
+  - On phones the outlet name is left off the visible line so the headline fits; screen readers still hear it.
+- **Markets** are a separate segment on wider screens, with their own smooth scroll, green ▲ and red ▼, tabular monospace numbers and soft fades at the edges. On the Markets page the strip carries news only.
+- **Tapping a headline opens the story.** Every link has a 44px tall tap area that overhangs the 32px bar, so the bar itself doesn't grow.
+- **Reduced motion**: no scrolling, no pulsing dot, no progress line and no highlight. The headline still changes every 8 seconds, without animation.
+- **No layout shift**: the bar has a fixed height, headlines are stacked in place and fade, and relative times are worked out from server time on the first paint. A browser test checks the 32px height, the 44px targets and that layout shift stays under 0.02 through a headline change.
+- Screenshots (TEST outlets, on `live-v1`): `screenshots/latest-{phone,desktop}{,-next,-reduced}.png`.
+
+## Fix: two stock tapes on the Markets page
+- The Markets page had a small stock tape under the header and the LED big board, both scrolling stocks. Only the LED board is left. It now leads with the S&P 500, Nasdaq-100, Dow and Russell 2000, then your watchlist (starred), then every other stock.
 
 ## Job 1: Final scores and live games load faster
 - **Live lane.** Every 30 seconds (`SPORTS_LIVE_INTERVAL_SEC`), separate from the 15-minute sync that keeps schedules and standings, the server refreshes only the games that need it:

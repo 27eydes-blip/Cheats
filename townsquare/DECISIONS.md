@@ -347,3 +347,17 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Polling every 20 s** (within the asked 15–30), and only while something is live or starts within 15 minutes.
 - **Cache**: the scoreboard is cached per league filter and time zone, cleared whenever `gamesVersion` changes (any game change or standings write), and kept at most 15 s so clock-based phases stay current. Game of the Day and My Teams are still worked out per visitor, from the cached board.
 - **Usage counts are kept in memory**, per minute for the last hour plus a running total for the day; they reset when the server restarts. That is enough to watch usage without a new table.
+
+## live-v1, Job 2: Latest ticker
+
+- **Crossfade instead of a continuous scroll** for headlines. A progress line only makes sense if one headline is shown at a time, and a still headline is easier to read than a moving one. The continuous scroll is kept for the markets segment, where the numbers are short.
+- **6 seconds per headline** (8 seconds with reduced motion), long enough to read a full headline. The progress line is a CSS animation, and the next headline is triggered when it ends, so pausing the animation pauses the rotation exactly. No timers run in that mode.
+- **What counts as breaking** (`src/lib/wire-logic.ts`):
+  - the newsroom banner at Breaking or Alert (an Update-level banner is not breaking);
+  - a live story whose newest update is under 30 minutes old.
+
+  Developing and ended stories never are. At most 3 items are flagged at once, so the word keeps its meaning.
+- **One accent**: blue for the dot, the progress line, the BREAKING tag and the highlight. The old red Breaking tag is gone; red and green are kept for market moves.
+- **Phones**: at 390px, LATEST, the BREAKING tag, the outlet and the time leave almost no room for the headline, so the outlet is left off the visible line (it stays in the link for screen readers). The time stays.
+- **Tap targets**: links are 44px tall with 6px negative margins, so the bar stays 32px with no layout shift. The browser test taps 2px from the top edge to prove the overhang works.
+- **Markets page**: the site-wide strip carries news only there, and the page keeps a single stock tape (the LED board, now with the indexes and your watchlist first).
