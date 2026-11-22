@@ -58,7 +58,7 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
           )}
           {it.teams?.map((t) => <TeamLogo key={t.id} team={t} size="sm" label={false} />)}
           {it.href ? (
-            <Link href={it.href} tabIndex={hidden ? -1 : undefined} className="text-[12px] whitespace-nowrap text-ink-2 hover:text-ink-1 hover:underline">{it.text}</Link>
+            <Link href={it.href} tabIndex={hidden ? -1 : undefined} className="flex h-[var(--wire-h)] items-center text-[12px] whitespace-nowrap text-ink-2 hover:text-ink-1 hover:underline">{it.text}</Link>
           ) : (
             <span className="text-[12px] whitespace-nowrap text-ink-2">{it.text}</span>
           )}
@@ -69,7 +69,7 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
         const up = q.changePct >= 0;
         return (
           <li key={q.symbol} className="flex items-center gap-2 pr-6">
-            <Link href={`/markets?s=${q.symbol}`} tabIndex={hidden ? -1 : undefined} className="mono flex items-center gap-1.5 text-[11.5px] whitespace-nowrap text-ink-3 hover:text-ink-1">
+            <Link href={`/markets?s=${q.symbol}`} tabIndex={hidden ? -1 : undefined} className="mono flex h-[var(--wire-h)] items-center gap-1.5 text-[11.5px] whitespace-nowrap text-ink-3 hover:text-ink-1">
               <span className="font-semibold text-ink-2">{INDEX[q.symbol] ?? q.symbol}</span>
               <span>{q.price.toFixed(2)}</span>
               <span className={up ? "text-[#34d399]" : "text-[#ff6b81]"}>{up ? "▲" : "▼"} {up ? "+" : ""}{q.changePct.toFixed(2)}%</span>

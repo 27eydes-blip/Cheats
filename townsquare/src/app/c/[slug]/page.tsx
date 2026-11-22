@@ -85,7 +85,7 @@ export default async function DeskPage({ params, searchParams }: { params: Promi
               {beat.map((s) => (
                 <li key={s.key} className="border-b border-rule py-4">
                   <Link href={`/news/story/${s.key}`} className="group block">
-                    <span className="folio !text-[10px] text-ink-3">{s.status === "live" ? "Live · " : ""}{s.section === "Top Stories" ? "National" : s.section} · {s.takes} dispatches</span>
+                    <span className="folio !text-[10px] text-ink-3">{s.status === "live" ? "Live · " : ""}{s.section === "Top Stories" ? "U.S." : s.section} · {s.takes} dispatches</span>
                     <span className="mt-1 block font-display text-[21px] leading-snug font-semibold group-hover:underline">{s.title}</span>
                     <MiniSplit split={s.split} className="mt-2" />
                   </Link>

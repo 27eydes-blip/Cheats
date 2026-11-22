@@ -200,3 +200,20 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **The card** keeps the quiet style: sponsor name, a bordered "Sponsored" label, headline, body, then the image under the text (fixed 1200:630 ratio, 12px corners, lazy loading), and a small button. The sponsor's initial sits where a dispatch has an avatar. With no image, or if an image fails to load, the card is text only, never a broken image. All links open in a new tab with `rel="noopener sponsored"`.
 - **Glydrift** was added by the migration: "Can you beat the Abyss???", "Play now at Glydrift.com", button "Play now", linking to `https://glydrift.com`, with a generated placeholder graphic in the app's colors (rendered on the server and cached). Upload the real image in Control Room → Sponsors; it replaces the placeholder. **The master switch is still off by default**, so Glydrift won't show until you turn sponsored cards on.
 - The Control Room front page now links to the Sponsors page (the old inline form was removed).
+
+## Part 5 — Quality pass
+
+- **Checked**: home, Friends, a topic page, Discover, search, profile, Alerts, notifications, messages, help, and the Control Room's News feeds and Sponsors pages, at phone (390px) and desktop (1280px), with Lighthouse (accessibility and best practices) and a tap-target audit. **Result: accessibility 100 and best practices 100 on every page checked; every control has a 44px tap area** (visible or invisible), with the exceptions below.
+- **Fixed**:
+  - Top nav items 42px → 44px tall.
+  - Compact buttons (Edit, Test, Sync, Remove, debate buttons…) keep their compact look but get an invisible 44px tap area from the shared button style.
+  - Filter chips, footer links, profile tabs, "How this is scored", Back, the Control Room link on admin pages, the friend-suggestion rows, and the debate card's links all reach 44px.
+  - Contrast: paused outlets in News feeds were drawn at 60% opacity, which dimmed their buttons below contrast; now only an "Off" label marks them. The active profile tab used dark text on the accent blue (4.47:1); it's now normal text with an accent underline, matching the other tab rows.
+  - Headings: topic pages and the profile's Credibility section skipped a heading level.
+  - Search overlay: it still had the old card-heavy look (huge display font, odds-style green/red "0/0" figures). Now it uses plain 15px titles, section, time and dispatch count, and a quiet selected-row marker, matching the compact feed.
+  - Labels: Business no longer shows an "M" badge (from its internal "markets" key); U.S. stories say "U.S." everywhere instead of "National".
+  - Feed errors no longer repeat the status ("error (HTTP 503): HTTP 503").
+  - The sponsor editor's desktop preview no longer leaves empty space below it.
+- **Deliberate exceptions**:
+  - **Ticker headlines are 32px tall**, not 44. The ticker scrolls inside a clipped strip, so invisible padding can't extend past it, and you asked for a thin ticker. I raised it from 28px to 32px; that is above the WCAG 2.2 AA minimum (24px). The same headlines are all in the feed.
+  - **Bylines and hashtags inside a dispatch** keep their text height. They are links inside text (the WCAG "inline" exception), and the whole dispatch row is already a large target that opens it.

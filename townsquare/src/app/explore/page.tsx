@@ -42,7 +42,7 @@ export default async function HotStoriesPage() {
               <Link href={`/news/story/${s.key}`} className="group grid grid-cols-[44px_1fr] gap-4 py-5 sm:grid-cols-[64px_1fr_auto]">
                 <span className="font-display text-[44px] leading-none font-semibold text-gold-ink sm:text-[56px]">{i + 1}</span>
                 <span className="min-w-0">
-                  <span className="flex items-center gap-2">{s.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{s.section === "Top Stories" ? "National" : s.section}</Kicker></span>
+                  <span className="flex items-center gap-2">{s.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{s.section === "Top Stories" ? "U.S." : s.section}</Kicker></span>
                   <span className="mt-1 block font-display text-[clamp(1.3rem,1.1rem+0.8vw,1.75rem)] leading-snug font-semibold group-hover:underline">{s.title}</span>
                   <span className="mt-2 flex flex-wrap items-center gap-4"><MiniSplit split={s.split} /><span className="mono text-[11.5px] text-ink-3">{s.takes} DISPATCHES · +{s.velocity} IN 6H</span></span>
                 </span>

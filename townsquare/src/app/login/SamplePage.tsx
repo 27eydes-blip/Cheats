@@ -23,7 +23,7 @@ export function SamplePage() {
         <ul className="divide-y divide-rule">
           {rest.map((s) => (
             <li key={s.key} className="py-2.5 first:pt-0">
-              <p className="folio !text-[9.5px] text-ink-3">{s.section === "Top Stories" ? "National" : s.section}</p>
+              <p className="folio !text-[9.5px] text-ink-3">{s.section === "Top Stories" ? "U.S." : s.section}</p>
               <p className="font-display text-[16px] leading-snug font-semibold">{s.title}</p>
               <MiniSplit split={s.split} className="mt-1.5" />
             </li>

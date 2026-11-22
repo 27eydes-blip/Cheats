@@ -163,7 +163,7 @@ export function SponsoredCard({ ad, preview }: { ad: SponsoredCardData; /** Cont
           <span aria-hidden="true">·</span>
           <span className="shrink-0 rounded-[4px] px-1 py-px text-[11.5px] font-semibold ring-1 ring-[var(--hairline)]">Sponsored</span>
         </p>
-        <a {...link} className="group block">
+        <a {...link} className="group block min-h-11">
           <span className="block text-[15px] leading-[21px] font-semibold text-ink-1 group-hover:underline">{ad.title}</span>
           {ad.body && <span className="block text-[14px] leading-[20px] text-ink-2">{ad.body}</span>}
         </a>

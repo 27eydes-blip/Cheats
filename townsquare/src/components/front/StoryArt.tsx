@@ -9,7 +9,7 @@ const SECTION: Record<string, { accent: string; icon: number; label: string }> =
   Tech: { accent: "#7fa3ff", icon: 3, label: "Tech" },
   Sports: { accent: "#22d3ee", icon: 4, label: "Sports" },
   Culture: { accent: "#7fa3ff", icon: 5, label: "Culture" },
-  "Top Stories": { accent: "#22d3ee", icon: 6, label: "National" },
+  "Top Stories": { accent: "#22d3ee", icon: 6, label: "U.S." },
 };
 
 /**

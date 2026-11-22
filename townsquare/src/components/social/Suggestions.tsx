@@ -18,8 +18,8 @@ export function Suggestions({ people, title = "People you may know", compact }: 
       )}
       <ul className={compact ? "" : "divide-y divide-rule"}>
         {people.map((u) => (
-          <li key={u.id} className={`flex items-center gap-3 ${compact ? "py-1.5" : "py-3"}`}>
-            <Link href={`/u/${u.handle}`} className="flex min-w-0 flex-1 items-center gap-3">
+          <li key={u.id} className={`flex min-h-12 items-center gap-3 ${compact ? "py-1" : "py-3"}`}>
+            <Link href={`/u/${u.handle}`} className="flex min-h-11 min-w-0 flex-1 items-center gap-3">
               <Avatar url={u.avatarUrl} name={u.displayName} handle={u.handle} size={compact ? 40 : 42} />
               <span className="min-w-0">
                 <span className="flex items-center gap-1 text-[14.5px] font-bold">{u.displayName}{u.verified && <VerifiedSeal size={14} />}</span>

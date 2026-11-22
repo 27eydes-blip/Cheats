@@ -8,6 +8,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 | 2 | Search crash fix, error boundary, client error logging | `f64b71f` |
 | 3 | One feed tab row, topics in the top nav, Your Topics | `14d8e8f` |
 | 4 | Sponsors with images, editor with preview, Glydrift | `aa7e47c` |
+| 5 | Quality pass: tap targets, contrast, headings, calmer search | (see below) |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -42,6 +43,14 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - A **Glydrift** sponsor is ready with a placeholder graphic. Sponsored cards are still **off** until you switch them on at the top of the Sponsors page.
 - Railway: nothing to add (images use the existing `UPLOAD_DIR` volume).
 - Screenshots: `screenshots/part4-{phone,desktop}-{sponsored,sponsor-editor,sponsor-list}.png` (a sponsored card with its image in the feed, the editor with live previews, the sponsor list with counters).
+
+## Part 5: Quality pass
+- Checked phone and desktop sizes, contrast and tap targets on all the main pages and the new Control Room pages: accessibility 100 and best practices 100 everywhere checked.
+- Every control now has at least a 44px tap area (invisible padding where the compact look should stay), except the thin ticker (32px) and links inside dispatch text; see DECISIONS.md.
+- Fixed two contrast problems (paused feeds, the active profile tab) and two heading-order problems.
+- The search overlay now matches the compact feed (no big display headings, no odds-style "0/0" numbers).
+- "Business" and "U.S." are labeled consistently everywhere.
+- Railway: nothing to add.
 
 ---
 

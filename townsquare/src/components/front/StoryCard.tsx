@@ -9,7 +9,7 @@ import { TeamChips } from "../sports/TeamChips";
 import { CoverageBar } from "../news/CoverageBar";
 import { FeedImage } from "../news/FeedImage";
 
-export const sectionName = (s: StorySummary) => (s.section === "Top Stories" ? "National" : s.section);
+export const sectionName = (s: StorySummary) => (s.section === "Top Stories" ? "U.S." : s.section);
 
 export function StatusTags({ s }: { s: StorySummary }) {
   return (

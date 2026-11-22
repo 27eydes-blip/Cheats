@@ -2,7 +2,7 @@ import Link from "next/link";
 
 /** Square-ish chips for filters and sections (no pills). */
 export function chipClass(active: boolean, extra = "") {
-  return `inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] font-semibold transition-[background-color,color,box-shadow] duration-200 ${
+  return `tap inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] font-semibold transition-[background-color,color,box-shadow] duration-200 ${
     active ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "bg-paper text-ink-2 ring-1 ring-rule hover:text-ink-1 hover:ring-rule-strong"
   } ${extra}`;
 }

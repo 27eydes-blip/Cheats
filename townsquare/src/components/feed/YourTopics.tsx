@@ -14,7 +14,7 @@ import { Sheet } from "../ui/Sheet";
 
 /** Small badge for a topic: a tile with its initial. Teams use their logo badge. */
 function TopicBadge({ topic }: { topic: string }) {
-  return <span aria-hidden="true" className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] font-display text-[13px] leading-none font-extrabold text-[#070b14]" style={{ background: "#7fa3ff" }}>{TOPIC_LABEL[topic]?.[0]}</span>;
+  return <span aria-hidden="true" className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] font-display text-[13px] leading-none font-extrabold text-[#070b14]" style={{ background: "#7fa3ff" }}>{(TOPIC_PAGE_LABEL[topic] ?? TOPIC_LABEL[topic])?.[0]}</span>;
 }
 
 /**
