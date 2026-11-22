@@ -10,6 +10,7 @@ import { mediaUrl } from "@/lib/users";
 import { Suspense } from "react";
 import { Providers } from "@/components/providers";
 import { RegisterSW } from "@/components/RegisterSW";
+import { TzCookie } from "@/components/sports/TzCookie";
 import { ChannelDial } from "@/components/shell/ChannelDial";
 import { TabBar } from "@/components/shell/TabBar";
 import { Rail } from "@/components/shell/Rail";
@@ -117,6 +118,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
           <TabBar unread={unread} unreadMessages={unreadDm} />
           <RegisterSW />
+          <TzCookie />
           <PhoneGestures />
           <Celebrate />
           <InstallPrompt />

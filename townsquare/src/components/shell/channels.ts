@@ -9,7 +9,7 @@ export const CHANNELS = [
   { key: "world", label: "World", href: topicHref("world") },
   { key: "markets", label: "Business", href: topicHref("markets") },
   { key: "tech", label: "Tech", href: topicHref("tech") },
-  { key: "sports", label: "Sports", href: topicHref("sports") },
+  { key: "sports", label: "Sports", href: "/sports" },
   { key: "culture", label: "Culture", href: topicHref("culture") },
   { key: "stockboard", label: "Markets", href: "/markets" },
   { key: "live", label: "Live", href: "/live" },
@@ -24,7 +24,7 @@ export function activeChannel(path: string, _c?: string | null) {
   void _c;
   const t = CHANNELS.find((c) => c.href.startsWith("/topics/") && (path === c.href || path.startsWith(c.href + "/")));
   if (t) return t.key;
-  if (path.startsWith("/sports")) return "sports";
+  if (path.startsWith("/sports") || path === "/topics/sports") return "sports";
   if (path.startsWith("/live")) return "live";
   if (path.startsWith("/markets")) return "stockboard";
   if (path.startsWith("/communities") || path.startsWith("/c/")) return "desks";

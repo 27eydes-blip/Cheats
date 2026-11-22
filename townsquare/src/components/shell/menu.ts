@@ -23,7 +23,7 @@ export function menuItems(o: { handle: string | null; isAdmin: boolean; wallet: 
   const more: MenuEntry[] = [
     { key: "rundown", label: "Rundown", href: "/rundown", icon: "rundown", auth: true },
     { key: "edition", label: "Morning Edition", href: "/briefing", icon: "edition" },
-    { key: "teams", label: "Teams", href: "/sports", icon: "teams" },
+    { key: "teams", label: "Teams", href: "/sports?view=teams", icon: "teams" },
     ...(o.isAdmin ? [{ key: "control", label: "Control Room", href: "/admin", icon: "control", auth: true } satisfies MenuEntry] : []),
   ];
   return signedIn ? { main, more } : { main: main.filter((m) => !m.auth), more: more.filter((m) => !m.auth) };

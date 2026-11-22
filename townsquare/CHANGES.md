@@ -1,3 +1,30 @@
+# What changed (sports upgrade)
+
+Shipped to `news-v1` as one commit ("Sports: scores, schedules, standings…"), so you can roll it back in Railway on its own.
+
+- **Sports is now a real section.** The Sports tab in the top nav opens `/sports` with three views:
+  - **Scores**: Live now, Today, Upcoming (the next 7 days, by day) and Results (the last 3 days), for all leagues or one (NFL, NBA, MLB, NHL, College Football, MLS, Premier League). Signed-in readers who picked teams in Your Topics see **Your teams** with each team's next game first.
+  - **Standings**: league tables (wins, losses and win share; draws, goal difference and points for soccer).
+  - **Teams**: the team directory that used to be the Sports page.
+- **Game pages** (`/sports/game/…`): the matchup with logos and records, the score or the local start time and venue, both teams' last five results, earlier meetings, and related stories.
+- **Team pages** now show the record and league rank, the schedule, recent results, then the team's stories.
+- **Sports news** (`/topics/sports`) has a scrolling score strip on top, and links to the scores page.
+- **Local times**: game times and "Today" follow each reader's own time zone (US Eastern until the browser reports it).
+- **Control Room → Sports data**: each league's last sync, games stored, any errors, and a **Sync now** button.
+- **Where the data comes from**: TheSportsDB, every 15 minutes. On the **free key** you get a limited number of upcoming and recent games per league and partial tables, with no live scores. Add a **paid key** (about $9 a month, thesportsdb.com) as `SPORTS_DATA_KEY` for full schedules, full tables, and live scores every 2 minutes during games.
+- **Not tested live**: this workspace can't reach TheSportsDB, so the first real sync happens on Railway about 30 seconds after the deploy. Open Control Room → Sports data a minute later: every league should say OK. If one says Failed, its error is listed there.
+- Database: two new tables (`games`, `standings`), added by an additive migration. Nothing existing is changed.
+
+## Railway variables (sports)
+
+| Variable | Needed? | What to put |
+|---|---|---|
+| `SPORTS_DATA_KEY` | Optional, recommended | Your TheSportsDB API key. Without it the free test key is used (limited data, no live scores). |
+| `SPORTS_SYNC_INTERVAL_MIN` | Optional | Minutes between full syncs. Default `15`, minimum `5`. |
+| `SPORTS_SYNC` | Optional | `off` stops the sports sync entirely. |
+
+---
+
 # What changed (polish-v1)
 
 Built on `news-v1`, in six parts. Railway deploys `news-v1`; the variables to add are listed under "Railway variables (polish-v1)" below. Each part is one commit on `news-v1` (the live branch), so you can roll back a part in Railway on its own. Screenshots are in `screenshots/` on the `polish-v1` branch only.

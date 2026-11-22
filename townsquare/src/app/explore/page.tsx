@@ -31,7 +31,7 @@ export default async function HotStoriesPage() {
           {CHANNELS.map((c) => (
             <Link key={c.key} href={c.href} className="inline-flex min-h-11 shrink-0 items-center rounded-[12px] px-3.5 text-[13px] font-bold tracking-[0.04em] text-ink-2 uppercase ring-1 ring-rule transition-all hover:text-[var(--wn-cyan-ink)] hover:ring-[var(--wn-glass-border-hot)] active:scale-95">{c.label}</Link>
           ))}
-          <Link href="/sports" className="inline-flex min-h-11 shrink-0 items-center rounded-[12px] px-3.5 text-[13px] font-bold tracking-[0.04em] text-ink-2 uppercase ring-1 ring-rule transition-all hover:text-[var(--wn-cyan-ink)] active:scale-95">Teams</Link>
+          <Link href="/sports?view=teams" className="inline-flex min-h-11 shrink-0 items-center rounded-[12px] px-3.5 text-[13px] font-bold tracking-[0.04em] text-ink-2 uppercase ring-1 ring-rule transition-all hover:text-[var(--wn-cyan-ink)] active:scale-95">Teams</Link>
         </nav>
         <h2 className="pt-2 font-display text-[22px] font-extrabold tracking-[0.03em] uppercase">Hot stories</h2>
       </div>

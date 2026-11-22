@@ -453,6 +453,53 @@ CREATE TABLE IF NOT EXISTS ai_mutes (
 `,
     after: (db) => seedAiAccounts(db),
   },
+  {
+    // Additive: schedules, scores and standings from the sports data provider.
+    id: 12,
+    name: "sports_games_standings",
+    sql: `
+CREATE TABLE IF NOT EXISTS games (
+  id           TEXT PRIMARY KEY,
+  league       TEXT NOT NULL,
+  season       TEXT NOT NULL DEFAULT '',
+  round        TEXT,
+  starts_at    INTEGER NOT NULL,
+  time_known   INTEGER NOT NULL DEFAULT 1,
+  status       TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled','live','final','postponed','canceled')),
+  detail       TEXT NOT NULL DEFAULT '',
+  venue        TEXT NOT NULL DEFAULT '',
+  home_name    TEXT NOT NULL,
+  away_name    TEXT NOT NULL,
+  home_team_id TEXT,
+  away_team_id TEXT,
+  home_score   INTEGER,
+  away_score   INTEGER,
+  updated_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS games_when ON games(starts_at);
+CREATE INDEX IF NOT EXISTS games_league ON games(league, starts_at);
+CREATE INDEX IF NOT EXISTS games_home ON games(home_team_id, starts_at);
+CREATE INDEX IF NOT EXISTS games_away ON games(away_team_id, starts_at);
+CREATE TABLE IF NOT EXISTS standings (
+  league     TEXT NOT NULL,
+  season     TEXT NOT NULL DEFAULT '',
+  team_name  TEXT NOT NULL,
+  team_id    TEXT,
+  rank       INTEGER NOT NULL,
+  played     INTEGER NOT NULL DEFAULT 0,
+  wins       INTEGER NOT NULL DEFAULT 0,
+  losses     INTEGER NOT NULL DEFAULT 0,
+  draws      INTEGER NOT NULL DEFAULT 0,
+  points     INTEGER,
+  goal_diff  INTEGER,
+  form       TEXT NOT NULL DEFAULT '',
+  note       TEXT NOT NULL DEFAULT '',
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (league, team_name)
+);
+CREATE INDEX IF NOT EXISTS standings_team ON standings(team_id)
+`,
+  },
 ];
 
 export function runMigrations(db: DatabaseSync) {
