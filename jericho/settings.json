@@ -23,7 +23,7 @@
   },
 
   "elevenlabs": {
-    "voiceId": "JBFqnCBsd6RMkjVDRZzb",
+    "voiceId": "Qy7xBgqsDA40HK0hK0SY",
     "modelId": "eleven_flash_v2_5",
     "outputFormat": "mp3_44100_128",
     "stability": 0.5,
