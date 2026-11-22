@@ -1,0 +1,254 @@
+// Starts the 3D presence (or the 2D visualizer if WebGL isn't available) and the small
+// pieces of page chrome around it: HUD glyphs, the look settings panel, the chat toggle,
+// and the "call in progress" signal. Everything here is visual; app logic is untouched.
+import { createVisualizer } from "../visualizer.js";
+
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, fallback) {
+    try {
+      return JSON.parse(localStorage.getItem(k)) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  set(k, v) {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
+    } catch {
+      /* private mode */
+    }
+  },
+};
+
+const DEFAULT_LOOK = { glow: 1, particles: 1, quality: "auto" };
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function autoLowPower() {
+  const small = Math.min(window.innerWidth, window.innerHeight) < 700;
+  const phone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const weak = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
+  return phone || small || weak;
+}
+
+function webglAvailable() {
+  try {
+    const c = document.createElement("canvas");
+    return Boolean(c.getContext("webgl2") || c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns the same interface the app already uses for its visualizer
+ * (setState, setMicLevel, setSpeechSource). Calls made before the 3D scene has
+ * loaded are remembered and replayed, so nothing is lost while it starts.
+ */
+export function createPresence({ onTap }) {
+  const pending = { state: "off", mic: 0, speech: [null, false], calling: false };
+  let impl = null;
+  let look = { ...DEFAULT_LOOK, ...store.get("jericho-look", {}) };
+  const stateWord = $("orb-label");
+
+  const proxy = {
+    setState(s) {
+      pending.state = s;
+      impl?.setState(s);
+      document.body.dataset.state = s;
+    },
+    setMicLevel(v) {
+      pending.mic = v;
+      impl?.setMicLevel(v);
+    },
+    setSpeechSource(analyser, fake = false) {
+      pending.speech = [analyser, fake];
+      impl?.setSpeechSource(analyser, fake);
+    },
+  };
+
+  function attach(next) {
+    impl = next;
+    impl.setState(pending.state);
+    impl.setMicLevel(pending.mic);
+    impl.setSpeechSource(...pending.speech);
+    impl.setCalling?.(pending.calling);
+    document.body.classList.add("presence-ready");
+  }
+
+  function fallback2D() {
+    const canvas = $("viz");
+    canvas.hidden = false; // it sits inside the start button, so tapping it still starts Jericho
+    document.body.classList.add("presence-2d");
+    attach(createVisualizer(canvas));
+  }
+
+  // Start the 3D scene after the page has painted, so the page never waits for it.
+  async function start3D() {
+    if (!webglAvailable()) return fallback2D();
+    try {
+      const { createScene } = await import("./scene.js");
+      const lowPower = look.quality === "low" || (look.quality === "auto" && autoLowPower());
+      const scene = createScene($("stage3d"), { lowPower, reducedMotion: reduced, glow: look.glow, particles: look.particles, onTap });
+      document.body.classList.toggle("low-power", lowPower);
+      if (look.quality === "auto" && !lowPower) {
+        // Too slow on this device? Switch to low power once, for this visit.
+        scene.onSlow(() => {
+          scene.dispose();
+          const lite = createScene(freshCanvas(), { lowPower: true, reducedMotion: reduced, glow: look.glow, particles: look.particles, onTap });
+          document.body.classList.add("low-power");
+          attach(lite);
+        });
+      }
+      attach(scene);
+    } catch (err) {
+      console.warn("3D presence unavailable, using 2D:", err);
+      fallback2D();
+    }
+  }
+
+  function freshCanvas() {
+    const old = $("stage3d");
+    const c = old.cloneNode(false);
+    old.replaceWith(c);
+    return c;
+  }
+
+  requestAnimationFrame(() => setTimeout(start3D, 0));
+
+  // Phones only report tilt after a tap asks for permission (iOS).
+  document.addEventListener(
+    "pointerup",
+    () => {
+      const ask = window.DeviceOrientationEvent?.requestPermission;
+      if (typeof ask === "function") ask.call(window.DeviceOrientationEvent).catch(() => {});
+    },
+    { once: true },
+  );
+
+  // ---- the status word follows the app's own label ------------------------------
+  const word = $("hud-word");
+  const sync = () => {
+    word.textContent = document.body.classList.contains("calling") && pending.state !== "speaking" ? "Calling" : stateWord.textContent;
+  };
+  new MutationObserver(sync).observe(stateWord, { childList: true, characterData: true, subtree: true });
+
+  // ---- live call signal: read-only look at /api/calls -----------------------------
+  async function pollCalls() {
+    try {
+      let token = "";
+      try {
+        token = localStorage.getItem("jericho-token") || "";
+      } catch {
+        /* private mode */
+      }
+      const res = await fetch("/api/calls", { headers: { "x-jericho-token": token } });
+      if (res.ok) {
+        const { calls } = await res.json();
+        const live = calls.some((c) => c.status !== "ended" && Date.now() - Date.parse(c.createdAt) < 15 * 60_000);
+        pending.calling = live;
+        impl?.setCalling?.(live);
+        document.body.classList.toggle("calling", live);
+        sync();
+      }
+    } catch {
+      /* offline: try again later */
+    }
+    setTimeout(pollCalls, document.hidden ? 15_000 : 4000);
+  }
+  setTimeout(pollCalls, 1500);
+
+  // ---- HUD glyphs: an invented alphabet, drawn from strokes on a small grid -----------
+  function glyph(seed) {
+    let s = seed;
+    const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+    const pts = [[2, 2], [8, 2], [14, 2], [2, 8], [8, 8], [14, 8], [2, 14], [8, 14], [14, 14]];
+    let d = "";
+    const strokes = 2 + Math.floor(rnd() * 3);
+    for (let i = 0; i < strokes; i++) {
+      const a = pts[Math.floor(rnd() * 9)];
+      const b = pts[Math.floor(rnd() * 9)];
+      d += rnd() < 0.3 ? `M${a[0]} ${a[1]}A6 6 0 0 1 ${b[0]} ${b[1]}` : `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`;
+    }
+    if (rnd() < 0.5) d += `M8 8m-1.4 0a1.4 1.4 0 1 0 2.8 0a1.4 1.4 0 1 0 -2.8 0`;
+    return `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d}"/></svg>`;
+  }
+  let seed = 7;
+  for (const row of document.querySelectorAll(".hud-glyphs")) {
+    const n = Number(row.dataset.count || 5);
+    row.innerHTML = Array.from({ length: n }, () => `<span class="g">${glyph((seed = (seed * 48271) % 2147483647))}</span>`).join("");
+  }
+  // every few seconds one glyph changes, like a slow readout
+  setInterval(() => {
+    if (reduced) return;
+    const all = document.querySelectorAll(".hud-glyphs .g");
+    const pick = all[Math.floor(Math.random() * all.length)];
+    if (pick) pick.innerHTML = glyph(Math.floor(Math.random() * 1e9) + 1);
+  }, 2600);
+
+  // ---- chat toggle ---------------------------------------------------------------------
+  const chatHidden = store.get("jericho-chat-hidden", false);
+  document.body.classList.toggle("chat-hidden", chatHidden);
+  const chatBtn = $("chat-toggle");
+  const syncChatBtn = () => {
+    const hidden = document.body.classList.contains("chat-hidden");
+    chatBtn.textContent = hidden ? "Show chat" : "Hide chat";
+    chatBtn.setAttribute("aria-pressed", String(hidden));
+  };
+  syncChatBtn();
+  chatBtn.addEventListener("click", () => {
+    document.body.classList.toggle("chat-hidden");
+    store.set("jericho-chat-hidden", document.body.classList.contains("chat-hidden"));
+    syncChatBtn();
+  });
+
+  // ---- look settings panel ----------------------------------------------------------------
+  const panel = $("look-panel");
+  const glowIn = $("look-glow");
+  const partIn = $("look-particles");
+  const qualIn = $("look-quality");
+  const show = () => {
+    glowIn.value = Math.round(look.glow * 100);
+    partIn.value = Math.round(look.particles * 100);
+    qualIn.value = look.quality;
+    $("look-glow-val").textContent = `${glowIn.value}%`;
+    $("look-particles-val").textContent = `${partIn.value}%`;
+  };
+  show();
+  const save = () => store.set("jericho-look", look);
+  $("look-open").addEventListener("click", () => {
+    panel.hidden = !panel.hidden;
+    $("look-open").setAttribute("aria-expanded", String(!panel.hidden));
+  });
+  $("look-close").addEventListener("click", () => {
+    panel.hidden = true;
+    $("look-open").setAttribute("aria-expanded", "false");
+  });
+  glowIn.addEventListener("input", () => {
+    look.glow = glowIn.value / 100;
+    impl?.setGlow?.(look.glow);
+    show();
+    save();
+  });
+  partIn.addEventListener("change", () => {
+    look.particles = partIn.value / 100;
+    impl?.setParticles?.(look.particles);
+    show();
+    save();
+  });
+  partIn.addEventListener("input", show);
+  qualIn.addEventListener("change", () => {
+    look.quality = qualIn.value;
+    save();
+    $("look-note").textContent = "Quality changes apply when the page reloads.";
+  });
+  $("look-reset").addEventListener("click", () => {
+    look = { ...DEFAULT_LOOK };
+    save();
+    impl?.setGlow?.(look.glow);
+    impl?.setParticles?.(look.particles);
+    show();
+  });
+
+  return proxy;
+}

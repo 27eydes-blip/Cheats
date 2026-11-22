@@ -1,0 +1,221 @@
+/* Full-screen 3D presence page. Shared colours come from style.css. */
+body.presence-page {
+  overflow: hidden;
+  background: #050403;
+  height: 100dvh;
+}
+
+/* ---- loading glow, visible before anything else has loaded ---- */
+.loading-glow {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 46%, rgb(255 205 120 / 55%) 0, rgb(214 150 60 / 22%) 8vmin, rgb(120 70 20 / 8%) 22vmin, transparent 40vmin);
+  animation: load-breathe 2.4s ease-in-out infinite;
+  transition: opacity 1.2s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes load-breathe { 50% { transform: scale(1.08); opacity: 0.7; } }
+.presence-ready .loading-glow { opacity: 0; }
+
+.stage3d {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  display: block;
+  touch-action: none; /* we handle drag and pinch */
+  cursor: grab;
+  z-index: 1;
+}
+.stage3d:active { cursor: grabbing; }
+.presence-2d .stage3d { display: none; }
+
+/* ---- start button ---- */
+.presence-page .orb {
+  position: fixed;
+  left: 50%;
+  top: 46%;
+  width: min(70vw, 52dvh, 420px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  z-index: 2;
+  pointer-events: none; /* taps go to the 3D scene, which presses this button */
+}
+.presence-page .orb:focus-visible { outline: 1px solid var(--gold-deep); outline-offset: 6px; }
+.presence-2d .orb { pointer-events: auto; cursor: pointer; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- header ---- */
+.presence-page .top {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 16px;
+  right: 16px;
+  z-index: 5;
+}
+.presence-page .top-link { background: rgb(10 9 7 / 45%); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.top-link.icon { display: inline-flex; align-items: center; padding: 6px 8px; cursor: pointer; font: inherit; }
+.top-link.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; }
+
+/* ---- status word ---- */
+.status-word {
+  position: fixed;
+  left: 50%;
+  top: calc(max(14px, env(safe-area-inset-top)) + 58px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 3;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--gold);
+  text-shadow: 0 0 12px rgb(240 180 80 / 50%);
+  pointer-events: none;
+  transition: color 0.8s ease, opacity 0.8s ease;
+}
+.status-word .tick { width: 22px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-deep)); }
+.status-word .tick:last-child { transform: scaleX(-1); }
+body[data-state="off"] .status-word,
+body[data-state="idle"] .status-word { color: var(--muted); text-shadow: none; }
+body.calling .status-word { color: #8fe6da; }
+
+/* ---- HUD ---- */
+.hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; opacity: 0.55; }
+.hud-corner { position: absolute; display: flex; gap: 10px; align-items: center; }
+.hud-corner.tl { top: calc(max(14px, env(safe-area-inset-top)) + 44px); left: 18px; flex-direction: column; align-items: flex-start; }
+.hud-corner.tr { top: calc(max(14px, env(safe-area-inset-top)) + 48px); right: 18px; flex-direction: row; align-items: flex-start; }
+.hud-corner.bl { left: 14px; top: 40%; }
+.hud-corner.br { right: 18px; top: 58%; flex-direction: column; align-items: flex-end; }
+.hud-glyphs { display: flex; gap: 6px; }
+.hud-glyphs.col { flex-direction: column; }
+.hud-glyphs .g { width: 11px; height: 11px; display: inline-block; animation: glyph-turn 14s linear infinite; }
+.hud-glyphs .g:nth-child(2n) { animation-duration: 22s; animation-direction: reverse; }
+.hud-glyphs svg { width: 100%; height: 100%; fill: none; stroke: var(--gold); stroke-width: 1.3; stroke-linecap: round; }
+@keyframes glyph-turn { to { transform: rotate(360deg); } }
+.hud-ruler {
+  width: 90px;
+  height: 7px;
+  border-bottom: 1px solid rgb(227 180 92 / 45%);
+  background: repeating-linear-gradient(90deg, rgb(227 180 92 / 55%) 0 1px, transparent 1px 9px) bottom / 100% 4px no-repeat;
+}
+.hud-ruler.v { width: 7px; height: 70px; border-bottom: 0; border-left: 1px solid rgb(227 180 92 / 45%); background: repeating-linear-gradient(180deg, rgb(227 180 92 / 55%) 0 1px, transparent 1px 9px) left / 4px 100% no-repeat; }
+.hud-ring {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(92vw, 74dvh, 640px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px dashed rgb(227 180 92 / 12%);
+  animation: hud-spin 120s linear infinite;
+}
+.hud-ring span { position: absolute; top: -3px; left: 50%; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: 0.6; }
+@keyframes hud-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+body.calling .hud-ring { border-color: rgb(95 230 214 / 22%); }
+
+/* ---- bottom dock: status, confirmation, chat, typing ---- */
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px max(12px, env(safe-area-inset-bottom));
+  max-width: 620px;
+  margin: 0 auto;
+  pointer-events: none; /* only its controls catch taps; the being stays draggable */
+}
+.dock > * { pointer-events: auto; }
+.dock .status { font-size: 0.8rem; text-shadow: 0 1px 8px #000; }
+.dock .heard { font-size: 0.85rem; min-height: 1.2em; }
+.chat-bar { width: 100%; display: flex; justify-content: flex-end; }
+.chat-toggle {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.chat-toggle:hover, .chat-toggle:focus-visible { color: var(--gold); }
+.presence-page .log {
+  flex: none;
+  max-height: min(26dvh, 220px);
+  overflow-y: auto;
+  gap: 5px;
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  scrollbar-width: none;
+}
+.presence-page .log li { font-size: 0.78rem; padding: 6px 11px; max-width: 86%; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.presence-page .log .you { background: rgb(227 180 92 / 12%); }
+.presence-page .log .jericho { background: rgb(23 20 15 / 55%); }
+.chat-hidden .log { display: none; }
+.presence-page .typed { position: static; }
+.presence-page .typed input { background: rgb(19 17 13 / 70%); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.presence-page .confirm button { backdrop-filter: blur(6px); }
+
+/* ---- look settings ---- */
+.look-panel {
+  position: fixed;
+  top: calc(max(14px, env(safe-area-inset-top)) + 46px);
+  right: 16px;
+  z-index: 6;
+  width: min(280px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgb(19 17 13 / 88%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+.look-panel[hidden] { display: none; }
+.look-head { display: flex; justify-content: space-between; align-items: center; }
+.look-head h2 { margin: 0; font-size: 0.75rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); }
+.look-panel label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+.look-panel label span { float: right; color: var(--text); }
+.look-panel input[type="range"] { accent-color: var(--gold); width: 100%; }
+.look-panel select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px; font: inherit; }
+.look-panel .hint { margin: 0; color: var(--muted); font-size: 0.75rem; }
+.look-panel #look-reset { align-self: flex-start; }
+
+/* ---- phones and calm motion ---- */
+@media (max-width: 600px) {
+  .hud-corner.bl, .hud-corner.br { display: none; }
+  .hud { opacity: 0.45; }
+  .presence-page .orb, .hud-ring { top: 40%; }
+  .loading-glow { background-position: 50% 40%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-glow, .hud-glyphs .g, .hud-ring { animation: none; }
+}
+.orb canvas[hidden] { display: none; }

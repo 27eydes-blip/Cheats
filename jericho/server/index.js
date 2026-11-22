@@ -101,7 +101,22 @@ async function streamTurn(req, res, url) {
 
 const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : undefined);
 
+// Three.js is served from node_modules (only its build and examples/jsm folders).
+const THREE_DIR = path.join(ROOT, "node_modules", "three");
+function serveVendor(url, res) {
+  const rel = decodeURIComponent(url.pathname.slice("/vendor/three/".length));
+  const file = path.resolve(THREE_DIR, rel);
+  const allowed = [path.join(THREE_DIR, "build") + path.sep, path.join(THREE_DIR, "examples", "jsm") + path.sep];
+  if (!allowed.some((dir) => file.startsWith(dir)) || !file.endsWith(".js") || !fs.existsSync(file)) {
+    res.writeHead(404).end("Not found");
+    return;
+  }
+  res.writeHead(200, { "content-type": MIME[".js"], "cache-control": "public, max-age=86400" });
+  fs.createReadStream(file).pipe(res);
+}
+
 function serveStatic(url, res) {
+  if (url.pathname.startsWith("/vendor/three/")) return serveVendor(url, res);
   const pages = { "/": "index.html", "/memory": "memory.html", "/calls": "calls.html" };
   const rel = pages[url.pathname] || decodeURIComponent(url.pathname).replace(/^\/+/, "");
   const file = path.resolve(PUBLIC_DIR, rel);

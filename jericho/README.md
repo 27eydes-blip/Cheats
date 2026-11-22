@@ -70,18 +70,34 @@ Phone notes: tap **Start** each time you open the page, because phones only allo
 tap. Keep the screen on, because phones stop listening when the screen locks. Android Chrome
 may beep when it restarts listening.
 
-## The visualizer
+## The presence (what you see)
 
-The circle in the middle is drawn live on a canvas:
+The page is a full-screen 3D scene made with Three.js, which is installed with npm and served from
+`node_modules` by Jericho itself. In the centre is a gold and amber being: a translucent pulsing
+core, tilted rings turning at different depths, thousands of orbiting particles, and tendrils that
+ripple like a jellyfish, all floating in a starfield.
 
-- **Say Jericho** (waiting): small dim bars, the core breathes slowly.
-- **Listening**: brighter core, the bars twitch with your microphone. On phones, the bars react
-  to what speech recognition hears instead, because a second mic stream can upset recognition.
-- **Thinking**: the outer ring spins faster and the bars ripple round the circle.
-- **Speaking**: the bars and core follow Jericho's actual ElevenLabs audio, through a Web Audio
-  analyser. With the browser's built-in voice there's no audio to measure, so they pulse smoothly.
+| State | What it does |
+|---|---|
+| Waiting for "Jericho" | Dim, breathes slowly, particles drift |
+| Listening | Brighter; the tendrils draw in toward the core, which reacts to your voice |
+| Thinking | The rings spin faster and arcs of energy crackle between them |
+| Speaking | The whole structure pulses with Jericho's actual voice, read from the same analyser as before |
+| On a phone call | Slow teal ripples spread outward, and the status word says "Calling" |
 
-With "reduce motion" switched on in your phone or computer settings, it moves slower and less.
+Changes between states always ease in, never snap.
+
+- **Moving around:** drag to rotate, scroll or pinch to zoom. Moving the mouse (or tilting the
+  phone) adds a little parallax. A quick tap on the light does what the old start button did.
+- **Chat:** the bubbles sit at the bottom; **Hide chat** tucks them away.
+- **Settings:** the ✺ button opens a small panel for glow strength, particle amount and quality
+  (Auto, High or Low power), saved in your browser.
+- **Low power:** chosen automatically on phones, small screens and slower machines. It uses
+  fewer particles and no bloom. A device that turns out to run below about 38 frames a second
+  switches to it after a few seconds.
+- **Reduced motion:** with "reduce motion" on in your system settings, everything moves slower
+  and calmer.
+- **No WebGL:** without it, the earlier 2D gold visualizer is used instead.
 
 ## Memory and learning how you talk
 
@@ -270,7 +286,10 @@ server/calls/agent.js     the Claude agent on the phone, and the pretend busines
 server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json, announcements
 server/tools/calls.js     make_call + recent_calls tools
 server/tools/deepThink.js sends hard questions to the stronger model
-public/                   the web page (index.html, app.js, visualizer.js, style.css)
+public/                   the web page (index.html, app.js, style.css)
+public/presence/          the 3D presence: scene.js (Three.js), index.js (loading, fallback, HUD, settings)
+public/presence.css       full-screen layout, HUD and dock
+public/visualizer.js      the 2D fallback visualizer
 public/memory.html, memory.js  the /memory page
 public/calls.html, calls.js    the /calls page
 data/                     your memories and style notes (git-ignored)

@@ -3,41 +3,91 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0907">
+  <meta name="theme-color" content="#050403">
   <meta name="color-scheme" content="dark">
   <title>Jericho</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="presence.css">
+  <link rel="modulepreload" href="/vendor/three/build/three.module.min.js">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three/build/three.module.min.js",
+        "three/addons/": "/vendor/three/examples/jsm/"
+      }
+    }
+  </script>
 </head>
-<body>
-  <main>
-    <header class="top">
-      <h1 id="name">Jericho</h1>
-      <nav class="top-links">
-        <a class="top-link" href="/calls">Calls</a>
-        <a class="top-link" href="/memory">Memory</a>
-      </nav>
-    </header>
+<body class="presence-page" data-state="off">
+  <!-- Shows instantly while the 3D scene starts -->
+  <div class="loading-glow" aria-hidden="true"></div>
+  <canvas id="stage3d" class="stage3d" aria-hidden="true"></canvas>
 
-    <section class="stage">
-      <button id="orb" class="orb" data-state="off" aria-label="Start listening">
-        <canvas id="viz" aria-hidden="true"></canvas>
+  <!-- Small HUD details around the edges -->
+  <div class="hud" aria-hidden="true">
+    <div class="hud-corner tl"><div class="hud-glyphs" data-count="6"></div><div class="hud-ruler"></div></div>
+    <div class="hud-corner tr"><div class="hud-ruler v"></div><div class="hud-glyphs col" data-count="4"></div></div>
+    <div class="hud-corner bl"><div class="hud-glyphs col" data-count="4"></div></div>
+    <div class="hud-corner br"><div class="hud-ruler"></div><div class="hud-glyphs" data-count="5"></div></div>
+    <div class="hud-ring"><span></span></div>
+  </div>
+
+  <header class="top">
+    <h1 id="name">Jericho</h1>
+    <nav class="top-links">
+      <a class="top-link" href="/calls">Calls</a>
+      <a class="top-link" href="/memory">Memory</a>
+      <button id="look-open" class="top-link icon" type="button" aria-label="Look settings" aria-expanded="false" aria-controls="look-panel">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg>
       </button>
-      <p id="orb-label" class="state-label">Start</p>
-      <p id="status" class="status" role="status">Tap the circle, then say “Jericho”.</p>
-      <p id="heard" class="heard" aria-live="polite"></p>
-      <div id="confirm" class="confirm" hidden>
-        <button id="yes" class="yes">Yes</button>
-        <button id="no" class="no">No</button>
-      </div>
-    </section>
+    </nav>
+  </header>
 
+  <!-- The start button: invisible over the 3D scene (tapping the light presses it);
+       it shows the 2D visualizer if WebGL isn't available. -->
+  <button id="orb" class="orb" data-state="off" aria-label="Start listening">
+    <canvas id="viz" aria-hidden="true" hidden></canvas>
+  </button>
+
+  <div class="status-word" aria-hidden="true"><span class="tick"></span><span id="hud-word">Start</span><span class="tick"></span></div>
+  <p id="orb-label" class="state-label sr-only">Start</p>
+
+  <section class="dock">
+    <p id="status" class="status" role="status">Tap the light, then say “Jericho”.</p>
+    <p id="heard" class="heard" aria-live="polite"></p>
+    <div id="confirm" class="confirm" hidden>
+      <button id="yes" class="yes">Yes</button>
+      <button id="no" class="no">No</button>
+    </div>
+    <div class="chat-bar">
+      <button id="chat-toggle" class="chat-toggle" type="button" aria-controls="log">Hide chat</button>
+    </div>
     <ol id="log" class="log" aria-label="Conversation"></ol>
-
     <form id="typed" class="typed" autocomplete="off">
       <input id="typed-text" placeholder="Or type a request…" aria-label="Type a request">
       <button type="submit">Send</button>
     </form>
-  </main>
+  </section>
+
+  <aside id="look-panel" class="look-panel" hidden aria-label="Look settings">
+    <div class="look-head"><h2>Look</h2><button id="look-close" class="del" type="button">Close</button></div>
+    <label>Glow <span id="look-glow-val">100%</span>
+      <input id="look-glow" type="range" min="0" max="200" step="5" value="100">
+    </label>
+    <label>Particles <span id="look-particles-val">100%</span>
+      <input id="look-particles" type="range" min="20" max="160" step="10" value="100">
+    </label>
+    <label>Quality
+      <select id="look-quality">
+        <option value="auto">Auto</option>
+        <option value="high">High (bloom, more particles)</option>
+        <option value="low">Low power</option>
+      </select>
+    </label>
+    <p id="look-note" class="hint">Saved in this browser.</p>
+    <button id="look-reset" class="del" type="button">Reset</button>
+  </aside>
+
   <script src="app.js" type="module"></script>
 </body>
 </html>

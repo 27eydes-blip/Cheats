@@ -1,6 +1,6 @@
 // Jericho in the browser: ears (speech recognition + wake word), mouth (audio playback)
 // and the gold visualizer. All thinking and all API keys live on the server.
-import { createVisualizer } from "./visualizer.js";
+import { createPresence } from "./presence/index.js";
 
 const $ = (id) => document.getElementById(id);
 const orb = $("orb");
@@ -9,7 +9,8 @@ const statusEl = $("status");
 const heardEl = $("heard");
 const logEl = $("log");
 const confirmBox = $("confirm");
-const viz = createVisualizer($("viz"));
+// The 3D presence (or the 2D visualizer without WebGL). Tapping it works like the old start button.
+const viz = createPresence({ onTap: () => orb.click() });
 
 // ---- identity & access token -------------------------------------------------
 const store = {
