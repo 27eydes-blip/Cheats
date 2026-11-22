@@ -1,3 +1,29 @@
+# What changed (markets-v1)
+
+Shipped to `news-v1` as one commit: `7dd28cf`.
+
+## The Trading Floor (`/markets`)
+- **More stocks**: 110 large-cap U.S. stocks across all 11 sectors (Materials, Utilities and Real Estate are new). Also the 11 sector ETFs (XLK, XLC, XLY, XLP, XLF, XLV, XLE, XLI, XLB, XLU, XLRE) and bonds, gold, oil and the dollar via TLT, GLD, USO and UUP.
+- **New look**, a trading-floor feel without any exchange's name or branding:
+  - **Bell clock**: a big countdown to the next opening or closing bell, the New York time, the trading day on a 4 AM–8 PM rail (pre-market, session, after hours) with a "now" marker, and the next holidays and early closes.
+  - **LED big board**: every stock crawls past in glowing dot-matrix type, alphabetically. It pauses on hover and focus, and with reduced motion it stops and can be scrolled by hand.
+  - **Floor stats**: advancing, declining and unchanged stocks, the average move, and the leading and lagging sectors.
+  - **Sector board**: each sector's move (from its ETF), up and down counts, and its best stock. Picking a sector filters the big board.
+  - **The big board table**: all 110 stocks, sortable by any column, filterable by sector chips or a search box. Prices flash green or red as they tick. Picking a row opens its chart.
+  - **"Beyond stocks" strip** for bonds, gold, oil and the dollar.
+  - The heatmap now covers all 11 sectors. Index cards, the big chart and your watchlist stay.
+- **Exchange calendar**: NYSE holidays and 1:00 PM early closes for 2025–2027. Labels read, for example, "Closed for Thanksgiving" and "Market open · early close". Countdowns are exact across daylight-saving changes.
+
+## Making the data run well
+- **Live quotes no longer overrun the free Finnhub plan.** Before, every page load fetched every symbol at once (about 40 calls, more with each new stock).
+  - Every call now goes through one shared budget: `FINNHUB_CALLS_PER_MIN`, default 50, under the free plan's 60.
+  - Pages answer from a quote store straight away and refresh it in the background. Indexes refresh first, then sector ETFs, then the stalest stocks.
+  - A "too many requests" (429) answer pauses all calls for a minute, and the last good prices keep showing.
+  - Unknown tickers are dropped, and price-history calls that the plan doesn't include (a 403) stop for an hour so they don't use up the budget.
+- **Smaller refreshes**: the board's 4-second (demo) or 15-second (live) refresh only carries intraday lines for symbols that draw one. Without this, adding 110 stocks would have meant about 100 KB per refresh.
+- Railway: optional `FINNHUB_CALLS_PER_MIN` (leave it unset on the free plan). Database: no changes.
+- Screenshots (demo prices, on `markets-v1`): `screenshots/markets-{phone,desktop}.png`, `screenshots/markets-bigboard-{phone,desktop}.png`.
+
 # What changed (sections-v1)
 
 Two jobs, each shipped to `news-v1` as its own commit so it can be rolled back on its own.

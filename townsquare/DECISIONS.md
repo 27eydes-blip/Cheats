@@ -307,3 +307,17 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **One accent**: blue for links, chips, wins and the hero; red only for the LIVE tag and live card outlines. Form strips use a blue W, an outlined L and a gray D, instead of green and red.
 - **My Teams** is the same list as the teams in Your Topics. The new Add to My Teams button on team pages edits it.
 - **Time zones**: as before, from the `tz` cookie the browser sets. Until then, US Eastern.
+
+## markets-v1: Trading Floor
+
+- **"Feel like the NY Stock Exchange" without impersonating it**: no exchange names, logos or bell sounds. The feel comes from an LED big board, a bell countdown, floor stats and a sector board. The page says WorldNet News is not affiliated with any exchange.
+- **Colors**: green and red mean up and down only. LED symbols are white, and cyan stays the markets accent. I did not add amber "classic board" LEDs, to keep to the one-accent rule.
+- **Which 110 stocks**: well-known large caps, about 5–17 per sector, picked so every sector reads on its own. `base` prices are only starting points for the demo simulator.
+- **Rate limit**: one token bucket (`src/lib/markets/finnhub.ts`) shared by quotes and candles.
+  - The free plan allows 60 calls a minute; the default is 50 to leave headroom.
+  - With about 130 symbols, a full refresh takes about 2.5 minutes. Indexes refresh about every 20 seconds while the market is open; when it's closed, everything refreshes every 15 minutes.
+  - A paid plan can raise `FINNHUB_CALLS_PER_MIN`.
+- **No background timer**: each request starts at most one refresh pass, and nothing else runs on its own, so an idle server makes no calls. A page waits at most 1.5 seconds, and only for symbols it has never seen.
+- **Holiday calendar** is a table copied from the NYSE's published 2025–2027 schedule. It must be extended for 2028. After 2027 the clock still works, but it treats unknown holidays as trading days.
+- **Sector move**: the sector ETF when it is quoted, otherwise the average of the sector's stocks (labeled "AVG OF STOCKS").
+- **Big board default sort** is alphabetical, like a real board. Number columns sort largest first on their first click.
