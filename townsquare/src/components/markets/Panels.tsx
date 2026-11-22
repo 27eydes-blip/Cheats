@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { Quote } from "@/lib/markets/provider";
 import { addWatchAction, removeWatchAction } from "@/actions/markets";
-import { ALL_TICKERS, INDEX_OF, SECTORS, STOCKS, proxyNote } from "@/lib/markets/universe";
+import { ALL_TICKERS, INDEX_OF, STOCKS, proxyNote } from "@/lib/markets/universe";
 import { CloseIcon, PlusIcon } from "../icons";
 import { useToast, useViewer } from "../providers";
 import { AreaChart, MiniLine, PriceChart, type Bar } from "./Charts";
@@ -215,60 +215,6 @@ function WatchPrice({ q }: { q: Quote }) {
       <span key={f.key} className={`mono block rounded-[6px] text-[14px] text-white ${f.cls}`}>{fmtPrice(q.price)}</span>
       <span className={`mono block text-[11.5px] font-semibold ${tone(q)}`}>{fmtPct(q.changePct)}</span>
     </>
-  );
-}
-
-/** Sector heatmap: tile size by company size, color by today's move. */
-export function Heatmap() {
-  const { quotes, select } = useMarket();
-  const sectors = SECTORS.map((x) => x.key) as string[];
-  const ink = (p: number) => {
-    // Black or white ink, whichever contrasts more; the worst case is still above 4.5:1.
-    const m = color(p).match(/\d+/g)!.map((v) => Number(v) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-    const L = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
-    // Whichever of white or near-black contrasts more with this tile.
-    return 1.05 / (L + 0.05) >= (L + 0.05) / 0.05 ? "#ffffff" : "#000000";
-  };
-  const color = (p: number) => {
-    const a = Math.min(1, Math.abs(p) / 3);
-    return p >= 0 ? `rgb(${Math.round(10 + 10 * a)} ${Math.round(70 + 140 * a)} ${Math.round(60 + 70 * a)})` : `rgb(${Math.round(90 + 150 * a)} ${Math.round(40 + 20 * a)} ${Math.round(60 + 20 * a)})`;
-  };
-  return (
-    <section aria-labelledby="heat" className="[content-visibility:auto] [contain-intrinsic-size:auto_560px] rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 id="heat" className="folio text-[var(--wn-cyan-ink)]">Heatmap · {STOCKS.length} stocks</h2>
-        <span className="mono flex items-center gap-1.5 text-[10px] text-white/50">−3% <span className="h-2 w-16 rounded-full" style={{ background: `linear-gradient(90deg, ${color(-3)}, #1b2840, ${color(3)})` }} /> +3%</span>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-        {sectors.map((sec) => {
-          const list = STOCKS.filter((t) => t.sector === sec);
-          return (
-            <div key={sec}>
-              <p className="mono mb-1 text-[10px] tracking-wider text-white/50 uppercase">{sec}</p>
-              <div className="grid grid-flow-dense auto-rows-[44px] grid-cols-4 gap-[3px]">
-                {list.map((t) => {
-                  const q = quotes[t.symbol];
-                  const p = q?.changePct ?? 0;
-                  return (
-                    <button
-                      key={t.symbol}
-                      type="button"
-                      onClick={() => select(t.symbol)}
-                      title={`${t.name} ${fmtPct(p)}`}
-                      className={`flex flex-col items-center justify-center rounded-[6px] transition-transform hover:z-10 hover:scale-105 hover:ring-1 hover:ring-[#22d3ee] ${t.size === 3 ? "col-span-2 row-span-2" : t.size === 2 ? "col-span-2" : ""}`}
-                      style={{ background: color(p), color: ink(p) }}
-                    >
-                      <span className={`mono font-bold ${t.size === 3 ? "text-[15px]" : "text-[11px]"}`}>{t.symbol}</span>
-                      <span className="mono text-[10px]">{fmtPct(p)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 

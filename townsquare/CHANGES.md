@@ -1,3 +1,45 @@
+# What changed (heatmap-v1, overnight job 2)
+
+Shipped to `news-v1`; the commit hash is in OVERNIGHT.md.
+
+## Futuristic 3D heatmap, above the Big Board
+- **New order on /markets**:
+  1. bell clock;
+  2. index cards (plus the bonds/gold/oil/dollar strip);
+  3. the LED big-board strip;
+  4. floor stats and the sector board;
+  5. **the heatmap**;
+  6. the Big Board table;
+  7. the big chart and your watchlist;
+  8. top movers and Business stories.
+
+  The same order on phones, with the heatmap at full width.
+- **Look**:
+  - A dark glass "floor" with a faint perspective grid and soft blue edge light.
+  - Each sector is a floating glass plate with a thin glowing border, its name, and its average move (with ▲/▼).
+  - Tiles are raised blocks with beveled edges, an inner highlight and a shadow.
+  - Tile height and glow grow with the size of the move: big gains glow green, big losses red, flat stocks stay dim.
+  - It's built with CSS 3D only (perspective, translateZ, a slight rotateX); no WebGL and no new libraries.
+- **Interaction**:
+  - Hovering, keyboard focus or touch-and-hold lifts a tile and shows a floating card with the company, price, change, day range and sector.
+  - On desktop, a gentle tilt follows the pointer, at most 3°.
+  - Tapping a stock opens its chart, as before.
+  - **Tapping a sector plate zooms into that sector** (bigger tiles with names) with a **Back** button, filters the Big Board table to that sector, and offers "See them in the table ↓". Escape also goes back. The sector chips, sector board and search keep working with it.
+- **Live updates**: a tile flashes briefly when its price ticks, and its color and glow ease to the new level. The three biggest movers get a thin pulsing outline.
+- **Legend** for the color scale (−3% to +3%) and the glow scale. Mode toggle: **Day change** (equal tiles) and **Market cap** (tiles sized by company size). There is no Volume mode, because the live quotes don't include volume.
+- **Accessibility and comfort**:
+  - Every percent has ▲, ▼ or ■, so color is never the only signal. White tile text keeps WCAG AA contrast at every move size (tested).
+  - Sector plates have 44px tap targets.
+  - With reduced motion there's no tilt, glow animation, pulse or zoom transition: the same design, flat.
+  - Phones and touch screens get a simpler depth (shadow and glow only, no 3D or tilt).
+- **Performance**:
+  - 120 tiles, each re-rendered only when its own numbers change.
+  - The tilt writes CSS variables once per frame without React renders.
+  - `will-change` is set only while the pointer is over the heatmap.
+  - Scrolling past it held 60fps (16.7 ms median frames) on phone and desktop in the test browser.
+- Data layer and rate limiter: unchanged.
+- Screenshots (demo prices, on `heatmap-v1`): `screenshots/heatmap-{phone,desktop}.png` and `screenshots/heatmap-{phone,desktop}-zoomed.png`.
+
 # What changed (tickers-v1, overnight job 1)
 
 Shipped to `news-v1`; the commit hash is in OVERNIGHT.md.

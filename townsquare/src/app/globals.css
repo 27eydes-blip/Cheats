@@ -452,3 +452,66 @@ html.light .tl-row:hover { background: rgb(10 18 34 / 0.02); }
   .wire-dot::after, .wire-flash { animation: none; }
   .wire-progress { display: none; }
 }
+
+/* Markets heatmap: a lit glass floor with raised tiles (CSS 3D; flat on phones and with reduced motion) */
+.hm-floor {
+  --depth: 1;
+  position: relative; overflow: hidden; border-radius: var(--r-lg);
+  background: radial-gradient(120% 70% at 50% 0%, rgb(47 107 255 / 0.16), transparent 60%), linear-gradient(180deg, #0a1222, #060a14);
+  border: 1px solid rgb(127 163 255 / 0.2);
+  box-shadow: inset 0 1px 0 rgb(127 163 255 / 0.18), inset 0 0 40px -12px rgb(47 107 255 / 0.45), 0 18px 50px -24px rgb(0 0 0 / 0.9);
+}
+.hm-floor::before {
+  content: ""; position: absolute; left: -20%; right: -20%; bottom: -10%; height: 70%; pointer-events: none;
+  background-image: linear-gradient(rgb(127 163 255 / 0.09) 1px, transparent 1px), linear-gradient(90deg, rgb(127 163 255 / 0.09) 1px, transparent 1px);
+  background-size: 44px 44px; transform: perspective(500px) rotateX(58deg); transform-origin: bottom;
+  -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 85%); mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+}
+.hm-stage { transform-style: preserve-3d; transform: perspective(1600px) rotateX(calc(3deg + var(--rx, 0deg))) rotateY(var(--ry, 0deg)); transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.hm-floor:hover .hm-stage { will-change: transform; }
+.hm-plate {
+  position: relative; transform-style: preserve-3d; transform: translateZ(calc(8px * var(--depth)));
+  border-radius: 12px; background: rgb(13 21 38 / 0.82);
+  border: 1px solid rgb(127 163 255 / 0.24);
+  box-shadow: 0 0 0 1px rgb(47 107 255 / 0.06), 0 0 18px -6px rgb(47 107 255 / 0.4), 0 14px 26px -14px rgb(0 0 0 / 0.85), inset 0 1px 0 rgb(255 255 255 / 0.07);
+}
+.hm-zoom { animation: hm-zoom 0.38s cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes hm-zoom { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+.hm-tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; overflow: visible;
+  border-radius: 7px; border: 1px solid rgb(255 255 255 / 0.07); background-color: var(--fill);
+  transform: translateZ(calc(var(--lift) * 1px * var(--depth)));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 -2px 0 rgb(0 0 0 / 0.32),
+    0 calc(2px + var(--lift) * 0.45px) calc(5px + var(--lift) * 0.9px) rgb(0 0 0 / 0.55),
+    0 0 calc(var(--glow-a) * 24px) rgb(var(--gc) / var(--glow-a));
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.7s ease, background-color 0.7s ease, filter 0.2s;
+}
+.hm-tile:hover, .hm-tile:focus-visible, .hm-tile[data-held] { transform: translateZ(calc((var(--lift) + 26) * 1px * var(--depth))) scale(1.07); filter: brightness(1.2); z-index: 5; }
+.hm-tile:focus-visible { outline: 2px solid var(--wn-blue-ink); outline-offset: 2px; }
+.hm-tile[data-mover] { outline: 1px solid rgb(var(--gc) / 0.85); outline-offset: 2px; animation: hm-pulse 2.6s ease-in-out infinite; }
+@keyframes hm-pulse { 50% { outline-color: rgb(var(--gc) / 0.2); } }
+.hm-flash { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: hm-flash 0.9s ease-out forwards; }
+.hm-flash-up { background: rgb(46 230 166 / 0.4); }
+.hm-flash-down { background: rgb(255 92 122 / 0.4); }
+@keyframes hm-flash { from { opacity: 1; } to { opacity: 0; } }
+.hm-card {
+  position: absolute; z-index: 40; width: 240px; pointer-events: none; padding: 10px 12px; border-radius: 12px;
+  background: rgb(9 15 28 / 0.96); border: 1px solid rgb(127 163 255 / 0.35);
+  box-shadow: 0 0 22px -6px rgb(47 107 255 / 0.55), 0 18px 40px -12px rgb(0 0 0 / 0.9);
+}
+.hm-swatch { display: inline-block; width: 14px; height: 10px; border-radius: 3px; background: var(--fill); box-shadow: 0 0 calc(var(--glow-a) * 14px) rgb(var(--gc) / var(--glow-a)); }
+/* Phones and touch screens: shadow and glow only, no 3D, no tilt. */
+@media (hover: none), (max-width: 640px) {
+  .hm-floor { --depth: 0; }
+  .hm-stage { transform: none; transition: none; }
+}
+/* Reduced motion: the flat version, no tilt, glow animation, pulse or zoom. */
+@media (prefers-reduced-motion: reduce) {
+  .hm-floor { --depth: 0; }
+  .hm-stage { transform: none; transition: none; }
+  .hm-tile { transition: none; }
+  .hm-tile:hover, .hm-tile:focus-visible, .hm-tile[data-held] { transform: none; }
+  .hm-tile[data-mover], .hm-zoom, .hm-flash { animation: none; }
+  .hm-flash { display: none; }
+}

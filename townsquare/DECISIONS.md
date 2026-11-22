@@ -374,3 +374,13 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Index names**: `INDEX_ETFS` now carry the fund's real name. `INDEX_OF` keeps the index each fund tracks, and `proxyNote()` and `fundLabel()` are used everywhere a fund price appears. One-line strips use the fund label instead of the long note; the note is in the tooltip.
 - **Unknown tickers in demo mode** get a simulated price, labeled DEMO, like every demo price. With a real key, a symbol Finnhub doesn't know gets "No price for X yet".
 - **Bad ticker addresses** (`/markets/123`) show the not-found page. Because `/markets` has a loading screen, the response streams with status 200, as other routes with loading screens already do.
+
+## heatmap-v1 (overnight job 2): 3D heatmap
+
+- **Where the big chart and watchlist went**: your order put the heatmap and the Big Board table right after the sector board, so the big chart and watchlist moved below the table. Tapping a row or a tile still scrolls to the chart.
+- **Sector plate tap**: zooms the heatmap into that sector, filters the Big Board table, and keeps the zoomed heatmap in view (you just asked for a closer look). A "See them in the table ↓" button smooth-scrolls to the filtered table. Back clears the filter that the zoom set. If you pick a different sector elsewhere (chips or the sector board) while zoomed, the zoom follows.
+- **Modes**: "Day change" uses equal tiles, so it's all about the move; "Market cap" sizes tiles by our 3-step company-size buckets (the data has no exact market caps). "Volume" is left out because the live quotes don't include volume and the demo volumes are only simulated chart data.
+- **Scaling**: magnitude = √(|move| ÷ 3%), capped at 1, so small moves still show. Lift is up to 18px and glow opacity up to 0.75. Moves under 0.1% count as flat. Tile colors mix the floor color toward green or red by at most 62%, so white text stays at 4.5:1 or better (a test checks every 0.25% step).
+- **Biggest movers** = the three largest moves either way, with a thin outline that pulses slowly every 2.6 s.
+- **Phones**: "flat" means (hover: none) or a width of 640px or less: no translateZ and no tilt, keeping the shadows and glow. Touch-and-hold (0.38 s) shows the card; a normal tap opens the chart.
+- **Hover cards open on keyboard focus only** (`:focus-visible`), so a tap that moves focus doesn't leave a card open on a phone.
