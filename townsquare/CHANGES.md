@@ -8,7 +8,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 | 2 | Search crash fix, error boundary, client error logging | `f64b71f` |
 | 3 | One feed tab row, topics in the top nav, Your Topics | `14d8e8f` |
 | 4 | Sponsors with images, editor with preview, Glydrift | `aa7e47c` |
-| 5 | Quality pass: tap targets, contrast, headings, calmer search | (see below) |
+| 5 | Quality pass: tap targets, contrast, headings, calmer search | `22db479` |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -51,6 +51,7 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - The search overlay now matches the compact feed (no big display headings, no odds-style "0/0" numbers).
 - "Business" and "U.S." are labeled consistently everywhere.
 - Railway: nothing to add.
+- Screenshots: `screenshots/part5-{phone,desktop}-{home,search,tabs,sponsored,sponsor-editor,newsfeeds-list}.png`.
 
 ---
 
