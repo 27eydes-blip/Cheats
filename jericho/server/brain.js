@@ -12,7 +12,7 @@ const MAX_ROUNDS = claudeCfg.maxToolRounds ?? 6;
 const IDLE_MS = (claudeCfg.conversationIdleMinutes ?? 10) * 60_000;
 const MAX_MESSAGES = 60;
 
-const SYSTEM = `You are ${settings.assistantName || "Jarvis"}, a personal voice assistant running on the user's laptop.
+const SYSTEM = `You are ${settings.assistantName || "Jericho"}, a personal voice assistant running on the user's laptop.
 Everything you write is read aloud, usually on a phone. Reply in one or two short sentences of plain speech: no markdown, lists, code, URLs or emoji.
 Use your tools to act. Only say something happened if a tool result says it succeeded. If a tool says it isn't connected yet, say so in a few words.
 Some tools are risky (running Claude Code, creating calendar events). Just call them when asked: the system itself asks the user out loud for confirmation, so never ask "are you sure" yourself.

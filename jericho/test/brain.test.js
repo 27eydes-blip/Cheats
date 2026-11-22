@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jarvis-test-"));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-test-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
 const settingsFile = path.join(tmp, "settings.json");
 fs.writeFileSync(
@@ -16,7 +16,7 @@ fs.writeFileSync(
     claudeCode: { ...base.claudeCode, command: new URL("./fake-claude.mjs", import.meta.url).pathname, projectsDir: path.join(tmp, "projects") },
   }),
 );
-process.env.JARVIS_SETTINGS = settingsFile;
+process.env.JERICHO_SETTINGS = settingsFile;
 
 const { Brain } = await import("../server/brain.js");
 const { isYes } = await import("../server/safety.js");

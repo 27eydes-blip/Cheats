@@ -1,4 +1,4 @@
-// Jarvis server: serves the web page and the small JSON API it talks to.
+// Jericho server: serves the web page and the small JSON API it talks to.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
@@ -15,7 +15,7 @@ const PUBLIC_DIR = path.join(ROOT, "public");
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json" };
 
 if (!secrets.anthropicKey) console.warn("⚠️  ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add it.");
-if (!secrets.elevenLabsKey) console.warn("⚠️  ELEVENLABS_API_KEY is not set. Jarvis will use the browser's built-in voice.");
+if (!secrets.elevenLabsKey) console.warn("⚠️  ELEVENLABS_API_KEY is not set. Jericho will use the browser's built-in voice.");
 
 const brain = new Brain();
 const listeners = new Set(); // open /api/events streams
@@ -25,7 +25,7 @@ jobEvents.on("announce", (text) => {
 
 function authorized(req, url) {
   if (!secrets.accessToken) return true;
-  const given = req.headers["x-jarvis-token"] || url.searchParams.get("token") || "";
+  const given = req.headers["x-jericho-token"] || url.searchParams.get("token") || "";
   const a = Buffer.from(String(given));
   const b = Buffer.from(secrets.accessToken);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -107,7 +107,7 @@ const server = useHttps
 const port = Number(process.env.PORT || settings.port || 3000);
 server.listen(port, settings.host || "0.0.0.0", () => {
   const scheme = useHttps ? "https" : "http";
-  console.log(`\n🤖 ${settings.assistantName || "Jarvis"} is running.`);
+  console.log(`\n🤖 ${settings.assistantName || "Jericho"} is running.`);
   console.log(`   Laptop:  ${scheme}://localhost:${port}`);
   for (const addrs of Object.values(os.networkInterfaces())) {
     for (const a of addrs || []) {
@@ -115,6 +115,6 @@ server.listen(port, settings.host || "0.0.0.0", () => {
     }
   }
   console.log(`   Actions are logged to ${logPath}`);
-  if (!secrets.accessToken) console.log("   Tip: set JARVIS_ACCESS_TOKEN in .env before opening Jarvis from other devices.");
+  if (!secrets.accessToken) console.log("   Tip: set JERICHO_ACCESS_TOKEN in .env before opening Jericho from other devices.");
   console.log("");
 });

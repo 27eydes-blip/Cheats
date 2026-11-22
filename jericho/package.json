@@ -1,5 +1,5 @@
 {
-  "name": "jarvis",
+  "name": "jericho",
   "version": "0.1.0",
   "private": true,
   "description": "Personal voice assistant: browser ears, Claude brain, ElevenLabs voice.",
@@ -9,7 +9,7 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node --test test/*.test.js",
-    "make-cert": "mkdir -p certs && openssl req -x509 -newkey rsa:2048 -nodes -days 825 -keyout certs/key.pem -out certs/cert.pem -subj /CN=jarvis.local"
+    "make-cert": "mkdir -p certs && openssl req -x509 -newkey rsa:2048 -nodes -days 825 -keyout certs/key.pem -out certs/cert.pem -subj /CN=jericho.local"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0"

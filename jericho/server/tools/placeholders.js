@@ -1,5 +1,5 @@
 // Calendar and music placeholders. Each one tells Claude it isn't connected yet,
-// so Jarvis says so out loud instead of pretending. Fill in run() later.
+// so Jericho says so out loud instead of pretending. Fill in run() later.
 
 export const calendarListTool = {
   risky: false,

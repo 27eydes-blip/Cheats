@@ -18,7 +18,7 @@ export function expandHome(p) {
 }
 
 export function loadSettings() {
-  const file = process.env.JARVIS_SETTINGS || path.join(ROOT, "settings.json");
+  const file = process.env.JERICHO_SETTINGS || path.join(ROOT, "settings.json");
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
@@ -27,8 +27,13 @@ export const settings = loadSettings();
 export const secrets = {
   anthropicKey: process.env.ANTHROPIC_API_KEY || "",
   elevenLabsKey: process.env.ELEVENLABS_API_KEY || "",
-  accessToken: process.env.JARVIS_ACCESS_TOKEN || "",
+  // The pre-rename variable is still honoured so an existing .env doesn't silently
+  // turn the access token off.
+  accessToken: process.env.JERICHO_ACCESS_TOKEN || process.env.JARVIS_ACCESS_TOKEN || "",
 };
+if (!process.env.JERICHO_ACCESS_TOKEN && process.env.JARVIS_ACCESS_TOKEN) {
+  console.warn("⚠️  Rename JARVIS_ACCESS_TOKEN to JERICHO_ACCESS_TOKEN in .env (the old name still works for now).");
+}
 
 // The only settings the browser ever sees. No keys in here.
 export function publicConfig() {

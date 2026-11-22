@@ -1,5 +1,5 @@
 // Runs Claude Code headlessly (`claude -p`) in a project folder and reports back.
-// Jobs run in the background; when one finishes, Jarvis announces it out loud.
+// Jobs run in the background; when one finishes, Jericho announces it out loud.
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
@@ -8,7 +8,7 @@ import { expandHome, settings } from "../config.js";
 import { logAction } from "../logger.js";
 
 const cfg = settings.claudeCode || {};
-const projectsDir = path.resolve(expandHome(cfg.projectsDir || "~/jarvis-projects"));
+const projectsDir = path.resolve(expandHome(cfg.projectsDir || "~/jericho-projects"));
 export const jobEvents = new EventEmitter();
 const jobs = [];
 let nextId = 1;
@@ -100,7 +100,7 @@ export const claudeCodeTool = {
     name: "claude_code",
     description:
       "Start Claude Code (a coding agent) to build or change a software project in a folder. " +
-      "It runs in the background and Jarvis announces when it finishes. Folder is a project name " +
+      "It runs in the background and Jericho announces when it finishes. Folder is a project name " +
       "inside the user's projects directory; a new name creates a new project. " +
       "Pass the user's full request as the task, with any details they gave.",
     input_schema: {

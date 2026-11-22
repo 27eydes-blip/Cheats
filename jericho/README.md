@@ -1,13 +1,13 @@
-# Jarvis
+# Jericho
 
 A personal voice assistant that runs on your laptop. Open the page, tap **Start**, and say
-"Jarvis, turn on the kitchen lights".
+"Jericho, turn on the kitchen lights".
 
 ```
  Browser (laptop or phone)               Node server (your laptop)
  ┌──────────────────────────┐            ┌─────────────────────────────────────┐
  │ Ears: Web Speech API     │  /api/ask  │ Brain: Claude API + tool loop       │
- │  wake word "Jarvis"      ├───────────►│ Safety: risky tools wait for "yes"  │
+ │  wake word "Jericho"      ├───────────►│ Safety: risky tools wait for "yes"  │
  │ Mouth: <audio> stream    │◄───────────┤ Hands: lights, Claude Code,         │
  │  fallback: browser voice │  /api/tts  │        calendar*, music* (*stubs)   │
  └──────────────────────────┘            │ Voice: ElevenLabs (key stays here)  │
@@ -20,24 +20,24 @@ A personal voice assistant that runs on your laptop. Open the page, tap **Start*
 Needs Node 20.12 or newer.
 
 ```bash
-cd jarvis
+cd jericho
 npm install
 cp .env.example .env      # then paste your ANTHROPIC_API_KEY and ELEVENLABS_API_KEY
 npm start
 ```
 
 Open **http://localhost:3000** in Chrome or Safari, tap **Start**, allow the microphone and say
-**"Jarvis"**. You'll hear a beep. Then say what you want. You can also say it in one go:
-"Jarvis, turn off the bedroom lights". The text box at the bottom works too, which is handy if
+**"Jericho"**. You'll hear a beep. Then say what you want. You can also say it in one go:
+"Jericho, turn off the bedroom lights". The text box at the bottom works too, which is handy if
 speech recognition misbehaves.
 
 Try:
 
-- "Jarvis, turn on the kitchen lights": the terminal prints `💡 [MOCK LIGHTS] kitchen -> ON`.
-- "Jarvis, build a tic tac toe game in a folder called tic-tac-toe": Jarvis asks you to confirm,
-  you say "yes", Claude Code runs in `~/jarvis-projects/tic-tac-toe`, and Jarvis tells you when
+- "Jericho, turn on the kitchen lights": the terminal prints `💡 [MOCK LIGHTS] kitchen -> ON`.
+- "Jericho, build a tic tac toe game in a folder called tic-tac-toe": Jericho asks you to confirm,
+  you say "yes", Claude Code runs in `~/jericho-projects/tic-tac-toe`, and Jericho tells you when
   it's done. This needs the [Claude Code CLI](https://code.claude.com) installed and logged in.
-- "Jarvis, what's on my calendar tomorrow?": Jarvis says the calendar isn't connected yet.
+- "Jericho, what's on my calendar tomorrow?": Jericho says the calendar isn't connected yet.
 
 Run the offline tests (no API keys needed, nothing billed): `npm test`.
 
@@ -54,9 +54,9 @@ Browsers only allow the microphone on `https://` pages (or `localhost`), so
    warning. Android Chrome lets you click through. iPhones make you install and trust the
    certificate first, so option 1 is easier there.
 
-Set `JARVIS_ACCESS_TOKEN` in `.env` before you do either, then open the page once as
+Set `JERICHO_ACCESS_TOKEN` in `.env` before you do either, then open the page once as
 `https://…/?token=<your token>`. The phone remembers it, and every API call without it gets
-refused. Don't expose Jarvis to the internet without a token: anyone who can reach it can run
+refused. Don't expose Jericho to the internet without a token: anyone who can reach it can run
 Claude Code on your laptop once they say "yes".
 
 Phone notes: tap **Start** each time you open the page, because phones only allow audio after a
@@ -71,7 +71,7 @@ None of these are secret. Keys live only in `.env`.
 |---|---|
 | `elevenlabs.voiceId` | The ElevenLabs voice. Copy any voice ID from your ElevenLabs Voices page. Changes apply on the next reply, no restart needed. |
 | `elevenlabs.modelId` | `eleven_flash_v2_5` is the fastest. Use `eleven_multilingual_v2` for higher quality but more delay. |
-| `wakeWords` | Words that count as "Jarvis". Add the ones the browser mishears it as. |
+| `wakeWords` | Words that wake the assistant: "jericho", "jer" and common mishearings ("jerico", "jerry co", "jerr"…). Add more to the array any time; a space also matches a hyphen or no gap, so "jerry co" covers "jerry-co" and "jerryco". Whole words only: "Jerry", "Jeremy" and "jersey" don't trigger it. Reload the page after editing. |
 | `claude.model` / `claude.effort` | Default is `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. Raise effort to `medium` if answers feel too shallow. |
 | `claude.fallbacks` | On by default. If the main model declines a request on safety grounds, the API retries it on a fallback model inside the same call. Set to `false` to turn it off. |
 | `lights.provider` / `lights.rooms` | `mock` for now. `hue` and `kasa` are stubs with setup notes inside. |
@@ -86,7 +86,7 @@ are the exception.
 
 - Each tool declares whether it's `risky`. The server checks that flag, not Claude, so Claude
   can't skip it.
-- When Claude picks a risky tool, nothing runs yet. Jarvis says what it's about to do ("Should I
+- When Claude picks a risky tool, nothing runs yet. Jericho says what it's about to do ("Should I
   run Claude Code in the tic-tac-toe folder to…? Say yes to confirm.") and waits.
 - Only a clear yes runs it: "yes", "yeah", "confirm", "go ahead" and similar. Anything with "no",
   "don't", "cancel", "stop" or "wait" in it is a no. So is saying something else, staying quiet

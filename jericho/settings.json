@@ -2,8 +2,17 @@
   "port": 3000,
   "host": "0.0.0.0",
 
-  "assistantName": "Jarvis",
-  "wakeWords": ["jarvis", "jervis", "javis", "jarvas"],
+  "assistantName": "Jericho",
+  "wakeWords": [
+    "jericho",
+    "jer",
+    "jerico",
+    "jeriko",
+    "jerrico",
+    "jerry co",
+    "jerryco",
+    "jerr"
+  ],
   "speechLang": "en-US",
 
   "claude": {
@@ -28,7 +37,7 @@
 
   "claudeCode": {
     "command": "claude",
-    "projectsDir": "~/jarvis-projects",
+    "projectsDir": "~/jericho-projects",
     "permissionMode": "acceptEdits",
     "extraArgs": [],
     "timeoutMinutes": 30

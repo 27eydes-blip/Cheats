@@ -1,4 +1,4 @@
-// Jarvis in the browser: ears (speech recognition + wake word) and mouth (audio playback).
+// Jericho in the browser: ears (speech recognition + wake word) and mouth (audio playback).
 // All thinking and all API keys live on the server.
 
 const $ = (id) => document.getElementById(id);
@@ -16,20 +16,20 @@ const store = {
 };
 const params = new URLSearchParams(location.search);
 if (params.has("token")) {
-  store.set("jarvis-token", params.get("token"));
+  store.set("jericho-token", params.get("token"));
   history.replaceState(null, "", location.pathname); // keep the token out of the address bar
 }
-const token = store.get("jarvis-token") || "";
-let sessionId = store.get("jarvis-session");
+const token = store.get("jericho-token") || "";
+let sessionId = store.get("jericho-session");
 if (!sessionId) {
   sessionId = crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2);
-  store.set("jarvis-session", sessionId);
+  store.set("jericho-session", sessionId);
 }
 
 async function api(path, body) {
   const res = await fetch(path, {
     method: body ? "POST" : "GET",
-    headers: { "content-type": "application/json", "x-jarvis-token": token },
+    headers: { "content-type": "application/json", "x-jericho-token": token },
     body: body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 401) throw new Error("Access token missing or wrong. Open the page with ?token=…");
@@ -55,7 +55,7 @@ function addLog(who, text) {
 }
 
 // ---- config ---------------------------------------------------------------------
-let config = { assistantName: "Jarvis", wakeWords: ["jarvis"], speechLang: "en-US", elevenLabsEnabled: false };
+let config = { assistantName: "Jericho", wakeWords: ["jericho", "jer"], speechLang: "en-US", elevenLabsEnabled: false };
 api("/api/config")
   .then((c) => {
     config = c;
@@ -112,7 +112,7 @@ function elevenLabsVoice(text) {
 function speak(text) {
   speechQueue = speechQueue.then(async () => {
     const after = mode === "confirm" ? "confirm" : "idle";
-    stopListening(); // don't let Jarvis hear itself
+    stopListening(); // don't let Jericho hear itself
     setMode("speaking");
     try {
       if (!config.elevenLabsEnabled) throw new Error("no key");
@@ -135,7 +135,7 @@ async function send(kind, text) {
   setMode("thinking", "Thinking…");
   try {
     const r = await api(kind === "confirm" ? "/api/confirm" : "/api/ask", { sessionId, text });
-    addLog("jarvis", r.reply);
+    addLog("jericho", r.reply);
     clearTimeout(confirmTimer);
     if (r.awaitingConfirmation) {
       mode = "confirm"; // speak() returns to confirm mode afterwards
@@ -155,7 +155,12 @@ let wantListening = false;
 let commandTimer;
 
 function wakeRegex() {
-  const words = config.wakeWords.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  // Longest first, so "jerry co" wins over "jer". A space in a wake word also
+  // matches a hyphen or no gap at all ("jerry co" = "jerry-co" = "jerryco").
+  const words = [...config.wakeWords]
+    .sort((a, b) => b.length - a.length)
+    .map((w) => w.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "[\\s-]*"))
+    .join("|");
   return new RegExp(`\\b(?:hey\\s+|ok\\s+|okay\\s+)?(?:${words})\\b[\\s,.!?]*`, "i");
 }
 
@@ -171,8 +176,8 @@ function onHeard(raw) {
   const m = wakeRegex().exec(text);
   if (!m) return; // not for us
   const rest = text.slice(m.index + m[0].length).trim();
-  if (rest.length > 1) return send("ask", rest); // "Jarvis, turn on the lights"
-  // Just "Jarvis": wait for the request.
+  if (rest.length > 1) return send("ask", rest); // "Jericho, turn on the lights"
+  // Just "Jericho": wait for the request.
   beep();
   setMode("command", "Yes?");
   commandTimer = setTimeout(() => { if (mode === "command") setMode("idle", `Say “${config.assistantName}”…`); }, 8000);
@@ -265,7 +270,7 @@ const events = new EventSource(`/api/events?${new URLSearchParams({ token })}`);
 events.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   if (msg.type === "announce") {
-    addLog("jarvis", msg.text);
+    addLog("jericho", msg.text);
     if (running) speak(msg.text);
   }
 };
