@@ -28,7 +28,7 @@ export default async function HotStoriesPage() {
       <div className="space-y-3 px-4 pt-4 sm:px-6">
         <DiscoverSearch />
         <nav aria-label="Channels" className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0" data-no-swipe>
-          {CHANNELS.filter((c) => c.key !== "front").map((c) => (
+          {CHANNELS.map((c) => (
             <Link key={c.key} href={c.href} className="inline-flex min-h-11 shrink-0 items-center rounded-[12px] px-3.5 text-[13px] font-bold tracking-[0.04em] text-ink-2 uppercase ring-1 ring-rule transition-all hover:text-[var(--wn-cyan-ink)] hover:ring-[var(--wn-glass-border-hot)] active:scale-95">{c.label}</Link>
           ))}
           <Link href="/sports" className="inline-flex min-h-11 shrink-0 items-center rounded-[12px] px-3.5 text-[13px] font-bold tracking-[0.04em] text-ink-2 uppercase ring-1 ring-rule transition-all hover:text-[var(--wn-cyan-ink)] active:scale-95">Teams</Link>

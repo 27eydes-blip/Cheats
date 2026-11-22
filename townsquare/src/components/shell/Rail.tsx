@@ -1,5 +1,7 @@
 "use client";
 
+import type { FeedTab } from "@/lib/feedtabs";
+import { YourTopics } from "../feed/YourTopics";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FEATURES } from "@/config";
@@ -15,7 +17,7 @@ import { ThemeCycle } from "./ThemeToggle";
  * panel button collapses it to icons (remembered in a cookie so the page
  * renders at the right width with no jump).
  */
-export function Rail({ viewer, unread, unreadMessages }: { viewer: MenuViewer; unread: number; unreadMessages: number }) {
+export function Rail({ viewer, unread, unreadMessages, topics = [] }: { viewer: MenuViewer; unread: number; unreadMessages: number; topics?: FeedTab[] }) {
   const path = usePathname() ?? "/";
   const { main, more } = menuItems({ handle: viewer?.handle ?? null, isAdmin: !!viewer?.isAdmin, wallet: FEATURES.wallet });
   const toggle = () => {
@@ -54,6 +56,12 @@ export function Rail({ viewer, unread, unreadMessages }: { viewer: MenuViewer; u
       </div>
       <nav aria-label="Side menu" className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-[14px] pb-3">
         <ul className="space-y-0.5">{TABS.filter((t) => t.key !== "markets").map(row)}</ul>
+        {viewer && (
+          <>
+            <hr className="my-2.5 border-rule" />
+            <YourTopics tabs={topics} compact />
+          </>
+        )}
         <hr className="my-2.5 border-rule" />
         <ul className="space-y-0.5">{main.map(row)}</ul>
         {more.length > 0 && (

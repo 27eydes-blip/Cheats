@@ -1,5 +1,7 @@
 "use client";
 
+import type { FeedTab } from "@/lib/feedtabs";
+import { YourTopics } from "../feed/YourTopics";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -22,7 +24,7 @@ export type MenuStats = { followers: number; following: number; friends: number 
  * trapped and Escape closes it; it also closes on an outside tap, a swipe to
  * the left, or after choosing a destination. The page behind dims and blurs.
  */
-export function SideMenu({ open, onClose, viewer, stats, wallet = FEATURES.wallet }: { open: boolean; onClose: () => void; viewer: MenuViewer; stats: MenuStats | null; wallet?: boolean }) {
+export function SideMenu({ open, onClose, viewer, stats, wallet = FEATURES.wallet, topics = [] }: { open: boolean; onClose: () => void; viewer: MenuViewer; stats: MenuStats | null; wallet?: boolean; topics?: FeedTab[] }) {
   const ref = useRef<HTMLDialogElement>(null);
   const path = usePathname() ?? "/";
   const [dx, setDx] = useState(0);
@@ -134,6 +136,7 @@ export function SideMenu({ open, onClose, viewer, stats, wallet = FEATURES.walle
 
           {/* Destinations */}
           <nav aria-label="Menu" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
+            {viewer && <div className="mb-3 border-b border-rule pb-3"><YourTopics tabs={topics} onNavigate={onClose} /></div>}
             <ul className="space-y-0.5">{main.map(row)}</ul>
             {more.length > 0 && (
               <>

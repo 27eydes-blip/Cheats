@@ -10,6 +10,7 @@ import { useMedia } from "./ui/useMedia";
 import { ConfirmProvider } from "./ui/Confirm";
 import { Sheet } from "./ui/Sheet";
 import { SideMenu, type MenuStats } from "./shell/SideMenu";
+import type { FeedTab } from "@/lib/feedtabs";
 
 /** What client components know about the signed-in user. */
 export type ClientViewer = {
@@ -65,7 +66,7 @@ const typing = (el: EventTarget | null) => {
   return !!t && (/INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable);
 };
 
-export function Providers({ viewer, stats, children }: { viewer: ClientViewer; stats?: MenuStats | null; children: React.ReactNode }) {
+export function Providers({ viewer, stats, topics = [], children }: { viewer: ClientViewer; stats?: MenuStats | null; topics?: FeedTab[]; children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -150,7 +151,7 @@ export function Providers({ viewer, stats, children }: { viewer: ClientViewer; s
               <RundownCtx.Provider value={() => (viewer ? setRundownOpen(true) : (window.location.href = "/login?next=/rundown"))}>
               <MenuCtx.Provider value={openMenu}>
                 {children}
-                <SideMenu open={menuOpen} onClose={closeMenu} viewer={viewer} stats={stats ?? null} />
+                <SideMenu open={menuOpen} onClose={closeMenu} viewer={viewer} stats={stats ?? null} topics={topics} />
                 {desktop ? (
                   composer && (
                     /* Desktop: an inline panel that drops down from the masthead */

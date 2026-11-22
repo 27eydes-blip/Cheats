@@ -14,6 +14,7 @@ import { ChannelDial } from "@/components/shell/ChannelDial";
 import { TabBar } from "@/components/shell/TabBar";
 import { Rail } from "@/components/shell/Rail";
 import { unreadMessages } from "@/lib/messages";
+import { getFeedTabs } from "@/lib/feedtabs";
 import { LiveWire, type WireItem } from "@/components/shell/LiveWire";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
 import { Masthead } from "@/components/shell/Masthead";
@@ -69,6 +70,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     ? { id: viewer.id, handle: viewer.handle, displayName: viewer.display_name, avatarUrl: mediaUrl(viewer.avatar_media_id), isAdmin: viewer.role === "admin", suspended: viewer.status === "suspended", verified: !!viewer.verified }
     : null;
   const count = (sql: string) => (viewer ? (get<{ n: number }>(sql, [viewer.id])?.n ?? 0) : 0);
+  const topics = viewer ? getFeedTabs(viewer.id) : [];
   const stats = viewer
     ? {
         followers: count("SELECT count(*) n FROM follows WHERE followee_id = ?"),
@@ -94,17 +96,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-[10px] focus:bg-navy focus:px-4 focus:py-2 focus:text-white">
           Skip to content
         </a>
-        <Providers viewer={clientViewer} stats={stats}>
+        <Providers viewer={clientViewer} stats={stats} topics={topics}>
           <Suspense fallback={null}><NavProgress /></Suspense>
-          <Rail viewer={clientViewer} unread={unread} unreadMessages={unreadDm} />
+          <Rail viewer={clientViewer} unread={unread} unreadMessages={unreadDm} topics={topics} />
           <div className="lg:pl-[var(--rail-w)] lg:transition-[padding] lg:duration-200">
           <Masthead unread={unread} tape={tape} />
           <div className="z-30 shadow-[0_1px_0_var(--rule)] lg:sticky lg:top-0">
-            <div className="hidden lg:block">
-              <Suspense fallback={<div className="h-[var(--dial-h)] border-b border-rule bg-paper" />}>
-                <ChannelDial liveCount={liveCount} />
-              </Suspense>
-            </div>
+            <ChannelDial liveCount={liveCount} />
             <LiveWire items={wire} quotes={tape} demo={marketMode() === "demo"} slot="layout" />
           </div>
           <main id="main" className="pb-tabbar relative min-h-[70dvh]" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>

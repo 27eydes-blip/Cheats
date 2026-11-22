@@ -8,7 +8,7 @@ import { VerifiedSeal } from "../ui/Badge";
 import { MiniSplit, StanceChip, type TakeStance } from "../ui/Stance";
 import { CloseIcon, DeskIcon, EditionIcon, RundownIcon, SearchIcon, StudioIcon, TakeIcon } from "../icons";
 import { useViewer } from "../providers";
-import { CHANNELS } from "./channels";
+import { CHANNELS, TOPICS_END } from "./channels";
 import type { TeamView } from "@/lib/sports/teams";
 import { LEAGUE_NAME } from "@/lib/sports/teams-data";
 import { TeamLogo } from "../sports/TeamLogo";
@@ -108,7 +108,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
         ["Morning Edition", "/briefing", <EditionIcon key="b" size={18} />],
         ["Live Studio", "/live", <StudioIcon key="l" size={18} />],
         ["Desks", "/communities", <DeskIcon key="d" size={18} />],
-        ...CHANNELS.slice(1, 7).map((c): [string, string, React.ReactNode] => [`${c.label} channel`, c.href, <EditionIcon key={c.key} size={18} />]),
+        ...CHANNELS.slice(0, TOPICS_END).map((c): [string, string, React.ReactNode] => [c.label, c.href, <EditionIcon key={c.key} size={18} />]),
       ];
       for (const [label, href, icon] of jumps) out.push({ id: `j-${href}`, group: "Jump to", href, node: <span className="flex items-center gap-3"><span className="text-ink-3">{icon}</span>{label}</span> });
     }
