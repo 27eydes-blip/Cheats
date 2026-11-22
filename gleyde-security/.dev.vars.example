@@ -1,0 +1,26 @@
+# Copy to .dev.vars for local development (`npm run dev`). .dev.vars is git-ignored.
+# In production set these as *encrypted* environment variables in
+# Cloudflare Pages > Settings > Variables and Secrets. Never commit real values.
+
+# Cloudflare Turnstile secret (test value below always passes)
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# Resend (https://resend.com) — email delivery for the contact form
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
+CONTACT_TO_EMAIL=you@yourdomain.com
+CONTACT_FROM_EMAIL=Gleyde Website <website@yourdomain.com>
+
+# Random string used to hash visitor IPs for rate limiting (IPs are never stored raw)
+RATE_LIMIT_SALT=change-me-to-a-long-random-string
+
+# Public Turnstile site key (test value below always passes)
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
+
+# Extra allowed origins for the form, comma-separated (the site's own origin is always allowed)
+ALLOWED_ORIGINS=
+
+# AI chat assistant (Anthropic). Set as a Pages *secret* in production.
+# Leave empty locally to keep the chat off (it then answers with a friendly "not available").
+ANTHROPIC_API_KEY=
+# Optional: most chat messages the whole site will answer per day (default 500)
+CHAT_DAILY_CAP=500

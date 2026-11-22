@@ -1,0 +1,24 @@
+# Cloudflare Pages configuration. No secrets in this file: set them as
+# encrypted variables in the dashboard or with `wrangler pages secret put`.
+name = "gleyde-security"
+pages_build_output_dir = "./public"
+compatibility_date = "2026-11-01"
+
+# Rate-limit counters for the contact form.
+# Create with:  npx wrangler kv namespace create RATE_LIMIT_KV
+# then paste the id below (an id is not a secret).
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT_KV"
+# id = "PASTE_NAMESPACE_ID"
+
+# Every other setting (TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY, RESEND_API_KEY,
+# CONTACT_TO_EMAIL, CONTACT_FROM_EMAIL, RATE_LIMIT_SALT, ALLOWED_ORIGINS) lives in
+# environment variables: .dev.vars locally, the Pages dashboard in production.
+
+# Chat logs for the AI assistant (private: only reachable through this binding).
+# Schema: migrations/0001_chat.sql. An id is not a secret.
+[[d1_databases]]
+binding = "CHAT_DB"
+database_name = "gleyde-chat"
+database_id = "c8172edf-38cf-4e81-8e2d-dc68c23be53b"
+migrations_dir = "migrations"

@@ -1,0 +1,8 @@
+{
+  "name": "Gleyde Technologies — Cybersecurity & Software",
+  "short_name": "Gleyde",
+  "icons": [{ "src": "/assets/img/favicon.svg", "sizes": "any", "type": "image/svg+xml" }],
+  "theme_color": "#0a0a0b",
+  "background_color": "#0a0a0b",
+  "display": "standalone"
+}

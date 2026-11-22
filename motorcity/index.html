@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0d0a07" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Motor City 1915" />
+  <meta name="description" content="Motor City 1915 — race period motor cars through 1910s Detroit and New York in a silent-film world. By Gleyde Technologies, LLC · Created by Sam Eyde III · Juwon Shon, COO." />
+  <title>Motor City 1915</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Limelight&family=Playfair+Display+SC:wght@400;700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="240" height="400"></canvas>
+    <div id="hud" hidden>
+      <div class="hud-top">
+        <div class="hud-pos"><span id="hud-place">1</span><sup id="hud-suffix">st</sup><small id="hud-of">/6</small></div>
+        <div class="hud-lap"><span id="hud-lap">LAP 1/3</span><span id="hud-time">0:00.0</span></div>
+      </div>
+      <div id="hud-msg"></div>
+      <button id="btn-pause" class="hud-pause" aria-label="Pause">❚❚</button>
+    </div>
+    <div id="controls" hidden>
+      <div class="pad pad-left">
+        <button class="ctl ctl-steer" data-btn="left" aria-label="Steer left"><span>◀</span></button>
+        <button class="ctl ctl-steer" data-btn="right" aria-label="Steer right"><span>▶</span></button>
+        <div class="tilt-note">TILT TO STEER</div>
+      </div>
+      <div class="pad pad-right">
+        <button class="ctl ctl-horn" data-btn="horn" aria-label="Horn"><i class="cool"></i><span>AH-OO-GAH</span></button>
+        <button class="ctl ctl-boost" data-btn="boost" aria-label="Boost"><i class="cool"></i><span>BOOST</span></button>
+        <button class="ctl ctl-brake" data-btn="brake" aria-label="Brake and drift"><span>BRAKE<small>hold + steer to drift</small></span></button>
+      </div>
+    </div>
+    <div id="hitlog" hidden aria-live="polite"></div>
+    <div id="ui"></div>
+  </div>
+  <noscript>Motor City 1915 needs JavaScript. — Gleyde Technologies, LLC · Created by Sam Eyde III · Juwon Shon, COO</noscript>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
