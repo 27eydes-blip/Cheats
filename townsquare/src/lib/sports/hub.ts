@@ -1,5 +1,6 @@
 import { getFeedTabs } from "../feedtabs";
-import { dataKey, getGame, scoreboard, teamStanding, type GameView, type Scoreboard } from "./games";
+import { tryTake } from "./budget";
+import { dataKey, gamesVersion, getGame, getJson, lastChecked, scoreboard, teamStanding, type GameView, type Scoreboard } from "./games";
 import { tzOffsetMin } from "./time";
 import type { League } from "./teams-data";
 
@@ -15,7 +16,28 @@ export type Board = Scoreboard & {
   records: Record<string, string>;
   myTeams: string[];
   at: number;
+  /** When the data provider was last checked (live lane or full sync), for "Updated Xs ago". */
+  syncedAt: number;
 };
+
+/**
+ * Many visitors, one database read: scoreboards are cached in memory per
+ * league filter and time zone for up to 15 seconds, and dropped as soon as a
+ * game changes (gamesVersion). No visitor ever triggers a provider call.
+ */
+const g = globalThis as unknown as { __boardCache?: Map<string, { v: number; at: number; b: Scoreboard }> };
+const boardCache = () => (g.__boardCache ??= new Map());
+export const clearBoardCache = () => boardCache().clear();
+export function cachedScoreboard(opts: { leagues?: League[]; tzOffsetMin: number; t: number }): Scoreboard {
+  const key = `${(opts.leagues ?? []).join(",")}|${opts.tzOffsetMin}`;
+  const hit = boardCache().get(key);
+  const v = gamesVersion();
+  if (hit && hit.v === v && opts.t - hit.at >= 0 && opts.t - hit.at < 15_000) return hit.b;
+  const b = scoreboard({ leagues: opts.leagues, tzOffsetMin: opts.tzOffsetMin, t: opts.t, upcomingLimit: 60, recentLimit: 40 });
+  if (boardCache().size > 200) boardCache().clear();
+  boardCache().set(key, { v, at: opts.t, b });
+  return b;
+}
 
 const WEIGHT: Record<League, number> = { NFL: 6, NBA: 5, NCAAF: 4.5, MLB: 4, NHL: 4, EPL: 3.5, MLS: 3 };
 
@@ -46,7 +68,7 @@ const recordOf = (teamId: string | null) => {
 
 export function buildBoard(opts: { leagues?: League[]; tz: string; viewerId: string | null; now?: number }): Board {
   const now = opts.now ?? Date.now();
-  const b = scoreboard({ leagues: opts.leagues, tzOffsetMin: tzOffsetMin(opts.tz, now), t: now, upcomingLimit: 60, recentLimit: 40 });
+  const b = cachedScoreboard({ leagues: opts.leagues, tzOffsetMin: tzOffsetMin(opts.tz, now), t: now });
   const myTeams = opts.viewerId ? getFeedTabs(opts.viewerId).filter((t) => t.kind === "team").map((t) => t.key) : [];
   const header = [...b.live, ...b.today.filter((g) => g.status !== "final"), ...b.upcoming].slice(0, 16);
   const featured = pickGameOfDay(b, myTeams, now);
@@ -56,7 +78,7 @@ export function buildBoard(opts: { leagues?: League[]; tz: string; viewerId: str
       const r = s.id && !(s.id in records) ? recordOf(s.id) : null;
       if (s.id && r) records[s.id] = r;
     }
-  return { ...b, header, featured, records, myTeams, at: now };
+  return { ...b, header, featured, records, myTeams, at: now, syncedAt: lastChecked() };
 }
 
 // ------------------------------------------------------------------ key stats
@@ -87,8 +109,7 @@ export async function eventStats(id: string, fetchImpl: typeof fetch = fetch, t 
   if (!g || (g.status !== "live" && g.status !== "final")) return [];
   let stats: KeyStat[] = [];
   try {
-    const res = await fetchImpl(`https://www.thesportsdb.com/api/v1/json/${encodeURIComponent(dataKey())}/lookupeventstats.php?id=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(6_000), cache: "no-store" });
-    if (res.ok) stats = parseEventStats(await res.json());
+    stats = parseEventStats(await getJson(fetchImpl, `https://www.thesportsdb.com/api/v1/json/${encodeURIComponent(dataKey())}/lookupeventstats.php?id=${encodeURIComponent(id)}`, "stats", { wait: false, tryTake: () => tryTake() }));
   } catch {
     stats = [];
   }

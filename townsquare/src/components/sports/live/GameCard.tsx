@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { GameSide, GameView } from "@/lib/sports/games";
-import { statusLabel } from "@/lib/sports/status";
+import { AWAITING, statusLabel } from "@/lib/sports/status";
 import { LEAGUE_NAME } from "@/lib/sports/teams-data";
 import { LetterBadge, TeamLogo } from "../TeamLogo";
 
@@ -17,6 +17,13 @@ export function SideMark({ side, size = "sm" }: { side: GameSide; size?: keyof t
 /** The status pill: red pulsing LIVE (the only red on the page), Final, or the local start time. */
 export function StatusPill({ g, tz, now, withDay = true, className = "" }: { g: GameView; tz: string; now: number; withDay?: boolean; className?: string }) {
   const s = statusLabel(g, tz, now, withDay);
+  // The game is over but the provider hasn't sent the final: no red LIVE, no pulse.
+  if (g.status === "live" && g.detail === AWAITING)
+    return (
+      <span className={`inline-flex items-center rounded-[6px] px-1.5 py-0.5 text-[11.5px] leading-none font-bold text-ink-2 ring-1 ring-[var(--hairline)] ${className}`} aria-label={s.long}>
+        <span aria-hidden="true">{s.text}</span>
+      </span>
+    );
   if (s.kind === "live")
     return (
       <span className={`inline-flex items-center gap-1.5 rounded-[6px] bg-live-bg px-1.5 py-0.5 text-[11.5px] leading-none font-extrabold tracking-[0.04em] text-white ${className}`} aria-label={s.long}>

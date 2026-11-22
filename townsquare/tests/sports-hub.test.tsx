@@ -30,7 +30,7 @@ const game = (id: string, o: Partial<GameView> = {}): GameView => ({
   id, league: "NFL", season: "2026", round: "12", startsAt: NOW - H, timeKnown: true, status: "live", detail: "Q3 4:12", venue: "Field",
   home: teamSide("nfl-kc", "Kansas City Chiefs", 17), away: teamSide("nfl-buf", "Buffalo Bills", 14), ...o,
 });
-const board = (o: Partial<Board> = {}): Board => ({ live: [], today: [], upcoming: [], recent: [], header: [], featured: null, records: {}, myTeams: [], at: NOW, ...o });
+const board = (o: Partial<Board> = {}): Board => ({ live: [], today: [], upcoming: [], recent: [], header: [], featured: null, records: {}, myTeams: [], at: NOW, syncedAt: NOW - 5_000, ...o });
 
 describe("status labels", () => {
   it("shows LIVE with the clock, Final, the local start time, or postponed", () => {
@@ -67,11 +67,12 @@ describe("live refresh rules", () => {
     expect([...changedScores(before, [game("a", { home: teamSide("nfl-kc", "Kansas City Chiefs", 24) }), game("b"), game("c")])]).toEqual(["a"]);
   });
 
-  it("refreshes every 30 seconds without reloading, flashes changed scores, and pauses while hidden", async () => {
+  it("polls only changed games every 20 seconds, flashes changed scores, sends the ETag, and pauses while hidden", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout"] });
     const first = board({ live: [game("g1")], header: [game("g1")] });
-    const updated = board({ live: [game("g1", { home: teamSide("nfl-kc", "Kansas City Chiefs", 24), detail: "Q4 9:01" })], header: [game("g1")], at: NOW + POLL_MS });
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(updated)));
+    const changed = game("g1", { home: teamSide("nfl-kc", "Kansas City Chiefs", 24), detail: "Q4 9:01" });
+    let calls = 0;
+    const fetchImpl = vi.fn(async () => (++calls === 1 ? new Response(JSON.stringify({ full: false, at: NOW + POLL_MS, syncedAt: NOW, games: [changed] }), { headers: { ETag: 'W/"abc"' } }) : new Response(null, { status: 304 })));
     const { container } = render(
       <LiveBoardProvider initial={first} league="NFL" tz={NY} fetchImpl={fetchImpl as unknown as typeof fetch}>
         <BoardSections showLeague />
@@ -90,7 +91,7 @@ describe("live refresh rules", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(fetchImpl).toHaveBeenCalledWith("/api/sports/scores?league=NFL", expect.anything());
+    expect(fetchImpl).toHaveBeenCalledWith(`/api/sports/changes?since=${NOW}&league=NFL`, expect.anything());
     expect(card().textContent).toContain("24");
     expect(card().textContent).toContain("Q4 9:01");
     expect(card().className).toContain("score-flash");
@@ -98,12 +99,21 @@ describe("live refresh rules", () => {
       vi.advanceTimersByTime(2_100);
     });
     expect(card().className).not.toContain("score-flash");
+    // The next poll carries the new cursor and the ETag; a 304 changes nothing.
+    await act(async () => {
+      vi.advanceTimersByTime(POLL_MS);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(fetchImpl).toHaveBeenLastCalledWith(`/api/sports/changes?since=${NOW + POLL_MS}&league=NFL`, expect.objectContaining({ headers: { "If-None-Match": 'W/"abc"' } }));
+    expect(card().textContent).toContain("24");
     // Hidden tab: no requests.
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
     await act(async () => {
       vi.advanceTimersByTime(POLL_MS * 2);
     });
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
     Object.defineProperty(document, "hidden", { value: false, configurable: true });
   });
 

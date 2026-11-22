@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GameView } from "@/lib/sports/games";
 import { fmtDay } from "@/lib/sports/time";
 import { LEAGUE_NAME } from "@/lib/sports/teams-data";
@@ -156,13 +156,30 @@ export function BoardSections({ showLeague }: { showLeague: boolean }) {
   );
 }
 
+/** "Updated 12s ago" (ticks on its own) plus how often live scores refresh. */
 export function RefreshNote() {
-  const { board, refreshing } = useBoard();
+  const { board, refreshing, syncedAt } = useBoard();
+  const [t, setT] = useState<number | null>(null);
+  useEffect(() => {
+    setT(Date.now());
+    const id = setInterval(() => setT(Date.now()), 5_000);
+    return () => clearInterval(id);
+  }, []);
   const live = board.live.length > 0;
-  if (!live) return null;
+  if (!syncedAt && !live) return null;
   return (
-    <p className="px-4 pt-3 text-[12.5px] text-ink-3" aria-live="polite">
-      {refreshing ? "Updating scores…" : "Live scores update every 30 seconds."}
+    <p className="flex flex-wrap gap-x-2 px-4 pt-3 text-[12.5px] text-ink-3">
+      {syncedAt > 0 && <span className="num" suppressHydrationWarning>Updated {ago(syncedAt, t ?? board.at)}</span>}
+      {live && <span aria-live="polite">{refreshing ? "· Updating scores…" : "· Live scores update every 20 seconds."}</span>}
     </p>
   );
+}
+
+/** "just now", "12s ago", "4m ago", "2h ago". */
+export function ago(at: number, now: number) {
+  const s = Math.max(0, Math.round((now - at) / 1000));
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  return `${Math.floor(s / 3600)}h ago`;
 }

@@ -100,7 +100,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
           </section>
         )}
 
-        <p className="px-4 py-5 text-[12.5px] text-ink-3">Data: {PROVIDER}. Live scores refresh every 30 seconds; check the league for official results.</p>
+        <p className="px-4 py-5 text-[12.5px] text-ink-3">Data: {PROVIDER}. Live scores refresh every 20 seconds; check the league for official results.</p>
       </div>
     </LiveBoardProvider>
   );

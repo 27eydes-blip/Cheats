@@ -7,16 +7,55 @@ import { fmtDay, fmtTime } from "./time";
  * score changes, and standings zones.
  */
 
+/** Typical length of a game, start to final whistle, in minutes (used to know when a final is overdue). */
+export const DURATION_MIN: Record<League, number> = { NFL: 200, NCAAF: 215, NBA: 150, NHL: 160, MLB: 190, MLS: 115, EPL: 115 };
+/** How long a game may sit at "Awaiting final score" before we show "Final (unconfirmed)". */
+export const AWAIT_CAP_MS = 20 * 60_000;
+export const AWAITING = "Awaiting final score";
+
+export const expectedEndAt = (league: League, startsAt: number) => startsAt + DURATION_MIN[league] * 60_000;
+
+export type Phase = "scheduled" | "live" | "awaiting" | "unconfirmed" | "final" | "postponed" | "canceled";
+/**
+ * Where a game stands right now. The provider's word wins: a game it calls
+ * finished is final. A game it still calls live is "live" until its expected
+ * end, then "awaiting" (a final score is overdue) for up to 20 minutes, then
+ * "unconfirmed" (shown as a final with the last known score).
+ */
+export function phaseOf(g: Pick<GameView, "status" | "league" | "startsAt">, now: number): Phase {
+  if (g.status !== "live") return g.status;
+  const end = expectedEndAt(g.league, g.startsAt);
+  if (now < end) return "live";
+  return now < end + AWAIT_CAP_MS ? "awaiting" : "unconfirmed";
+}
+
+/** The moments a live game changes phase on its own (no new data): its expected end, and 20 minutes later. */
+export const phaseChanges = (g: Pick<GameView, "league" | "startsAt">) => {
+  const end = expectedEndAt(g.league, g.startsAt);
+  return [end, end + AWAIT_CAP_MS];
+};
+
+/** Apply the phase to a game for display: awaiting games say so; unconfirmed ones read as finals. */
+export function withPhase<T extends Pick<GameView, "status" | "league" | "startsAt" | "detail"> & { unconfirmed?: boolean }>(g: T, now: number): T {
+  const ph = phaseOf(g, now);
+  if (ph === "awaiting") return { ...g, detail: AWAITING, unconfirmed: false };
+  if (ph === "unconfirmed") return { ...g, status: "final", detail: "", unconfirmed: true };
+  if (g.detail === AWAITING) return { ...g, detail: "", unconfirmed: false };
+  return { ...g, unconfirmed: false };
+}
+
 export type StatusKind = "live" | "final" | "scheduled" | "postponed" | "canceled";
 export type StatusLabel = { kind: StatusKind; text: string; /** screen-reader text */ long: string };
 
 /** "LIVE · Q3 4:12", "Final · OT", "7:30 PM" (or "Tomorrow · 7:30 PM"), "Postponed", "Canceled" in the reader's time zone. */
-export function statusLabel(g: Pick<GameView, "status" | "detail" | "startsAt" | "timeKnown">, tz: string, now: number, withDay = true): StatusLabel {
+export function statusLabel(g: Pick<GameView, "status" | "detail" | "startsAt" | "timeKnown"> & { unconfirmed?: boolean }, tz: string, now: number, withDay = true): StatusLabel {
   if (g.status === "live") {
-    const text = g.detail && g.detail !== "Awaiting final score" ? `LIVE · ${g.detail}` : g.detail ? g.detail : "LIVE";
+    if (g.detail === AWAITING) return { kind: "live", text: AWAITING, long: "Game over, awaiting the final score" };
+    const text = g.detail ? `LIVE · ${g.detail}` : "LIVE";
     return { kind: "live", text, long: `Live${g.detail ? `, ${g.detail}` : ""}` };
   }
   if (g.status === "final") {
+    if (g.unconfirmed) return { kind: "final", text: "Final (unconfirmed)", long: "Final, not yet confirmed by the data provider. Showing the last known score." };
     const text = `Final${g.detail ? ` · ${g.detail}` : ""}`;
     return { kind: "final", text: withDay ? `${text} · ${fmtDay(g.startsAt, tz, now)}` : text, long: `Final${g.detail ? `, ${g.detail}` : ""}` };
   }
@@ -28,8 +67,8 @@ export function statusLabel(g: Pick<GameView, "status" | "detail" | "startsAt" |
   return { kind: "scheduled", text, long: `Starts ${day === "Today" ? "today" : day} at ${time}` };
 }
 
-/** Refresh every 30 seconds only while something is live or about to start (within 15 minutes, or started without a score yet). */
-export const POLL_MS = 30_000;
+/** Refresh every 20 seconds only while something is live or about to start (within 15 minutes, or started without a score yet). */
+export const POLL_MS = 20_000;
 export function shouldPoll(games: Pick<GameView, "status" | "startsAt">[], now: number) {
   return games.some((g) => g.status === "live" || (g.status === "scheduled" && g.startsAt - now < 15 * 60_000 && now - g.startsAt < 4 * 3_600_000));
 }

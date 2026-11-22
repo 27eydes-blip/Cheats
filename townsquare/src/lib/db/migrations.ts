@@ -531,6 +531,22 @@ CREATE TABLE IF NOT EXISTS team_aliases (
       seedAliases(db);
     },
   },
+  {
+    // Additive: change tracking for the live lane and the changed-games endpoint.
+    id: 14,
+    name: "games_change_tracking",
+    sql: `
+ALTER TABLE games ADD COLUMN changed_at INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE games ADD COLUMN checked_at INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS games_changed ON games(changed_at);
+CREATE INDEX IF NOT EXISTS games_status_start ON games(status, starts_at)
+`,
+    after: (db) => {
+      db.exec("UPDATE games SET changed_at = updated_at WHERE changed_at = 0");
+      // The old 6-hour rule wrote this into the detail; it is now worked out when the game is shown.
+      db.exec("UPDATE games SET detail = '' WHERE detail = 'Awaiting final score'");
+    },
+  },
 ];
 
 export function runMigrations(db: DatabaseSync) {

@@ -1,3 +1,6 @@
+import { resetSportsBudget } from "@/lib/sports/budget";
+import { resetLane } from "@/lib/sports/livelane";
+import { clearBoardCache } from "@/lib/sports/hub";
 import { resetDbForTests } from "@/lib/db";
 import { createUser } from "@/lib/users";
 import { resetTeamsCache } from "@/lib/sports/teams";
@@ -12,4 +15,7 @@ export async function makeUser(handle?: string) {
 export function freshDb() {
   resetDbForTests();
   resetTeamsCache();
+  resetSportsBudget();
+  resetLane();
+  clearBoardCache();
 }

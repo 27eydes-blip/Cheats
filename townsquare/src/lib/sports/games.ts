@@ -4,6 +4,8 @@ import { badgeLetters, circleColors } from "./logos";
 import { getSetting, setSetting } from "../newsroom/settings";
 import { LEAGUES, type League } from "./teams-data";
 import { listTeams, type TeamView } from "./teams";
+import { record, take, type CallKind } from "./budget";
+import { phaseChanges, withPhase } from "./status";
 
 /**
  * Schedules, scores and standings from TheSportsDB (https://www.thesportsdb.com).
@@ -41,6 +43,8 @@ export type GameView = {
   venue: string;
   home: GameSide;
   away: GameSide;
+  /** The provider never confirmed the result; showing the last known score as "Final (unconfirmed)". */
+  unconfirmed?: boolean;
 };
 /** One side of a game. `badge` is the letter circle to show when there's no logo (the team's, or a neutral one for an unmatched name). */
 export type GameSide = { id: string | null; name: string; score: number | null; team: TeamView | null; badge: { letters: string; fill: string; text: string } };
@@ -77,7 +81,7 @@ export function mapStatus(raw: string, startsAt: number, hasScore: boolean, t = 
   const s = raw.trim().toLowerCase();
   if (/postpon|^pst$|delayed|suspend/.test(s)) return "postponed";
   if (/cancel|canc|abandon|^aban$/.test(s)) return "canceled";
-  if (/finish|^ft$|^aet$|^aot$|^ap$|^pen$|final|ended|^ot$ final|after (extra|over)/.test(s)) return "final";
+  if (/finish|^ft$|^aet$|^aot$|^ap$|^pen$|final|ended|game over|full[ -]?time|complete|^ot$ final|after (extra|over)|after pen/.test(s)) return "final";
   if (/not started|^ns$|scheduled|^tbd$|time to be defined/.test(s) || (!s && startsAt > t)) return "scheduled";
   if (/^(1h|2h|ht|et|bt|p|live|in progress|q[1-4]|ot|[1-9](st|nd|rd|th)|top|bot|mid|end|half|period|inning|1p|2p|3p|so)/.test(s) || /progress|live|quarter|period|inning|half/.test(s)) return "live";
   if (!s) return hasScore && startsAt < t ? "final" : "scheduled";
@@ -195,10 +199,32 @@ export function matchTeam(league: League, name: string): string | null {
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 export type LeagueSync = { league: League; ok: boolean; games: number; standings: number; live: number; error: string | null; at: number };
 
-async function getJson(fetchImpl: Fetch, url: string, headers: Record<string, string> = {}) {
-  const res = await fetchImpl(url, { headers: { accept: "application/json", ...headers }, signal: AbortSignal.timeout(15_000) });
-  if (res.status === 429) throw new Error("Rate limited by TheSportsDB (HTTP 429)");
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+export class BudgetSpent extends Error {}
+
+/**
+ * GET JSON from TheSportsDB through the shared request budget. `wait: false`
+ * gives up at once when the budget is spent (the live lane); otherwise it
+ * waits up to 30 seconds (the 15-minute sync).
+ */
+export async function getJson(fetchImpl: Fetch, url: string, kind: CallKind, opts: { headers?: Record<string, string>; wait?: boolean; tryTake?: () => boolean } = {}) {
+  const ok = opts.wait === false ? (opts.tryTake ?? (() => true))() : await take();
+  if (!ok) throw new BudgetSpent("Request budget spent; will try again shortly");
+  let res: Response;
+  try {
+    res = await fetchImpl(url, { headers: { accept: "application/json", ...opts.headers }, signal: AbortSignal.timeout(15_000) });
+  } catch (e) {
+    record(kind, "error", Date.now(), e instanceof Error ? e.message : String(e));
+    throw e;
+  }
+  if (res.status === 429) {
+    record(kind, "limited", Date.now(), "HTTP 429");
+    throw new Error("Rate limited by TheSportsDB (HTTP 429)");
+  }
+  if (!res.ok) {
+    record(kind, "error", Date.now(), `HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`);
+  }
+  record(kind, "ok");
   const text = await res.text();
   if (!text.trim()) return {} as Raw;
   try {
@@ -208,19 +234,44 @@ async function getJson(fetchImpl: Fetch, url: string, headers: Record<string, st
   }
 }
 
-function upsertGame(g: NonNullable<ReturnType<typeof parseEvent>>) {
+const gv = globalThis as unknown as { __gamesVersion?: number };
+/** Bumped whenever a game's status, score or detail changes (server-side board cache key). */
+export const gamesVersion = () => gv.__gamesVersion ?? 0;
+export const bumpGamesVersion = () => void (gv.__gamesVersion = gamesVersion() + 1);
+
+type Parsed = NonNullable<ReturnType<typeof parseEvent>>;
+/**
+ * Insert or update a game. A final is never turned back into live or
+ * scheduled, and a missing score never erases a known one. `changed_at` moves
+ * only when the status, score or detail actually changed (the changed-games
+ * endpoint reads it). Returns what happened.
+ */
+export function upsertGame(g: Parsed, opts: { checked?: boolean } = {}): "new" | "changed" | "same" {
+  const t = now();
+  const old = get<{ status: GameStatus; detail: string; home_score: number | null; away_score: number | null; starts_at: number; changed_at: number }>("SELECT status, detail, home_score, away_score, starts_at, changed_at FROM games WHERE id = ?", [g.id]);
+  const status = old?.status === "final" && (g.status === "scheduled" || g.status === "live") ? "final" : g.status;
+  const detail = old?.status === "final" && status === "final" && g.status !== "final" ? old.detail : g.detail;
+  const hs = g.homeScore ?? old?.home_score ?? null;
+  const as = g.awayScore ?? old?.away_score ?? null;
+  const changed = !old || old.status !== status || old.detail !== detail || old.home_score !== hs || old.away_score !== as || old.starts_at !== g.startsAt;
   run(
-    `INSERT INTO games (id, league, season, round, starts_at, time_known, status, detail, venue, home_name, away_name, home_team_id, away_team_id, home_score, away_score, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO games (id, league, season, round, starts_at, time_known, status, detail, venue, home_name, away_name, home_team_id, away_team_id, home_score, away_score, updated_at, changed_at, checked_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET season = excluded.season, round = excluded.round, starts_at = excluded.starts_at, time_known = excluded.time_known,
-       status = CASE WHEN games.status = 'final' AND excluded.status IN ('scheduled','live') THEN games.status ELSE excluded.status END,
-       detail = excluded.detail, venue = excluded.venue, home_name = excluded.home_name, away_name = excluded.away_name,
-       home_team_id = excluded.home_team_id, away_team_id = excluded.away_team_id,
-       home_score = COALESCE(excluded.home_score, games.home_score), away_score = COALESCE(excluded.away_score, games.away_score),
-       updated_at = excluded.updated_at`,
-    [g.id, g.league, g.season, g.round, g.startsAt, g.timeKnown ? 1 : 0, g.status, g.detail, g.venue, g.homeName, g.awayName, matchTeam(g.league, g.homeName), matchTeam(g.league, g.awayName), g.homeScore, g.awayScore, now()],
+       status = excluded.status, detail = excluded.detail, venue = excluded.venue, home_name = excluded.home_name, away_name = excluded.away_name,
+       home_team_id = excluded.home_team_id, away_team_id = excluded.away_team_id, home_score = excluded.home_score, away_score = excluded.away_score,
+       updated_at = excluded.updated_at, changed_at = excluded.changed_at, checked_at = CASE WHEN ? THEN excluded.checked_at ELSE games.checked_at END`,
+    [g.id, g.league, g.season, g.round, g.startsAt, g.timeKnown ? 1 : 0, status, detail, g.venue, g.homeName, g.awayName, matchTeam(g.league, g.homeName), matchTeam(g.league, g.awayName), hs, as, t, changed ? t : old!.changed_at, opts.checked ? t : 0, opts.checked ? 1 : 0],
   );
+  if (changed) bumpGamesVersion();
+  return !old ? "new" : changed ? "changed" : "same";
 }
+
+/** When the provider data was last checked (live lane or full sync), for "Updated Xs ago". */
+export function markChecked(t = now()) {
+  setSetting("sports_checked_at", String(t));
+}
+export const lastChecked = () => Number(getSetting("sports_checked_at") ?? 0) || 0;
 
 const events = (j: Raw, k = "events") => (Array.isArray(j[k]) ? (j[k] as Raw[]) : []);
 
@@ -252,14 +303,14 @@ export async function syncLeague(league: League, fetchImpl: Fetch = fetch, t = n
   };
   for (const path of [`eventsnextleague.php?id=${id}`, `eventspastleague.php?id=${id}`]) {
     try {
-      take(events(await getJson(fetchImpl, `${V1()}/${path}`)));
+      take(events(await getJson(fetchImpl, `${V1()}/${path}`, "schedule")));
     } catch (e) {
       errors.push(`${path.split(".")[0]}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   try {
     const season = seasonFor(league, t);
-    const rows = events(await getJson(fetchImpl, `${V1()}/lookuptable.php?l=${id}&s=${encodeURIComponent(season)}`), "table")
+    const rows = events(await getJson(fetchImpl, `${V1()}/lookuptable.php?l=${id}&s=${encodeURIComponent(season)}`, "standings"), "table")
       .map((r) => parseTableRow(r, league))
       .filter((r): r is NonNullable<typeof r> => !!r);
     if (rows.length) {
@@ -273,6 +324,7 @@ export async function syncLeague(league: League, fetchImpl: Fetch = fetch, t = n
           );
       });
       out.standings = rows.length;
+      bumpGamesVersion();
     }
   } catch (e) {
     errors.push(`standings: ${e instanceof Error ? e.message : String(e)}`);
@@ -282,32 +334,9 @@ export async function syncLeague(league: League, fetchImpl: Fetch = fetch, t = n
   return out;
 }
 
-/** Live scores (paid key only): one call per sport, then update games we know. */
-export async function syncLive(fetchImpl: Fetch = fetch, t = now()) {
-  if (!isPremium()) return 0;
-  let n = 0;
-  const sports = [...new Set(LEAGUES.map((l) => SPORT[l]))];
-  const byLeagueId = new Map(Object.entries(PROVIDER_LEAGUE).map(([l, id]) => [id, l as League]));
-  for (const sport of sports) {
-    try {
-      const j = await getJson(fetchImpl, `${V2}/livescore/${sport}`, { "X-API-KEY": dataKey() });
-      tx(() => {
-        for (const e of events(j, "livescore")) {
-          const league = byLeagueId.get(str(e.idLeague));
-          if (!league) continue;
-          const g = parseEvent(e, league, t);
-          if (!g) continue;
-          if (g.status === "scheduled") g.status = "live";
-          upsertGame(g);
-          n++;
-        }
-      });
-    } catch {
-      /* live scores are best effort; the next league sync corrects them */
-    }
-  }
-  return n;
-}
+export const V1_BASE = V1;
+export const V2_BASE = V2;
+export const SPORT_OF = SPORT;
 
 const STATE_KEY = "sports_sync";
 export function syncState(): Partial<Record<League, LeagueSync>> {
@@ -333,17 +362,11 @@ export async function syncAllSports(opts: { fetchImpl?: Fetch; leagues?: League[
       setSetting(STATE_KEY, JSON.stringify(state));
       if (opts.pauseMs) await new Promise((res) => setTimeout(res, opts.pauseMs));
     }
-    await syncLive(opts.fetchImpl);
-    finishStale();
+    markChecked();
   } finally {
     g.__sportsRunning = false;
   }
   return { skipped: false as const, results };
-}
-
-/** Games stuck "live" long after they began (no update came) are shown as awaiting the final score. */
-function finishStale(t = now()) {
-  run("UPDATE games SET detail = 'Awaiting final score' WHERE status = 'live' AND starts_at < ? AND detail != 'Awaiting final score'", [t - 6 * 3_600_000]);
 }
 
 // ------------------------------------------------------------------ reading
@@ -361,9 +384,9 @@ function teamsById(ids: (string | null)[]) {
   return map;
 }
 
-function toViews(rows: GameRow[]): GameView[] {
+function toViews(rows: GameRow[], t = now()): GameView[] {
   const teams = teamsById(rows.flatMap((r) => [r.home_team_id, r.away_team_id]));
-  return rows.map((r) => ({
+  return rows.map((r) => withPhase<GameView>({
     id: r.id,
     league: r.league,
     season: r.season,
@@ -375,7 +398,7 @@ function toViews(rows: GameRow[]): GameView[] {
     venue: r.venue,
     home: side(r.home_team_id, r.home_name, r.home_score, teams),
     away: side(r.away_team_id, r.away_name, r.away_score, teams),
-  }));
+  }, t));
 }
 
 function side(id: string | null, name: string, score: number | null, teams: Map<string, TeamView>): GameSide {
@@ -398,11 +421,13 @@ export function scoreboard(opts: { leagues?: League[]; tzOffsetMin?: number; t?:
   const dayStart = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) + off;
   const dayEnd = dayStart + 86_400_000;
   const L = opts.leagues ?? [];
-  const q = (sql: string, params: (string | number)[]) => toViews(all<GameRow>(sql, [...params, ...L]));
-  const live = q(`SELECT * FROM games WHERE status = 'live' AND starts_at > ? ${leagueWhere(L)} ORDER BY starts_at`, [t - 8 * 3_600_000]);
-  const today = q(`SELECT * FROM games WHERE status != 'live' AND starts_at >= ? AND starts_at < ? ${leagueWhere(L)} ORDER BY starts_at, id`, [dayStart, dayEnd]);
+  const q = (sql: string, params: (string | number)[]) => toViews(all<GameRow>(sql, [...params, ...L]), t);
+  // Games the provider still calls live but whose final is long overdue read as "Final (unconfirmed)", so they move to today/results.
+  const liveRows = q(`SELECT * FROM games WHERE status = 'live' AND starts_at > ? ${leagueWhere(L)} ORDER BY starts_at`, [t - 8 * 3_600_000]);
+  const live = liveRows.filter((g) => g.status === "live");
+  const today = q(`SELECT * FROM games WHERE starts_at >= ? AND starts_at < ? ${leagueWhere(L)} ORDER BY starts_at, id`, [dayStart, dayEnd]).filter((g) => g.status !== "live");
   const upcoming = q(`SELECT * FROM games WHERE status IN ('scheduled','postponed') AND starts_at >= ? AND starts_at < ? ${leagueWhere(L)} ORDER BY starts_at, id LIMIT ${opts.upcomingLimit ?? 60}`, [dayEnd, dayEnd + 7 * 86_400_000]);
-  const recent = q(`SELECT * FROM games WHERE status = 'final' AND starts_at < ? AND starts_at > ? ${leagueWhere(L)} ORDER BY starts_at DESC LIMIT ${opts.recentLimit ?? 40}`, [dayStart, dayStart - 3 * 86_400_000]);
+  const recent = q(`SELECT * FROM games WHERE status IN ('final','live') AND starts_at < ? AND starts_at > ? ${leagueWhere(L)} ORDER BY starts_at DESC LIMIT ${opts.recentLimit ?? 40}`, [dayStart, dayStart - 3 * 86_400_000]).filter((g) => g.status === "final");
   return { live, today, upcoming, recent };
 }
 
@@ -410,8 +435,9 @@ export function scoreboard(opts: { leagues?: League[]; tzOffsetMin?: number; t?:
 export function teamSchedule(teamId: string, t = now()) {
   const where = "(home_team_id = ? OR away_team_id = ?)";
   const next = toViews(all<GameRow>(`SELECT * FROM games WHERE ${where} AND status IN ('scheduled','live','postponed') AND starts_at > ? ORDER BY starts_at LIMIT 10`, [teamId, teamId, t - 8 * 3_600_000]));
-  const last = toViews(all<GameRow>(`SELECT * FROM games WHERE ${where} AND status = 'final' ORDER BY starts_at DESC LIMIT 10`, [teamId, teamId]));
-  return { next, last };
+  const nextAll = next.filter((g) => g.status !== "final");
+  const last = toViews(all<GameRow>(`SELECT * FROM games WHERE ${where} AND (status = 'final' OR (status = 'live' AND starts_at < ?)) ORDER BY starts_at DESC LIMIT 12`, [teamId, teamId, t]), t).filter((g) => g.status === "final").slice(0, 10);
+  return { next: nextAll, last };
 }
 
 export function getGame(id: string): GameView | null {
@@ -453,3 +479,19 @@ export const gameCounts = () => Object.fromEntries(all<{ league: string; n: numb
 export const anyLive = (t = now()) => !!get("SELECT 1 FROM games WHERE status = 'live' AND starts_at > ?", [t - 8 * 3_600_000]);
 /** Games starting soon (or in progress) also get a faster refresh. */
 export const anySoon = (t = now()) => !!get("SELECT 1 FROM games WHERE status = 'scheduled' AND starts_at BETWEEN ? AND ?", [t - 4 * 3_600_000, t + 15 * 60_000]);
+
+/**
+ * Games that changed after `since` (ms): new scores, statuses or details from
+ * the provider, plus live games that crossed into "awaiting" or "unconfirmed"
+ * on the clock alone. Limited to games from the last day and the next one.
+ */
+export function changedGames(since: number, opts: { leagues?: League[]; t?: number } = {}): GameView[] {
+  const t = opts.t ?? now();
+  const L = opts.leagues ?? [];
+  const rows = all<GameRow & { changed_at: number }>(
+    `SELECT * FROM games WHERE starts_at > ? AND starts_at < ? AND (changed_at > ? OR status = 'live') ${leagueWhere(L)} ORDER BY starts_at LIMIT 300`,
+    [t - 36 * 3_600_000, t + 36 * 3_600_000, since, ...L],
+  );
+  const keep = rows.filter((r) => r.changed_at > since || (r.status === "live" && phaseChanges({ league: r.league, startsAt: r.starts_at }).some((x) => x > since && x <= t)));
+  return toViews(keep, t);
+}
