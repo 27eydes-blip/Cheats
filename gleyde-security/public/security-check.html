@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Free Website Security Check | Gleyde Technologies</title>
+  <meta name="description" content="Free, passive website security check: HTTPS, security headers, SPF and DMARC, and exposed files, with a score and plain-English fixes.">
+  <link rel="canonical" href="https://gleyde.com/security-check">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Free Website Security Check | Gleyde Technologies">
+  <meta property="og:description" content="Free, passive website security check: HTTPS, security headers, SPF and DMARC, and exposed files, with a score and plain-English fixes.">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="preload" href="/assets/fonts/cormorant-garamond-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/site.css?v=6b3ba29ec6">
+  <script src="/assets/js/site.js?v=307e6c3d5b"></script>
+  <script src="/assets/js/chat.js?v=f171e7e770" defer></script>
+  <script src="/assets/js/security-check.js?v=042a8f0fe9" defer></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=gleydeTurnstileReady" async defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <nav class="wrap nav" aria-label="Main">
+      <a class="brand" href="/" aria-label="Gleyde Technologies home">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 58 32 32 58 6 32Z" fill="none" stroke="#d4af6a" stroke-width="2.5"/><path d="M32 20 44 32 32 44 20 32Z" fill="#d4af6a"/></svg>
+        <span class="brand-text"><span class="brand-name">GLEYDE</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-menu" id="nav-menu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/services">Services</a></li>
+        <li><a href="/how-it-works">How It Works</a></li>
+        <li><a href="/about">About</a></li>
+        <li><a href="/contact">Contact</a></li>
+        <li><a class="btn btn-gold" href="/security-check" aria-current="page">Free security check</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+
+    <section class="page-hero page-hero-tight">
+      <div class="wrap">
+        <span class="eyebrow reveal">Free tool</span>
+        <h1 class="reveal d1">Website <em class="gold">Security Check</em></h1>
+        <p class="lede reveal d2">Get a graded report with your top three fixes and step-by-step instructions for your platform.</p>
+      </div>
+    </section>
+
+    <section class="section section-tight">
+      <div class="wrap">
+        <div class="scan-layout">
+          <div class="scan-main">
+            <ul class="scan-facts" aria-label="About this check">
+              <li>Free.</li>
+              <li>About 15 seconds.</li>
+              <li>20+ checks.</li>
+              <li>Public information only, no login.</li>
+            </ul>
+            <form class="form scan-form" id="scan-form" action="/api/scan" method="post" novalidate>
+              <div class="field domain-row">
+                <label for="domain">Your website</label>
+                <input id="domain" name="domain" aria-describedby="domain-hint err-domain" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com" maxlength="300" required autocapitalize="off" autocorrect="off" spellcheck="false">
+                <p class="field-hint" id="domain-hint">Paste a full link if you like; we&rsquo;ll trim it to the domain.</p>
+                <p class="field-error" id="err-domain" data-error-for="domain" aria-live="polite"></p>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="industry">Industry <span class="opt">(optional)</span></label>
+                  <select id="industry" name="industry">
+                    <option value="">Not specified</option>
+                    <option value="realestate">Real estate</option>
+                    <option value="lending">Lending / mortgage</option>
+                    <option value="legal">Legal</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="homeservices">Home &amp; local services</option>
+                    <option value="retail">Retail / e-commerce</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="email">Email me the report <span class="opt">(optional)</span></label>
+                  <input id="email" name="email" aria-describedby="err-email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@yourbusiness.com" autocapitalize="off" spellcheck="false">
+                  <p class="field-error" id="err-email" data-error-for="email" aria-live="polite"></p>
+                </div>
+              </div>
+              <label class="consent" for="consent">
+                <input type="checkbox" id="consent" name="consent" required aria-describedby="err-consent">
+                <span>This is my website, or I&rsquo;m allowed to check it.</span>
+              </label>
+              <p class="field-error" id="err-consent" data-error-for="consent" aria-live="polite"></p>
+              <div class="turnstile-slot" id="turnstile-slot" data-action="scan"></div>
+              <noscript><p class="note">This tool needs JavaScript. You can also <a href="/contact">ask us to run the check for you</a>.</p></noscript>
+              <div class="form-status" id="scan-status" role="status" aria-live="polite" tabindex="-1"></div>
+              <button class="btn btn-gold scan-submit" type="submit" id="scan-submit" aria-disabled="true" aria-describedby="scan-status"><span class="label">Check my website</span> <span class="arrow" aria-hidden="true">&rarr;</span></button>
+              <p class="scan-trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><span>Read-only checks. We never log in or change anything. <a href="/privacy">Privacy policy</a></span></p>
+              <p class="small">If you add your email, we send you the report and may follow up once. We never share it.</p>
+            </form>
+
+            <div class="scan-progress" id="scan-progress" hidden>
+              <h2 class="scan-progress-title">Checking <span id="scan-progress-domain"></span></h2>
+              <ol class="progress-steps" id="progress-steps">
+                <li data-step="encryption"><span class="dot" aria-hidden="true"></span><span class="step-label">Encryption &amp; certificate</span><span class="step-state">Waiting</span></li>
+                <li data-step="email"><span class="dot" aria-hidden="true"></span><span class="step-label">Email protection</span><span class="step-state">Waiting</span></li>
+                <li data-step="headers"><span class="dot" aria-hidden="true"></span><span class="step-label">Security headers &amp; software</span><span class="step-state">Waiting</span></li>
+                <li data-step="files"><span class="dot" aria-hidden="true"></span><span class="step-label">Exposed files</span><span class="step-state">Waiting</span></li>
+                <li data-step="domain"><span class="dot" aria-hidden="true"></span><span class="step-label">Domain &amp; DNS</span><span class="step-state">Waiting</span></li>
+              </ol>
+              <p class="sr-only" id="progress-live" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+
+          <aside class="scan-aside" aria-labelledby="example-title">
+            <div class="example-card">
+              <div class="example-head">
+                <span class="example-tag">Example</span>
+                <h2 id="example-title">Sample report preview</h2>
+              </div>
+              <div class="example-body">
+                <div class="example-grade" role="img" aria-label="Example grade C, 72 out of 100"><span>C</span><small>72/100</small></div>
+                <div class="example-meta">
+                  <p class="example-domain">example.com</p>
+                  <p>14 passed · 4 need work · 3 at risk</p>
+                </div>
+              </div>
+              <p class="example-sub">Top fixes</p>
+              <ol class="example-fixes">
+                <li><span class="badge fail">At risk</span> Email spoofing protection (DMARC) is off</li>
+                <li><span class="badge fail">At risk</span> Plugin with known security issues</li>
+                <li><span class="badge warn">Needs work</span> Browser security headers missing</li>
+              </ol>
+              <p class="example-note">Illustration only. Your report shows your site&rsquo;s real results.</p>
+            </div>
+
+            <h2 class="aside-title">What we check</h2>
+            <ul class="checks-included">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><div><strong>Encryption</strong>HTTPS, redirects, HSTS and certificate expiry.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg><div><strong>Email protection</strong>SPF, DKIM and DMARC against fake emails in your name.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6Z"/><path d="m8.8 12 2.2 2.2 4.4-4.4"/></svg><div><strong>Headers &amp; software</strong>Browser protections, outdated WordPress, PHP and libraries, cookies and forms.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/><path d="M8.5 11h5M11 8.5v5"/></svg><div><strong>Exposed files</strong>Files often left public by mistake, like .env and .git. We never download or show their contents.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 8.5h18"/><path d="m10 12.5-2.5 2.5 2.5 2.5M14 12.5l2.5 2.5-2.5 2.5"/></svg><div><strong>Domain &amp; DNS</strong>Renewal date, transfer lock and DNSSEC.</div></li>
+            </ul>
+          </aside>
+        </div>
+
+        <div class="scan-results" id="scan-results" hidden></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="/" aria-label="Gleyde Technologies home">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 58 32 32 58 6 32Z" fill="none" stroke="#d4af6a" stroke-width="2.5"/><path d="M32 20 44 32 32 44 20 32Z" fill="#d4af6a"/></svg>
+            <span class="brand-text"><span class="brand-name">GLEYDE</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
+          </a>
+          <p class="small">Secure software and website protection for local small businesses. A division of Gleyde Technologies, LLC.</p>
+        </div>
+        <div>
+          <h2>Services</h2>
+          <ul>
+            <li><a href="/services#audit">Security Audit</a></li>
+            <li><a href="/services#hardening">Security Hardening</a></li>
+            <li><a href="/services#development">Secure Development</a></li>
+            <li><a href="/services#monitoring">Monitoring &amp; Updates</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Company</h2>
+          <ul>
+            <li><a href="/how-it-works">How It Works</a></li>
+            <li><a href="/about">About</a></li>
+            <li><a href="/security-check">Free Security Check</a></li>
+            <li><a href="/contact">Contact</a></li>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/.well-known/security.txt">security.txt</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; <span data-year>2026</span> Gleyde Technologies, LLC. All rights reserved.</span>
+        <span>We only test systems we have written permission to test.</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

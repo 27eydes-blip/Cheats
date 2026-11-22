@@ -1,0 +1,24 @@
+# Separate Worker that emails finished chat transcripts and purges old chats.
+# No secrets here. Set them with:
+#   npx wrangler secret put RESEND_API_KEY   --config workers/chat-mailer/wrangler.toml
+#   npx wrangler secret put OWNER_EMAIL      --config workers/chat-mailer/wrangler.toml
+name = "gleyde-chat-mailer"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = false   # no public URL: this Worker only runs on its schedule
+
+[triggers]
+crons = [
+  "*/15 * * * *",  # every 15 minutes: email chats idle for 15+ minutes
+  "23 4 * * *",    # daily: delete chats older than 30 days (except follow-up leads)
+]
+
+[[d1_databases]]
+binding = "CHAT_DB"
+database_name = "gleyde-chat"
+database_id = "c8172edf-38cf-4e81-8e2d-dc68c23be53b"
+migrations_dir = "../../migrations"
+
+[vars]
+# A sender on a domain verified in Resend (not a secret). Change once gleyde.com is verified.
+MAIL_FROM = "Gleyde Chat <chat@gleyde.com>"
