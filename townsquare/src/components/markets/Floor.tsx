@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { etMinutes, upcomingCalendar, etDate } from "@/lib/markets/clock";
 import { boardRows, breadthOf, fmtCountdown, rangePos, sectorSummaries, sessionRail, type SortDir, type SortKey } from "@/lib/markets/floor";
 import type { Quote } from "@/lib/markets/provider";
-import { MACRO_ETFS, MACRO_LABEL, SECTORS, STOCKS } from "@/lib/markets/universe";
+import { INDEX_ETFS, MACRO_ETFS, MACRO_LABEL, SECTORS, STOCKS } from "@/lib/markets/universe";
 import { BellIcon, SearchIcon } from "../icons";
 import { MiniLine } from "./Charts";
 import { fmtChg, fmtPct, fmtPrice, useFlash, useMarket } from "./MarketData";
@@ -100,31 +100,40 @@ export function BellClock() {
   );
 }
 
-function LedItem({ q }: { q: Quote }) {
+function LedItem({ q, label, mine }: { q: Quote; label?: string; mine?: boolean }) {
   const f = useFlash(q.symbol);
   const upq = q.change >= 0;
   return (
     <li className="led flex items-baseline gap-2 px-5 text-[15px] sm:text-[17px]">
-      <span className="led-sym">{q.symbol}</span>
+      {mine && <span aria-label="On your watchlist" className="text-[10px] text-[#22d3ee]">★</span>}
+      <span className="led-sym">{label ?? q.symbol}</span>
       <span key={f.key} className={`rounded-[4px] px-0.5 text-white/90 ${f.cls}`}>{fmtPrice(q.price)}</span>
       <span className={upq ? "led-up" : "led-down"}>{upq ? "▲" : "▼"}{Math.abs(q.change).toFixed(2)}</span>
     </li>
   );
 }
 
-/** The big board: every stock on the floor crawling past in LED type, alphabetical like the boards over a trading floor. */
+/**
+ * The page's one stock tape: the four indexes, then your watchlist (starred),
+ * then every other stock on the floor alphabetically, crawling past in LED type.
+ */
 export function BigBoardCrawl() {
-  const { quotes } = useMarket();
+  const { quotes, watchlist } = useMarket();
   const [paused, setPaused] = useState(false);
-  const items = STOCKS.map((t) => quotes[t.symbol]).filter((q): q is Quote => !!q).sort((a, b) => a.symbol.localeCompare(b.symbol));
+  const indexes = INDEX_ETFS.map((t) => quotes[t.symbol]).filter((q): q is Quote => !!q);
+  const mine = watchlist.map((s) => quotes[s]).filter((q): q is Quote => !!q && !INDEX_ETFS.some((t) => t.symbol === q.symbol));
+  const rest = STOCKS.map((t) => quotes[t.symbol]).filter((q): q is Quote => !!q && !watchlist.includes(q.symbol)).sort((a, b) => a.symbol.localeCompare(b.symbol));
+  const items = [...indexes, ...mine, ...rest];
   if (!items.length) return null;
   const row = (hidden: boolean) => (
     <ul className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
-      {items.map((q) => <LedItem key={q.symbol} q={q} />)}
+      {indexes.map((q) => <LedItem key={q.symbol} q={q} label={q.name.toUpperCase()} />)}
+      {mine.map((q) => <LedItem key={q.symbol} q={q} mine />)}
+      {rest.map((q) => <LedItem key={q.symbol} q={q} />)}
     </ul>
   );
   return (
-    <div role="region" aria-label="Big board: every stock on the floor" className="led-board overflow-hidden rounded-[var(--r-lg)] border border-white/10 motion-reduce:overflow-x-auto" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+    <div role="region" aria-label="Stock ticker: indexes, your watchlist and every stock on the floor" className="led-board overflow-hidden rounded-[var(--r-lg)] border border-white/10 motion-reduce:overflow-x-auto" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
       <div className="flex h-12 w-max items-center motion-reduce:!animate-none" style={{ animation: `marquee ${Math.max(60, items.length * 2.4)}s linear infinite`, animationPlayState: paused ? "paused" : "running" }}>
         {row(false)}
         {row(true)}

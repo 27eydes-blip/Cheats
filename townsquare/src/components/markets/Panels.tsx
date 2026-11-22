@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { Quote } from "@/lib/markets/provider";
 import { addWatchAction, removeWatchAction } from "@/actions/markets";
-import { ALL_TICKERS, INDEX_ETFS, SECTORS, STOCKS } from "@/lib/markets/universe";
+import { ALL_TICKERS, SECTORS, STOCKS } from "@/lib/markets/universe";
 import { CloseIcon, PlusIcon } from "../icons";
 import { useToast, useViewer } from "../providers";
 import { AreaChart, MiniLine, PriceChart, type Bar } from "./Charts";
@@ -16,51 +16,6 @@ import { fmtChg, fmtPct, fmtPrice, useFlash, useMarket } from "./MarketData";
 const up = (q: Quote) => q.change >= 0;
 const tone = (q: Quote) => (up(q) ? "text-[#2ee6a6]" : "text-[#ff5c7a]");
 const Arrow = ({ q }: { q: Quote }) => <span aria-hidden="true">{up(q) ? "▲" : "▼"}</span>;
-
-/** Full-width scrolling tape: index ETFs, your watchlist, and the day's biggest movers. */
-export function TickerTape() {
-  const { quotes, watchlist } = useMarket();
-  const [paused, setPaused] = useState(false);
-  const symbols = useMemo(() => {
-    const movers = STOCKS.map((t) => quotes[t.symbol]).filter(Boolean).sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 6).map((q) => q.symbol);
-    return [...new Set([...INDEX_ETFS.map((t) => t.symbol), ...watchlist, ...movers])];
-  }, [quotes, watchlist]);
-  const items = symbols.map((s) => quotes[s]).filter(Boolean);
-  if (!items.length) return null;
-  const row = (hidden: boolean) => (
-    <ul className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
-      {items.map((q) => (
-        <li key={q.symbol} className="flex items-center gap-2 border-r border-white/10 px-5">
-          <span className="text-[12px] font-bold tracking-wide text-white">{INDEX_ETFS.some((t) => t.symbol === q.symbol) ? q.name : q.symbol}</span>
-          <TapePrice q={q} />
-          <span className={`text-[12px] font-semibold ${tone(q)}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
-        </li>
-      ))}
-    </ul>
-  );
-  const seconds = Math.max(30, items.length * 4.5);
-  return (
-    <div
-      role="region"
-      aria-label="Stock ticker"
-      className="mono relative overflow-hidden border-y border-[#22d3ee]/40 bg-black/60"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      <div className="flex h-10 w-max items-center motion-reduce:!animate-none" style={{ animation: `marquee ${seconds}s linear infinite`, animationPlayState: paused ? "paused" : "running" }}>
-        {row(false)}
-        {row(true)}
-      </div>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#070b14] to-transparent" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#070b14] to-transparent" />
-    </div>
-  );
-}
-
-function TapePrice({ q }: { q: Quote }) {
-  const f = useFlash(q.symbol);
-  return <span key={f.key} className={`rounded-[6px] px-1 text-[12px] text-white/90 ${f.cls}`}>{fmtPrice(q.price)}</span>;
-}
 
 /** One index card: S&P 500 (SPY), Nasdaq-100 (QQQ), Dow (DIA), Russell 2000 (IWM). */
 export function IndexCard({ symbol }: { symbol: string }) {

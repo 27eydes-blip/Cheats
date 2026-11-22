@@ -7,7 +7,7 @@ import { INDEX_ETFS, MACRO_ETFS, SECTOR_ETFS, STOCKS, SYMBOL_RE } from "@/lib/ma
 import { listStories } from "@/lib/news";
 import { getHistory } from "@/lib/markets/history";
 import { MarketData } from "@/components/markets/MarketData";
-import { Breadth, FocusChart, Heatmap, IndexCard, Movers, TickerTape, Watchlist } from "@/components/markets/Panels";
+import { Breadth, FocusChart, Heatmap, IndexCard, Movers, Watchlist } from "@/components/markets/Panels";
 import { BellClock, BigBoard, BigBoardCrawl, FloorStats, MacroStrip, SectorBoard } from "@/components/markets/Floor";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,6 @@ export default async function MarketsPage({ searchParams }: { searchParams: Prom
   return (
     <div className="dark terminal-grid -mt-px min-h-screen text-white">
       <MarketData initial={quotes} mode={mode} status={marketStatus(t)} symbols={symbols} seriesFor={seriesFor} watchlist={watchlist} focus={focus} initialHistory={h1.available ? { symbol: first, bars: h1.candles } : undefined}>
-        <TickerTape />
         <div className="mx-auto max-w-[1440px] px-4 pt-6 pb-16 sm:px-6">
           <header className="flex flex-wrap items-end justify-between gap-4">
             <div>
