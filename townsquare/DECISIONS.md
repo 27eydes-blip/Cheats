@@ -260,3 +260,13 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **The conversation** shows readers' dispatches only (the For You feed with story cards turned off), so stories aren't listed twice on the page.
 - **Neutral by design**: no section ranks one side above another, colors are muted and always paired with text labels, and every headline links out to the outlet.
 - Checked on phone and desktop with TEST outlets only (not committed); accessibility structure follows the existing pages (one h1, h2 per section, labeled navs).
+
+## Team logos
+
+- **Asked for ESPN, built TheSportsDB (your choice after I flagged it).** ESPN's logo files sit on ESPN's own image server, which isn't offered for other sites, and ESPN's terms forbid reusing its content. TheSportsDB is the data provider you already chose for scores, and its API returns each team's badge.
+- **How**: one `lookup_all_teams.php` request per league lists the teams with their `strBadge` URL. Teams are matched to ours with the same name matching as games (plus `strTeamAlternate` and `strTeamShort`). `http://` badge URLs are upgraded to `https://`.
+- **Caching**: each badge is downloaded once, checked (PNG/WebP/JPEG/GIF only, never SVG), resized to at most 512px, re-encoded as PNG and stored in `UPLOAD_DIR/team-logos`. Pages serve the local copy. Teams marked missing or errored are retried after 24 hours; a failed league lookup isn't cached, so the next attempt tries again.
+- **When it runs**: 60 seconds after start, then daily, one team at a time with a short pause. Pages still trigger a fetch for any team they show that has never been tried.
+- **Default provider**: TheSportsDB is now the default, with no extra variable. Tests never use it unless they opt in. `SPORTS_LOGO_PROVIDER=none` turns it off; `manifest` (a licensed vendor feed) still works as before.
+- **Rights**: team logos are trademarks of the teams and leagues. Showing them next to news and scores about those teams is common practice for news sites, but if a team or league objects, remove that logo in the Control Room (its badge comes back) or set `SPORTS_LOGO_PROVIDER=none`.
+- **Not tested live**: this workspace can't reach TheSportsDB, so check Control Room → Team logos (or the Sports → Teams page) a few minutes after the deploy.

@@ -1,3 +1,15 @@
+# What changed (team logos)
+
+Shipped to `news-v1` as one commit ("Team logos from TheSportsDB…").
+
+- **Real team logos** for every NFL, NBA, MLB, NHL, college football, MLS and Premier League team now come from **TheSportsDB**, the same provider as schedules and scores (not ESPN: its image server isn't licensed for other sites, see DECISIONS.md).
+- About a minute after the deploy, the app fetches every team's badge once, resizes it, and stores it on the Railway volume, so pages stay fast and keep working if the provider is down. Teams it couldn't get are retried once a day. Until a team's logo arrives, it keeps the colored badge.
+- Logos you upload in **Control Room → Team logos** always win and are never overwritten.
+- Railway: nothing new to add. Your `SPORTS_DATA_KEY` (if set) is used; otherwise the free key. If the free key returns only some teams, the paid key fills in the rest. `SPORTS_LOGO_PROVIDER=none` switches provider logos off.
+- To re-fetch every logo on demand: `npm run teams:refresh -- --force` (in a Railway shell).
+
+---
+
 # What changed (Politics section)
 
 Shipped to `news-v1` as one commit ("Politics: a dedicated section…"), so you can roll it back in Railway on its own. No new Railway variables, no database changes.

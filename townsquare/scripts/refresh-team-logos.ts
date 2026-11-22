@@ -4,8 +4,8 @@
  *   npm run teams:refresh            # seed/update teams, fetch logos never fetched before
  *   npm run teams:refresh -- --force # re-fetch every provider logo (manual uploads are kept)
  *
- * Needs SPORTS_LOGO_PROVIDER and SPORTS_API_KEY (see .env.example). Without
- * them, teams are still seeded and the site uses generated badges.
+ * Logos come from TheSportsDB by default (SPORTS_DATA_KEY, or the free key).
+ * SPORTS_LOGO_PROVIDER=none switches it off; teams then use generated badges.
  */
 import { fetchProviderLogo, logoProvider } from "../src/lib/sports/logo-provider";
 import { listTeams, seedTeams } from "../src/lib/sports/teams";
@@ -16,7 +16,7 @@ async function main() {
   const provider = logoProvider();
   console.log(`${teams.length} teams seeded.`);
   if (!provider) {
-    console.log("No logo provider configured (SPORTS_LOGO_PROVIDER / SPORTS_API_KEY). Generated badges will be used.");
+    console.log("Logo provider switched off (SPORTS_LOGO_PROVIDER=none). Generated badges will be used.");
     return;
   }
   const force = process.argv.includes("--force");

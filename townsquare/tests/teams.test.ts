@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { now, run } from "@/lib/db";
 import { listStories } from "@/lib/news";
 import { badgeColors, contrast } from "@/lib/sports/badge";
-import { fetchProviderLogo, logoProvider, readLogo, removeLogo, setManualLogo, type LogoProvider } from "@/lib/sports/logo-provider";
+import { fetchProviderLogo, logoProvider, needsFetch, readLogo, refreshAllLogos, removeLogo, setManualLogo, TheSportsDBLogos, type LogoProvider } from "@/lib/sports/logo-provider";
 import { getTeam, listTeams, searchTeams, teamsMentioned } from "@/lib/sports/teams";
 import { LEAGUES, TEAM_ROWS } from "@/lib/sports/teams-data";
 import { freshDb } from "./helpers";
@@ -109,5 +109,54 @@ describe("logo provider and cache", () => {
     await expect(setManualLogo("epl-ars", new File(['<svg onload="alert(1)"/>'], "a.svg", { type: "image/svg+xml" }))).rejects.toThrow(/PNG/);
     removeLogo("epl-ars");
     expect(getTeam("epl-ars")?.logo).toBeNull();
+  });
+});
+
+describe("TheSportsDB team badges", () => {
+  const teamsJson = { teams: [
+    { strTeam: "Kansas City Chiefs", strBadge: "http://r2.example/badges/kc.png" },
+    { strTeam: "Buffalo Bills", strBadge: "https://r2.example/badges/buf.png" },
+    { strTeam: "Nowhere Nomads", strBadge: "https://r2.example/badges/x.png" },
+    { strTeam: "Dallas Cowboys", strBadge: null },
+  ] };
+
+  it("matches the league's teams by name and uses HTTPS badge URLs", async () => {
+    listTeams();
+    const urls: string[] = [];
+    const p = new TheSportsDBLogos((async (u: string) => (urls.push(u), new Response(JSON.stringify(teamsJson)))) as typeof fetch);
+    expect(await p.logoUrl(getTeam("nfl-kc")!)).toBe("https://r2.example/badges/kc.png");
+    expect(await p.logoUrl(getTeam("nfl-buf")!)).toBe("https://r2.example/badges/buf.png");
+    expect(await p.logoUrl(getTeam("nfl-dal")!)).toBeNull();
+    expect(urls).toHaveLength(1); // one request per league
+    expect(urls[0]).toMatch(/lookup_all_teams\.php\?id=4391$/);
+  });
+
+  it("tries the league again after a failed lookup", async () => {
+    listTeams();
+    let calls = 0;
+    const p = new TheSportsDBLogos((async () => (++calls === 1 ? new Response("", { status: 500 }) : new Response(JSON.stringify(teamsJson)))) as typeof fetch);
+    await expect(p.logoUrl(getTeam("nfl-kc")!)).rejects.toThrow();
+    expect(await p.logoUrl(getTeam("nfl-kc")!)).toBe("https://r2.example/badges/kc.png");
+  });
+
+  it("is the default provider outside tests, and can be switched off", () => {
+    process.env.SPORTS_LOGO_PROVIDER = "thesportsdb";
+    expect(logoProvider()?.name).toBe("thesportsdb");
+    process.env.SPORTS_LOGO_PROVIDER = "none";
+    expect(logoProvider()).toBeNull();
+  });
+
+  it("retries misses and errors after a day, never manual uploads", async () => {
+    const t = Date.now();
+    expect(needsFetch("none", null, t)).toBe(true);
+    expect(needsFetch("missing", t - 3_600_000, t)).toBe(false);
+    expect(needsFetch("error", t - 25 * 3_600_000, t)).toBe(true);
+    expect(needsFetch("ok", 0, t)).toBe(false);
+    listTeams();
+    const buf = await png();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new Uint8Array(buf), { status: 200 })));
+    process.env.SPORTS_LOGO_PROVIDER = "thesportsdb";
+    const tally = await refreshAllLogos([getTeam("nfl-kc")!], { pauseMs: 0 });
+    expect(Object.keys(tally)).toHaveLength(1);
   });
 });
