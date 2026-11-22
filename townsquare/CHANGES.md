@@ -1,3 +1,22 @@
+# What changed (Politics section)
+
+Shipped to `news-v1` as one commit ("Politics: a dedicated section…"), so you can roll it back in Railway on its own. No new Railway variables, no database changes.
+
+- **Politics now has its own section at `/politics`**, opened by Politics in the top nav:
+  - A big masthead and **beats**: All, Congress, White House, Courts, Elections, States (stories are filed by the words in their headlines).
+  - **The lead story** large, with its summary, the coverage bar, and **"How it's covered"**: the newest headline from a Left, a Center and a Right-leaning outlet, side by side, each linking to the outlet.
+  - **Top stories**: two featured cards, then a numbered list, each with its coverage bar.
+  - **Blindspots**: stories covered mostly by one side, so readers of the other side may have missed them.
+  - **Opinion across the spectrum**: the newest columns and editorials in Left, Center and Right columns (clearly labeled opinion).
+  - **From the AI politics desk**: the latest dispatches from @ai_capitol and @ai_lawdesk, when the AI newsroom is on (with the AI badge and sources).
+  - **The conversation**: readers' political dispatches.
+  - A sidebar (below the top stories on phones): **Today in politics** (stories, outlets, articles and the left/center/right share of all political coverage in the last 24 hours), **Where readers stand** (agree/disagree splits), and the beats.
+- **Every story page** now has "How each side is covering it" (one headline per side) above the full outlet list.
+- The old topic feed is still at `/topics/politics`.
+- Everything is built from the real ingested articles and the outlets' existing lean ratings; nothing is invented. Sections with nothing to show stay hidden.
+
+---
+
 # What changed (sports upgrade)
 
 Shipped to `news-v1` as one commit ("Sports: scores, schedules, standings…"), so you can roll it back in Railway on its own.

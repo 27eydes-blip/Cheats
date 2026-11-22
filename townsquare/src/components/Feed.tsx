@@ -14,7 +14,7 @@ import type { MenuItem } from "./ui/Menu";
 import { ErrorState } from "./ui/States";
 import { FeedSkeleton, PostSkeleton } from "./ui/Skeleton";
 
-type Source = { tab: string; handle?: string; ptab?: string; q?: string; exclude?: string; topic?: string; team?: string; list?: string };
+type Source = { tab: string; handle?: string; ptab?: string; q?: string; exclude?: string; topic?: string; team?: string; list?: string; human?: string; posts?: string };
 
 const qs = (s: Source, extra: Record<string, string>) => new URLSearchParams({ ...(s as Record<string, string>), ...extra }).toString();
 

@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
           topic: p.get("topic") && p.get("topic")! in TOPIC_LABEL ? p.get("topic")! : undefined,
           teamId: p.get("team") ?? undefined,
           humanOnly: p.get("human") === "1",
+          postsOnly: p.get("posts") === "1",
         }),
       );
     case "list":

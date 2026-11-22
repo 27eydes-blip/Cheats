@@ -14,7 +14,7 @@ export type ForYouItem =
   | { key: string; kind: "post"; post: PostView; repostedBy: null; reason?: string; topic: string | null; promoted?: boolean }
   | { key: string; kind: "story"; story: StorySummary; reason?: string; topic: string | null; rising?: boolean }
   | { key: string; kind: "sponsored"; ad: SponsoredCard; topic: null };
-export type ForYouOpts = { excludeStory?: string; /** topic tab: only this topic */ topic?: string; /** team tab: only stories tagged with this team, and dispatches on them */ teamId?: string; /** "Human only": leave out AI newsroom accounts */ humanOnly?: boolean };
+export type ForYouOpts = { excludeStory?: string; /** topic tab: only this topic */ topic?: string; /** team tab: only stories tagged with this team, and dispatches on them */ teamId?: string; /** "Human only": leave out AI newsroom accounts */ humanOnly?: boolean; /** dispatches only, no story cards (e.g. the Politics page's conversation) */ postsOnly?: boolean };
 export type ForYouPage = { items: ForYouItem[]; nextCursor: string | null };
 
 const H = 3_600_000;
@@ -95,7 +95,7 @@ export function forYou(viewerId: string | null, cursor?: string | null, limit: n
 
   // ---- stories
   const banner = getBanner();
-  const stories = listStories(40, { viewerId }).filter((s) => !dismissed.has(`story:${s.key}`) && s.key !== opts.excludeStory);
+  const stories = (opts.postsOnly ? [] : listStories(40, { viewerId })).filter((s) => !dismissed.has(`story:${s.key}`) && s.key !== opts.excludeStory);
   const skeys = stories.map((s) => s.key);
   const sq = ph(skeys.length);
   const sviews = skeys.length ? buckets(`SELECT target_id id, ${BUCKET("created_at", t)} FROM engagement_events WHERE target_type = 'story' AND kind IN ('view','click') AND target_id IN (${sq}) GROUP BY target_id`, skeys) : new Map();

@@ -124,7 +124,7 @@ describe("one feed tab row and Your Topics", () => {
     const { CHANNELS, activeChannel } = await import("@/components/shell/channels");
     expect(CHANNELS.map((c) => c.label)).toEqual(["Politics", "World", "Business", "Tech", "Sports", "Culture", "Markets", "Live", "Desks"]);
     expect(new Set(CHANNELS.map((c) => c.label)).size).toBe(CHANNELS.length);
-    expect(CHANNELS[0].href).toBe("/topics/politics");
+    expect(CHANNELS[0].href).toBe("/politics");
     expect(activeChannel("/topics/business")).toBe("markets");
     expect(activeChannel("/markets")).toBe("stockboard");
     expect(activeChannel("/")).toBeNull();

@@ -248,3 +248,15 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Season for tables**: the season string of the latest game we have, else a guess per league (NBA, NHL and EPL use "2026-2027"; NFL and college football use the year the season started; MLB and MLS use the calendar year).
 - **Navigation**: the Sports item in the top nav now opens `/sports` (scores) instead of the topic feed. The topic feed is still at `/topics/sports` ("Sports news"), with a score strip on top. The menu's Teams item opens `/sports?view=teams`.
 - **No sample games in production**: there are no demo or seeded games. Until the first sync succeeds, the pages show a plain "No games loaded yet" message.
+
+## Politics section
+
+- **Why a dedicated page**: you said Politics will be the main part, so the top nav's Politics now opens `/politics`, a designed front page for politics, instead of the generic topic feed (still at `/topics/politics`).
+- **Signature feature, "How it's covered"**: for each story, the newest news headline (opinion only when there's no news piece) from one Left, one Center and one Right-leaning outlet. Sides use the outlets' existing approximate lean ratings (Lean Left counts as Left, Lean Right as Right). A missing side says so neutrally ("No Right-leaning outlet in our feeds has covered this yet").
+- **Beats** are assigned by whole words in the story headline, summary and article headlines (Congress: senate, lawmakers, bill…; White House: president, executive order…; Courts: supreme court, judge, ruling…; Elections: campaign, ballot, primary…; States: governor, mayor, legislature…). A story can have more than one beat. Word lists are in `src/lib/politics.ts`.
+- **Blindspots** reuse the existing neutral coverage flags: "mostly covered by Left-leaning outlets" or "few Right-leaning outlets" go in the left column, and the reverse in the right. They need at least 4 rated outlets, so small stories never get flagged.
+- **Opinion columns** show at most one piece per outlet per column, from the last 4 days, so one prolific outlet can't fill a column.
+- **Today in politics** counts each outlet once, over articles published in the last 24 hours on political stories.
+- **The conversation** shows readers' dispatches only (the For You feed with story cards turned off), so stories aren't listed twice on the page.
+- **Neutral by design**: no section ranks one side above another, colors are muted and always paired with text labels, and every headline links out to the outlet.
+- Checked on phone and desktop with TEST outlets only (not committed); accessibility structure follows the existing pages (one h1, h2 per section, labeled navs).

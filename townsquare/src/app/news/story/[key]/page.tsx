@@ -8,6 +8,8 @@ import { DebateCard } from "@/components/front/DebateCard";
 import { StoryArt } from "@/components/front/StoryArt";
 import { CoverageBar } from "@/components/news/CoverageBar";
 import { CoverageList } from "@/components/news/CoverageList";
+import { SidesPanel } from "@/components/politics/Politics";
+import { sideHeadlines } from "@/lib/politics";
 import { FeedImage } from "@/components/news/FeedImage";
 import { NotesPanel } from "@/components/notes/NotesPanel";
 import { FLAG_REASONS, notesFor, REASONS } from "@/lib/notes/notes";
@@ -119,6 +121,12 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
                 <h2 id="coverage" className="folio text-navy-ink">Who&apos;s covering this</h2>
               </div>
               <div className="mt-3"><CoverageBar storyKey={story.key} coverage={story.coverage} items={story.articles} size="md" /></div>
+              {story.coverage.rated > 1 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">How each side is covering it</p>
+                  <SidesPanel sides={sideHeadlines(story.articles.map((a) => ({ title: a.title, url: a.url, published_at: a.publishedAt, opinion: a.opinion ? 1 : 0, source: a.source, lean: a.lean })))} />
+                </div>
+              )}
               <div className="mt-4"><CoverageList items={story.articles} /></div>
             </section>
           )}

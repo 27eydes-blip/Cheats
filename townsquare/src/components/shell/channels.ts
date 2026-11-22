@@ -5,7 +5,7 @@ import { topicHref } from "@/lib/feedtabs-meta";
  * Live and Desks. The home feed itself only has For You and Friends tabs.
  */
 export const CHANNELS = [
-  { key: "politics", label: "Politics", href: topicHref("politics") },
+  { key: "politics", label: "Politics", href: "/politics" },
   { key: "world", label: "World", href: topicHref("world") },
   { key: "markets", label: "Business", href: topicHref("markets") },
   { key: "tech", label: "Tech", href: topicHref("tech") },
@@ -24,6 +24,7 @@ export function activeChannel(path: string, _c?: string | null) {
   void _c;
   const t = CHANNELS.find((c) => c.href.startsWith("/topics/") && (path === c.href || path.startsWith(c.href + "/")));
   if (t) return t.key;
+  if (path.startsWith("/politics") || path === "/topics/politics") return "politics";
   if (path.startsWith("/sports") || path === "/topics/sports") return "sports";
   if (path.startsWith("/live")) return "live";
   if (path.startsWith("/markets")) return "stockboard";
