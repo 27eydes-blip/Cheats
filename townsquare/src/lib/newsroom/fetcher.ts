@@ -91,20 +91,26 @@ export function robotsAllows(rules: Rule[], path: string): boolean {
 }
 
 /**
- * May we fetch this URL? robots.txt is cached for 24 hours per host. As with
+ * May we fetch this URL? robots.txt is cached for 24 hours per host (a failed
+ * check only ROBOTS_RETRY, so the next sync tries again). As with
  * major crawlers: a missing robots.txt (4xx) allows everything; a server
  * error (5xx) or network failure means "try later" (treated as not allowed).
  */
+/** How long a failed robots.txt check is remembered before trying again. */
+export const ROBOTS_RETRY = 9 * 60_000;
+
 export async function allowedByRobots(url: string, fetchImpl?: FetchLike): Promise<{ ok: boolean; reason?: string }> {
   const u = new URL(url);
   const host = u.host;
   let row = get<{ body: string; status: number; fetched_at: number }>("SELECT body, status, fetched_at FROM robots_cache WHERE host = ?", [host]);
-  if (!row || now() - row.fetched_at > 24 * 3_600_000) {
-    const r = await fetchText(`${u.protocol}//${host}/robots.txt`, { fetchImpl, timeoutMs: 8000, maxBytes: 500_000 });
+  // A good answer is kept 24 hours; a failed one (timeout, 5xx) only ROBOTS_RETRY, so the next sync really retries.
+  const failed = (st: number) => st === 0 || st >= 500;
+  if (!row || now() - row.fetched_at > (failed(row.status) ? ROBOTS_RETRY : 24 * 3_600_000)) {
+    const r = await fetchText(`${u.protocol}//${host}/robots.txt`, { fetchImpl, timeoutMs: 12_000, maxBytes: 500_000 });
     row = { body: r.status === 200 ? r.body : "", status: r.status, fetched_at: now() };
     run("INSERT INTO robots_cache (host, body, status, fetched_at) VALUES (?, ?, ?, ?) ON CONFLICT(host) DO UPDATE SET body = excluded.body, status = excluded.status, fetched_at = excluded.fetched_at", [host, row.body, row.status, row.fetched_at]);
   }
-  if (row.status >= 500 || row.status === 0) return { ok: false, reason: "robots.txt unavailable; will retry" };
+  if (failed(row.status)) return { ok: false, reason: "robots.txt unavailable; will retry" };
   if (row.status !== 200) return { ok: true };
   return robotsAllows(robotsRules(row.body), u.pathname + u.search) ? { ok: true } : { ok: false, reason: "Blocked by the site's robots.txt" };
 }

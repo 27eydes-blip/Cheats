@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { seedOutlets } from "../newsroom/outlets";
+import { applyOutletUpdates, seedOutlets } from "../newsroom/outlets";
 
 /**
  * Numbered, append-only migrations. Each runs once per database and is
@@ -343,6 +343,19 @@ CREATE TABLE IF NOT EXISTS breaking_alerts (
 )
 `,
     after: (db) => seedOutlets(db),
+  },
+  {
+    // Additive only: two columns, feed-address fixes, new outlets. Nothing is deleted or reset.
+    id: 9,
+    name: "feed_fixes_and_outlets",
+    sql: `
+ALTER TABLE news_sources ADD COLUMN last_found INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE news_sources ADD COLUMN last_new INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE news_sources ADD COLUMN feed_candidates TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE news_sources ADD COLUMN pending_check INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE news_sources ADD COLUMN feed_note TEXT NOT NULL DEFAULT ''
+`,
+    after: (db) => applyOutletUpdates(db),
   },
 ];
 

@@ -23,7 +23,7 @@ const sub = (n: string) => ({ endpoint: `https://push.example.com/${n}`, keys: {
 const payload = { title: "T", body: "B", url: "/" };
 const story = (key: string, o: { importance?: number; category?: string; outlets?: number } = {}) => {
   run("INSERT INTO stories (key, title, section, status, created_at, updated_at, origin, importance, category) VALUES (?, ?, 'Politics', 'developing', ?, ?, 'real', ?, ?)", [key, `Headline ${key}`, now(), now(), o.importance ?? 50, o.category ?? "Politics"]);
-  const outlets = ["npr", "fox", "cnn", "upi", "wsj", "nyt", "bbc", "nypost", "axios", "thehill"].slice(0, o.outlets ?? 0);
+  const outlets = ["npr", "fox", "cnn", "upi", "wsj", "nyt", "bbc", "nypost", "politico", "thehill"].slice(0, o.outlets ?? 0);
   outlets.forEach((src, i) => run("INSERT INTO news_items (id, source_id, section, title, url, story_key, published_at) VALUES (?, ?, 'Politics', 'h', ?, ?, ?)", [`${key}${i}`, src, `https://x.example.com/${key}/${i}`, key, now()]));
 };
 

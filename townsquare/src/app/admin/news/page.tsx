@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireViewerPage } from "@/lib/session";
 import { listSources, newsStatus } from "@/lib/newsroom/admin";
+import { FAILING_AFTER } from "@/lib/newsroom/ingest";
 import { demoEnabled } from "@/lib/newsroom/settings";
 import { Frame, PageTitle } from "@/components/ui/Frame";
 import { Kicker } from "@/components/ui/Badge";
@@ -17,7 +18,8 @@ export default async function NewsAdmin() {
   if (admin.role !== "admin") notFound();
   const st = newsStatus();
   const sources = listSources();
-  const failing = sources.filter((s) => s.active && s.error_count > 0);
+  const failing = sources.filter((s) => s.active && s.error_count >= FAILING_AFTER);
+  const pending = sources.filter((s) => s.pending_check);
   const active = sources.filter((s) => s.active).length;
 
   return (
@@ -26,7 +28,7 @@ export default async function NewsAdmin() {
 
       <section aria-label="Sync status" className="mx-4 mt-6 grid gap-4 border-y border-[var(--hairline)] py-4 sm:mx-6 sm:grid-cols-4">
         <div><p className="text-[12.5px] text-ink-3">Last sync</p><p className="text-[16px] font-semibold">{st.last ? <><Time ms={st.last.started_at} /> ago</> : "Never"}</p>{st.last && <p className="text-[12.5px] text-ink-3">{st.last.new_items} new, {st.last.errors} errors ({st.last.trigger})</p>}</div>
-        <div><p className="text-[12.5px] text-ink-3">Feeds</p><p className="text-[16px] font-semibold">{active} active</p><p className="text-[12.5px] text-ink-3">{failing.length} failing</p></div>
+        <div><p className="text-[12.5px] text-ink-3">Feeds</p><p className="text-[16px] font-semibold">{active} active</p><p className={`text-[12.5px] ${failing.length ? "font-semibold text-[var(--disagree)]" : "text-ink-3"}`}>{failing.length} failing {FAILING_AFTER}+ times in a row</p>{pending.length > 0 && <p className="text-[12.5px] text-ink-3">{pending.length} waiting for checks</p>}</div>
         <div><p className="text-[12.5px] text-ink-3">Stories</p><p className="text-[16px] font-semibold">{st.counts.real} real</p><p className="text-[12.5px] text-ink-3">{st.counts.items} articles stored</p></div>
         <div className="flex flex-col items-start gap-1.5"><SyncNow /><p className="text-[12.5px] text-ink-3">Runs by itself every {Number(process.env.NEWS_INGEST_INTERVAL_MIN) || 10} minutes.</p></div>
       </section>
@@ -57,11 +59,17 @@ export default async function NewsAdmin() {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <OutletBadge name={s.name} color={s.color} className="text-[15px]" />
                 <span className="text-[12.5px] text-ink-3">{s.outlet_type}{s.category ? ` · ${s.category}` : ""}{s.kind === "api" ? " · via news API" : ""}</span>
-                <span className="ml-auto text-[12.5px] text-ink-3">
-                  {!s.active ? "Paused" : s.last_success_at ? <>OK <Time ms={s.last_success_at} /> ago · {s.items_24h} new in 24h</> : "Not synced yet"}
-                </span>
+                {s.active && s.error_count >= FAILING_AFTER && <span className="rounded-[4px] bg-[var(--wn-red-fill)] px-1.5 py-px text-[11px] font-bold text-white">Failing {s.error_count}× in a row</span>}
+                {!!s.pending_check && <span className="rounded-[4px] px-1.5 py-px text-[11px] font-semibold text-ink-2 ring-1 ring-[var(--hairline)]">Waiting for robots.txt and feed check</span>}
+                <span className="ml-auto text-[12.5px] text-ink-3">{!s.active && !s.pending_check ? "Off" : s.items_24h ? `${s.items_24h} new in 24h` : ""}</span>
               </div>
-              {s.last_error && <p className="mt-1 text-[13px] text-[var(--disagree)]">Error{s.error_count > 1 ? ` (${s.error_count} in a row)` : ""}: {s.last_error}{s.last_status ? ` · HTTP ${s.last_status}` : ""}</p>}
+              <p className="mt-1 text-[13px] text-ink-2">
+                <span className="text-ink-3">Last result: </span>
+                {!s.last_fetch_at ? "not fetched yet" : s.last_error ? <span className="text-[var(--disagree)]">error{s.last_status ? ` (HTTP ${s.last_status})` : ""}: {s.last_error}</span> : s.last_status === 304 ? "unchanged since the last sync (304)" : `OK, ${s.last_found} items, ${s.last_new} new`}
+                {s.last_fetch_at && <span className="text-ink-3"> · <Time ms={s.last_fetch_at} /> ago</span>}
+                {s.last_success_at && s.last_error && <span className="text-ink-3"> · last worked <Time ms={s.last_success_at} /> ago</span>}
+              </p>
+              {s.feed_note && <p className="mt-0.5 text-[12.5px] text-ink-3">{s.feed_note}</p>}
               <SourceRowControls id={s.id} name={s.name} lean={s.lean} note={s.lean_note} feedUrl={s.feed_url} active={!!s.active} />
             </li>
           ))}

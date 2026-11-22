@@ -1,3 +1,21 @@
+# What changed (polish-v1)
+
+Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live branch), so you can roll back a part in Railway on its own. Screenshots are in `screenshots/` on the `polish-v1` branch only.
+
+| Part | What | Commit on news-v1 |
+|---|---|---|
+| 1 | Feed fixes, outlet changes, Control Room feed status | (filled in below) |
+
+## Part 1: Failing feeds and more outlets
+- HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
+- Fox Business and Axios removed from the default outlets (their robots.txt disallows us); on the live site they're switched off, their old articles kept.
+- Newsmax's "robots.txt unavailable" now really retries on the next sync.
+- New outlets WSJ Opinion, The Daily Signal, Townhall and TheBlaze start switched off and turn on only after their robots.txt allows us and their feed works.
+- Control Room → News feeds shows each feed's last result and flags feeds that fail 3 times in a row.
+- Railway: nothing to add.
+
+---
+
 # What changed (news-v1)
 
 Branch `news-v1`, built on `design-v2`. Every earlier feature still works. Details and reasons: `DECISIONS.md`, Parts H–K.

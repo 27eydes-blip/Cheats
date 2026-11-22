@@ -35,6 +35,24 @@ export type OutletDef = {
   color: string;
   type: OutletType;
   category?: Category;
+  /** Other official addresses to try if the main one stops returning a feed. */
+  candidates?: string[];
+  /**
+   * Added in polish-v1 and not yet verified: starts switched off, and the
+   * ingest job switches it on only after its robots.txt allows our reader and
+   * the feed returns items (see checkPendingOutlets).
+   */
+  pendingCheck?: boolean;
+};
+
+/**
+ * Removed from the default list (DECISIONS.md, Part 1 of polish-v1): their
+ * robots.txt disallows our feed reader. Existing rows are switched off, never
+ * deleted, and these ids are never seeded again.
+ */
+export const REMOVED_OUTLETS: Record<string, string> = {
+  foxbusiness: "Removed from the default list: Fox Business's robots.txt disallows our feed reader.",
+  axios: "Removed from the default list: Axios's robots.txt disallows our feed reader.",
 };
 
 const AS = "Approximate: AllSides rating";
@@ -62,9 +80,8 @@ export const OUTLET_LIST: OutletDef[] = [
   { id: "nbc", name: "NBC News", homepage: "https://www.nbcnews.com", feed: "https://feeds.nbcnews.com/nbcnews/public/news", lean: "Lean Left", note: note("Lean Left", "Skews Left"), color: "#6460aa", type: "tv" },
   { id: "cbs", name: "CBS News", homepage: "https://www.cbsnews.com", feed: "https://www.cbsnews.com/latest/rss/main", lean: "Lean Left", note: note("Lean Left", "Middle"), color: "#a9b3c1", type: "tv" },
   { id: "abc", name: "ABC News", homepage: "https://abcnews.go.com", feed: "https://abcnews.go.com/abcnews/topstories", lean: "Lean Left", note: note("Lean Left", "Middle"), color: "#4d6cfa", type: "tv" },
-  { id: "msnbc", name: "MSNBC", homepage: "https://www.msnbc.com", feed: "https://www.msnbc.com/feeds/latest", lean: "Left", note: note("Left", "Skews Left"), color: "#2a6ebb", type: "tv" },
+  { id: "msnbc", name: "MSNBC", homepage: "https://www.msnbc.com", feed: "https://www.msnbc.com/feeds/latest", candidates: ["https://www.msnow.com/feeds/latest", "https://www.msnow.com/rss", "https://www.msnbc.com/rss"], lean: "Left", note: note("Left", "Skews Left"), color: "#2a6ebb", type: "tv" },
   { id: "newsmax", name: "Newsmax", homepage: "https://www.newsmax.com", feed: "https://www.newsmax.com/rss/Newsfront/16/", lean: "Right", note: note("Right", "Strong Right"), color: "#2c5aa0", type: "tv" },
-  { id: "foxbusiness", name: "Fox Business", homepage: "https://www.foxbusiness.com", feed: "https://moxie.foxbusiness.com/google-publisher/latest.xml", lean: "Lean Right", note: note("Lean Right", "Skews Right"), color: "#1f3d7a", type: "tv", category: "Markets" },
   { id: "cnbc", name: "CNBC", homepage: "https://www.cnbc.com", feed: "https://www.cnbc.com/id/100003114/device/rss/rss.html", lean: "Center", note: note("Center", "Middle"), color: "#3fa9f5", type: "tv", category: "Markets" },
   // Public media
   { id: "npr", name: "NPR", homepage: "https://www.npr.org", feed: "https://feeds.npr.org/1001/rss.xml", lean: "Lean Left", note: note("Lean Left", "Skews Left"), color: "#d62021", type: "public" },
@@ -72,9 +89,8 @@ export const OUTLET_LIST: OutletDef[] = [
   // Digital and political news
   { id: "thehill", name: "The Hill", homepage: "https://thehill.com", feed: "https://thehill.com/news/feed/", lean: "Center", note: note("Center", "Middle"), color: "#2a6ead", type: "digital", category: "Politics" },
   { id: "politico", name: "Politico", homepage: "https://www.politico.com", feed: "https://rss.politico.com/politics-news.xml", lean: "Lean Left", note: note("Lean Left", "Middle"), color: "#d8272d", type: "digital", category: "Politics" },
-  { id: "axios", name: "Axios", homepage: "https://www.axios.com", feed: "https://api.axios.com/feed/", lean: "Lean Left", note: note("Lean Left", "Middle"), color: "#2a7de1", type: "digital" },
   { id: "newsweek", name: "Newsweek", homepage: "https://www.newsweek.com", feed: "https://www.newsweek.com/rss", lean: "Center", note: note("Center", "Middle"), color: "#d71920", type: "magazine" },
-  { id: "huffpost", name: "HuffPost", homepage: "https://www.huffpost.com", feed: "https://www.huffpost.com/section/front-page/feed", lean: "Left", note: note("Left", "Skews Left"), color: "#0dbe98", type: "digital" },
+  { id: "huffpost", name: "HuffPost", homepage: "https://www.huffpost.com", feed: "https://chaski.huffpost.io/us/auto/vertical/us-news", candidates: ["https://chaski.huffpost.io/us/auto/vertical/front-page", "https://www.huffpost.com/section/front-page/feed"], lean: "Left", note: note("Left", "Skews Left"), color: "#0dbe98", type: "digital" },
   { id: "vox", name: "Vox", homepage: "https://www.vox.com", feed: "https://www.vox.com/rss/index.xml", lean: "Left", note: note("Left", "Skews Left"), color: "#fff200", type: "digital" },
   { id: "slate", name: "Slate", homepage: "https://slate.com", feed: "https://slate.com/feeds/all.rss", lean: "Left", note: note("Left", "Skews Left"), color: "#8a3fd1", type: "magazine" },
   { id: "intercept", name: "The Intercept", homepage: "https://theintercept.com", feed: "https://theintercept.com/feed/?rss", lean: "Left", note: note("Left", "Skews Left"), color: "#9b9b9b", type: "digital" },
@@ -90,6 +106,12 @@ export const OUTLET_LIST: OutletDef[] = [
   { id: "federalist", name: "The Federalist", homepage: "https://thefederalist.com", feed: "https://thefederalist.com/feed/", lean: "Right", note: note("Right", "Strong Right"), color: "#c41e3a", type: "digital" },
   { id: "dailycaller", name: "The Daily Caller", homepage: "https://dailycaller.com", feed: "https://dailycaller.com/feed/", lean: "Right", note: note("Right", "Strong Right"), color: "#1c5aa6", type: "digital" },
   { id: "freebeacon", name: "Washington Free Beacon", homepage: "https://freebeacon.com", feed: "https://freebeacon.com/feed/", lean: "Right", note: note("Right", "Skews Right"), color: "#9c1c1c", type: "digital" },
+  // Added in polish-v1 to keep right-of-center coverage after Fox Business left the list. Each starts
+  // switched off and is turned on only if its robots.txt allows our reader and its feed parses.
+  { id: "wsjopinion", name: "WSJ Opinion", homepage: "https://www.wsj.com/opinion", feed: "https://feeds.a.dj.com/rss/RSSOpinion.xml", lean: "Lean Right", note: note("Lean Right (WSJ opinion section, rated separately from its news)", "Skews Right"), color: "#b5a37a", type: "paper", pendingCheck: true },
+  { id: "dailysignal", name: "The Daily Signal", homepage: "https://www.dailysignal.com", feed: "https://www.dailysignal.com/feed/", lean: "Right", note: note("Right", "Skews Right"), color: "#c8102e", type: "digital", pendingCheck: true },
+  { id: "townhall", name: "Townhall", homepage: "https://townhall.com", feed: "https://townhall.com/feed/", lean: "Right", note: note("Right", "Strong Right"), color: "#1f4e8c", type: "digital", pendingCheck: true },
+  { id: "theblaze", name: "TheBlaze", homepage: "https://www.theblaze.com", feed: "https://www.theblaze.com/feeds/feed.rss", lean: "Right", note: note("Right", "Strong Right"), color: "#f26722", type: "digital", pendingCheck: true },
   // Business
   { id: "bloomberg", name: "Bloomberg", homepage: "https://www.bloomberg.com", feed: "https://feeds.bloomberg.com/markets/news.rss", lean: "Lean Left", note: note("Lean Left", "Middle"), color: "#a855f7", type: "digital", category: "Markets" },
   { id: "forbes", name: "Forbes", homepage: "https://www.forbes.com", feed: "https://www.forbes.com/business/feed/", lean: "Center", note: note("Center", "Middle"), color: "#9a9a9a", type: "magazine", category: "Markets" },
@@ -113,11 +135,29 @@ const DEMO_LEANS: Record<string, Lean> = { o1: "Center", o2: "Lean Left", o3: "L
 export function seedOutlets(db: DatabaseSync) {
   const ins = db.prepare(
     `INSERT OR IGNORE INTO news_sources (id, name, homepage, feed_url, verified, kind, api_source, lean, lean_note, color, category, outlet_type, active, demo)
-     VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 1, 0)`,
+     VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
   );
   for (const o of OUTLET_LIST) {
-    ins.run(o.id, o.name, o.homepage, o.feed, o.feed ? "rss" : "api", o.api ?? null, o.lean, o.note ?? "", o.color, o.category ?? null, o.type);
+    if (REMOVED_OUTLETS[o.id]) continue;
+    ins.run(o.id, o.name, o.homepage, o.feed, o.feed ? "rss" : "api", o.api ?? null, o.lean, o.note ?? "", o.color, o.category ?? null, o.type, o.pendingCheck ? 0 : 1);
   }
   const demo = db.prepare("UPDATE news_sources SET lean = ?, lean_note = 'Fictional demo outlet.' WHERE id = ? AND demo = 1 AND lean IS NULL");
   for (const [id, lean] of Object.entries(DEMO_LEANS)) demo.run(lean, id);
+}
+
+/**
+ * Migration 9's data step, safe on the live database: never deletes rows.
+ *  - outlets removed from the default list are switched off (their articles stay);
+ *  - HuffPost's old address (a web page, not a feed) is replaced, only if nobody edited it;
+ *  - fallback feed addresses are recorded for outlets whose feed has moved;
+ *  - new outlets are added switched off, waiting for the robots.txt and feed check.
+ */
+export function applyOutletUpdates(db: DatabaseSync) {
+  for (const [id, why] of Object.entries(REMOVED_OUTLETS)) db.prepare("UPDATE news_sources SET active = 0, feed_note = ? WHERE id = ?").run(why, id);
+  db.prepare("UPDATE news_sources SET feed_url = ?, etag = NULL, last_modified = NULL, error_count = 0, next_fetch_at = 0, feed_note = 'Feed address updated: the old one returns a web page.' WHERE id = 'huffpost' AND feed_url = 'https://www.huffpost.com/section/front-page/feed'").run("https://chaski.huffpost.io/us/auto/vertical/us-news");
+  const cand = db.prepare("UPDATE news_sources SET feed_candidates = ? WHERE id = ?");
+  for (const o of OUTLET_LIST) if (o.candidates?.length) cand.run(JSON.stringify(o.candidates), o.id);
+  seedOutlets(db);
+  const pend = db.prepare("UPDATE news_sources SET pending_check = 1, next_fetch_at = 0 WHERE id = ? AND last_fetch_at IS NULL AND active = 0");
+  for (const o of OUTLET_LIST) if (o.pendingCheck) pend.run(o.id);
 }

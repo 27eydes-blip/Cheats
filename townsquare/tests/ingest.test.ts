@@ -25,7 +25,7 @@ function fakeNet(routes: Record<string, Route | ((init?: RequestInit) => Route)>
 
 /** Point three real outlet rows at fake feeds and switch the rest off. */
 function useOnly(feeds: Record<string, string>) {
-  run("UPDATE news_sources SET active = 0");
+  run("UPDATE news_sources SET active = 0, pending_check = 0");
   for (const [id, url] of Object.entries(feeds)) run("UPDATE news_sources SET active = 1, feed_url = ?, kind = 'rss', next_fetch_at = 0 WHERE id = ?", [url, id]);
 }
 

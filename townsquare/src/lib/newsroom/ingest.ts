@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { all, get, newId, now, run, tx } from "../db";
 import { publish } from "../realtime";
 import { assign, CATEGORY_SECTION, classify, pickHeadline, scoreStory, STORY_WINDOW, storyCategory, storySlug, trimBag, addBag, type Bag, type Doc, type StoryState } from "./cluster";
-import { parseApiArticles, parseFeed, type ApiArticle, type FeedItem } from "./feeds";
+import { parseApiArticles, parseFeed, safeUrl, type ApiArticle, type FeedItem } from "./feeds";
 import { allowedByRobots, fetchText, type FetchLike } from "./fetcher";
 import type { Category, Lean } from "./outlets";
 import { getSetting, setSetting } from "./settings";
@@ -20,8 +20,11 @@ const CONCURRENCY = 6;
 export type SourceRow = {
   id: string; name: string; homepage: string; feed_url: string | null; kind: string; api_source: string | null; lean: Lean | null; lean_note: string; color: string;
   category: Category | null; outlet_type: string; active: number; demo: number; etag: string | null; last_modified: string | null; last_fetch_at: number | null;
-  last_success_at: number | null; last_status: number | null; last_error: string | null; error_count: number; next_fetch_at: number; items_total: number;
+  last_success_at: number | null; last_status: number | null; last_error: string | null; error_count: number; next_fetch_at: number; items_total: number; last_found: number; last_new: number; feed_candidates: string; pending_check: number; feed_note: string;
 };
+
+/** A feed that has failed this many syncs in a row is flagged in the Control Room. */
+export const FAILING_AFTER = 3;
 
 export type IngestResult = { skipped?: string; sources: number; fetched: number; newItems: number; storiesNew: number; storiesUpdated: number; errors: { source: string; error: string }[] };
 
@@ -29,7 +32,7 @@ function backoff(errors: number) {
   return Math.min(6 * H, FEED_INTERVAL() * 2 ** Math.min(6, errors));
 }
 
-function recordFetch(s: SourceRow, ok: boolean, status: number, error: string | null, extra: { etag?: string | null; lastModified?: string | null; retryAfter?: number | null; items?: number } = {}) {
+function recordFetch(s: SourceRow, ok: boolean, status: number, error: string | null, extra: { etag?: string | null; lastModified?: string | null; retryAfter?: number | null; items?: number; found?: number } = {}) {
   const t = now();
   const errors = ok ? 0 : s.error_count + 1;
   const interval = s.kind === "api" ? API_INTERVAL() : FEED_INTERVAL();
@@ -37,8 +40,8 @@ function recordFetch(s: SourceRow, ok: boolean, status: number, error: string | 
   run(
     `UPDATE news_sources SET last_fetch_at = ?, last_status = ?, last_error = ?, error_count = ?, next_fetch_at = ?,
        last_success_at = CASE WHEN ? THEN ? ELSE last_success_at END, items_total = items_total + ?,
-       etag = COALESCE(?, etag), last_modified = COALESCE(?, last_modified) WHERE id = ?`,
-    [t, status, error, errors, next, ok ? 1 : 0, t, extra.items ?? 0, ok ? extra.etag ?? null : null, ok ? extra.lastModified ?? null : null, s.id],
+       etag = COALESCE(?, etag), last_modified = COALESCE(?, last_modified), last_found = ?, last_new = ? WHERE id = ?`,
+    [t, status, error, errors, next, ok ? 1 : 0, t, extra.items ?? 0, ok ? extra.etag ?? null : null, ok ? extra.lastModified ?? null : null, extra.found ?? 0, extra.items ?? 0, s.id],
   );
 }
 
@@ -74,16 +77,62 @@ async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
 }
 
 /** Fetch and parse one RSS source (robots.txt first). */
-export async function fetchSource(s: SourceRow, fetchImpl?: FetchLike): Promise<{ items: FeedItem[]; status: number; error: string | null; etag?: string | null; lastModified?: string | null; retryAfter?: number | null }> {
-  if (!s.feed_url) return { items: [], status: 0, error: "No feed URL" };
-  const robots = await allowedByRobots(s.feed_url, fetchImpl);
-  if (!robots.ok) return { items: [], status: 0, error: robots.reason ?? "Blocked by robots.txt" };
-  const r = await fetchText(s.feed_url, { etag: s.etag, lastModified: s.last_modified, fetchImpl });
+type FetchOut = { items: FeedItem[]; status: number; error: string | null; etag?: string | null; lastModified?: string | null; retryAfter?: number | null; movedTo?: string; robotsBlocked?: boolean };
+
+/** <link rel="alternate" type="application/rss+xml|atom+xml" href="…"> on an outlet's own page. */
+export function feedLinksIn(html: string, base: string): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = m[0];
+    if (!/rel=["']?alternate/i.test(tag) || !/type=["']?application\/(rss|atom)\+xml/i.test(tag)) continue;
+    const href = /href=["']([^"']+)["']/i.exec(tag)?.[1];
+    const u = href ? safeUrl(href, base) : null;
+    if (u && !out.includes(u)) out.push(u);
+  }
+  return out.slice(0, 6);
+}
+
+async function fetchOne(url: string, s: Pick<SourceRow, "etag" | "last_modified"> | null, fetchImpl?: FetchLike): Promise<FetchOut & { body?: string }> {
+  const robots = await allowedByRobots(url, fetchImpl);
+  if (!robots.ok) return { items: [], status: 0, error: robots.reason ?? "Blocked by robots.txt", robotsBlocked: robots.reason !== "robots.txt unavailable; will retry" };
+  const r = await fetchText(url, { etag: s?.etag, lastModified: s?.last_modified, fetchImpl });
   if (r.status === 304) return { items: [], status: 304, error: null, retryAfter: r.retryAfter };
   if (r.status !== 200) return { items: [], status: r.status, error: r.error ?? `HTTP ${r.status}${r.status === 429 ? " (rate limited)" : ""}`, retryAfter: r.retryAfter };
-  const items = parseFeed(r.body, s.feed_url);
-  if (!items.length) return { items, status: 200, error: "No items found (not an RSS or Atom feed?)" };
-  return { items, status: 200, error: null, etag: r.etag, lastModified: r.lastModified };
+  return { items: parseFeed(r.body, url), status: 200, error: null, etag: r.etag, lastModified: r.lastModified, body: r.body };
+}
+
+/**
+ * Fetch and parse one RSS source (robots.txt first). If the address answers
+ * with a normal web page instead of a feed, look for the outlet's official
+ * feed: feed links on that page, the outlet's listed fallback addresses, and
+ * feed links on the outlet's homepage. Every candidate is checked against
+ * robots.txt; the first one that parses with items is used (movedTo).
+ */
+export async function fetchSource(s: SourceRow, fetchImpl?: FetchLike): Promise<FetchOut> {
+  if (!s.feed_url) return { items: [], status: 0, error: "No feed URL" };
+  const r = await fetchOne(s.feed_url, s, fetchImpl);
+  if (r.error || r.status === 304 || r.items.length) {
+    const { body: _b, ...rest } = r;
+    void _b;
+    return rest;
+  }
+  const tried = new Set([s.feed_url]);
+  const queue = [...feedLinksIn(r.body ?? "", s.feed_url), ...(JSON.parse(s.feed_candidates || "[]") as string[])];
+  let homepageChecked = false;
+  for (let i = 0; i < 8; i++) {
+    let next = queue.find((u) => !tried.has(u));
+    if (!next && !homepageChecked && s.homepage) {
+      homepageChecked = true;
+      const home = await fetchOne(s.homepage, null, fetchImpl);
+      queue.push(...feedLinksIn(home.body ?? "", s.homepage));
+      next = queue.find((u) => !tried.has(u));
+    }
+    if (!next) break;
+    tried.add(next);
+    const c = await fetchOne(next, null, fetchImpl);
+    if (!c.error && c.items.length) return { items: c.items, status: 200, error: null, etag: c.etag, lastModified: c.lastModified, movedTo: next };
+  }
+  return { items: [], status: 200, error: "The address returns a web page, not a feed, and no working official feed was found on the outlet's site" };
 }
 
 /** The licensed API, one call for all API outlets (NewsAPI.org "top-headlines" by source). */
@@ -211,7 +260,8 @@ export async function runIngest(opts: { trigger?: string; fetchImpl?: FetchLike;
       if (!r.error) result.fetched++;
       else result.errors.push({ source: s.name, error: r.error });
       result.newItems += added;
-      recordFetch(s, !r.error, r.status, r.error, { etag: r.etag, lastModified: r.lastModified, retryAfter: r.retryAfter, items: added });
+      recordFetch(s, !r.error, r.status, r.error, { etag: r.etag, lastModified: r.lastModified, retryAfter: r.retryAfter, items: added, found: r.items.length });
+      if (r.movedTo) run("UPDATE news_sources SET feed_url = ?, etag = ?, last_modified = ?, feed_note = ? WHERE id = ?", [r.movedTo, r.etag ?? null, r.lastModified ?? null, `Feed address updated automatically: ${s.feed_url} returned a web page; the outlet's site lists ${r.movedTo}.`, s.id]);
     });
     if (api.length && process.env.NEWS_API_KEY) {
       const r = await fetchApi(api, opts.fetchImpl);
@@ -223,13 +273,14 @@ export async function runIngest(opts: { trigger?: string; fetchImpl?: FetchLike;
           const added = storeItems(s, r.get(s.api_source!) ?? [], now());
           result.fetched++;
           result.newItems += added;
-          recordFetch(s, true, 200, null, { items: added });
+          recordFetch(s, true, 200, null, { items: added, found: (r.get(s.api_source!) ?? []).length });
         }
       }
     } else if (api.length) {
       // No key: don't count it as an error; check again later.
       for (const s of api) run("UPDATE news_sources SET last_error = 'Needs NEWS_API_KEY (no public feed)', next_fetch_at = ? WHERE id = ?", [t + API_INTERVAL(), s.id]);
     }
+    if (!opts.sourceIds?.length) await checkPendingOutlets(opts.fetchImpl, result);
     const c = clusterNew(now());
     result.storiesNew = c.created.length;
     result.storiesUpdated = c.touched.length - c.created.length;
@@ -251,6 +302,32 @@ export async function runIngest(opts: { trigger?: string; fetchImpl?: FetchLike;
       now(), result.sources, result.fetched, result.newItems, result.storiesNew, result.storiesUpdated, result.errors.length, JSON.stringify(result.errors.slice(0, 20)), runId,
     ]);
     setSetting("ingest_lock", null);
+  }
+}
+
+/**
+ * New outlets start switched off. Each sync checks the ones still pending:
+ * robots.txt must allow our reader and the feed must parse with items, then
+ * the outlet is switched on. If robots.txt disallows it, it stays off for
+ * good (with the reason shown). Other errors are retried with backoff.
+ */
+export async function checkPendingOutlets(fetchImpl: FetchLike | undefined, result: IngestResult) {
+  const t = now();
+  for (const s of all<SourceRow>("SELECT * FROM news_sources WHERE pending_check = 1 AND demo = 0 AND feed_url IS NOT NULL AND next_fetch_at <= ?", [t])) {
+    const r = await fetchSource(s, fetchImpl);
+    if (!r.error && r.items.length) {
+      const added = storeItems(s, r.items, now());
+      result.newItems += added;
+      result.fetched++;
+      recordFetch(s, true, r.status, null, { etag: r.etag, lastModified: r.lastModified, items: added, found: r.items.length });
+      run("UPDATE news_sources SET active = 1, pending_check = 0, feed_url = COALESCE(?, feed_url), feed_note = ? WHERE id = ?", [r.movedTo ?? null, `Switched on after checks: robots.txt allows our reader and the feed had ${r.items.length} items.`, s.id]);
+    } else if (r.robotsBlocked) {
+      recordFetch(s, false, r.status, r.error);
+      run("UPDATE news_sources SET pending_check = 0, active = 0, feed_note = 'Not added: its robots.txt disallows our feed reader.' WHERE id = ?", [s.id]);
+    } else {
+      recordFetch(s, false, r.status, r.error ?? "No items");
+      result.errors.push({ source: `${s.name} (pending check)`, error: r.error ?? "No items" });
+    }
   }
 }
 

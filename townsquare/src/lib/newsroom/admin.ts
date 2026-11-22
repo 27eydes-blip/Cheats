@@ -15,7 +15,7 @@ export type SourceView = SourceRow & { items_24h: number };
 export function listSources(): SourceView[] {
   return all<SourceView>(
     `SELECT s.*, (SELECT count(*) FROM news_items n WHERE n.source_id = s.id AND n.fetched_at > ?) items_24h FROM news_sources s WHERE s.demo = 0
-     ORDER BY s.active DESC, (s.last_error IS NOT NULL AND s.error_count > 0) DESC, s.name`,
+     ORDER BY (s.active = 1 AND s.error_count >= 3) DESC, s.active DESC, s.pending_check DESC, s.name`,
     [now() - 24 * 3_600_000],
   );
 }
@@ -63,7 +63,7 @@ export function removeSource(u: Admin, id: string) {
 
 export function setSourceActive(u: Admin, id: string, on: boolean) {
   must(u);
-  run("UPDATE news_sources SET active = ?, next_fetch_at = 0, error_count = 0 WHERE id = ? AND demo = 0", [on ? 1 : 0, id]);
+  run("UPDATE news_sources SET active = ?, pending_check = 0, next_fetch_at = 0, error_count = 0 WHERE id = ? AND demo = 0", [on ? 1 : 0, id]);
 }
 
 export function updateSource(u: Admin, id: string, input: { lean: string; note: string; feedUrl?: string }) {
