@@ -436,3 +436,19 @@ html.light .tl-row:hover { background: rgb(10 18 34 / 0.02); }
 @media (prefers-reduced-motion: reduce) {
   .score-flash { outline: 2px solid var(--wn-blue-ink); outline-offset: -2px; }
 }
+
+/* "Latest" ticker: one accent (blue), calm motion, tabular numbers */
+.wire { --wire-accent: var(--wn-blue-ink); }
+.wire-num { font-family: var(--font-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.wire-dot { position: relative; width: 6px; height: 6px; border-radius: 9999px; background: var(--wire-accent); }
+.wire-dot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--wire-accent); animation: wire-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite; }
+@keyframes wire-ping { 0% { transform: scale(1); opacity: 0.55; } 70%, 100% { transform: scale(2.6); opacity: 0; } }
+.wire-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--wire-accent)); transform-origin: left; transform: scaleX(0); opacity: 0.75; animation-name: wire-progress; animation-timing-function: linear; animation-fill-mode: forwards; pointer-events: none; }
+@keyframes wire-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.wire-breaking { border-radius: 3px; padding: 1px 5px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1.3; color: #fff; background: var(--wn-blue-fill); }
+.wire-flash { animation: wire-flash 1.4s ease-out 1; }
+@keyframes wire-flash { 0% { background-color: color-mix(in srgb, var(--wire-accent) 26%, transparent); } 100% { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .wire-dot::after, .wire-flash { animation: none; }
+  .wire-progress { display: none; }
+}

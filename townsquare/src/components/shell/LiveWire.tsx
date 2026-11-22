@@ -2,36 +2,88 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveEvents } from "../live";
-import type { TeamView } from "@/lib/sports/teams";
-import { TeamLogo } from "../sports/TeamLogo";
+import { indexAfterUpdate, nextIndex, orderWire, relTime, ROTATE_MS, ROTATE_REDUCED_MS, type WireItem as Item } from "@/lib/wire-logic";
 
-export type WireItem = { text: string; href: string | null; at: number; label?: string; teams?: TeamView[] };
+export type WireItem = Item;
 export type WireQuote = { symbol: string; name: string; price: number; changePct: number };
 
 /** Stable default so the sync effect below doesn't see a new array every render. */
 const NO_QUOTES: WireQuote[] = [];
 const INDEX: Record<string, string> = { SPY: "S&P 500", QQQ: "NASDAQ", DIA: "DOW", IWM: "RUSSELL" };
 
+/** True when the reader asked for less motion (false during server render). */
+export function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!mq) return;
+    setReduced(mq.matches);
+    const on = () => setReduced(mq.matches);
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, []);
+  return reduced;
+}
+
 /**
- * The ticker under the header: breaking news and market moves scroll past in
- * one continuous band. Hover or focus pauses it; reduced-motion users get a
- * still, swipeable row instead. Breaking items set in the Control Room arrive
- * live (no reload) through the event stream.
+ * The "Latest" ticker under the header, 32px tall and one line.
+ *
+ * Headlines: one at a time, crossfading every 6 seconds, with a thin progress
+ * line along the bottom edge counting down to the next one. Each shows a
+ * BREAKING tag only when the story is breaking (breaking items come first and
+ * get a brief highlight), the headline, the outlet in small caps and a
+ * relative time. Hover, touch or keyboard focus pauses it.
+ *
+ * Markets: a separate segment with its own smooth scroll and green and red
+ * arrows (wider screens).
+ *
+ * Reduced motion: no scrolling, no pulsing, no progress line; the headline
+ * still changes every 8 seconds, without animation.
+ *
+ * Every link has a 44px tall hit area that overhangs the 32px bar, so nothing
+ * moves when it renders.
  */
-export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot }: { items: WireItem[]; quotes?: WireQuote[]; demo?: boolean; /** "layout": the site-wide bar (hidden on the phone home page, where the feed shows its own under the tabs); "home": that in-feed copy */ slot?: "layout" | "home" }) {
+export function LiveWire({ items: rawItems, quotes: initialQuotes = NO_QUOTES, demo, slot, now: serverNow }: { items: WireItem[]; quotes?: WireQuote[]; demo?: boolean; /** "layout": the site-wide bar; "home": the in-feed copy (hidden) */ slot?: "layout" | "home"; /** Server time, so relative times match on first paint */ now?: number }) {
   const router = useRouter();
-  const [paused, setPaused] = useState(false);
   const path = usePathname();
+  const reduced = useReducedMotion();
+  const items = useMemo(() => orderWire(rawItems), [rawItems]);
+  const [idx, setIdx] = useState(0);
+  const [hovered, setHovered] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [marketsPaused, setMarketsPaused] = useState(false);
+  const [now, setNow] = useState(serverNow ?? items[0]?.at ?? 0);
   const [allQuotes, setQuotes] = useState(initialQuotes);
+  const prevItems = useRef(items);
+  const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const paused = hovered || touched || focused;
+
   useEffect(() => setQuotes(initialQuotes), [initialQuotes]);
   // The Market Board has its own stock tape, so the wire carries only news there.
   const quotes = path?.startsWith("/markets") ? [] : allQuotes;
+
+  // New headlines (a live "wire" event refreshes the page data): breaking ones take the stage at once.
+  useEffect(() => {
+    if (prevItems.current === items) return;
+    setIdx((i) => indexAfterUpdate(prevItems.current, items, i));
+    prevItems.current = items;
+  }, [items]);
+
   useLiveEvents((e) => {
     // Only the site-wide bar refreshes; the in-feed copy rides along.
     if (e.type === "wire" && slot !== "home") router.refresh();
   });
+
+  // Relative times tick every 30 seconds.
+  useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
   // Market moves refresh every 30s while the tab is visible.
   useEffect(() => {
     if (!initialQuotes.length) return;
@@ -44,75 +96,134 @@ export function LiveWire({ items, quotes: initialQuotes = NO_QUOTES, demo, slot 
     return () => clearInterval(t);
   }, [initialQuotes]);
 
-  if (!items.length && !quotes.length) return null;
-  const breaking = items[0]?.label === "Breaking" || items[0]?.label === "Alert";
+  const advance = useCallback(() => setIdx((i) => nextIndex(i, items.length)), [items.length]);
 
-  const row = (hidden: boolean) => (
+  // With reduced motion there is no progress line to end, so a plain timer moves the headline on.
+  useEffect(() => {
+    if (!reduced || paused || items.length < 2) return;
+    const t = setInterval(advance, ROTATE_REDUCED_MS);
+    return () => clearInterval(t);
+  }, [reduced, paused, items.length, advance]);
+
+  useEffect(() => () => void (touchTimer.current && clearTimeout(touchTimer.current)), []);
+
+  if (!items.length && !quotes.length) return null;
+  const cur = Math.min(idx, Math.max(0, items.length - 1));
+
+  const onTouchStart = () => {
+    setTouched(true);
+    if (touchTimer.current) clearTimeout(touchTimer.current);
+  };
+  const onTouchEnd = () => {
+    if (touchTimer.current) clearTimeout(touchTimer.current);
+    touchTimer.current = setTimeout(() => setTouched(false), 4_000);
+  };
+
+  const quoteRow = (hidden: boolean) => (
     <ul className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
-      {items.map((it, i) => (
-        <li key={`w${i}`} className="flex items-center gap-2.5 pr-8">
-          {(it.label === "Breaking" || it.label === "Alert") && !(breaking && i === 0) && (
-            <span className={`rounded-[4px] px-1 py-px text-[9.5px] font-bold tracking-[0.1em] uppercase ${it.label === "Breaking" || it.label === "Alert" ? "bg-[var(--wn-red-fill)] text-white" : "text-ink-3 ring-1 ring-[var(--hairline)]"}`}>
-              {it.label}
-            </span>
-          )}
-          {it.teams?.map((t) => <TeamLogo key={t.id} team={t} size="sm" label={false} />)}
-          {it.href ? (
-            <Link href={it.href} tabIndex={hidden ? -1 : undefined} className="flex h-[var(--wire-h)] items-center text-[12px] whitespace-nowrap text-ink-2 hover:text-ink-1 hover:underline">{it.text}</Link>
-          ) : (
-            <span className="text-[12px] whitespace-nowrap text-ink-2">{it.text}</span>
-          )}
-          <span aria-hidden="true" className="ml-6 h-[3px] w-[3px] rounded-full bg-[var(--rule-strong)]" />
-        </li>
-      ))}
       {quotes.map((q) => {
         const up = q.changePct >= 0;
         return (
-          <li key={q.symbol} className="flex items-center gap-2 pr-6">
-            <Link href={`/markets?s=${q.symbol}`} tabIndex={hidden ? -1 : undefined} className="mono flex h-[var(--wire-h)] items-center gap-1.5 text-[11.5px] whitespace-nowrap text-ink-3 hover:text-ink-1">
+          <li key={q.symbol} className="flex items-center pr-5">
+            <Link href={`/markets?s=${q.symbol}`} tabIndex={hidden ? -1 : undefined} data-tap="wire" className="wire-num -my-1.5 flex h-11 items-center gap-1.5 text-[11.5px] whitespace-nowrap text-ink-3 hover:text-ink-1">
               <span className="font-semibold text-ink-2">{INDEX[q.symbol] ?? q.symbol}</span>
               <span>{q.price.toFixed(2)}</span>
-              <span className={up ? "text-[#34d399]" : "text-[#ff6b81]"}>{up ? "▲" : "▼"} {up ? "+" : ""}{q.changePct.toFixed(2)}%</span>
+              <span className={up ? "text-[#34d399]" : "text-[#ff6b81]"}>
+                <span aria-hidden="true">{up ? "▲" : "▼"}</span>
+                <span className="sr-only">{up ? "up" : "down"}</span> {up ? "+" : ""}{q.changePct.toFixed(2)}%
+              </span>
             </Link>
           </li>
         );
       })}
     </ul>
   );
-  const seconds = Math.max(30, items.reduce((n, it) => n + it.text.length, 0) * 0.16 + quotes.length * 3.5);
 
   return (
     <div
       role="region"
-      aria-label="Live Wire"
+      aria-label="Latest headlines and markets"
       aria-roledescription="ticker"
-      className={`relative border-b border-[var(--hairline)] bg-[var(--wire-bg)] text-[var(--wire-fg)] ${slot === "home" ? "hidden" : ""}`}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+      data-reduced={reduced || undefined}
+      className={`wire relative border-b border-[var(--hairline)] bg-[var(--wire-bg)] text-[var(--wire-fg)] ${slot === "home" ? "hidden" : ""}`}
     >
       <div className="mx-auto flex h-[var(--wire-h)] max-w-[1320px] items-center">
-        {/* Only breaking news gets a (small) red tag; otherwise the wire is plain gray text. */}
-        <span className="relative z-10 flex h-full shrink-0 items-center bg-[var(--wire-bg)] pr-2 pl-3 lg:pl-8">
-          {breaking ? (
-            <span className="rounded-[4px] bg-[var(--wn-red-fill)] px-1.5 py-px text-[9.5px] font-bold tracking-[0.1em] text-white uppercase">Breaking</span>
-          ) : (
-            <span className="text-[9.5px] font-bold tracking-[0.1em] text-ink-3 uppercase">Latest</span>
-          )}
+        <span className="flex h-full shrink-0 items-center gap-2 pr-2 pl-3 sm:pr-3 lg:pl-8">
+          <span aria-hidden="true" className="wire-dot" />
+          <span className="text-[10.5px] font-extrabold tracking-[0.16em] text-ink-1 uppercase">Latest</span>
         </span>
-        <div className="relative min-w-0 flex-1 overflow-hidden motion-reduce:overflow-x-auto" data-no-swipe>
+
+        {items.length > 0 && (
           <div
-            className="flex w-max items-center pl-4 motion-reduce:!animate-none"
-            style={{ animation: `marquee ${seconds}s linear infinite`, animationPlayState: paused ? "paused" : "running" }}
+            className="relative h-full min-w-0 flex-1 [overflow-x:clip]"
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            data-no-swipe
+            data-paused={paused || undefined}
           >
-            {row(false)}
-            <span className="contents motion-reduce:hidden">{row(true)}</span>
+            {items.map((it, i) => {
+              const active = i === cur;
+              const body = (
+                <>
+                  {it.breaking && <span className="wire-breaking shrink-0">Breaking</span>}
+                  <span className="min-w-0 truncate text-[12.5px] text-ink-1 group-hover:underline">{it.text}</span>
+                  {it.source && <span className="shrink-0 text-[11.5px] tracking-[0.04em] text-ink-3 [font-variant-caps:all-small-caps] max-sm:sr-only">{it.source}</span>}
+                  <span className="wire-num shrink-0 text-[11px] text-ink-3" suppressHydrationWarning>{relTime(it.at, now)}</span>
+                </>
+              );
+              return (
+                <div
+                  key={(it.href ?? it.text) + i}
+                  aria-hidden={!active || undefined}
+                  inert={!active || undefined}
+                  className={`absolute inset-0 flex items-center pr-3 transition-opacity duration-300 ease-out motion-reduce:transition-none ${active ? "opacity-100" : "pointer-events-none opacity-0"}`}
+                >
+                  {it.href ? (
+                    <Link href={it.href} data-tap="wire" className={`wire-headline group -my-1.5 flex h-11 min-w-0 items-center gap-2.5 rounded-[4px] px-1 ${active && it.breaking ? "wire-flash" : ""}`} key={active ? `on-${cur}` : "off"}>
+                      {body}
+                    </Link>
+                  ) : (
+                    <span className={`flex min-w-0 items-center gap-2.5 px-1 ${active && it.breaking ? "wire-flash" : ""}`}>{body}</span>
+                  )}
+                </div>
+              );
+            })}
+            {items.length > 1 && !reduced && (
+              <span
+                key={`p${cur}-${items.length}`}
+                aria-hidden="true"
+                className="wire-progress"
+                style={{ animationDuration: `${ROTATE_MS}ms`, animationPlayState: paused ? "paused" : "running" }}
+                onAnimationEnd={advance}
+              />
+            )}
+            <span className="sr-only" aria-live="polite">{items[cur]?.breaking ? `Breaking: ${items[cur].text}` : ""}</span>
           </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-[var(--wire-bg)] to-transparent" />
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[var(--wire-bg)] to-transparent" />
-        </div>
-        {demo && quotes.length > 0 && <span className="mono hidden shrink-0 px-3 text-[10px] tracking-wider text-ink-3 lg:block lg:pr-8">PRICES: DEMO</span>}
+        )}
+
+        {quotes.length > 0 && (
+          <div
+            className={`relative hidden h-full shrink-0 border-l border-[var(--hairline)] md:block ${items.length ? "w-[32%] max-w-[400px]" : "flex-1"} [overflow-x:clip] motion-reduce:overflow-x-auto`}
+            onMouseEnter={() => setMarketsPaused(true)}
+            onMouseLeave={() => setMarketsPaused(false)}
+            onFocus={() => setMarketsPaused(true)}
+            onBlur={() => setMarketsPaused(false)}
+            aria-label="Markets"
+            role="group"
+          >
+            <div className="flex h-full w-max items-center pl-4 motion-reduce:!animate-none" style={reduced ? undefined : { animation: `marquee ${Math.max(24, quotes.length * 5)}s linear infinite`, animationPlayState: marketsPaused ? "paused" : "running" }}>
+              {quoteRow(false)}
+              {!reduced && quoteRow(true)}
+            </div>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[var(--wire-bg)] to-transparent" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[var(--wire-bg)] to-transparent" />
+          </div>
+        )}
+        {demo && quotes.length > 0 && <span className="wire-num hidden shrink-0 px-3 text-[10px] tracking-wider text-ink-3 lg:block lg:pr-8">PRICES: DEMO</span>}
       </div>
     </div>
   );

@@ -2,12 +2,16 @@ import { all, get } from "./db";
 import { demoEnabled } from "./newsroom/settings";
 import { getBanner } from "./moderation";
 import { listStories } from "./news";
-import type { TeamView } from "./sports/teams";
+import { isBreaking, orderWire, type WireItem } from "./wire-logic";
 
-export type WireEntry = { text: string; href: string | null; at: number; label?: string; teams?: TeamView[] };
+export type WireEntry = WireItem;
 
-/** The breaking ticker's items: the admin's breaking item first, then the latest updates from live stories. */
-export function wireItems(): WireEntry[] {
+/**
+ * The "Latest" ticker's items: the newsroom's banner, the most important real
+ * stories, and the newest updates from live stories, each with its outlet.
+ * Breaking items (see wire-logic.ts) are flagged and moved to the front.
+ */
+export function wireItems(t = Date.now()): WireEntry[] {
   const b0 = getBanner();
   // A banner pointing at a fictional demo story is demo content too: hide it when demo data is off.
   const demoKey = b0?.url?.match(/^\/news\/story\/([^/?#]+)/)?.[1];
@@ -22,12 +26,12 @@ export function wireItems(): WireEntry[] {
         live.map((x) => x.key),
       )
     : [];
-  return [
-    ...(banner ? [{ text: banner.text, href: banner.url, at: banner.setAt, label: banner.level === "info" ? "Update" : banner.level === "alert" ? "Alert" : "Breaking" }] : []),
-    ...real.map((st) => ({ text: st.title, href: `/news/story/${st.key}`, at: st.updatedAt, label: st.category ?? "News", teams: st.teams.slice(0, 2) })),
+  return orderWire([
+    ...(banner ? [{ text: banner.text, href: banner.url, at: banner.setAt, label: banner.level === "info" ? "Update" : banner.level === "alert" ? "Alert" : "Breaking", source: "WorldNet", breaking: isBreaking({ bannerLevel: banner.level as "breaking" | "alert" | "info", at: banner.setAt }, t) }] : []),
+    ...real.map((st) => ({ text: st.title, href: `/news/story/${st.key}`, at: st.updatedAt, label: st.category ?? "News", source: st.source, teams: st.teams.slice(0, 2), breaking: isBreaking({ storyStatus: st.status, at: st.updatedAt }, t) })),
     ...updates.map((u) => {
       const st = live.find((x) => x.key === u.story_key);
-      return { text: u.body, href: `/news/story/${u.story_key}`, at: u.created_at, label: st?.section ?? "Live", teams: st?.teams.slice(0, 2) };
+      return { text: u.body, href: `/news/story/${u.story_key}`, at: u.created_at, label: st?.section ?? "Live", source: st?.source ?? "WorldNet", teams: st?.teams.slice(0, 2), breaking: isBreaking({ storyStatus: "live", at: u.created_at }, t) };
     }),
-  ];
+  ]);
 }

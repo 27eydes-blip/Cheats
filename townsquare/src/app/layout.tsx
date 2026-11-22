@@ -104,7 +104,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Masthead unread={unread} tape={tape} />
           <div className="z-30 shadow-[0_1px_0_var(--rule)] lg:sticky lg:top-0">
             <ChannelDial liveCount={liveCount} />
-            <LiveWire items={wire} quotes={tape} demo={marketMode() === "demo"} slot="layout" />
+            <LiveWire items={wire} quotes={tape} demo={marketMode() === "demo"} slot="layout" now={Date.now()} />
           </div>
           <main id="main" className="pb-tabbar relative min-h-[70dvh]" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>
             {viewer?.status === "suspended" && (
