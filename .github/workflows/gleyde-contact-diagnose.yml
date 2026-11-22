@@ -1,0 +1,49 @@
+# One-off, read-only diagnosis for the Gleyde contact form (never deploys or changes anything).
+#  1. Looks up gleyde.com's public DNS records that Resend needs.
+#  2. Streams the live contact-function log for 10 minutes so a real form submission can be
+#     observed. Only the path, status and the function's own log lines are printed: no visitor
+#     IPs, no form contents, and the functions never log secret values.
+# Runs when this file changes on the site branch. Delete this file once the issue is fixed.
+name: Gleyde contact diagnose
+
+on:
+  push:
+    branches: [claude/gleyde-cybersecurity-site-cv4rjj]
+    paths: ['.github/workflows/gleyde-contact-diagnose.yml']
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    defaults:
+      run:
+        working-directory: gleyde-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - name: Public DNS records Resend needs for gleyde.com
+        run: |
+          for q in "gleyde.com NS" "gleyde.com MX" "gleyde.com TXT" "_dmarc.gleyde.com TXT" \
+                   "resend._domainkey.gleyde.com TXT" "send.gleyde.com MX" "send.gleyde.com TXT"; do
+            set -- $q
+            echo "== $1 $2"; dig +short "$1" "$2" @1.1.1.1 | cut -c1-120
+          done
+      - name: Live contact-function log for 10 minutes (submit the form now)
+        run: |
+          echo "::notice::Log stream open for 10 minutes. Submit the contact form now."
+          timeout 600 npx wrangler pages deployment tail --project-name gleyde-security --environment production --format json > tail.json 2> tail.err || true
+          tail -5 tail.err | grep -v -i token || true
+          jq -c 'select(.event.request.url? and ((.event.request.url|test("/api/")))) |
+            { at: (.eventTimestamp/1000|todate), method: .event.request.method,
+              path: (.event.request.url|sub("^https?://[^/]+";"")|sub("\\?.*$";"")),
+              status: .event.response.status?, outcome,
+              logs: [ .logs[]? | {level, message: (.message|tostring|.[0:400])} ],
+              exceptions: [ .exceptions[]? | {name, message} ] }' tail.json || echo "no parsable events"
