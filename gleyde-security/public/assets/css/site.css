@@ -2758,3 +2758,8 @@ main p {
     display: none;
   }
 }
+
+/* Two-person team: keep the cards a comfortable width instead of stretching. */
+.team-pair {
+  max-width: 820px;
+}
