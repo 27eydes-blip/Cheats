@@ -5,7 +5,7 @@ Two jobs, each shipped to `news-v1` as its own commit so it can be rolled back o
 | Job | What | Commit on news-v1 |
 |---|---|---|
 | 1 | World, Business, Tech and Culture get the Politics treatment | `784315e` |
-| 2 | Sports hub upgrade | the "Sports hub" commit |
+| 2 | Sports hub upgrade | `31975b4` |
 
 ## Job 1: World, Business, Tech and Culture pages
 - **New pages**: `/world`, `/business`, `/tech` and `/culture`, built from the same component as `/politics`. Each has:
