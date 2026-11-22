@@ -4,7 +4,8 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 
 | Part | What | Commit on news-v1 |
 |---|---|---|
-| 1 | Feed fixes, outlet changes, Control Room feed status | (filled in below) |
+| 1 | Feed fixes, outlet changes, Control Room feed status | `7572c29` |
+| 2 | Search crash fix, error boundary, client error logging | (see below) |
 
 ## Part 1: Failing feeds and more outlets
 - HuffPost's feed address fixed; MSNBC and any other feed that starts returning a web page now finds the outlet's official feed by itself (robots.txt checked for every candidate).
@@ -12,6 +13,14 @@ Built on `news-v1`, in six parts. Each part is one commit on `news-v1` (the live
 - Newsmax's "robots.txt unavailable" now really retries on the next sync.
 - New outlets WSJ Opinion, The Daily Signal, Townhall and TheBlaze start switched off and turn on only after their robots.txt allows us and their feed works.
 - Control Room → News feeds shows each feed's last result and flags feeds that fail 3 times in a row.
+- Railway: nothing to add.
+- Screenshots: `screenshots/part1-phone-newsfeeds.png`, `part1-phone-newsfeeds-list.png`, `part1-desktop-newsfeeds.png`, `part1-desktop-newsfeeds-list.png` (Control Room → News feeds, with TEST outlets and one TEST feed failing 3 times).
+
+## Part 2: The search crash
+- Search can no longer take down the page: bad or empty replies from the search API are handled, browsers that can't open a modal still work, and an error boundary contains anything else (the rest of the page keeps working).
+- Any client-side crash is now written to the server log as `[client-error] …`, so if it ever happens again you'll see the exact error in Railway → Logs.
+- Zero results now say "Nothing on the wire for …".
+- I couldn't reproduce the crash here; see DECISIONS.md (Part 2) for the likely causes and what changed for each.
 - Railway: nothing to add.
 
 ---

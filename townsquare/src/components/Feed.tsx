@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FeedPage } from "@/lib/feed";
 import type { ForYouItem } from "@/lib/foryou";
 import type { FeedItem, PostView } from "@/lib/posts";
@@ -71,23 +71,28 @@ function useWindowing(ids: string[], on: boolean) {
     return () => (cancelAnimationFrame(raf), window.removeEventListener("scroll", tick), window.removeEventListener("resize", tick));
   }, [compute, on, ids.length]);
 
-  // Measure every mounted row; a changed height re-lays the spacers.
-  useLayoutEffect(() => {
-    if (typeof ResizeObserver === "undefined") return;
-    ro.current = new ResizeObserver((entries) => {
-      let changed = false;
-      for (const e of entries) {
-        const id = (e.target as HTMLElement).dataset.row!;
-        const h = (e.target as HTMLElement).offsetHeight;
-        if (h && heights.current.get(id) !== h) (heights.current.set(id, h), (changed = true));
-      }
-      if (changed) (bump((n) => n + 1), compute());
-    });
-    return () => ro.current?.disconnect();
-  }, [compute]);
-  const measure = useCallback((el: HTMLElement | null) => {
-    if (el) ro.current?.observe(el);
+  // Measure every mounted row; a changed height re-lays the spacers. The observer is created
+  // on first use, because row refs attach before layout effects run.
+  const computeRef = useRef(compute);
+  computeRef.current = compute;
+  const observer = useCallback(() => {
+    if (!ro.current && typeof ResizeObserver !== "undefined") {
+      ro.current = new ResizeObserver((entries) => {
+        let changed = false;
+        for (const e of entries) {
+          const id = (e.target as HTMLElement).dataset.row!;
+          const h = (e.target as HTMLElement).offsetHeight;
+          if (h && heights.current.get(id) !== h) (heights.current.set(id, h), (changed = true));
+        }
+        if (changed) (bump((n) => n + 1), computeRef.current());
+      });
+    }
+    return ro.current;
   }, []);
+  useEffect(() => () => ro.current?.disconnect(), []);
+  const measure = useCallback((el: HTMLElement | null) => {
+    if (el) observer()?.observe(el);
+  }, [observer]);
 
   const [start, end] = on ? range : [0, ids.length];
   const sum = (a: number, b: number) => {

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { PostView } from "@/lib/posts";
 import { Composer } from "./Composer";
 import { SearchOverlay } from "./shell/SearchOverlay";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { RundownDrawer } from "./rundown/RundownDrawer";
 import { useMedia } from "./ui/useMedia";
 import { ConfirmProvider } from "./ui/Confirm";
@@ -167,7 +168,24 @@ export function Providers({ viewer, stats, children }: { viewer: ClientViewer; s
                 ) : (
                   <Sheet open={!!composer} onClose={() => setComposer(null)} title={title}>{composerEl}</Sheet>
                 )}
-                <SearchOverlay open={palette} onClose={() => setPalette(false)} onCompose={() => openComposer()} />
+                <ErrorBoundary
+                  where="search"
+                  resetKey={palette}
+                  fallback={() =>
+                    palette ? (
+                      <div role="alertdialog" aria-label="Search problem" className="fixed inset-x-4 top-20 z-[70] mx-auto max-w-md rounded-[14px] bg-[var(--wn-panel-1)] p-4 text-[14px] shadow-3 ring-1 ring-[var(--hairline)]">
+                        <p className="font-semibold">Search hit a problem.</p>
+                        <p className="mt-1 text-ink-2">The rest of the page is fine. You can use the full search page instead.</p>
+                        <div className="mt-3 flex gap-2">
+                          <a href="/search" className="btn-primary !min-h-10 !text-[14px]">Open search page</a>
+                          <button type="button" className="btn-outline !min-h-10 !text-[14px]" onClick={() => setPalette(false)}>Close</button>
+                        </div>
+                      </div>
+                    ) : null
+                  }
+                >
+                  <SearchOverlay open={palette} onClose={() => setPalette(false)} onCompose={() => openComposer()} />
+                </ErrorBoundary>
                 <RundownDrawer open={rundownOpen} onClose={() => setRundownOpen(false)} />
                 <Sheet open={shortcuts} onClose={() => setShortcuts(false)} title="Keyboard shortcuts">
                   <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 px-6 pt-2 pb-6">
