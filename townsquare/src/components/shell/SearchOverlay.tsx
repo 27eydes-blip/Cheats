@@ -21,6 +21,30 @@ type Results = {
   teams: TeamView[];
 };
 type Filter = "all" | "stories" | "voices" | "desks" | "takes";
+
+const arr = <T,>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : []);
+const str = (x: unknown) => (typeof x === "string" ? x : x == null ? "" : String(x));
+const STANCES = ["agree", "disagree", "context", "question"];
+const EMPTY_SPLIT_C: Split = { agree: 0, disagree: 0, unsure: 0, total: 0, mine: null };
+
+/**
+ * Accept whatever the search API sends back and turn it into safe, complete
+ * results. A missing list, a null field, or an error body (for example
+ * { error: "…" } from a proxy) gives empty results instead of a crash.
+ */
+export function normalizeResults(raw: unknown): Results {
+  const d = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  return {
+    stories: arr<Record<string, unknown>>(d.stories).filter((s) => s && s.key).map((s) => ({
+      key: str(s.key), title: str(s.title) || "Untitled story", section: str(s.section) || "News", status: str(s.status), takes: Number(s.takes) || 0,
+      split: s.split && typeof s.split === "object" ? { ...EMPTY_SPLIT_C, ...(s.split as Split) } : EMPTY_SPLIT_C,
+    })),
+    voices: arr<Record<string, unknown>>(d.voices).filter((v) => v && v.handle).map((v) => ({ handle: str(v.handle), displayName: str(v.displayName) || str(v.handle), avatarUrl: (v.avatarUrl as string) ?? null, verified: !!v.verified, bio: str(v.bio) })),
+    desks: arr<Record<string, unknown>>(d.desks).filter((x) => x && x.slug).map((x) => ({ slug: str(x.slug), name: str(x.name) || str(x.slug), description: str(x.description) })),
+    takes: arr<Record<string, unknown>>(d.takes).filter((t) => t && t.id).map((t) => ({ id: str(t.id), body: str(t.body), author: str(t.author), stance: STANCES.includes(str(t.stance)) ? (t.stance as TakeStance) : null })),
+    teams: arr<TeamView>(d.teams).filter((t) => t && t.id && t.league),
+  };
+}
 type Row = { id: string; group: string; node: React.ReactNode; href: string };
 
 /**
@@ -35,6 +59,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [res, setRes] = useState<Results | null>(null);
+  const [failed, setFailed] = useState(false);
   const [sel, setSel] = useState(0);
 
   useEffect(() => {
@@ -44,7 +69,12 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
       setQ("");
       setFilter("all");
       setSel(0);
-      d.showModal();
+      try {
+        d.showModal();
+      } catch {
+        // Older browsers, or a dialog already open elsewhere: show it without the modal backdrop instead of crashing.
+        d.setAttribute("open", "");
+      }
       setTimeout(() => input.current?.focus(), 10);
     }
     if (!open && d.open) d.close();
@@ -53,7 +83,18 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
   useEffect(() => {
     if (!open) return;
     const ctrl = new AbortController();
-    const t = setTimeout(() => fetch(`/api/palette?q=${encodeURIComponent(q)}`, { signal: ctrl.signal }).then((r) => r.json()).then(setRes).catch(() => {}), 110);
+    const t = setTimeout(
+      () =>
+        fetch(`/api/palette?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+          .then((j) => (setRes(normalizeResults(j)), setFailed(false)))
+          .catch((e) => {
+            if ((e as Error).name === "AbortError") return;
+            setRes(normalizeResults(null));
+            setFailed(true);
+          }),
+      110,
+    );
     return () => (clearTimeout(t), ctrl.abort());
   }, [q, open]);
 
@@ -78,7 +119,7 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
           node: (
             <span className="flex w-full items-center gap-3">
               <span className="min-w-0 flex-1">
-                <span className="folio block !text-[10px] text-ink-3">{s.status === "live" ? <span className="text-live-bg dark:text-live">● Live · </span> : null}{s.section} · {s.takes} dispatches</span>
+                <span className="folio block !text-[10px] text-ink-3">{s.status === "live" ? <span className="text-live-bg dark:text-live">● Live · </span> : null}<span>{`${s.section} · ${s.takes} dispatches`}</span></span>
                 <span className="block truncate font-display text-[17px] font-semibold">{s.title}</span>
               </span>
               <MiniSplit split={s.split} />
@@ -137,6 +178,11 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
               placeholder="Search stories, voices, desks, dispatches"
               className="min-w-0 flex-1 bg-transparent font-display text-[clamp(1.4rem,1.1rem+1.4vw,2.2rem)] font-semibold tracking-[-0.02em] placeholder:font-normal placeholder:text-ink-3 focus:outline-none"
               role="combobox"
+              autoComplete="off"
+              spellCheck={false}
+              data-gramm="false"
+              data-gramm_editor="false"
+              data-enable-grammarly="false"
               aria-expanded="true"
               aria-controls="search-list"
               aria-activedescendant={rows[sel] ? `sr-${rows[sel].id}` : undefined}
@@ -153,7 +199,8 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
             )}
           </div>
           <ul id="search-list" role="listbox" className="flex-1 overflow-y-auto overscroll-contain pb-10">
-            {rows.length === 0 && res && <li className="py-16 text-center font-display text-h3 text-ink-3">Nothing on the wire for “{q}”.</li>}
+            {failed && <li role="status" className="py-3 text-center text-[14px] text-ink-3"><span>{"Search is having trouble right now. Try again in a moment, or "}</span><a href={`/search?q=${encodeURIComponent(q)}`} className="underline">open the search page</a><span>.</span></li>}
+            {res && !failed && rows.every((r) => r.id === "all" || r.id.startsWith("j-")) && (q || !rows.length) && <li className="py-10 text-center font-display text-h3 text-ink-3"><span>{q ? `Nothing on the wire for “${q}”.` : "Nothing here yet."}</span></li>}
             {rows.map((r, i) => {
               const header = r.group !== last ? r.group : null;
               last = r.group;
