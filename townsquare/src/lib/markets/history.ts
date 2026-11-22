@@ -1,4 +1,5 @@
-import { marketStatus, recentSessions } from "./clock";
+import { marketStatus, recentSessions, sessionLength } from "./clock";
+import { finnhub } from "./finnhub";
 import { demoSession, getQuotes, marketMode, seeded } from "./provider";
 import { TICKER_MAP } from "./universe";
 
@@ -59,7 +60,7 @@ async function demoDaily(symbol: string, n: number, now: number): Promise<Candle
   }
   const today = dates[dates.length - 1];
   const st = marketStatus(now);
-  out.push({ t: OPEN_UTC_OFFSET(today), o: q.open, h: q.high, l: q.low, c: q.price, v: Math.round(avgVolume(symbol) * ((st.minuteOfSession + 1) / 390)) });
+  out.push({ t: OPEN_UTC_OFFSET(today), o: q.open, h: q.high, l: q.low, c: q.price, v: Math.round(avgVolume(symbol) * ((st.minuteOfSession + 1) / sessionLength(st.sessionDate))) });
   return out;
 }
 
@@ -104,24 +105,27 @@ async function demoHistory(symbol: string, range: Range, now: number): Promise<C
 
 // ---------------------------------------------------------------- live (Finnhub candles; needs a plan with history)
 const liveHist = new Map<string, { at: number; c: Candle[] }>();
+/** Free Finnhub plans answer candles with 403; stop asking for an hour so quotes keep the budget. */
+let candlesOffUntil = 0;
+export const resetLiveHistory = () => (liveHist.clear(), (candlesOffUntil = 0));
 async function liveHistory(symbol: string, range: Range, now: number): Promise<Candle[] | null> {
   const key = `${symbol}:${range}`;
   const hit = liveHist.get(key);
   if (hit && now - hit.at < (range === "1D" ? 60_000 : 15 * 60_000)) return hit.c;
+  if (now < candlesOffUntil) return hit?.c ?? null;
   const res = range === "1D" ? "5" : range === "5D" ? "30" : "D";
   const span = { "1D": 1, "5D": 7, "1M": 31, "1Y": 366 }[range] * 86_400;
   const to = Math.floor(now / 1000);
-  try {
-    const r = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${res}&from=${to - span}&to=${to}&token=${process.env.FINNHUB_API_KEY}`, { cache: "no-store" });
-    if (!r.ok) return null;
-    const d = (await r.json()) as { s: string; t: number[]; o: number[]; h: number[]; l: number[]; c: number[]; v: number[] };
-    if (d.s !== "ok") return null;
-    const c = d.t.map((t, i) => ({ t: t * 1000, o: d.o[i], h: d.h[i], l: d.l[i], c: d.c[i], v: d.v[i] }));
-    liveHist.set(key, { at: now, c });
-    return c;
-  } catch {
-    return null;
+  const r = await finnhub<{ s: string; t: number[]; o: number[]; h: number[]; l: number[]; c: number[]; v: number[] }>(`/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${res}&from=${to - span}&to=${to}`, now);
+  if (!r.ok) {
+    if (r.status === 403 || r.status === 401) candlesOffUntil = now + 3_600_000;
+    return hit?.c ?? null;
   }
+  const d = r.data;
+  if (d.s !== "ok" || !Array.isArray(d.t)) return hit?.c ?? null;
+  const c = d.t.map((t, i) => ({ t: t * 1000, o: d.o[i], h: d.h[i], l: d.l[i], c: d.c[i], v: d.v[i] }));
+  liveHist.set(key, { at: now, c });
+  return c;
 }
 
 export async function getHistory(symbol: string, range: Range, now = Date.now()): Promise<History> {
@@ -131,9 +135,10 @@ export async function getHistory(symbol: string, range: Range, now = Date.now())
   // Fall back to today's quotes for 1D (line only, no volume).
   if (range === "1D") {
     const [q] = await getQuotes([symbol], now);
+    if (!q) return { symbol, range, candles: [], available: false, note: "Waiting for the first quote from the data provider." };
     const start = OPEN_UTC_OFFSET(marketStatus(now).sessionDate);
-    const step = (now - start) / Math.max(1, (q?.series.length ?? 1) - 1);
-    return { symbol, range, available: true, note: "Intraday line built from quotes; volume needs a data plan with candles.", candles: (q?.series ?? []).map((p, i) => ({ t: start + i * step, o: p, h: p, l: p, c: p, v: 0 })) };
+    const step = (Math.min(now, start + sessionLength(marketStatus(now).sessionDate) * 60_000) - start) / Math.max(1, q.series.length - 1);
+    return { symbol, range, available: true, note: "Intraday line built from quotes; volume needs a data plan with candles.", candles: q.series.map((p, i) => ({ t: start + i * step, o: p, h: p, l: p, c: p, v: 0 })) };
   }
   return { symbol, range, candles: [], available: false, note: "Longer ranges need a market-data plan that includes price history." };
 }

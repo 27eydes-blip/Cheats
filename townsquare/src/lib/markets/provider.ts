@@ -1,10 +1,12 @@
 import { marketStatus } from "./clock";
-import { TICKER_MAP } from "./universe";
+import { finnhub } from "./finnhub";
+import { TICKER_MAP, priorityOf } from "./universe";
 
 /**
  * Market data with two sources behind one interface:
- *  - "live": Finnhub REST quotes (set FINNHUB_API_KEY). Cached 45s server-side;
- *    intraday series are built from the quotes this server has seen.
+ *  - "live": Finnhub REST quotes (set FINNHUB_API_KEY), refreshed in the
+ *    background within a per-minute call budget (see finnhub.ts); intraday
+ *    series are built from the quotes this server has seen.
  *  - "demo": a deterministic simulator. Every price it returns is synthetic and
  *    the UI labels it DEMO. Used when no key is configured.
  */
@@ -90,36 +92,99 @@ function demoQuote(symbol: string, now: number): Quote {
 
 // ---------------------------------------------------------------- live (Finnhub)
 type FinnhubQuote = { c: number; d: number; dp: number; h: number; l: number; o: number; pc: number; t: number };
-const liveCache = new Map<string, { at: number; q: Quote }>();
-const history = new Map<string, { date: string; points: number[] }>();
+type Entry = { q?: Quote; at: number; wantedAt: number; tried: number; unknown?: boolean };
+/** Latest quote per symbol. Pages read from here and never wait on a full refresh. */
+const store = new Map<string, Entry>();
+const intraday = new Map<string, { date: string; points: number[] }>();
+let refreshing: Promise<void> | null = null;
 
-async function liveQuote(symbol: string, now: number): Promise<Quote | null> {
-  const hit = liveCache.get(symbol);
-  // Finnhub free tier: 60 calls/min. ~40 tickers refreshed every 45s stays under it.
-  if (hit && now - hit.at < 45_000) return hit.q;
-  try {
-    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`, { cache: "no-store" });
-    if (!res.ok) return hit?.q ?? null;
-    const d = (await res.json()) as FinnhubQuote;
-    if (!d || !d.c) return hit?.q ?? null;
-    const date = marketStatus(now).sessionDate;
-    const h = history.get(symbol);
-    const points = h && h.date === date ? h.points : [d.o || d.c];
-    if (points[points.length - 1] !== d.c) points.push(d.c);
-    if (points.length > 400) points.shift();
-    history.set(symbol, { date, points });
-    const q: Quote = { symbol, name: TICKER_MAP.get(symbol)?.name ?? symbol, price: d.c, change: d.d, changePct: d.dp, open: d.o, high: d.h, low: d.l, prevClose: d.pc, ts: d.t * 1000 || now, series: [...points] };
-    liveCache.set(symbol, { at: now, q });
-    return q;
-  } catch {
-    return hit?.q ?? null;
-  }
+export function resetLive() {
+  store.clear();
+  intraday.clear();
+  refreshing = null;
 }
 
-/** Quotes for the given symbols (unknown or unavailable symbols are skipped). */
-export async function getQuotes(symbols: string[], now = Date.now()): Promise<Quote[]> {
-  const uniq = [...new Set(symbols)].slice(0, 60);
+/** How old a quote may get before it is refetched: indexes fastest; slow when the market is closed. */
+function ttl(symbol: string, open: boolean) {
+  if (!open) return 15 * 60_000;
+  return [20_000, 45_000, 60_000][priorityOf(symbol)];
+}
+
+async function fetchQuote(symbol: string, e: Entry, now: number): Promise<"ok" | "budget" | "fail"> {
+  const r = await finnhub<FinnhubQuote>(`/quote?symbol=${encodeURIComponent(symbol)}`, now);
+  if (!r.ok) {
+    if (r.reason === "budget" || r.reason === "limited") return "budget";
+    e.tried = now;
+    return "fail";
+  }
+  const d = r.data;
+  e.tried = now;
+  if (!d || !d.c) {
+    // Finnhub answers unknown symbols with zeros.
+    e.unknown = !e.q;
+    return "fail";
+  }
+  const date = marketStatus(now).sessionDate;
+  const h = intraday.get(symbol);
+  const points = h && h.date === date ? h.points : [d.o || d.c];
+  if (points[points.length - 1] !== d.c) points.push(d.c);
+  if (points.length > 400) points.shift();
+  intraday.set(symbol, { date, points });
+  e.q = { symbol, name: TICKER_MAP.get(symbol)?.name ?? symbol, price: d.c, change: d.d ?? d.c - d.pc, changePct: d.dp ?? ((d.c - d.pc) / d.pc) * 100, open: d.o, high: d.h, low: d.l, prevClose: d.pc, ts: d.t * 1000 || now, series: [...points] };
+  e.at = now;
+  return "ok";
+}
+
+/**
+ * Refresh the stalest quotes that pages asked for in the last 10 minutes,
+ * within the shared Finnhub budget: indexes first, then symbols with no quote
+ * yet, then the oldest. Stops as soon as the budget is spent.
+ */
+export async function refreshLive(now = Date.now()) {
+  const open = marketStatus(now).open;
+  const due = [...store.entries()]
+    .filter(([s, e]) => !e.unknown && now - e.wantedAt < 10 * 60_000 && (e.q ? now - e.at > ttl(s, open) : now - e.tried > 15_000))
+    .sort(([a, x], [b, y]) => {
+      const pa = priorityOf(a), pb = priorityOf(b);
+      return Number(pa !== 0) - Number(pb !== 0) || Number(!!x.q) - Number(!!y.q) || pa - pb || (now - y.at) / ttl(b, open) - (now - x.at) / ttl(a, open);
+    });
+  let i = 0;
+  let spent = false;
+  const worker = async () => {
+    while (!spent && i < due.length) {
+      const [s, e] = due[i++];
+      if ((await fetchQuote(s, e, now)) === "budget") spent = true;
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, worker));
+}
+
+function kick(now: number) {
+  if (!refreshing) refreshing = refreshLive(now).finally(() => (refreshing = null));
+  return refreshing;
+}
+
+/**
+ * Quotes for the given symbols (unknown or not-yet-loaded symbols are
+ * skipped). In live mode this answers from the store and starts a background
+ * refresh; it only waits (up to `waitMs`) when some symbol has no quote yet.
+ */
+export async function getQuotes(symbols: string[], now = Date.now(), opts: { waitMs?: number } = {}): Promise<Quote[]> {
+  const uniq = [...new Set(symbols)].slice(0, 200);
   if (marketMode() === "demo") return uniq.map((s) => demoQuote(s, now));
-  const out = await Promise.all(uniq.map((s) => liveQuote(s, now)));
-  return out.filter((q): q is Quote => !!q);
+  let missing = false;
+  for (const s of uniq) {
+    const e = store.get(s) ?? { at: 0, wantedAt: now, tried: 0 };
+    e.wantedAt = now;
+    store.set(s, e);
+    if (!e.q && !e.unknown) missing = true;
+  }
+  const run = kick(now);
+  if (missing) await Promise.race([run, new Promise((r) => setTimeout(r, opts.waitMs ?? 1500))]);
+  return uniq.map((s) => store.get(s)?.q).filter((q): q is Quote => !!q);
+}
+
+/** Drops the intraday series except for `keep` (keeps big-board payloads small). `null` keeps all. */
+export function trimSeries(quotes: Quote[], keep: Set<string> | null) {
+  return keep ? quotes.map((q) => (keep.has(q.symbol) ? q : { ...q, series: [] })) : quotes;
 }

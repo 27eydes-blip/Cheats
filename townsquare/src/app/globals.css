@@ -362,6 +362,20 @@ dialog[open] { animation: scale-in var(--dur-std) var(--ease-out); }
 }
 .glow-up { color: #2ee6a6; text-shadow: 0 0 18px rgb(46 230 166 / 0.45); }
 .glow-down { color: #ff5c7a; text-shadow: 0 0 18px rgb(255 92 122 / 0.45); }
+/* Trading floor: LED big board (dot-matrix look over plain text, so it stays readable and selectable) */
+.led-board { position: relative; background: #020305; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 -1px 0 rgb(255 255 255 / 0.04); }
+.led-board::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 50% 50%, transparent 0 1px, rgb(0 0 0 / 0.55) 1.3px);
+  background-size: 3px 3px;
+}
+.led { font-family: var(--font-mono, ui-monospace), ui-monospace, monospace; font-weight: 700; letter-spacing: 0.06em; }
+.led-sym { color: #f4f7ff; text-shadow: 0 0 6px rgb(244 247 255 / 0.55); }
+.led-up { color: #2ee6a6; text-shadow: 0 0 8px rgb(46 230 166 / 0.7); }
+.led-down { color: #ff5c7a; text-shadow: 0 0 8px rgb(255 92 122 / 0.7); }
+@keyframes bell-ring { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(14deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
+.bell-ring { animation: bell-ring 1.2s ease-in-out 2; transform-origin: 50% 10%; }
+@media (prefers-reduced-motion: reduce) { .bell-ring, .flash-up, .flash-down { animation: none; } }
 .glow-gold { color: var(--wn-cyan); text-shadow: 0 0 16px rgb(34 211 238 / 0.45); }
 
 /* Team badge outline: visible on both themes */

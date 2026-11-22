@@ -4,25 +4,18 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { Quote } from "@/lib/markets/provider";
 import { addWatchAction, removeWatchAction } from "@/actions/markets";
-import { ALL_TICKERS, INDEX_ETFS, STOCKS } from "@/lib/markets/universe";
+import { ALL_TICKERS, INDEX_ETFS, SECTORS, STOCKS } from "@/lib/markets/universe";
 import { CloseIcon, PlusIcon } from "../icons";
 import { useToast, useViewer } from "../providers";
 import { AreaChart, MiniLine, PriceChart, type Bar } from "./Charts";
 import type { Range } from "@/lib/markets/history";
 
 const RANGES: Range[] = ["1D", "5D", "1M", "1Y"];
-import { fmtChg, fmtPct, fmtPrice, useMarket } from "./MarketData";
+import { fmtChg, fmtPct, fmtPrice, useFlash, useMarket } from "./MarketData";
 
 const up = (q: Quote) => q.change >= 0;
 const tone = (q: Quote) => (up(q) ? "text-[#2ee6a6]" : "text-[#ff5c7a]");
 const Arrow = ({ q }: { q: Quote }) => <span aria-hidden="true">{up(q) ? "▲" : "▼"}</span>;
-
-/** Flashes green/red each time a symbol ticks. */
-function useFlash(symbol: string) {
-  const { ticks } = useMarket();
-  const t = ticks[symbol];
-  return t ? { key: t.n, cls: t.dir > 0 ? "flash-up" : "flash-down" } : { key: 0, cls: "" };
-}
 
 /** Full-width scrolling tape: index ETFs, your watchlist, and the day's biggest movers. */
 export function TickerTape() {
@@ -67,36 +60,6 @@ export function TickerTape() {
 function TapePrice({ q }: { q: Quote }) {
   const f = useFlash(q.symbol);
   return <span key={f.key} className={`rounded-[6px] px-1 text-[12px] text-white/90 ${f.cls}`}>{fmtPrice(q.price)}</span>;
-}
-
-/** Market status: open/closed, countdown, Eastern time, and which data source is in use. */
-export function StatusBar() {
-  const { status, mode } = useMarket();
-  const [now, setNow] = useState<number | null>(null);
-  const [anchor] = useState(() => ({ at: Date.now(), left: status.nextChangeMs }));
-  useEffect(() => {
-    setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const left = now ? Math.max(0, status.nextChangeMs - (now - anchor.at) + (anchor.left - status.nextChangeMs)) : status.nextChangeMs;
-  const h = Math.floor(left / 3_600_000);
-  const m = Math.floor((left % 3_600_000) / 60_000);
-  const s = Math.floor((left % 60_000) / 1000);
-  const et = now ? new Date(now).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", second: "2-digit" }) : "";
-  return (
-    <div className="mono flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px]">
-      <span className={`flex items-center gap-2 rounded-[6px] px-2 py-1 font-bold tracking-wider uppercase ${status.open ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-white/10 text-white/80"}`}>
-        <span className={`h-2 w-2 rounded-full ${status.open ? "bg-[#2ee6a6] shadow-[0_0_10px_#2ee6a6]" : "bg-white/50"}`} style={status.open ? { animation: "blink 1.6s infinite" } : undefined} />
-        {status.label}
-      </span>
-      <span className="text-white/70" suppressHydrationWarning>{status.open ? "Closes in" : "Opens in"} <b className="text-white">{h}h {String(m).padStart(2, "0")}m {String(s).padStart(2, "0")}s</b></span>
-      <span className="text-white/70" suppressHydrationWarning>NEW YORK <b className="inline-block min-w-[11ch] text-white">{et || "--:--:-- --"}</b></span>
-      <span className={`ml-auto rounded-[6px] px-2 py-1 font-bold tracking-wider ${mode === "live" ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-[var(--wn-blue-fill)]/20 text-[var(--wn-cyan-ink)]"}`} title={mode === "demo" ? "No market-data key is configured, so prices are simulated." : "Quotes from Finnhub"}>
-        {mode === "live" ? "LIVE DATA · FINNHUB" : "DEMO DATA · SIMULATED PRICES"}
-      </span>
-    </div>
-  );
 }
 
 /** One index card: S&P 500 (SPY), Nasdaq-100 (QQQ), Dow (DIA), Russell 2000 (IWM). */
@@ -179,7 +142,7 @@ export function FocusChart() {
   const stats: [string, string][] = [["Open", fmtPrice(q.open)], ["Prev close", fmtPrice(q.prevClose)], ["Day high", fmtPrice(q.high)], ["Day low", fmtPrice(q.low)]];
   const seg = "rounded-[8px] px-2.5 py-1 text-[11.5px] font-bold transition-colors";
   return (
-    <section aria-label={`${q.symbol} chart`} className="relative overflow-hidden rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-5">
+    <section id="focus-chart" aria-label={`${q.symbol} chart`} className="scroll-mt-20 relative overflow-hidden rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-5">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 h-24 bg-gradient-to-b from-white/[0.04] to-transparent" style={{ animation: "scan 6s linear infinite" }} />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -301,7 +264,7 @@ function WatchPrice({ q }: { q: Quote }) {
 /** Sector heatmap: tile size by company size, color by today's move. */
 export function Heatmap() {
   const { quotes, select } = useMarket();
-  const sectors = [...new Set(STOCKS.map((t) => t.sector))];
+  const sectors = SECTORS.map((x) => x.key) as string[];
   const ink = (p: number) => {
     // Black or white ink, whichever contrasts more; the worst case is still above 4.5:1.
     const m = color(p).match(/\d+/g)!.map((v) => Number(v) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
@@ -316,10 +279,10 @@ export function Heatmap() {
   return (
     <section aria-labelledby="heat" className="[content-visibility:auto] [contain-intrinsic-size:auto_560px] rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 id="heat" className="folio text-[var(--wn-cyan-ink)]">Sector heatmap</h2>
+        <h2 id="heat" className="folio text-[var(--wn-cyan-ink)]">Heatmap · {STOCKS.length} stocks</h2>
         <span className="mono flex items-center gap-1.5 text-[10px] text-white/50">−3% <span className="h-2 w-16 rounded-full" style={{ background: `linear-gradient(90deg, ${color(-3)}, #1b2840, ${color(3)})` }} /> +3%</span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {sectors.map((sec) => {
           const list = STOCKS.filter((t) => t.sector === sec);
           return (
