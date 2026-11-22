@@ -79,6 +79,8 @@ export const TEAM_ROWS: Record<League, Row[]> = {
     ["UCLA", "UCLA", "Bruins", "#2D68C4", "#F2A900"], ["USC", "USC", "Trojans", "#990000", "#FFC72C"], ["UTAH", "Utah", "Utes", "#CC0000", "#000000"],
     ["VAN", "Vanderbilt", "Commodores", "#000000", "#866D4B"], ["VT", "Virginia Tech", "Hokies", "#630031", "#CF4420"], ["WASH", "Washington", "Huskies", "#4B2E83", "#B7A57A"],
     ["WIS", "Wisconsin", "Badgers", "#C5050C", "#FFFFFF"],
+    ["ARST", "Arkansas State", "Red Wolves", "#CC092F", "#000000"], ["LT", "Louisiana Tech", "Bulldogs", "#002F8B", "#E31B23"], ["CSU", "Colorado State", "Rams", "#1E4D2B", "#C8C372"],
+    ["FRES", "Fresno State", "Bulldogs", "#DB0032", "#002E6D"], ["UTSA", "UTSA", "Roadrunners", "#0C2340", "#F15A22"], ["MOH", "Miami (OH)", "RedHawks", "#C3142D", "#000000"],
   ],
   MLS: [
     ["ATL", "Atlanta", "Atlanta United", "#80000A", "#221F1F"], ["ATX", "Austin", "Austin FC", "#00B140", "#000000"], ["CLT", "Charlotte", "Charlotte FC", "#1A85C8", "#000000"],

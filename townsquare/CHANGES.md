@@ -1,3 +1,25 @@
+# What changed (team logos, take two)
+
+Shipped to `news-v1` as one commit ("Team logos: Control Room page…"). Screenshots are on the `logos-v1` branch only.
+
+- **Control Room → Sports data → Team logos** (`/admin/sports/logos`):
+  - Every team in one table: logo thumbnail, team and slug, league, what it shows now (Uploaded, TheSportsDB or Letter badge), and a thumbnail of each logo you have for it.
+  - Filters: search, league, **No real logo** and **College teams**.
+  - **Upload** per team: PNG, SVG, JPG or WebP, up to 2 MB. The file type is checked from the file's contents, not its name. Each upload is converted to WebP at 128 and 512 pixels and stored on the volume (`/data/uploads/team-logos`). SVGs are drawn into images and never served as SVG; SVGs that load outside files or contain scripts are refused.
+  - A choice per team: **Automatic**, **Use uploaded logo**, **Use TheSportsDB badge** or **Use letter badge**, plus **Remove upload**. The same choices apply in one click to every team the filters show (for example, all college teams to letter badges).
+  - **Bulk upload**: a ZIP of images named by team slug (for example `ncaaf-ala.png`), with a list of which files matched a team and which didn't, and why.
+  - **Name aliases**: add or remove how the data feed spells a team (for example "Miami (FL)"). They are used for scores, standings and badges.
+  - The note: "Official college and pro logos are trademarked. Only upload images you have permission to use."
+- **One priority order everywhere**: uploaded logo, then TheSportsDB badge, then the letter badge, unless you pick one for a team.
+- **New letter badge**: a circle in the team's color (TheSportsDB's color if it has one, otherwise our reference color, otherwise neutral slate) with 1 to 3 letters in white or near-black. Every team's badge is checked to be at least 4.5:1 contrast. Teams the feed names but we can't match get a neutral circle with their initials instead of a plain gray letter.
+- **Better name matching**: "Miami (FL)", "Miami (OH)", "Arkansas State", "Louisiana Tech", "Colorado State", "Fresno State" and "UTSA" now find the right team. "Arkansas State" no longer becomes Arkansas. Six college teams were added: Arkansas State, Louisiana Tech, Colorado State, Fresno State, UTSA and Miami (OH).
+- Logos you uploaded and badges fetched before this version keep working: old uploads show as "Uploaded", old provider logos as "TheSportsDB".
+- Database: additive migration 13 (logo choice and source columns, TheSportsDB colors, an aliases table). Nothing deleted; checked on a copy of a live-style database.
+- Railway: nothing new to add.
+- Screenshots (TEST teams only, on `logos-v1`): `screenshots/logos-{phone,desktop}-team-logos.png` (the Team logos page) and `screenshots/logos-{phone,desktop}-score-cards.png` (score cards showing an uploaded logo, a TheSportsDB badge and a letter badge).
+
+---
+
 # What changed (team logos)
 
 Shipped to `news-v1` as one commit ("Team logos from TheSportsDB…").

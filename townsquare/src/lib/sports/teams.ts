@@ -1,22 +1,39 @@
 import { all, get, now, run, tx } from "../db";
 import { FULL_NAME_LEAGUES, LEAGUES, TEAM_ROWS, type League } from "./teams-data";
+import { badgeLetters, circleColors, effectiveLogo, LOGO_MODES, type LogoMode, type LogoSource } from "./logos";
 
 export type TeamView = {
   id: string; league: League; abbr: string; city: string; name: string; fullName: string;
   primary: string; secondary: string;
-  /** Local, cached logo URL (licensed provider or manual upload); null = use the generated badge. */
+  /** The logo to show (uploaded, then provider badge), or null for the letter badge. */
   logo: string | null;
+  logoSource: LogoSource;
+  /** The admin's choice for this team ("auto" = uploaded → provider badge → letter). */
+  logoMode: LogoMode;
+  hasUpload: boolean;
+  hasProviderLogo: boolean;
+  /** The letter-badge circle: 1–3 letters on the team color, contrast-checked. */
+  circle: { letters: string; fill: string; text: string };
 };
 
-type Row = { id: string; league: League; abbr: string; city: string; name: string; full_name: string; primary_color: string; secondary_color: string; logo_path: string | null; logo_status: string; updated_at: number };
+type Row = {
+  id: string; league: League; abbr: string; city: string; name: string; full_name: string; primary_color: string; secondary_color: string;
+  logo_path: string | null; logo_status: string; logo_source: string | null; updated_at: number;
+  logo_mode: string | null; upload_at: number | null; tsdb_at: number | null; tsdb_color1: string | null;
+};
 
 export const teamId = (league: string, abbr: string) => `${league}-${abbr}`.toLowerCase();
 export const fullNameOf = (league: League, city: string, name: string) => (FULL_NAME_LEAGUES.includes(league) ? name : `${city} ${name}`);
 
-const toView = (r: Row): TeamView => ({
-  id: r.id, league: r.league, abbr: r.abbr, city: r.city, name: r.name, fullName: r.full_name, primary: r.primary_color, secondary: r.secondary_color,
-  logo: r.logo_status === "ok" && r.logo_path ? `/api/team-logo/${r.id}?v=${r.updated_at}` : null,
-});
+const toView = (r: Row): TeamView => {
+  const e = effectiveLogo(r);
+  return {
+    id: r.id, league: r.league, abbr: r.abbr, city: r.city, name: r.name, fullName: r.full_name, primary: r.primary_color, secondary: r.secondary_color,
+    logo: e.url, logoSource: e.source, logoMode: (LOGO_MODES as string[]).includes(r.logo_mode ?? "") ? (r.logo_mode as LogoMode) : "auto",
+    hasUpload: e.available.upload, hasProviderLogo: e.available.tsdb,
+    circle: { letters: badgeLetters({ id: r.id, abbr: r.abbr, name: r.full_name }), ...circleColors(r.tsdb_color1 ?? r.primary_color) },
+  };
+};
 
 /** Insert or update every team from the reference data. Never touches cached logos. */
 export function seedTeams() {

@@ -4,17 +4,17 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TeamLogo } from "@/components/sports/TeamLogo";
 
 afterEach(cleanup);
-const team = { id: "nfl-kc", abbr: "KC", fullName: "Kansas City Chiefs", primary: "#E31837", secondary: "#FFB81C", league: "NFL" as const };
+const team = { id: "nfl-kc", fullName: "Kansas City Chiefs", circle: { letters: "KC", fill: "#E31837", text: "#FFFFFF" } };
 
 describe("TeamLogo", () => {
-  it("draws the generated badge when there is no licensed logo", () => {
+  it("draws the letter circle when there is no logo", () => {
     const { container, getByRole } = render(<TeamLogo team={{ ...team, logo: null }} size="md" />);
-    expect(container.querySelector("[data-team-logo=badge]")).not.toBeNull();
+    expect(container.querySelector("[data-team-logo=letter]")).not.toBeNull();
     expect(getByRole("img", { name: "Kansas City Chiefs" })).toBeTruthy();
     expect(container.textContent).toContain("KC");
   });
 
-  it("lazy-loads the cached logo, and switches to the badge if the image fails", () => {
+  it("lazy-loads the cached logo, and switches to the letter circle if the image fails", () => {
     const { container } = render(<TeamLogo team={{ ...team, logo: "/api/team-logo/nfl-kc" }} size="lg" />);
     const img = container.querySelector("img")!;
     expect(img.getAttribute("loading")).toBe("lazy");
@@ -23,7 +23,7 @@ describe("TeamLogo", () => {
       fireEvent.error(img);
     });
     expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("[data-team-logo=badge]")).not.toBeNull();
+    expect(container.querySelector("[data-team-logo=letter]")).not.toBeNull();
   });
 
   it("supports small, medium and large sizes", () => {

@@ -1,16 +1,18 @@
 "use client";
 
-import { useId, useState } from "react";
-import { badgeColors } from "@/lib/sports/badge";
+import { useState } from "react";
 import type { TeamView } from "@/lib/sports/teams";
 
 const PX = { sm: 22, md: 34, lg: 64 } as const;
 export type TeamLogoSize = keyof typeof PX;
-type TeamLike = Pick<TeamView, "id" | "abbr" | "fullName" | "primary" | "secondary" | "logo" | "league">;
+type TeamLike = Pick<TeamView, "id" | "fullName" | "logo"> & { circle?: TeamView["circle"] };
+/** Neutral circle for anything without server-computed colors (white on slate: 9.6:1). */
+const fallbackCircle = (name: string) => ({ letters: name.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").toUpperCase().slice(0, 3) || "?", fill: "#3A4256", text: "#FFFFFF" });
 
 /**
- * Team logo: the cached licensed logo when there is one (lazy-loaded), and
- * the generated badge otherwise, or the moment the image fails to load.
+ * Team logo in the priority order the server already worked out: an uploaded
+ * logo, then the provider badge, then the letter circle. If an image fails to
+ * load, the circle takes its place.
  */
 export function TeamLogo({ team, size = "md", className = "", label = true }: { team: TeamLike; size?: TeamLogoSize; className?: string; label?: boolean }) {
   const [failed, setFailed] = useState(false);
@@ -31,45 +33,32 @@ export function TeamLogo({ team, size = "md", className = "", label = true }: { 
       />
     );
   }
-  return <TeamBadge team={team} px={px} className={className} label={label} />;
+  return <LetterBadge circle={team.circle ?? fallbackCircle(team.fullName)} name={team.fullName} px={px} className={className} label={label} />;
 }
 
 /**
- * Generated badge: a shield in the team's primary color, a secondary-color
- * chevron, and the abbreviation in whichever color reads best. No logo
- * artwork, so nothing trademarked and nothing that can fail to load.
+ * The fallback: a circle in the team's color with 1–3 letters in white or
+ * near-black, whichever passes 4.5:1 (checked on the server). A faint ring
+ * keeps dark or light circles visible on either theme.
  */
-export function TeamBadge({ team, px, className = "", label = true }: { team: TeamLike; px: number; className?: string; label?: boolean }) {
-  const u = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const c = badgeColors(team.primary, team.secondary);
-  const fs = team.abbr.length >= 4 ? 19 : team.abbr.length === 3 ? 23 : 28;
-  const soccer = team.league === "MLS" || team.league === "EPL";
-  const shape = soccer ? "M32 4 L56 12 V30 C56 46 46 56 32 61 C18 56 8 46 8 30 V12 Z" : "M32 3 L57 13 C57 37 49 52 32 61 C15 52 7 37 7 13 Z";
+export function LetterBadge({ circle, name, px, className = "", label = true }: { circle: TeamView["circle"]; name: string; px: number; className?: string; label?: boolean }) {
+  const n = circle.letters.length;
+  const fs = n >= 3 ? 21 : n === 2 ? 25 : 30;
   return (
     <svg
       viewBox="0 0 64 64"
       width={px}
       height={px}
       role={label ? "img" : undefined}
-      aria-label={label ? `${team.fullName}` : undefined}
+      aria-label={label ? name : undefined}
       aria-hidden={label ? undefined : true}
-      data-team-logo="badge"
+      data-team-logo="letter"
       className={`inline-block shrink-0 ${className}`}
-      style={{ ["--ring-d" as string]: c.ringDark, ["--ring-l" as string]: c.ringLight }}
     >
-      <defs>
-        <clipPath id={`c${u}`}><path d={shape} /></clipPath>
-        <linearGradient id={`g${u}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity="0.18" /><stop offset="0.55" stopColor="#fff" stopOpacity="0" /></linearGradient>
-      </defs>
-      <path d={shape} fill={c.fill} />
-      <g clipPath={`url(#c${u})`}>
-        <path d="M0 53 L32 48 L64 53 V64 H0 Z" fill={c.accent} opacity="0.95" />
-        <path d="M0 57.5 L32 52.5 L64 57.5" stroke={c.fill} strokeWidth="2" fill="none" />
-        <rect width="64" height="64" fill={`url(#g${u})`} />
-      </g>
-      <path d={shape} fill="none" className="team-badge-ring" strokeWidth="2.5" />
-      <text x="32" y={fs >= 28 ? 33 : 32} textAnchor="middle" dominantBaseline="middle" fill={c.text} fontFamily="var(--font-display), 'Arial Narrow', sans-serif" fontWeight="800" fontSize={fs} letterSpacing="0.5">
-        {team.abbr}
+      <circle cx="32" cy="32" r="30" fill={circle.fill} />
+      <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" strokeOpacity="0.18" strokeWidth="2" className="text-ink-1" />
+      <text x="32" y="33.5" textAnchor="middle" dominantBaseline="middle" fill={circle.text} fontFamily="var(--font-sans), Inter, Arial, sans-serif" fontWeight="800" fontSize={fs} letterSpacing={n >= 3 ? "-0.5" : "0"}>
+        {circle.letters}
       </text>
     </svg>
   );

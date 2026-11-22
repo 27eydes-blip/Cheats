@@ -1,4 +1,5 @@
-import { all, get, now, run, tx } from "../db";
+import { all, db, get, now, run, tx } from "../db";
+import { normName } from "./names";
 import { getSetting, setSetting } from "../newsroom/settings";
 import { LEAGUES, type League } from "./teams-data";
 import { listTeams, type TeamView } from "./teams";
@@ -143,66 +144,47 @@ export function parseTableRow(r: Raw, league: League) {
 
 // ------------------------------------------------------------------ team matching
 
-const norm = (s: string) =>
-  ` ${s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/&/g, " and ")
-    .replace(/\b(fc|afc|cf|sc)\b/g, " ")
-    .replace(/\bst\b\.?/g, "state")
-    .replace(/[^a-z0-9 ]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()} `;
+const norm = normName;
 
-/** A few names the provider writes differently from our reference list. */
-const ALIASES: Record<string, string> = {
-  " la clippers ": " los angeles clippers ",
-  " la lakers ": " los angeles lakers ",
-  " man united ": " manchester united ",
-  " man city ": " manchester city ",
-  " spurs ": " tottenham hotspur ",
-  " wolves ": " wolverhampton wanderers ",
-  " nottm forest ": " nottingham forest ",
-  " brighton ": " brighton and hove albion ",
-  " newcastle ": " newcastle united ",
-  " west ham ": " west ham united ",
-  " leeds ": " leeds united ",
-  " bournemouth ": " afc bournemouth ",
-  " inter miami ": " inter miami cf ",
-};
+type Index = { exact: Map<string, string>; city: Map<string, Set<string>>; nick: Map<string, Set<string>>; aliases: Map<string, string>; full: [string, string][] };
+const indexes = new WeakMap<object, Map<League, Index>>();
 
-const matchers = new WeakMap<object, Map<string, Map<string, string>>>();
-const cacheKey = {};
-function teamIndex(league: League) {
-  let byLeague = matchers.get(cacheKey);
-  if (!byLeague) matchers.set(cacheKey, (byLeague = new Map()));
+function teamIndex(league: League): Index {
+  const d = db();
+  let byLeague = indexes.get(d);
+  if (!byLeague) indexes.set(d, (byLeague = new Map()));
   let idx = byLeague.get(league);
   if (idx) return idx;
-  idx = new Map();
+  idx = { exact: new Map(), city: new Map(), nick: new Map(), aliases: new Map(), full: [] };
+  const add = (m: Map<string, Set<string>>, k: string, id: string) => m.set(k, (m.get(k) ?? new Set()).add(id));
   for (const t of listTeams(league)) {
-    for (const n of [t.fullName, `${t.city} ${t.name}`, t.name]) {
-      const k = norm(n);
-      if (!idx.has(k)) idx.set(k, t.id);
-    }
+    for (const n of [t.fullName, `${t.city} ${t.name}`]) if (!idx.exact.has(norm(n))) idx.exact.set(norm(n), t.id);
+    add(idx.city, norm(t.city), t.id);
+    add(idx.nick, norm(t.name), t.id);
+    idx.full.push([norm(t.fullName), t.id]);
   }
+  for (const a of all<{ alias_norm: string; team_id: string }>("SELECT alias_norm, team_id FROM team_aliases WHERE league = ?", [league])) idx.aliases.set(a.alias_norm, a.team_id);
   byLeague.set(league, idx);
   return idx;
 }
+/** Drop cached name indexes (after an alias is added or removed). */
 export function resetTeamIndex() {
-  matchers.delete(cacheKey);
+  indexes.delete(db());
 }
 
-/** Our team id for a provider team name in a league, or null. */
+const only = (s: Set<string> | undefined) => (s && s.size === 1 ? [...s][0] : null);
+
+/**
+ * Our team id for a provider team name in a league, or null. In order:
+ * an alias (Control Room → Team logos), the full name, the school or city
+ * alone when only one team has it ("Arkansas State" is not "Arkansas"), the
+ * nickname alone when unique, then a name that adds words after our full name.
+ */
 export function matchTeam(league: League, name: string): string | null {
   const idx = teamIndex(league);
-  let k = norm(name);
-  k = ALIASES[k] ? norm(ALIASES[k]) : k;
-  if (idx.has(k)) return idx.get(k)!;
-  // "Alabama Crimson Tide" vs "Alabama" style differences: unique prefix/suffix match.
-  const hits = [...idx.entries()].filter(([n]) => n.length > 5 && (k.startsWith(n) || n.startsWith(k) || k.endsWith(n)));
-  const ids = new Set(hits.map(([, id]) => id));
-  return ids.size === 1 ? [...ids][0] : null;
+  const k = norm(name);
+  if (k.trim() === "") return null;
+  return idx.aliases.get(k) ?? idx.exact.get(k) ?? only(idx.city.get(k)) ?? only(idx.nick.get(k)) ?? only(new Set(idx.full.filter(([n]) => n.split(" ").length > 3 && k.startsWith(n)).map(([, id]) => id)));
 }
 
 // ------------------------------------------------------------------ sync

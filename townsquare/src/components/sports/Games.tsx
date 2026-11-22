@@ -3,18 +3,15 @@ import type { GameView, StandingRow } from "@/lib/sports/games";
 import { DRAW_LEAGUES } from "@/lib/sports/games";
 import { LEAGUE_NAME, type League } from "@/lib/sports/teams-data";
 import { fmtDay, fmtTime } from "@/lib/sports/time";
-import { TeamLogo } from "./TeamLogo";
+import { LetterBadge, TeamLogo } from "./TeamLogo";
+import { badgeLetters, circleColors } from "@/lib/sports/logos";
 
 type Side = GameView["home"];
 
-function SideLogo({ side, league, size = "sm" }: { side: Side; league: League; size?: "sm" | "md" }) {
+function SideLogo({ side, size = "sm" }: { side: Side; league: League; size?: "sm" | "md" }) {
   if (side.team) return <TeamLogo team={side.team} size={size} label={false} />;
-  const px = size === "md" ? 34 : 22;
-  return (
-    <span aria-hidden="true" className="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-white/[0.08] font-bold text-ink-2 ring-1 ring-[var(--hairline)]" style={{ width: px, height: px, fontSize: px * 0.42 }} data-league={league}>
-      {side.name.replace(/^(The|FC|AFC) /, "")[0]}
-    </span>
-  );
+  // A team we couldn't match: a neutral circle with its initials.
+  return <LetterBadge circle={{ letters: badgeLetters({ name: side.name }), ...circleColors(null) }} name={side.name} px={size === "md" ? 34 : 22} label={false} />;
 }
 
 const winner = (g: GameView, side: "home" | "away") =>

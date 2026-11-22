@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { applyOutletUpdates, seedOutlets } from "../newsroom/outlets";
 import { seedSponsors } from "../sponsors-seed";
 import { seedAiAccounts } from "../ai/seed";
+import { addMissingTeams, seedAliases } from "../sports/names";
 
 /**
  * Numbered, append-only migrations. Each runs once per database and is
@@ -499,6 +500,36 @@ CREATE TABLE IF NOT EXISTS standings (
 );
 CREATE INDEX IF NOT EXISTS standings_team ON standings(team_id)
 `,
+  },
+  {
+    // Additive: team logo choices (uploaded / TheSportsDB / letter badge), TheSportsDB colors,
+    // and editable name aliases. Existing logos are kept and mapped to the new fields.
+    id: 13,
+    name: "team_logo_sources_and_aliases",
+    sql: `
+ALTER TABLE teams ADD COLUMN logo_mode TEXT NOT NULL DEFAULT 'auto';
+ALTER TABLE teams ADD COLUMN upload_at INTEGER;
+ALTER TABLE teams ADD COLUMN tsdb_at INTEGER;
+ALTER TABLE teams ADD COLUMN tsdb_status TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE teams ADD COLUMN tsdb_checked_at INTEGER;
+ALTER TABLE teams ADD COLUMN tsdb_color1 TEXT;
+ALTER TABLE teams ADD COLUMN tsdb_color2 TEXT;
+UPDATE teams SET upload_at = COALESCE(logo_checked_at, updated_at) WHERE logo_source = 'manual' AND logo_status = 'ok' AND upload_at IS NULL;
+UPDATE teams SET tsdb_at = COALESCE(logo_checked_at, updated_at), tsdb_status = 'ok' WHERE logo_source = 'provider' AND logo_status = 'ok' AND tsdb_at IS NULL;
+UPDATE teams SET tsdb_status = logo_status, tsdb_checked_at = logo_checked_at WHERE logo_source IS NULL AND logo_status IN ('missing','error');
+CREATE TABLE IF NOT EXISTS team_aliases (
+  league     TEXT NOT NULL,
+  alias_norm TEXT NOT NULL,
+  alias      TEXT NOT NULL,
+  team_id    TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (league, alias_norm)
+)
+`,
+    after: (db) => {
+      addMissingTeams(db);
+      seedAliases(db);
+    },
   },
 ];
 

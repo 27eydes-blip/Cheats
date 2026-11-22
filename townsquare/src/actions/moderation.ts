@@ -4,7 +4,6 @@ import { fileReport, moderate, setBanner, type ModAction } from "@/lib/moderatio
 import { requireViewer } from "@/lib/session";
 import { safeHttpUrl } from "@/lib/text";
 import { setStoryPhoto } from "@/lib/news";
-import { removeLogo, setManualLogo } from "@/lib/sports/logo-provider";
 import { AppError } from "@/lib/errors";
 import { attempt } from "./result";
 
@@ -47,18 +46,3 @@ export async function setStoryPhotoAction(form: FormData) {
 }
 
 /** Control Room: upload/replace or remove a team logo (admins confirm they hold the rights). */
-export async function teamLogoAction(form: FormData) {
-  return attempt(async () => {
-    const admin = await requireViewer();
-    if (admin.role !== "admin") throw new AppError("Admins only.", "forbidden");
-    const id = String(form.get("team") ?? "");
-    if (form.get("remove")) removeLogo(id);
-    else {
-      if (!form.get("rights")) throw new AppError("Confirm you have the rights to use this logo.");
-      const file = form.get("file");
-      if (!(file instanceof File) || !file.size) throw new AppError("Choose a logo file.");
-      await setManualLogo(id, file);
-    }
-    revalidatePath("/", "layout");
-  });
-}
