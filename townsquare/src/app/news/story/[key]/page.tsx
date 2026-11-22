@@ -8,7 +8,7 @@ import { DebateCard } from "@/components/front/DebateCard";
 import { StoryArt } from "@/components/front/StoryArt";
 import { CoverageBar } from "@/components/news/CoverageBar";
 import { CoverageList } from "@/components/news/CoverageList";
-import { SidesPanel } from "@/components/politics/Politics";
+import { SidesPanel } from "@/components/sections/SectionParts";
 import { sideHeadlines } from "@/lib/politics";
 import { FeedImage } from "@/components/news/FeedImage";
 import { NotesPanel } from "@/components/notes/NotesPanel";

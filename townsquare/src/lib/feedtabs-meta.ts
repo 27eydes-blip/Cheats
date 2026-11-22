@@ -1,3 +1,5 @@
+import { SECTION_FOR_TOPIC, SECTIONS } from "./sections-meta";
+
 /**
  * Home feed tabs (client-safe). The home page has two feed tabs: For You and
  * Friends. Topics and teams have their own pages (/topics/<slug>, /sports/<id>);
@@ -23,5 +25,6 @@ export const TOPIC_SLUG: Record<string, string> = { politics: "politics", world:
 export const SLUG_TOPIC: Record<string, string> = Object.fromEntries(Object.entries(TOPIC_SLUG).map(([k, v]) => [v, k]));
 /** Page label of a topic (Business, not Markets, because Markets is the stock board). */
 export const TOPIC_PAGE_LABEL: Record<string, string> = { ...TOPIC_LABEL, markets: "Business", national: "U.S." };
-export const topicHref = (topic: string) => `/topics/${TOPIC_SLUG[topic] ?? topic}`;
+/** Topics with a dedicated section page open it (/politics, /world, /business, /tech, /culture); the rest use /topics/<slug>. */
+export const topicHref = (topic: string) => (SECTION_FOR_TOPIC[topic] ? SECTIONS[SECTION_FOR_TOPIC[topic]].path : `/topics/${TOPIC_SLUG[topic] ?? topic}`);
 export const tabHref = (t: HomeTab) => (t.kind === "foryou" ? "/" : t.kind === "friends" ? "/?tab=friends" : t.kind === "topic" ? topicHref(t.key) : `/sports/${t.key}`);

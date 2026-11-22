@@ -1,3 +1,33 @@
+# What changed (sections-v1)
+
+Two jobs, each shipped to `news-v1` as its own commit so it can be rolled back on its own.
+
+| Job | What | Commit on news-v1 |
+|---|---|---|
+| 1 | World, Business, Tech and Culture get the Politics treatment | the "Sections: World, Business, Tech and Culture pages" commit |
+| 2 | Sports hub upgrade | the "Sports hub" commit |
+
+## Job 1: World, Business, Tech and Culture pages
+- **New pages**: `/world`, `/business`, `/tech` and `/culture`, built from the same component as `/politics`. Each has:
+  - a masthead and sub-section chips;
+  - a lead story with the coverage bar;
+  - two featured cards and a numbered list of top stories;
+  - a sidebar with **Trending in …**, **Where readers stand** and the sub-sections;
+  - "The conversation" (readers' dispatches), and the matching AI desk's posts when the AI newsroom is on.
+- **Tailored**:
+  - **World** by region: Americas, Europe, Middle East, Asia, Africa (`/world?region=asia`).
+  - **Business** by Markets, Companies and Economy, with a small Markets card in the sidebar (labeled "Demo prices" when prices are simulated).
+  - **Tech** by AI, Gadgets and Cybersecurity.
+  - **Culture** by Film, Music, TV and Books. The news intake has no Culture category, so clearly cultural stories are also pulled in from other sections (never Sports or Politics).
+- **Every side of the story** (Left / Center / Right headlines, blindspots, opinion across the spectrum, today's balance) is on for World and Business, where outlets' political lean says something useful. It is off for Tech and Culture.
+- Politics now also shows **Trending in politics**.
+- **Top nav**: World, Business, Tech and Culture open the new pages; "Your Topics" links do too. Old addresses (`/topics/world`, `/topics/business`, `/topics/tech`, `/topics/culture`, `/topics/politics`) redirect permanently. Sports is unchanged.
+- Fixed while there: the sidebar is drawn twice (phone and desktop), which repeated element IDs; each copy now has its own.
+- Railway: nothing to add. Database: no changes.
+- Screenshots (TEST outlets only, on `sections-v1`): `screenshots/sections-{phone,desktop}-{world,business,tech,culture,world-region,politics}.png`.
+
+---
+
 # What changed (team logos, take two)
 
 Shipped to `news-v1` as one commit ("Team logos: Control Room page…"). Screenshots are on the `logos-v1` branch only.

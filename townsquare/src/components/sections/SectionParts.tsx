@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Coverage, Side } from "@/lib/newsroom/coverage";
-import { BEATS, type OpinionItem, type PoliticsStory, type SideHeadline } from "@/lib/politics";
+import type { OpinionItem, SectionStory, SideHeadline } from "@/lib/sections";
 import type { StorySummary } from "@/lib/news";
 import { Time } from "@/components/Time";
 import { StoryArt } from "@/components/front/StoryArt";
@@ -34,12 +34,15 @@ function Art({ s, className }: { s: StorySummary; className: string }) {
   );
 }
 
-function BeatTags({ s }: { s: PoliticsStory }) {
+/** Beat names for the tags above headlines (and the section name when a story has no beat). */
+export type Labels = { section: string; beats: Record<string, string> };
+
+function BeatTags({ s, labels }: { s: SectionStory; labels: Labels }) {
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-extrabold tracking-[0.1em] uppercase">
       {s.status === "live" && <span className="text-live">● Live</span>}
-      {s.beats.slice(0, 2).map((b) => <span key={b} className="text-[var(--wn-blue-ink)]">{BEATS[b].label}</span>)}
-      {!s.beats.length && <span className="text-[var(--wn-blue-ink)]">Politics</span>}
+      {s.beats.slice(0, 2).map((b) => <span key={b} className="text-[var(--wn-blue-ink)]">{labels.beats[b] ?? b}</span>)}
+      {!s.beats.length && <span className="text-[var(--wn-blue-ink)]">{labels.section}</span>}
       <span className="font-semibold tracking-normal normal-case text-ink-3"><Time ms={s.updatedAt} /></span>
     </span>
   );
@@ -73,34 +76,36 @@ export function SidesPanel({ sides, compact }: { sides: Partial<Record<Side, Sid
 }
 
 /** The lead story: big art, a strong headline, summary, coverage balance and every side's headline. */
-export function PoliticsHero({ s }: { s: PoliticsStory }) {
+export function SectionHero({ s, labels, spectrum = true }: { s: SectionStory; labels: Labels; spectrum?: boolean }) {
   const href = `/news/story/${s.key}`;
   return (
     <article aria-labelledby="lead-title" className="px-4 pt-4">
       <Link href={href} className="group block">
         <Art s={s} className="aspect-[16/9] rounded-[18px] ring-1 ring-[var(--hairline)]" />
         <div className="mt-3.5">
-          <BeatTags s={s} />
+          <BeatTags s={s} labels={labels} />
           <h2 id="lead-title" className="mt-1.5 text-[clamp(1.55rem,1.2rem+1.6vw,2.25rem)] leading-[1.12] font-extrabold tracking-[-0.01em] text-ink-1 group-hover:underline">{s.title}</h2>
           {s.summary && <p className="mt-2 text-[16px] leading-[1.5] text-ink-2">{s.summary}{s.summarySource && <span className="text-ink-3"> ({s.summarySource})</span>}</p>}
         </div>
       </Link>
       {s.coverage.total > 0 && <div className="mt-3"><CoverageBar storyKey={s.key} coverage={s.coverage} size="md" /></div>}
-      <div className="mt-4">
-        <p className="mb-2 text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">How it&apos;s covered</p>
-        <SidesPanel sides={s.sides} />
-      </div>
+      {spectrum && (
+        <div className="mt-4">
+          <p className="mb-2 text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">How it&apos;s covered</p>
+          <SidesPanel sides={s.sides} />
+        </div>
+      )}
     </article>
   );
 }
 
 /** A secondary story: art on top, headline, coverage bar. Used in the two-up grid. */
-export function PoliticsCard({ s }: { s: PoliticsStory }) {
+export function SectionCard({ s, labels }: { s: SectionStory; labels: Labels }) {
   return (
     <article className="min-w-0">
       <Link href={`/news/story/${s.key}`} className="group block">
         <Art s={s} className="aspect-[16/9] rounded-[14px] ring-1 ring-[var(--hairline)]" />
-        <span className="mt-2.5 block"><BeatTags s={s} /></span>
+        <span className="mt-2.5 block"><BeatTags s={s} labels={labels} /></span>
         <h3 className="mt-1 line-clamp-3 text-[17px] leading-[1.28] font-bold text-ink-1 group-hover:underline">{s.title}</h3>
       </Link>
       {s.coverage.total > 0 && <div className="mt-2"><CoverageBar storyKey={s.key} coverage={s.coverage} /></div>}
@@ -109,13 +114,13 @@ export function PoliticsCard({ s }: { s: PoliticsStory }) {
 }
 
 /** A compact list row with the three sides as small dots of coverage. */
-export function PoliticsRow({ s, n }: { s: PoliticsStory; n?: number }) {
+export function SectionRow({ s, n, labels }: { s: SectionStory; n?: number; labels: Labels }) {
   return (
     <li className="tl-row flex gap-3 px-4 py-3">
       {n !== undefined && <span aria-hidden="true" className="num w-6 shrink-0 pt-0.5 font-display text-[22px] leading-none font-extrabold text-ink-3">{n}</span>}
       <div className="min-w-0 flex-1">
         <Link href={`/news/story/${s.key}`} className="group block">
-          <BeatTags s={s} />
+          <BeatTags s={s} labels={labels} />
           <h3 className="mt-0.5 line-clamp-3 text-[15.5px] leading-[1.35] font-semibold text-ink-1 group-hover:underline">{s.title}</h3>
         </Link>
         {s.coverage.total > 0 && <div className="mt-1.5"><CoverageBar storyKey={s.key} coverage={s.coverage} /></div>}
@@ -128,13 +133,13 @@ export function PoliticsRow({ s, n }: { s: PoliticsStory; n?: number }) {
 }
 
 /** Today's balance: stories, outlets and the left/center/right share of all political coverage. */
-export function BalanceCard({ stats }: { stats: { stories: number; outlets: number; articles: number; coverage: Coverage } }) {
+export function BalanceCard({ stats, section = "politics", idp = "" }: { idp?: string; stats: { stories: number; outlets: number; articles: number; coverage: Coverage }; section?: string }) {
   const c = stats.coverage;
   if (!stats.stories) return null;
   const pct = (x: number) => Math.round(x * 100);
   return (
-    <section aria-labelledby="balance" className="rounded-[16px] bg-white/[0.03] p-4 ring-1 ring-[var(--hairline)]">
-      <h2 id="balance" className="text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Today in politics</h2>
+    <section aria-labelledby={`${idp}balance`} className="rounded-[16px] bg-white/[0.03] p-4 ring-1 ring-[var(--hairline)]">
+      <h2 id={`${idp}balance`} className="text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Today in {section.toLowerCase()}</h2>
       <dl className="mt-2 grid grid-cols-3 gap-2">
         {[["Stories", stats.stories], ["Outlets", stats.outlets], ["Articles", stats.articles]].map(([k, v]) => (
           <div key={k}>
@@ -153,7 +158,7 @@ export function BalanceCard({ stats }: { stats: { stories: number; outlets: numb
               <span key={x}><span aria-hidden="true" className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: SIDE_COLORS[x] }} />{SIDE_NAME[x]} {pct(c.shares[x])}%</span>
             ))}
           </p>
-          <p className="mt-2 text-[12px] leading-snug text-ink-3">Share of outlets covering politics in the last 24 hours, by their approximate lean. <Link href="/help#news-sources" className="underline hover:text-ink-1">How leans are rated</Link></p>
+          <p className="mt-2 text-[12px] leading-snug text-ink-3">Share of outlets covering {section.toLowerCase()} in the last 24 hours, by their approximate lean. <Link href="/help#news-sources" className="underline hover:text-ink-1">How leans are rated</Link></p>
         </>
       )}
     </section>
@@ -161,9 +166,9 @@ export function BalanceCard({ stats }: { stats: { stories: number; outlets: numb
 }
 
 /** Blindspots: stories mostly covered by one side, so readers of the other side may have missed them. */
-export function Blindspots({ left, right }: { left: PoliticsStory[]; right: PoliticsStory[] }) {
+export function Blindspots({ left, right }: { left: SectionStory[]; right: SectionStory[] }) {
   if (!left.length && !right.length) return null;
-  const col = (side: "left" | "right", list: PoliticsStory[]) => (
+  const col = (side: "left" | "right", list: SectionStory[]) => (
     <div className="min-w-0 rounded-[14px] ring-1 ring-[var(--hairline)]">
       <p className="flex items-center gap-2 border-b border-[var(--hairline)] px-3.5 py-2.5 text-[13px] font-bold">
         <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: SIDE_COLORS[side] }} />
@@ -217,12 +222,12 @@ export function OpinionColumns({ cols }: { cols: Record<Side, OpinionItem[]> }) 
 }
 
 /** Where readers stand: agree / disagree / unsure on today's political stories. */
-export function ReadersSplit({ stories }: { stories: PoliticsStory[] }) {
+export function ReadersSplit({ stories, idp = "" }: { idp?: string; stories: SectionStory[] }) {
   const list = stories.filter((s) => s.split.total > 0).slice(0, 4);
   if (!list.length) return null;
   return (
-    <section aria-labelledby="readers" className="rounded-[16px] bg-white/[0.03] p-4 ring-1 ring-[var(--hairline)]">
-      <h2 id="readers" className="text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Where readers stand</h2>
+    <section aria-labelledby={`${idp}readers`} className="rounded-[16px] bg-white/[0.03] p-4 ring-1 ring-[var(--hairline)]">
+      <h2 id={`${idp}readers`} className="text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Where readers stand</h2>
       <ul className="mt-2 space-y-3">
         {list.map((s) => {
           const t = s.split.total;
@@ -235,6 +240,52 @@ export function ReadersSplit({ stories }: { stories: PoliticsStory[] }) {
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+/** Trending in the section: what most outlets and readers are on right now. */
+export function TrendingCard({ stories, label, idp = "" }: { idp?: string; stories: SectionStory[]; label: string }) {
+  if (!stories.length) return null;
+  return (
+    <section aria-labelledby={`${idp}trending`} className="rounded-[16px] bg-white/[0.03] p-4 ring-1 ring-[var(--hairline)]">
+      <h2 id={`${idp}trending`} className="text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">Trending in {label}</h2>
+      <ol className="mt-1.5">
+        {stories.map((s, i) => (
+          <li key={s.key}>
+            <Link href={`/news/story/${s.key}`} className="group flex min-h-12 gap-3 py-2">
+              <span aria-hidden="true" className="num w-5 shrink-0 font-display text-[18px] leading-tight font-extrabold text-ink-3">{i + 1}</span>
+              <span className="min-w-0">
+                <span className="line-clamp-2 text-[14px] leading-snug font-semibold group-hover:underline">{s.title}</span>
+                <span className="mt-0.5 block text-[12px] text-ink-3">{s.coverage.total ? `${s.coverage.total} outlet${s.coverage.total === 1 ? "" : "s"}` : s.source ?? ""}{s.takes ? ` · ${s.takes} dispatch${s.takes === 1 ? "" : "es"}` : ""}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** Business: the main indexes at a glance (labeled Demo when prices are simulated). */
+export function MarketsCard({ quotes, demo, idp = "" }: { idp?: string; quotes: { symbol: string; name: string; price: number; changePct: number }[]; demo: boolean }) {
+  if (!quotes.length) return null;
+  return (
+    <section aria-labelledby={`${idp}mkts`} className="rounded-[16px] bg-white/[0.03] p-4 ring-1 ring-[var(--hairline)]">
+      <h2 id={`${idp}mkts`} className="flex items-center justify-between text-[12px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">
+        Markets {demo && <span className="rounded-[5px] px-1.5 py-0.5 text-[10.5px] ring-1 ring-[var(--hairline)]">Demo prices</span>}
+      </h2>
+      <ul className="mt-1.5">
+        {quotes.map((q) => (
+          <li key={q.symbol} className="flex min-h-10 items-center justify-between gap-2 text-[14px]">
+            <span className="font-semibold">{q.name}</span>
+            <span className="num">
+              {q.price.toFixed(2)} <span className={q.changePct >= 0 ? "text-[#4ade80]" : "text-[#f87171]"}>{q.changePct >= 0 ? "▲" : "▼"} {Math.abs(q.changePct).toFixed(2)}%</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Link href="/markets" className="tap mt-1 inline-flex min-h-10 items-center text-[13.5px] text-[var(--wn-blue-ink)] hover:underline">Open Markets</Link>
     </section>
   );
 }

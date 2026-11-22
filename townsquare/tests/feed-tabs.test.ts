@@ -34,8 +34,8 @@ describe("home feed tabs", () => {
     expect(parseHomeTab("t-nonsense")).toEqual({ kind: "foryou" });
     expect(parseHomeTab("team-nfl-kc")).toEqual({ kind: "team", key: "nfl-kc" });
     expect(parseHomeTab("team-<script>")).toEqual({ kind: "foryou" });
-    expect(tabHref({ kind: "topic", key: "tech" })).toBe("/topics/tech");
-    expect(tabHref({ kind: "topic", key: "markets" })).toBe("/topics/business");
+    expect(tabHref({ kind: "topic", key: "tech" })).toBe("/tech");
+    expect(tabHref({ kind: "topic", key: "markets" })).toBe("/business");
     expect(tabHref({ kind: "team", key: "nfl-kc" })).toBe("/sports/nfl-kc");
     expect(tabHref({ kind: "friends" })).toBe("/?tab=friends");
     expect(tabHref({ kind: "foryou" })).toBe("/");

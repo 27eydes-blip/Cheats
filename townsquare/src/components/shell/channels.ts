@@ -1,11 +1,11 @@
-import { topicHref } from "@/lib/feedtabs-meta";
+import { SLUG_TOPIC, topicHref } from "@/lib/feedtabs-meta";
 
 /**
  * The one top nav: topics (each opens its own filtered page), then Markets,
  * Live and Desks. The home feed itself only has For You and Friends tabs.
  */
 export const CHANNELS = [
-  { key: "politics", label: "Politics", href: "/politics" },
+  { key: "politics", label: "Politics", href: topicHref("politics") },
   { key: "world", label: "World", href: topicHref("world") },
   { key: "markets", label: "Business", href: topicHref("markets") },
   { key: "tech", label: "Tech", href: topicHref("tech") },
@@ -22,9 +22,12 @@ export const TOPICS_END = 6;
 
 export function activeChannel(path: string, _c?: string | null) {
   void _c;
-  const t = CHANNELS.find((c) => c.href.startsWith("/topics/") && (path === c.href || path.startsWith(c.href + "/")));
+  // Section pages and their old /topics/<slug> addresses.
+  const t = CHANNELS.find((c) => c.href !== "/" && (path === c.href || path.startsWith(c.href + "/") || path.startsWith(c.href + "?")));
   if (t) return t.key;
-  if (path.startsWith("/politics") || path === "/topics/politics") return "politics";
+  const slug = path.match(/^\/topics\/([a-z]+)/)?.[1];
+  const fromTopic = slug ? CHANNELS.find((c) => c.key === SLUG_TOPIC[slug]) : null;
+  if (fromTopic) return fromTopic.key;
   if (path.startsWith("/sports") || path === "/topics/sports") return "sports";
   if (path.startsWith("/live")) return "live";
   if (path.startsWith("/markets")) return "stockboard";

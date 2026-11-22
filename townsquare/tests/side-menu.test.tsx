@@ -115,7 +115,7 @@ describe("one feed tab row and Your Topics", () => {
     const team = { id: "nfl-kc", league: "nfl", abbr: "KC", city: "Kansas City", name: "Chiefs", fullName: "Kansas City Chiefs", primary: "#E31837", secondary: "#FFB81C", logo: null } as never;
     const { getByRole, getByText } = render(<SideMenu open onClose={() => {}} viewer={viewer} stats={stats} topics={[{ kind: "topic", key: "markets", label: "Markets" }, { kind: "team", key: "nfl-kc", label: "Chiefs", team }] as never} />);
     expect(getByText("Your Topics")).toBeTruthy();
-    expect(getByRole("link", { name: /Business/ }).getAttribute("href")).toBe("/topics/business");
+    expect(getByRole("link", { name: /Business/ }).getAttribute("href")).toBe("/business");
     expect(getByRole("link", { name: /Chiefs/ }).getAttribute("href")).toBe("/sports/nfl-kc");
     expect(getByRole("button", { name: "Edit" })).toBeTruthy();
   });

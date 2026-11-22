@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
     // Room for 4 images (each capped at 8 MB before re-encoding) in one post.
     serverActions: { bodySizeLimit: "36mb" },
   },
+  // The old topic feeds for sections that now have their own pages.
+  async redirects() {
+    return ["politics", "world", "business", "tech", "culture"].map((slug) => ({ source: `/topics/${slug}`, destination: `/${slug}`, permanent: true }));
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
