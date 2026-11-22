@@ -138,7 +138,7 @@ export class Brain {
       const risky = toolUses.filter((t) => isRisky(t.name, t.input));
       if (risky.length > 0) {
         s.pending = { toolUses, expiresAt: Date.now() + CONFIRM_TIMEOUT_MS };
-        const what = risky.map((t) => describeAction(t.name, t.input)).join(", and ");
+        const what = risky.map((t) => describeAction(t.name, t.input).trim().replace(/[.!?]+$/, "")).join(", and ");
         const reply = `Should I ${what}? Say yes to confirm.`;
         logAction("confirmation_requested", { sessionId, actions: risky.map((t) => ({ tool: t.name, input: t.input })) });
         return { reply, awaitingConfirmation: true };
