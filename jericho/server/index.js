@@ -346,6 +346,15 @@ const server = useHttps
   : http.createServer(handler);
 
 const port = Number(process.env.PORT || settings.port || 3000);
+// A long-running assistant shouldn't die over one stray background error: log it and carry on.
+process.on("unhandledRejection", (err) => {
+  console.warn("Unhandled error (Jericho keeps running):", err?.message || err);
+  try {
+    logAction("error", { where: "background", error: String(err?.message || err).slice(0, 300) });
+  } catch {
+    /* logging itself failed */
+  }
+});
 alarms.start(); // reload saved alarms and keep checking them
 server.listen(port, settings.host || "0.0.0.0", () => {
   const scheme = useHttps ? "https" : "http";
@@ -362,5 +371,6 @@ server.listen(port, settings.host || "0.0.0.0", () => {
   if (!secrets.accessToken) console.log("   Tip: set JERICHO_ACCESS_TOKEN in .env before opening Jericho from other devices.");
   console.log("");
   // One tiny request to Claude and one to ElevenLabs, so a broken connection or key shows up now.
-  if (process.env.JERICHO_SKIP_SELFTEST !== "1") selfTest(brain.client).then(() => console.log(""));
+  // (runs in the background: the server is already answering while it checks)
+  if (process.env.JERICHO_SKIP_SELFTEST !== "1") selfTest(brain.client).then(() => console.log("")).catch((err) => console.warn("Self-test couldn't run:", err.message));
 });

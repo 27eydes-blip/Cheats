@@ -161,7 +161,8 @@ export function createPresence({ onTap }) {
     } catch {
       /* offline: try again later */
     }
-    setTimeout(pollCalls, document.hidden ? 15_000 : 4000);
+    // every 4 s during a call, 10 s otherwise, 15 s when the tab is hidden
+    setTimeout(pollCalls, document.hidden ? 15_000 : pending.calling ? 4000 : 10_000);
   }
   setTimeout(pollCalls, 1500);
 
@@ -187,7 +188,7 @@ export function createPresence({ onTap }) {
   }
   // every few seconds one glyph changes, like a slow readout
   setInterval(() => {
-    if (reduced) return;
+    if (reduced || document.hidden) return;
     const all = document.querySelectorAll(".hud-glyphs .g");
     const pick = all[Math.floor(Math.random() * all.length)];
     if (pick) pick.innerHTML = glyph(Math.floor(Math.random() * 1e9) + 1);

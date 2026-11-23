@@ -151,23 +151,33 @@ export class AlarmManager extends EventEmitter {
 
   tick(now = this.clock()) {
     for (const a of this.store.list()) {
-      if (a.state === "scheduled" && Date.parse(a.fireAt) <= now.getTime()) this.ring(a);
+      if (a.state !== "scheduled" || Date.parse(a.fireAt) > now.getTime()) continue;
+      try {
+        this.ring(a);
+      } catch (err) {
+        // e.g. the disk is full: it still rings, it just couldn't be saved
+        logAction("alarm_error", { id: a.id, error: err.message });
+      }
     }
   }
 
   ring(a) {
     a.state = "ringing";
     a.ringingSince = this.clock().toISOString();
-    this.store.update(a);
+    try {
+      this.store.update(a);
+    } catch {
+      /* couldn't save; ring anyway */
+    }
     logAction("alarm_ringing", { id: a.id, label: labelForLog(a.label) });
     const ring = { acked: false };
     // the kill switch ("Jericho, stop", Stop) stops a ringing alarm too
-    ring.untrack = track("alarm", `alarm ${a.id}`, () => this.stop(a.id, "kill switch"));
+    ring.untrack = track("alarm", `alarm ${a.id}`, () => this.stop(a.id, "kill switch").catch(() => {}));
     // no page has said it's ringing within 10 s: play the native sound
     ring.ackTimer = setTimeout(() => {
       if (this.ringing.has(a.id) && !ring.acked) this.startNative("no page played it");
     }, 10_000);
-    ring.maxTimer = setTimeout(() => this.stop(a.id, "rang for too long"), (Number(cfg().maxRingMinutes) || 30) * 60_000);
+    ring.maxTimer = setTimeout(() => this.stop(a.id, "rang for too long").catch(() => {}), (Number(cfg().maxRingMinutes) || 30) * 60_000);
     ring.ackTimer.unref?.();
     ring.maxTimer.unref?.();
     this.ringing.set(a.id, ring);

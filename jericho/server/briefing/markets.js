@@ -45,7 +45,7 @@ export function fromCoinGecko(json) {
 }
 
 async function getJson(url) {
-  const res = await keepAliveFetch(url, { headers: HEADERS });
+  const res = await keepAliveFetch(url, { headers: HEADERS, signal: AbortSignal.timeout(5000) });
   if (!res.ok) throw new Error(`answered ${res.status}`);
   return res.json();
 }
@@ -66,7 +66,7 @@ async function quoteFuture(f) {
   try {
     return await yahoo(f.symbol);
   } catch {
-    const res = await keepAliveFetch(`https://stooq.com/q/l/?s=${f.stooq}&f=sd2t2ohlc&h&e=csv`, { headers: HEADERS });
+    const res = await keepAliveFetch(`https://stooq.com/q/l/?s=${f.stooq}&f=sd2t2ohlc&h&e=csv`, { headers: HEADERS, signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`answered ${res.status}`);
     return { ...fromStooqCsv(await res.text()), source: "Stooq" };
   }

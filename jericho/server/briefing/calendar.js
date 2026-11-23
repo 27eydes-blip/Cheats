@@ -180,7 +180,7 @@ async function readCalendar(url) {
   if (!/^https:\/\/[^/]+\.[^/]+\//i.test(url)) return { ok: false, reason: "the calendar link has to start with https or webcal" };
   try {
     const text = await cached("calendar", 5 * 60_000, async () => {
-      const res = await keepAliveFetch(url, { headers: { accept: "text/calendar" } });
+      const res = await keepAliveFetch(url, { headers: { accept: "text/calendar" }, signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`the calendar server answered ${res.status}`);
       return res.text();
     });

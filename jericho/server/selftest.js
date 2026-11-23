@@ -22,7 +22,7 @@ async function testClaude(client) {
   if (!secrets.anthropicKey && !process.env.ANTHROPIC_AUTH_TOKEN) return { status: "FAIL", reason: "ANTHROPIC_API_KEY isn't set in .env" };
   const t0 = Date.now();
   try {
-    await client.models.list({ limit: 1 }); // free: checks the key and the connection
+    await client.models.list({ limit: 1 }, { timeout: 10_000, maxRetries: 0 }); // free: checks the key and the connection
     return { status: "PASS", reason: `${Date.now() - t0} ms` };
   } catch (err) {
     return { status: "FAIL", reason: claudeReason(err), cause: errorDetails(err) };
@@ -40,6 +40,7 @@ async function testElevenLabs() {
       method: "POST",
       headers: { "xi-api-key": secrets.elevenLabsKey, "content-type": "application/json", accept: "audio/mpeg" },
       body: JSON.stringify({ text: "Hi.", model_id: el.modelId || "eleven_flash_v2_5" }),
+      signal: AbortSignal.timeout(10_000),
     });
     const body = Buffer.from(await res.arrayBuffer());
     if (res.ok) return { status: "PASS", reason: `${Date.now() - t0} ms, voice ${el.voiceId}` };
@@ -82,9 +83,21 @@ export async function testCalendar() {
   }
 }
 
-/** Runs the checks and prints the result. Returns true if Claude and ElevenLabs didn't fail. */
+/** A check that takes too long is reported as FAIL instead of holding up the rest. */
+export function limit(promise, ms = 15_000) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise).catch((err) => ({ status: "FAIL", reason: errorSummary(err) })),
+    new Promise((resolve) => {
+      timer = setTimeout(() => resolve({ status: "FAIL", reason: `no answer within ${Math.round(ms / 1000)} seconds` }), ms);
+      timer.unref?.();
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+/** Runs the checks side by side and prints the result. Returns true if Claude and ElevenLabs didn't fail. */
 export async function selfTest(client = new Anthropic({ fetch: (url, init) => keepAliveFetch(url, init) })) {
-  const [claude, eleven, calendar, claudeCode] = await Promise.all([testClaude(client), testElevenLabs(), testCalendar(), testClaudeCode()]);
+  const [claude, eleven, calendar, claudeCode] = await Promise.all([limit(testClaude(client)), limit(testElevenLabs()), limit(testCalendar()), limit(testClaudeCode(), 20_000)]);
   const mark = { PASS: "✅ PASS", FAIL: "❌ FAIL", SKIP: "➖ SKIP" };
   console.log(`   Self-test (Node ${process.version}, connections: ${connectionMode()}):`);
   console.log(`     Claude      ${mark[claude.status]}  ${claude.reason}`);

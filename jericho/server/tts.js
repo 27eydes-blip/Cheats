@@ -105,7 +105,10 @@ export async function streamSpeech(text, res) {
   res.writeHead(200, { "content-type": "audio/mpeg", "cache-control": "no-store", "x-tts-source": "elevenlabs" });
   const body = Readable.fromWeb(upstream.body);
   const count = (seen.get(key) || 0) + 1;
+  seen.delete(key); // re-insert so the Map stays in least-recently-used order
   seen.set(key, count);
+  // Jericho runs for weeks: forget the oldest short phrases so this can't grow forever
+  if (seen.size > 2000) for (const old of [...seen.keys()].slice(0, 500)) seen.delete(old);
   const keep = cacheable && count >= cache.minRepeats; // short and repeated: save a copy
   const chunks = [];
   body.on("data", (c) => {
@@ -136,6 +139,6 @@ export async function synthesize(text, overrides = {}) {
 // Keep the ElevenLabs connection open while a page is connected (free endpoint, no credits).
 addWarmer("elevenlabs", async () => {
   if (!secrets.elevenLabsKey) return;
-  const r = await keepAliveFetch("https://api.elevenlabs.io/v1/models", { headers: { "xi-api-key": secrets.elevenLabsKey } });
+  const r = await keepAliveFetch("https://api.elevenlabs.io/v1/models", { headers: { "xi-api-key": secrets.elevenLabsKey }, signal: AbortSignal.timeout(5000) });
   await r.arrayBuffer();
 });

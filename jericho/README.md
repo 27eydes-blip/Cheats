@@ -433,6 +433,16 @@ So Jericho never hears himself through the speakers:
 - Phones keep the mic off while he talks: tap the light (or press Stop) to cut him off and start listening.
 - Interrupting only stops his reply. Running tools, Claude Code jobs and calls keep going, and something said over him never counts as a "yes" to a confirmation. "Jericho, stop", the Stop button and Esc still stop everything. While he's talking, "Jericho, stop" works like this: your voice cuts him off first, then the "stop" is heard. If the first word gets clipped, say "stop" again or press Esc.
 
+## Troubleshooting
+
+- **The startup self-test** prints one line each for Claude, ElevenLabs, Calendar and Claude Code. It runs in the background after the server is already answering, all checks side by side, and any check that takes longer than 15 seconds (20 for Claude Code) is reported as FAIL instead of holding things up. It never stops Jericho from starting.
+- **Jericho seems stuck "Thinking"**: say "Jericho, stop" or press Esc. That stops the request and anything it started; the next request starts clean.
+- **He stopped talking mid-sentence**: if the ElevenLabs voice stalls for 8 seconds, he finishes the reply in the browser voice instead of waiting forever.
+- **The page lost its connection** (Wi-Fi drop, server restart): it reconnects by itself, and checks for a ringing alarm the moment it's back.
+- **The mic indicator says "Mic reconnecting…" for a long time**: another app or tab may be using the microphone; close it, or tap the light.
+- **Battery and fan**: while muted, before the first tap, or idle in a window you're not using, the 3D scene draws 30 frames a second instead of 60; it pauses completely when the tab is hidden. Quality "Low" in the settings panel saves the most.
+- **Errors are logged** in `logs/actions.log` (with secrets and personal text removed). A background error is logged and Jericho keeps running.
+
 ## Settings (`settings.json`)
 
 None of these are secret. Keys live only in `.env`.

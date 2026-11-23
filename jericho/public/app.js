@@ -86,7 +86,10 @@ function setMode(m, status) {
     speaking: "Speaking",
     confirm: "Yes / No?",
   }[m];
-  orb.setAttribute("aria-label", m === "off" ? "Power on Jericho" : m === "muted" ? "Unmute" : m === "lost" ? "Reconnect the microphone" : "Interrupt Jericho");
+  orb.setAttribute(
+    "aria-label",
+    { off: "Power on Jericho", muted: "Unmute", lost: "Reconnect the microphone", speaking: "Interrupt Jericho", thinking: "Stop Jericho", confirm: "Cancel the waiting action" }[m] || "Jericho is listening",
+  );
   confirmBox.hidden = m !== "confirm";
   if (status !== undefined) statusEl.textContent = status;
   updateMicIndicator();
@@ -206,13 +209,18 @@ function browserVoice(text, stats) {
     u.lang = config.speechLang;
     u.volume = voiceVolume();
     u.onstart = () => { stats.firstAudio ??= performance.now(); replyAudioStarted(stats); };
-    u.onend = u.onerror = () => resolve();
+    // Chrome sometimes never fires onend (long sentences, or right after a cancel): don't wait forever
+    const guard = setTimeout(() => resolve(), 6000 + text.length * 120);
+    u.onend = u.onerror = () => {
+      clearTimeout(guard);
+      resolve();
+    };
     speechSynthesis.speak(u);
   });
 }
 
 async function elevenLabsVoice(text, stats, next) {
-  if (audioCtx && audioCtx.state !== "running") await audioCtx.resume().catch(() => {});
+  if (audioCtx && audioCtx.state !== "running") await Promise.race([audioCtx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 300))]);
   const player = assignPlayer(text, null);
   currentPlayer = player;
   if (next) preload(next); // the other player fetches the next sentence while this one speaks
@@ -221,14 +229,25 @@ async function elevenLabsVoice(text, stats, next) {
   applyVoiceVolume(player, isRouted);
   return new Promise((resolve, reject) => {
     let started = false;
+    let lastProgress = performance.now();
     const cleanup = () => {
-      player.onended = player.onerror = player.onplaying = null;
+      player.onended = player.onerror = player.onplaying = player.ontimeupdate = null;
       player.dataset.url = "";
       clearTimeout(stall);
+      clearInterval(watchdog);
     };
     // If audio hasn't started within 7s, give up and use the browser voice.
     const stall = setTimeout(() => { if (!started) { cleanup(); player.pause(); reject(new Error("TTS stalled")); } }, 7000);
-    player.onplaying = () => { started = true; stats.firstAudio ??= performance.now(); replyAudioStarted(stats); };
+    // ...and if it started but stopped moving (the stream stalled mid-sentence), don't wait forever either
+    const watchdog = setInterval(() => {
+      if (started && !player.paused && performance.now() - lastProgress > 8000) {
+        cleanup();
+        player.pause();
+        reject(new Error("TTS stalled mid-sentence"));
+      }
+    }, 1000);
+    player.ontimeupdate = () => (lastProgress = performance.now());
+    player.onplaying = () => { started = true; lastProgress = performance.now(); stats.firstAudio ??= performance.now(); replyAudioStarted(stats); };
     player.onended = () => { cleanup(); resolve(); };
     player.onerror = () => { cleanup(); reject(new Error("TTS failed")); };
     player.play().catch((e) => { cleanup(); reject(e); });
@@ -316,7 +335,7 @@ function speak(text) {
   const turn = createTurn();
   turn.push(text);
   turn.finish();
-  speechQueue = speechQueue.then(() => playTurn(turn));
+  speechQueue = speechQueue.then(() => playTurn(turn)).catch(() => {}); // one failure never blocks later speech
   return speechQueue;
 }
 
@@ -383,7 +402,7 @@ async function send(kind, text, { endAfter = false, typed = false, interrupted =
   const spoken = lastUtterance && performance.now() - lastUtterance.final < 2000 ? lastUtterance : null;
   lastUtterance = null;
   Object.assign(turn.stats, { final: spoken?.final ?? performance.now(), first: spoken?.first, last: spoken?.last });
-  const playing = (speechQueue = speechQueue.then(() => playTurn(turn)));
+  const playing = (speechQueue = speechQueue.then(() => playTurn(turn)).catch((e) => console.warn("speech failed:", e)));
 
   let result = { awaitingConfirmation: false };
   let bubble = null;
@@ -1128,6 +1147,7 @@ function updateMicIndicator() {
   let text;
   if (!running) [state, text] = ["off", "Mic off"];
   else if (micLost) [state, text] = ["lost", "Mic lost · tap to reconnect"];
+  else if (alarmRinging && recActive) [state, text] = ["live", "Mic live · say “stop” or “snooze”"];
   else if (muted) [state, text] = ["muted", "Muted · tap or press M"];
   else if (!SR) [state, text] = ["off", "No speech recognition here"];
   else if (replyPlaying()) [state, text] = ["paused", canListenForBargeIn() && bargeMode !== "off" ? "Mic paused · talk over me to interrupt" : "Mic paused while I speak"];
@@ -1205,9 +1225,25 @@ $("typed").addEventListener("submit", (e) => {
 });
 
 // ---- announcements (e.g. "Claude Code finished") -------------------------------
-const events = new EventSource(`/api/events?${new URLSearchParams({ token })}`);
-events.onmessage = (e) => {
-  const msg = JSON.parse(e.data);
+// The browser reconnects this stream by itself after a drop. After every (re)connect we ask
+// what's ringing, so an alarm that fired while the stream was down still rings. If the stream
+// closes for good (e.g. the server was restarting), it's opened again after 10 s.
+let events = null;
+function connectEvents() {
+  events = new EventSource(`/api/events?${new URLSearchParams({ token })}`);
+  events.onopen = () => refreshAlarmList();
+  events.onmessage = onEvent;
+  events.onerror = () => {
+    if (events.readyState === EventSource.CLOSED) setTimeout(connectEvents, 10_000);
+  };
+}
+function onEvent(e) {
+  let msg;
+  try {
+    msg = JSON.parse(e.data);
+  } catch {
+    return;
+  }
   if (msg.type === "announce") {
     addLog("jericho", msg.text);
     if (running) speak(msg.text);
@@ -1216,7 +1252,8 @@ events.onmessage = (e) => {
     if (alarmRinging && (msg.ids || []).includes(alarmRinging.id)) endAlarmLocal(); // stopped elsewhere (another tab, the kill switch)
     refreshAlarmList();
   } else if (msg.type === "alarms-changed") refreshAlarmList();
-};
+}
+connectEvents();
 
 // ---- alarms: ringing, stop, snooze, and the list in the settings panel -------------------
 // A ringing alarm beats everything: mute, a conversation, barge-in rules. Stop it with

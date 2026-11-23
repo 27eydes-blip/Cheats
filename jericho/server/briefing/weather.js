@@ -117,7 +117,7 @@ async function fetchForecast(loc) {
       timezone: "auto",
       forecast_days: "7",
     }).toString();
-    const res = await keepAliveFetch(url);
+    const res = await keepAliveFetch(url, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) throw new Error(`the weather service answered ${res.status}`);
     return res.json();
   });

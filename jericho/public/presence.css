@@ -198,6 +198,10 @@ body.calling .hud-ring { border-color: rgb(95 230 214 / 22%); }
   flex-direction: column;
   gap: 12px;
   font-size: 0.85rem;
+  /* it has grown: scroll inside instead of running off short screens and phones */
+  max-height: calc(100dvh - max(14px, env(safe-area-inset-top)) - 46px - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .look-panel[hidden] { display: none; }
 .look-head { display: flex; justify-content: space-between; align-items: center; }

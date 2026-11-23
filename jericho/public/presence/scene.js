@@ -851,6 +851,13 @@ export async function createScene(canvas, opts) {
   function frame(now) {
     if (!running) return;
     requestAnimationFrame(frame);
+    // Calm moments (muted, waiting for the first tap, or idle in a window you're not using):
+    // 30 frames a second is plenty and saves GPU and battery. Never while he talks, listens or rings.
+    const holding = Boolean(boot && boot.delay > 1e9); // waiting for the first tap
+    const powering = Boolean(boot && !holding); // the power-up animation: full rate
+    const restful = !alarmOn && !powering && (mode === "muted" || holding || ((mode === "idle" || mode === "off") && !document.hasFocus()));
+    if (restful && now - last < 1000 / 30 - 2) return;
+    if (restful) auto.frames = auto.time = 0; // a capped frame rate mustn't make Auto quality step down
     const raw = now - last; // real time since the last frame, in ms
     const dt = Math.min(0.05, raw / 1000);
     const realDt = Math.min(0.25, raw / 1000);
