@@ -200,9 +200,11 @@ async function elevenLabsVoice(text, stats, next) {
 }
 
 /** One reply from Jericho: sentences are pushed in as they arrive and spoken in order. */
+const liveTurns = new Set(); // replies being spoken or waiting to be (the kill switch empties these)
 function createTurn() {
   let wake = null;
   const turn = {
+    cancelled: false,
     queue: [],
     done: false,
     useBrowser: !config.elevenLabsEnabled,
@@ -219,12 +221,14 @@ function createTurn() {
     },
     next: () => new Promise((r) => (wake = r)),
   };
+  liveTurns.add(turn);
   return turn;
 }
 
 async function playTurn(turn) {
   lastSpoken = "";
   for (;;) {
+    if (turn.cancelled) break;
     if (turn.queue.length === 0) {
       if (turn.done) break;
       if (mode === "speaking") setMode("thinking", ""); // more of the reply is on its way
@@ -234,7 +238,9 @@ async function playTurn(turn) {
     const sentence = turn.queue.shift();
     if (mode !== "speaking") {
       stopConversationTimer();
-      stopListening(); // the mic is off while Jericho talks, so it can't hear itself
+      // Phones: the mic is off while Jericho talks (it can't hear itself, and iPhones play audio
+      // badly with the mic open). Computers keep listening, but only for "Jericho, stop".
+      if (isPhone) stopListening();
       setMode("speaking", "");
     }
     turn.playing = true;
@@ -252,8 +258,10 @@ async function playTurn(turn) {
     turn.stats.voices.add("browser");
   }
   turn.playing = false;
+  liveTurns.delete(turn);
   turn.stats.end = performance.now();
   viz.setSpeechSource(null, false);
+  if (turn.cancelled) return; // stopped: the kill switch already set things straight
   afterSpeaking();
 }
 
@@ -331,8 +339,11 @@ async function send(kind, text, { endAfter = false, typed = false } = {}) {
 
   let result = { awaitingConfirmation: false };
   let bubble = null;
+  const controller = new AbortController();
+  currentRequest = controller;
   try {
     const res = await fetch(kind === "confirm" ? "/api/confirm" : "/api/ask", {
+      signal: controller.signal,
       method: "POST",
       headers: { "content-type": "application/json", "x-jericho-token": token },
       // how long you spoke for, so Jericho can tell if you're rushed or relaxed
@@ -364,9 +375,13 @@ async function send(kind, text, { endAfter = false, typed = false } = {}) {
       }
     }
   } catch (e) {
-    addLog("note", e.message);
-    turn.push("Sorry, I couldn't reach the server.");
+    if (!controller.signal.aborted) {
+      addLog("note", e.message);
+      turn.push("Sorry, I couldn't reach the server.");
+    }
   }
+  if (currentRequest === controller) currentRequest = null;
+  if (turn.cancelled) return; // stopped: nothing more to say
 
   clearTimeout(confirmTimer);
   confirmPending = Boolean(result.awaitingConfirmation);
@@ -385,6 +400,47 @@ async function send(kind, text, { endAfter = false, typed = false } = {}) {
   await playing;
   reportTiming(turn.stats, result.timings);
 }
+
+// ---- kill switch: "Jericho, stop", "cancel everything", the Stop button or Esc -------------
+let currentRequest = null;
+const KILL = new Set(["stop", "stop it", "stop now", "stop that", "stop everything", "stop all", "stop all of it", "cancel everything", "cancel all", "cancel all of it", "cancel it all", "cancel that", "cancel", "abort", "abort everything", "abort all", "halt", "never mind stop", "stop stop"]);
+function isKillPhrase(text) {
+  const t = String(text).toLowerCase().replace(/[’']/g, "").replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/^(hey |ok |okay )?(jericho|jer|jerico|jerry co|jerr)\b ?/, "")
+    .replace(/ (please|now|right now|jericho)$/, "").trim();
+  return KILL.has(t);
+}
+
+/** Stops speech, the request in flight and everything running on the server; clears any waiting yes/no. */
+function stopEverything() {
+  api("/api/stop", { sessionId }).catch(() => {});
+  currentRequest?.abort();
+  currentRequest = null;
+  for (const t of liveTurns) {
+    t.cancelled = true;
+    t.queue.length = 0;
+    t.finish();
+  }
+  for (const p of players) {
+    p.pause();
+    p.onended?.(); // lets the sentence that was playing finish its wait at once
+  }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  viz.setSpeechSource(null, false);
+  clearTimeout(confirmTimer);
+  confirmPending = false;
+  endAfterReply = false;
+  addLog("note", "Stopped.");
+  if (conversation && running) {
+    setMode("active", "Stopped. Listening…");
+    restartConversationTimer();
+  } else setMode(running ? "idle" : "off", "Stopped.");
+  if (running) setTimeout(() => startListening(), 200);
+}
+$("stop-btn")?.addEventListener("click", stopEverything);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && ["thinking", "speaking", "confirm"].includes(mode)) stopEverything();
+});
 
 /** Logs how long each step took, so slow spots show up in logs/actions.log. */
 function reportTiming(st, server) {
@@ -488,7 +544,10 @@ function onHeard(raw) {
   lastUtterance = { first: heardTimes.first, last: heardTimes.last ?? performance.now(), final: performance.now() };
   heardTimes = { first: null, last: null };
   const text = raw.trim();
-  if (!text || isEcho(text)) return;
+  if (!text) return;
+  // The kill switch works in every state, even while Jericho is talking or thinking.
+  if (mode !== "off" && isKillPhrase(text)) return stopEverything();
+  if (isEcho(text)) return;
 
   // Safety confirmations work exactly as before: whatever you say goes to the
   // server, which only accepts a clear yes. "That's all" here is a no, then sleep.
@@ -545,6 +604,7 @@ if (SR) {
       if (r.isFinal) onHeard(r[0].transcript);
       else interim += r[0].transcript;
     }
+    if (mode === "speaking") return; // only listening for "stop" now
     heardEl.textContent = interim;
     if (interim) onInterim(interim);
     if (interim && mode === "active") restartConversationTimer();

@@ -6,6 +6,7 @@ import path from "node:path";
 import { ROOT, secrets } from "../config.js";
 import { logAction, scrubEnvValues } from "../logger.js";
 import { errorDetails, keepAliveFetch } from "../net.js";
+import { track } from "../cancel.js";
 import { jobEvents } from "../tools/claudeCode.js";
 import { synthesize } from "../tts.js";
 import { agentTurn, disclosure, openingRequest, pickScenario, simulatedReply } from "./agent.js";
@@ -16,6 +17,20 @@ const CALLS_FILE = path.join(DATA_DIR, "calls.json");
 const MAX_TURNS = 16;
 
 const live = new Map(); // callId -> runtime state for calls in progress
+const untrackers = new Map(); // callId -> remove it from the kill switch
+
+async function cancelCall(call) {
+  const sid = call.twilioSid || live.get(call.id)?.call?.twilioSid;
+  if (!call.test && sid && secrets.twilioSid && secrets.twilioToken) {
+    const auth = Buffer.from(`${secrets.twilioSid}:${secrets.twilioToken}`).toString("base64");
+    await keepAliveFetch(`https://api.twilio.com/2010-04-01/Accounts/${secrets.twilioSid}/Calls/${sid}.json`, {
+      method: "POST",
+      headers: { authorization: `Basic ${auth}`, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ Status: "completed" }),
+    }).catch((err) => logAction("call_error", { id: call.id, error: err.message, cause: errorDetails(err) }));
+  }
+  finish(call, "failed", "Cancelled by you.");
+}
 const audio = new Map(); // audioId -> Promise<Buffer | null>
 
 // ---- storage ---------------------------------------------------------------------
@@ -120,6 +135,8 @@ export async function startCall(input, client) {
     transcript: [],
   };
   saveCall(call);
+  // the kill switch ("Jericho, stop") ends the call: a test call stops, a real one is hung up
+  untrackers.set(call.id, track("call", call.businessName, () => cancelCall(call)));
   logAction("call_started", { id: call.id, test: call.test, business: call.businessName, number: call.number, purpose: call.purpose, goal: call.goal });
 
   if (call.test) {
@@ -147,6 +164,8 @@ const SPOKEN = {
 };
 
 function finish(call, outcome, summary) {
+  untrackers.get(call.id)?.();
+  untrackers.delete(call.id);
   const state = live.get(call.id);
   if (call.status === "ended") return;
   live.delete(call.id);
@@ -171,6 +190,7 @@ async function simulate(call, client) {
   live.set(call.id, { answeredAt: null });
   if (scenario === "no_answer") {
     await new Promise((r) => setTimeout(r, 2500));
+    if (call.status === "ended") return;
     return finish(call, "no_answer");
   }
   live.get(call.id).answeredAt = Date.now();
@@ -180,7 +200,9 @@ async function simulate(call, client) {
   saveCall(call);
   let simulatedSeconds = 8;
   for (let turn = 0; turn < MAX_TURNS; turn++) {
+    if (call.status === "ended") return; // cancelled
     const reply = await simulatedReply(client, call, scenario);
+    if (call.status === "ended") return;
     call.transcript.push({ who: "them", text: reply });
     simulatedSeconds += 8 + reply.split(/\s+/).length / 2.5;
     const wrapUp = simulatedSeconds > cfg.maxMinutes * 60 - 20;

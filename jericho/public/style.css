@@ -251,3 +251,4 @@ details summary { cursor: pointer; color: var(--muted); font-size: 0.8rem; }
 .call .line.agent b { color: var(--gold); }
 .call .line.them b { color: var(--muted); }
 .top-links { display: flex; gap: 8px; }
+.items .meta { overflow-wrap: anywhere; } /* long action details wrap instead of widening the page */

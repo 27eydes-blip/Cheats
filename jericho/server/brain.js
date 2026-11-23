@@ -6,6 +6,7 @@ import { settings } from "./config.js";
 import { logAction } from "./logger.js";
 import * as memory from "./memory.js";
 import { addWarmer, errorDetails, keepAliveFetch } from "./net.js";
+import { cancelAll, isKillPhrase, track } from "./cancel.js";
 import { CONFIRM_TIMEOUT_MS, isYes } from "./safety.js";
 import { SentenceSplitter, speakable } from "./speech.js";
 import { updateStyle } from "./style.js";
@@ -67,6 +68,13 @@ const SYSTEM = `You are ${name}, a personal voice assistant running on ${owner}'
 - You can phone businesses for ordinary errands: reservations, checking hours, appointments, or one simple question. Nothing else: no calling people, no emergencies, nothing deceptive.
 - Before calling, you need the business name and its number (search for it or ask, never guess), and for bookings the date, time, party size and the name to book under (default ${owner} unless told otherwise). Ask for what's missing in one short question, then call make_call. The system reads the plan back and waits for a yes. The call runs in the background and they hear the result when it ends.
 
+# The PC
+- You can control this PC: open apps and web pages, volume, media keys, timers, the clipboard, and list, read and search files in the allowed folders (Desktop, Documents, Downloads and the Cheats folder unless set otherwise). Paths start with the folder name, e.g. "Documents/notes.txt".
+- Writing, moving or deleting files (deletes go to the Recycle Bin), running a command, and starting Claude Code need a yes: just call the tool and the system reads back exactly what will happen.
+- Anything outside the allowed folders, system or registry changes, security settings, and files with secrets like .env are blocked. If a tool refuses, say so plainly; don't look for a way around it.
+- When a Claude Code job finishes they hear about it; for the details, call claude_code_result and give a short spoken summary.
+- "Stop" or "cancel everything" is handled before it reaches you.
+
 Your memories, lessons, profile of them and notes on how they talk are below. They come only from things they said. Use them quietly; don't recite them unless asked.`;
 
 // Fixed replies, in a few wordings so they don't sound canned.
@@ -75,6 +83,7 @@ const SAYINGS = {
   timedOut: ["That timed out, so I didn't do it.", "I didn't hear a yes in time, so I left it.", "No answer, so I didn't go ahead."],
   nothingPending: ["There's nothing waiting for a yes right now.", "Nothing's waiting on a yes at the moment.", "There's nothing to confirm right now."],
   done: ["Done.", "All set.", "That's done.", "Sorted."],
+  stopped: ["Stopped.", "Okay, stopping everything.", "All stopped.", "Stopped. Nothing's running now."],
 };
 
 /** A wording from the list, never the same one as last time in this conversation. */
@@ -169,7 +178,13 @@ export class Brain {
    * hooks.onSentence(text) is called for each sentence as soon as it's ready to speak.
    */
   async handle(sessionId, text, hooks = {}, meta = {}) {
-    const turn = this.#newTurn(hooks);
+    if (isKillPhrase(text)) {
+      // "Jericho, stop" also works when typed or when it reaches the server
+      this.stopAll(sessionId);
+      const turn = this.#newTurn(hooks, sessionId);
+      return this.#finishTurn(turn, this.#say(turn, pick(this.session(sessionId), "stopped")));
+    }
+    const turn = this.#newTurn(hooks, sessionId);
     const s = this.session(sessionId);
     const { text: corrected, fixes } = applyMishearings(text);
     logAction("request", { sessionId, text, ...(fixes.length ? { corrected, fixes } : {}) });
@@ -196,7 +211,8 @@ export class Brain {
 
   /** Your answer while a risky action is waiting. */
   async confirm(sessionId, utterance, hooks = {}) {
-    const turn = this.#newTurn(hooks);
+    if (isKillPhrase(utterance)) return this.handle(sessionId, utterance, hooks);
+    const turn = this.#newTurn(hooks, sessionId);
     const s = this.session(sessionId);
     if (!s.pending) return this.#finishTurn(turn, this.#say(turn, pick(s, "nothingPending")));
     const expired = Date.now() > s.pending.expiresAt;
@@ -244,12 +260,32 @@ export class Brain {
 
   // ---- internals -------------------------------------------------------------------
 
-  #newTurn(hooks) {
-    return { hooks, spoken: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set() };
+  #newTurn(hooks, sessionId) {
+    const controller = new AbortController();
+    const untrack = track("reply", sessionId, () => controller.abort());
+    return { hooks, spoken: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set(), signal: controller.signal, untrack };
   }
 
-  #emit(turn, sentence) {
-    const clean = speakable(sentence);
+  /**
+   * The kill switch: stop the Claude reply in progress, running commands, timers, Claude Code
+   * jobs and calls, and clear every waiting confirmation (answering each with "cancelled", so
+   * the conversation stays valid).
+   */
+  stopAll(sessionId = "") {
+    const stopped = cancelAll("the user said stop");
+    let cleared = 0;
+    for (const s of this.sessions.values()) {
+      if (!s.pending) continue;
+      s.messages.push({ role: "user", content: this.#declineAll(s, "Cancelled: the user said stop. Not done.") });
+      cleared++;
+    }
+    logAction("kill_switch", { sessionId, stopped: stopped.map((x) => x.kind), confirmationsCleared: cleared });
+    return { stopped, confirmationsCleared: cleared };
+  }
+
+  #emit(turn, sentence, exact = false) {
+    // Confirmation read-backs are left exactly as written (paths, commands); everything else is tidied for speech.
+    const clean = exact ? String(sentence).trim() : speakable(sentence);
     if (!clean) return;
     if (turn.firstSentence === null) turn.firstSentence = Date.now() - turn.t0;
     turn.spoken.push(clean);
@@ -259,11 +295,13 @@ export class Brain {
   /** Speak fixed text (confirmations, errors) through the same sentence pipeline. */
   #say(turn, text, extra = {}) {
     const splitter = new SentenceSplitter(1);
-    for (const sentence of [...splitter.push(`${text} `), ...splitter.flush()]) this.#emit(turn, sentence);
+    const exact = Boolean(extra.awaitingConfirmation);
+    for (const sentence of [...splitter.push(`${text} `), ...splitter.flush()]) this.#emit(turn, sentence, exact);
     return { awaitingConfirmation: false, ...extra };
   }
 
   #finishTurn(turn, result) {
+    turn.untrack?.();
     const reply = turn.spoken.join(" ") || "Done.";
     const timings = {
       firstTokenMs: turn.firstToken,
@@ -285,7 +323,7 @@ export class Brain {
     const s = this.sessions.get(sessionId);
     // the last few things the user said: lessons must quote one of them
     const userText = s ? s.transcript.filter((x) => x.who === "user").slice(-4).map((x) => x.text).join("\n") : "";
-    const ctx = { client: this.client, sessionId, userText };
+    const ctx = { client: this.client, sessionId, userText, signal: turn.signal };
     for (const t of toolUses) {
       const tool = tools.get(t.name);
       if (tool?.announce && !prefailed[t.id]) {
@@ -297,15 +335,16 @@ export class Brain {
         const tool = tools.get(t.name);
         if (!tool) return { type: "tool_result", tool_use_id: t.id, content: `Unknown tool ${t.name}`, is_error: true };
         if (prefailed[t.id]) return { type: "tool_result", tool_use_id: t.id, content: `Not allowed: ${prefailed[t.id]}`, is_error: true };
+        if (turn.signal?.aborted) return { type: "tool_result", tool_use_id: t.id, content: "Cancelled: the user said stop.", is_error: true };
         if (isRisky(t.name, t.input) && !approved) {
           return { type: "tool_result", tool_use_id: t.id, content: "Not confirmed. Not done.", is_error: true };
         }
         try {
           const result = await tool.run(t.input || {}, ctx);
-          logAction("tool_result", { sessionId, tool: t.name, input: t.input, result });
+          logAction("tool_result", { sessionId, tool: t.name, input: shortForLog(t.input), result: shortForLog(result) });
           return { type: "tool_result", tool_use_id: t.id, content: JSON.stringify(result) };
         } catch (err) {
-          logAction("tool_error", { sessionId, tool: t.name, input: t.input, error: err.message, cause: errorDetails(err) });
+          logAction("tool_error", { sessionId, tool: t.name, input: shortForLog(t.input), error: err.message, cause: errorDetails(err) });
           return { type: "tool_result", tool_use_id: t.id, content: `Error: ${err.message}`, is_error: true };
         }
       }),
@@ -316,9 +355,11 @@ export class Brain {
     for (let round = 0; round < MAX_ROUNDS; round++) {
       turn.rounds++;
       let response;
+      if (turn.signal?.aborted) return { awaitingConfirmation: false, stopped: true };
       try {
         response = await this.#streamClaude(s, turn);
       } catch (err) {
+        if (turn.signal?.aborted) return { awaitingConfirmation: false, stopped: true }; // the kill switch: stop quietly
         logAction("error", { sessionId, where: "claude", error: err.message, cause: errorDetails(err) });
         // Drop the half-finished conversation so the next request starts clean.
         this.sessions.delete(sessionId);
@@ -349,7 +390,7 @@ export class Brain {
         const tool = tools.get(t.name);
         const problem = tool ? validateInput(tool.definition.input_schema, t.input) : null;
         if (problem) invalid[t.id] = problem;
-        logAction("tool_call", { sessionId, tool: t.name, input: t.input, risky: isRisky(t.name, t.input), ...(problem ? { invalid: problem } : {}) });
+        logAction("tool_call", { sessionId, tool: t.name, input: shortForLog(t.input), risky: isRisky(t.name, t.input), ...(problem ? { invalid: problem } : {}) });
       }
       if (Object.keys(invalid).length) {
         s.messages.push({
@@ -385,7 +426,7 @@ export class Brain {
           if (tool.confirmPrompt) return tool.confirmPrompt(t.input);
           return `Should I ${describeAction(t.name, t.input).trim().replace(/[.!?]+$/, "")}?`;
         });
-        logAction("confirmation_requested", { sessionId, actions: needYes.map((t) => ({ tool: t.name, input: t.input })) });
+        logAction("confirmation_requested", { sessionId, actions: needYes.map((t) => ({ tool: t.name, input: shortForLog(t.input) })) });
         return this.#say(turn, `${parts.join(" ")} Say yes to confirm.`, { awaitingConfirmation: true });
       }
 
@@ -428,7 +469,7 @@ export class Brain {
 
     const splitter = new SentenceSplitter();
     let announcedSearch = false;
-    const stream = this.client.beta.messages.stream(this.#params(s, messages));
+    const stream = this.client.beta.messages.stream(this.#params(s, messages), { signal: turn.signal });
     stream.on("text", (delta) => {
       if (turn.firstToken === null) turn.firstToken = Date.now() - turn.t0;
       for (const sentence of splitter.push(delta)) this.#emit(turn, sentence);
@@ -446,6 +487,21 @@ export class Brain {
     turn.models.add(response.model);
     return response;
   }
+}
+
+/**
+ * What goes in the log for a tool's input and result: file contents, clipboard text, text to
+ * write and command output are recorded only as their size; other long strings are shortened.
+ */
+const PRIVATE_FIELDS = new Set(["text", "content", "output", "errors", "result"]);
+function shortForLog(value, key = "") {
+  if (typeof value === "string") {
+    if (PRIVATE_FIELDS.has(key) && value.length > 0) return `[${value.length} characters]`;
+    return value.length > 300 ? `${value.slice(0, 300)}… [${value.length} characters]` : value;
+  }
+  if (Array.isArray(value)) return value.slice(0, 20).map((v) => shortForLog(v));
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, shortForLog(v, k)]));
+  return value;
 }
 
 function friendlyApiError(err) {

@@ -5,7 +5,10 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 import { expandHome, settings } from "../config.js";
-import { logAction } from "../logger.js";
+import { track } from "../cancel.js";
+import { logAction, scrubEnvValues } from "../logger.js";
+import { resolvePath } from "../pc/policy.js";
+import { isSensitive } from "../secrets.js";
 
 const cfg = settings.claudeCode || {};
 const projectsDir = path.resolve(expandHome(cfg.projectsDir || "~/jericho-projects"));
@@ -13,10 +16,18 @@ export const jobEvents = new EventEmitter();
 const jobs = [];
 let nextId = 1;
 
-/** Resolve a folder name inside projectsDir. Refuses anything that escapes it. */
+/**
+ * A plain name ("todo-app") is a project inside projectsDir. A path that starts with one of
+ * the allowed PC folders ("Cheats/jericho", "Documents/site") is used as is. Nothing else.
+ */
 export function resolveProjectFolder(folder) {
   const name = String(folder || "").trim();
   if (!name) throw new Error("No folder given.");
+  if (/[\\/]/.test(name) || name.startsWith("~") || path.isAbsolute(name)) {
+    const r = resolvePath(name);
+    if (!r.ok) throw new Error(r.reason);
+    return r.path;
+  }
   const full = path.resolve(projectsDir, name);
   if (full !== projectsDir && !full.startsWith(projectsDir + path.sep)) {
     throw new Error(`Folder must be inside ${projectsDir}.`);
@@ -59,11 +70,27 @@ function startJob(folder, task) {
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (err += d));
   const timer = setTimeout(() => child.kill("SIGTERM"), (cfg.timeoutMinutes ?? 30) * 60_000);
+  let stoppedByUser = false;
+  const untrack = track("claude_code", folder, () => {
+    stoppedByUser = true;
+    child.kill("SIGTERM");
+  });
 
-  const finish = (status, summary) => {
+  const finish = (status, summary, resultText = "") => {
     clearTimeout(timer);
+    untrack();
     if (job.status !== "running") return;
-    Object.assign(job, { status, summary, finishedAt: new Date().toISOString() });
+    if (stoppedByUser) {
+      status = "stopped";
+      summary = "Stopped by you.";
+    }
+    // the result, ready to read aloud: secret-looking lines hidden
+    const clean = scrubEnvValues(String(resultText).split(/\r?\n/).map((l) => (isSensitive(l) ? "[hidden]" : l)).join("\n")).trim();
+    Object.assign(job, { status, summary, result: clean.length > 1500 ? `${clean.slice(-1500)}` : clean, finishedAt: new Date().toISOString() });
+    if (stoppedByUser) {
+      logAction("claude_code_finished", { id: job.id, folder, status });
+      return; // you asked it to stop: no announcement
+    }
     logAction("claude_code_finished", { id: job.id, folder, status, summary });
     const spoken =
       status === "done"
@@ -84,8 +111,8 @@ function startJob(folder, task) {
     } catch {
       /* not JSON: use raw output */
     }
-    if (code === 0) finish("done", summarize(result));
-    else finish("failed", summarize(result || err || `exit code ${code}`));
+    if (code === 0) finish("done", summarize(result), result);
+    else finish("failed", summarize(result || err || `exit code ${code}`), result || err);
   });
 
   logAction("claude_code_started", { id: job.id, folder, cwd, task });
@@ -96,12 +123,22 @@ export const claudeCodeTool = {
   // Claude Code edits files and can run commands, so every run needs a spoken yes.
   risky: true,
   describe: ({ folder, task }) => `run Claude Code in the "${folder}" folder to: ${task}`,
+  /** Unknown or blocked folders are refused before you're asked to confirm. */
+  precheck({ folder }) {
+    try {
+      resolveProjectFolder(folder);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, reason: err.message };
+    }
+  },
   definition: {
     name: "claude_code",
     description:
       "Start Claude Code (a coding agent) to build or change a software project in a folder. " +
       "It runs in the background and Jericho announces when it finishes. Folder is a project name " +
-      "inside the user's projects directory; a new name creates a new project. " +
+      "inside the user's projects directory (a new name creates a new project), or a path inside an allowed folder " +
+      "such as 'Cheats/jericho'. Needs the user's yes. " +
       "Pass the user's full request as the task, with any details they gave.",
     input_schema: {
       type: "object",
@@ -128,5 +165,22 @@ export const claudeCodeStatusTool = {
   },
   async run() {
     return { projectsDir, projects: listProjects(), jobs: jobs.slice(-5) };
+  },
+};
+
+export const claudeCodeResultTool = {
+  risky: false,
+  definition: {
+    name: "claude_code_result",
+    description:
+      "Get what a Claude Code job reported when it finished (the latest one, or a given job id), to read it aloud. " +
+      "Summarise it in a few spoken sentences.",
+    input_schema: { type: "object", properties: { jobId: { type: "integer" } }, additionalProperties: false },
+  },
+  async run({ jobId } = {}) {
+    const job = jobId ? jobs.find((j) => j.id === jobId) : [...jobs].reverse().find((j) => j.status !== "running") || jobs.at(-1);
+    if (!job) return { ok: false, error: "No Claude Code jobs have run yet." };
+    if (job.status === "running") return { ok: true, status: "running", folder: job.folder, task: job.task, startedAt: job.startedAt };
+    return { ok: true, status: job.status, folder: job.folder, task: job.task, summary: job.summary, result: job.result || job.summary };
   },
 };

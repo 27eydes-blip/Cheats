@@ -14,6 +14,7 @@ import { callSettings } from "./calls/policy.js";
 import { errorDetails, setWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
 import { selfTest } from "./selftest.js";
+import { controlInfo } from "./tools/pc.js";
 import { streamSpeech } from "./tts.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
@@ -102,6 +103,37 @@ async function streamTurn(req, res, url) {
   res.end();
 }
 
+/** The last few actions from logs/actions.log (already redacted), newest first. */
+const ACTION_TYPES = new Set(["pc_action", "tool_call", "confirmation_requested", "confirmed", "declined", "action_blocked", "kill_switch", "claude_code_started", "claude_code_finished", "call_started", "call_ended", "call_blocked"]);
+function recentActions(n) {
+  let text = "";
+  try {
+    const size = fs.statSync(logPath).size;
+    const fd = fs.openSync(logPath, "r");
+    const len = Math.min(size, 400_000);
+    const buf = Buffer.alloc(len);
+    fs.readSync(fd, buf, 0, len, size - len);
+    fs.closeSync(fd);
+    text = buf.toString("utf8");
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const line of text.split("\n").reverse()) {
+    if (out.length >= n) break;
+    try {
+      const e = JSON.parse(line);
+      if (!ACTION_TYPES.has(e.type)) continue;
+      if (e.type === "tool_call" && e.tool === "lights") continue;
+      const { time, type, sessionId: _s, ...rest } = e;
+      out.push({ time, type, detail: JSON.stringify(rest).slice(0, 220) });
+    } catch {
+      /* partial line */
+    }
+  }
+  return out;
+}
+
 const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : undefined);
 
 // Three.js is served from node_modules (only its build and examples/jsm folders).
@@ -142,6 +174,17 @@ async function handler(req, res) {
 
     if (req.method === "POST" && (url.pathname === "/api/ask" || url.pathname === "/api/confirm")) {
       return await streamTurn(req, res, url);
+    }
+
+    // The kill switch: "Jericho, stop" / "cancel everything" / the Stop button.
+    if (req.method === "POST" && url.pathname === "/api/stop") {
+      const { sessionId } = await readJson(req);
+      return sendJson(res, 200, { ok: true, ...brain.stopAll(String(sessionId || "")) });
+    }
+
+    // The Control section of the Memory page: allowed folders, tiers and the last 20 actions.
+    if (req.method === "GET" && url.pathname === "/api/control") {
+      return sendJson(res, 200, { ...controlInfo(), recent: recentActions(20) });
     }
 
     // The wake word was heard: get Claude's prompt cache ready before the request arrives.

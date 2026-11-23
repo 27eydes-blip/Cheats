@@ -86,11 +86,24 @@
     "maxCallsPerDay": 3,
     "maxCallsPerNumberPerDay": 2,
     "maxMinutes": 5,
-    "allowedCountryCodes": ["1"],
+    "allowedCountryCodes": [
+      "1"
+    ],
     "defaultCountryCode": "1",
     "agentModel": "claude-opus-5-5",
     "agentEffort": "low",
     "language": "en-US"
+  },
+  "pc": {
+    "allowedFolders": [
+      "~/Desktop",
+      "~/Documents",
+      "~/Downloads",
+      "{cheats}"
+    ],
+    "commandTimeoutSeconds": 60,
+    "maxReadKB": 200,
+    "apps": {}
   },
   "logFile": "logs/actions.log"
 }

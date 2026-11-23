@@ -193,6 +193,33 @@ Jericho adapts to how you talk and gets better the more you use it. Everything i
 - **Ask it:** "what have you learned about me?" gets a short spoken summary.
 - **The log:** every change goes in the action log as IDs and counts only, never the personal text.
 
+## Controlling your PC
+
+Jericho can work with your PC, Windows first.
+
+| Tier | What | How |
+|---|---|---|
+| Runs straight away | open an app or a web page, volume, play/pause/next, timers, read or write the clipboard, list, read and search files | at once |
+| Needs your yes | write a file, move or rename, delete (to the Recycle Bin, never permanently), run a command, start Claude Code, phone calls | Jericho reads back exactly what will happen, e.g. "Should I run this command in Cheats: git status?" |
+| Never | anything outside your allowed folders, system, registry or security changes, `.env`, keys and other secret files | refused before you're even asked |
+
+- **Allowed folders:** set in `settings.json` under `pc.allowedFolders`. The defaults are
+  Desktop, Documents, Downloads and the Cheats folder. OneDrive copies of Desktop and Documents
+  count too. Paths are said starting with the folder name: "Documents/notes.txt".
+- **Commands are kept separate from your words:** apps and files are passed as data, never pasted
+  into a command line. Commands never see Jericho's API keys. Secret-looking lines in files, the
+  clipboard and command output are hidden before they're spoken.
+- **Claude Code:** start it in a project folder ("todo-app", or a path inside an allowed folder
+  such as "Cheats/jericho"). Ask how it's going, or "what did Claude Code do?" to hear the result.
+- **Kill switch:** "Jericho, stop", "cancel everything", the Stop button or Esc stops speech, the
+  reply in progress, running commands (including anything they started), timers, Claude Code
+  jobs and calls, and clears any waiting yes/no. On a computer the mic stays on while Jericho
+  talks, but only to hear "stop". On phones the mic still switches off while it speaks, so use
+  the Stop button there.
+- **Log:** every action goes in `logs/actions.log`, with secrets redacted and file text recorded
+  only as its length. The **Memory** page has a **Control** section with your allowed folders and
+  the last 20 actions.
+
 ## Speed
 
 - Claude's reply is streamed. Each sentence is sent to ElevenLabs as soon as it's complete, and
@@ -362,6 +389,9 @@ server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json
 server/tools/calls.js     make_call + recent_calls tools
 server/tools/deepThink.js sends hard questions, plans and decisions to the stronger model
 server/tools/learning.js  save_lesson + what_ive_learned tools
+server/tools/pc.js        PC control tools (apps, links, volume, media, timers, clipboard, files, commands)
+server/pc/policy.js       what may be touched: allowed folders, secret files, blocked commands and apps
+server/cancel.js          the kill switch: everything running registers here
 public/                   the web page (index.html, app.js, style.css)
 public/presence/          the 3D presence: scene.js (Three.js scene), postfx.js (quality levels and effects),
                           index.js (loading, fallback, HUD, settings)

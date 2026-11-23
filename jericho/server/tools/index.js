@@ -2,10 +2,11 @@
 // Optional extras: precheck(input, ctx) runs before the yes/no question and can refuse;
 // confirmPrompt(input) replaces the "Should I ...?" wording; announce is said before a slow tool runs.
 import { makeCallTool, recentCallsTool } from "./calls.js";
-import { claudeCodeStatusTool, claudeCodeTool } from "./claudeCode.js";
+import { claudeCodeResultTool, claudeCodeStatusTool, claudeCodeTool } from "./claudeCode.js";
 import { deepThinkTool } from "./deepThink.js";
 import { saveLessonTool, whatIveLearnedTool } from "./learning.js";
 import { lightsTool } from "./lights.js";
+import { pcTools } from "./pc.js";
 import { forgetTool, recallTool, rememberTool } from "./memory.js";
 import { calendarAddTool, calendarListTool, musicTool } from "./placeholders.js";
 
@@ -13,6 +14,7 @@ const all = [
   lightsTool,
   claudeCodeTool,
   claudeCodeStatusTool,
+  claudeCodeResultTool,
   calendarListTool,
   calendarAddTool,
   musicTool,
@@ -24,6 +26,7 @@ const all = [
   recentCallsTool,
   saveLessonTool,
   whatIveLearnedTool,
+  ...pcTools,
 ];
 
 export const tools = new Map(all.map((t) => [t.definition.name, t]));

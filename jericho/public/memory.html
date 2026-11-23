@@ -17,6 +17,21 @@
 
     <p id="status" class="status" role="status"></p>
 
+    <section class="panel" id="control-panel">
+      <h2>Control</h2>
+      <p class="hint">What Jericho may do on this PC. Change the folders in <code>settings.json</code> under <code>pc.allowedFolders</code>. Say “Jericho, stop” or “cancel everything” at any time to stop it all.</p>
+      <p class="subhead">Allowed folders</p>
+      <ul id="control-folders" class="items"></ul>
+      <p class="subhead">Runs straight away</p>
+      <p id="control-safe" class="hint"></p>
+      <p class="subhead">Needs your yes first</p>
+      <p id="control-confirm" class="hint"></p>
+      <p class="subhead">Never</p>
+      <p id="control-blocked" class="hint"></p>
+      <p class="subhead">Last 20 actions</p>
+      <ul id="control-recent" class="items"></ul>
+    </section>
+
     <section class="panel">
       <h2>Lessons from your corrections</h2>
       <p class="hint">Saved when you correct Jericho (“no, I meant…”), and always followed. Stored in <code>data/lessons.json</code>.</p>

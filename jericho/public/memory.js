@@ -108,6 +108,41 @@ async function load() {
   }
 }
 
+const ACTION_LABEL = {
+  pc_action: "PC",
+  tool_call: "Asked for",
+  confirmation_requested: "Asked you to confirm",
+  confirmed: "You said yes",
+  declined: "You said no",
+  action_blocked: "Blocked",
+  kill_switch: "Stopped everything",
+  claude_code_started: "Claude Code started",
+  claude_code_finished: "Claude Code finished",
+  call_started: "Call started",
+  call_ended: "Call ended",
+  call_blocked: "Call blocked",
+};
+
+async function loadControl() {
+  try {
+    const c = await api("/api/control");
+    const folders = $("control-folders");
+    folders.replaceChildren(...c.allowedFolders.map((f) => el("li", {}, el("span", {}, f.name, el("span", { className: "meta" }, f.path)))));
+    $("control-safe").textContent = c.safe.join(", ");
+    $("control-confirm").textContent = c.confirm.join(", ");
+    $("control-blocked").textContent = c.blocked.join("; ");
+    const recent = $("control-recent");
+    recent.replaceChildren();
+    if (!c.recent.length) recent.append(emptyRow("Nothing yet."));
+    for (const a of c.recent) {
+      recent.append(el("li", {}, el("span", {}, ACTION_LABEL[a.type] || a.type, el("span", { className: "meta" }, `${new Date(a.time).toLocaleString()} · ${a.detail}`))));
+    }
+  } catch (e) {
+    $("status").textContent = e.message;
+  }
+}
+loadControl();
+
 $("wipe").addEventListener("click", async () => {
   if (!confirm("Wipe all memories, lessons, your profile and the notes on how you talk? This can't be undone.")) return;
   try {
