@@ -15,6 +15,7 @@ import { errorDetails, setWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
 import { selfTest } from "./selftest.js";
 import { getNextEvent } from "./briefing/calendar.js";
+import { alarms } from "./alarms/manager.js";
 import { getWeather } from "./briefing/weather.js";
 import { controlInfo } from "./tools/pc.js";
 import { streamSpeech } from "./tts.js";
@@ -30,6 +31,13 @@ const listeners = new Set(); // open /api/events streams
 jobEvents.on("announce", (text) => {
   for (const res of listeners) res.write(`data: ${JSON.stringify({ type: "announce", text })}\n\n`);
 });
+// Alarms: tell every open page when one rings, stops or the list changes.
+const pushEvent = (obj) => {
+  for (const res of listeners) res.write(`data: ${JSON.stringify(obj)}\n\n`);
+};
+alarms.on("ring", (alarm) => pushEvent({ type: "alarm", alarm }));
+alarms.on("stopped", (info) => pushEvent({ type: "alarm-stopped", ...info }));
+alarms.on("changed", () => pushEvent({ type: "alarms-changed" }));
 
 function authorized(req, url) {
   if (!secrets.accessToken) return true;
@@ -196,6 +204,27 @@ async function handler(req, res) {
       return sendJson(res, 200, { ok: true, ...brain.stopAll(String(sessionId || "")) });
     }
 
+    // Alarms: the list (and anything ringing), stop, snooze, cancel, and the page saying it's ringing
+    if (req.method === "GET" && url.pathname === "/api/alarms") {
+      return sendJson(res, 200, { alarms: alarms.list(), ringing: alarms.list().filter((a) => a.state === "ringing"), snoozeMinutes: alarms.snoozeMinutes });
+    }
+    if (req.method === "POST" && url.pathname.startsWith("/api/alarm/")) {
+      const body = await readJson(req).catch(() => ({}));
+      const id = Number.isInteger(Number(body.id)) && body.id != null ? Number(body.id) : null;
+      const action = url.pathname.slice("/api/alarm/".length);
+      if (action === "stop") return sendJson(res, 200, await alarms.stop(id, "stopped from the page"));
+      if (action === "snooze") return sendJson(res, 200, await alarms.snooze(id, body.minutes));
+      if (action === "cancel" && id != null) {
+        const a = alarms.store.get(id);
+        if (!a) return sendJson(res, 404, { error: "No such alarm" });
+        const n = alarms.list().findIndex((x) => x.id === id) + 1;
+        return sendJson(res, 200, { ok: true, cancelled: await alarms.cancel(String(n), "cancelled from the page") });
+      }
+      if (action === "ack") return sendJson(res, 200, alarms.ack(id));
+      if (action === "blocked") return sendJson(res, 200, alarms.blocked());
+      return sendJson(res, 404, { error: "Unknown alarm action" });
+    }
+
     // The page's corner readouts: current weather and the next calendar event (each may be missing).
     if (req.method === "GET" && url.pathname === "/api/hud") {
       const [w, next] = await Promise.all([getWeather().catch(() => ({ ok: false })), getNextEvent().catch(() => ({ ok: false }))]);
@@ -317,6 +346,7 @@ const server = useHttps
   : http.createServer(handler);
 
 const port = Number(process.env.PORT || settings.port || 3000);
+alarms.start(); // reload saved alarms and keep checking them
 server.listen(port, settings.host || "0.0.0.0", () => {
   const scheme = useHttps ? "https" : "http";
   console.log(`\n🤖 ${settings.assistantName || "Jericho"} is running.`);

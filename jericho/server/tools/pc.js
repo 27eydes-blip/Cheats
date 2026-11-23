@@ -23,10 +23,10 @@ const isWin = process.platform === "win32";
 const isMac = process.platform === "darwin";
 
 /** Jericho's environment minus every key and private value. */
-function cleanEnv(extra = {}) {
+export function cleanEnv(extra = {}) {
   const env = { ...process.env };
   for (const k of Object.keys(env)) {
-    if (/^(ANTHROPIC_|ELEVENLABS_|TWILIO_|JERICHO_ACCESS_TOKEN$|MY_PHONE_NUMBER$|JARVIS_ACCESS_TOKEN$)/i.test(k)) delete env[k];
+    if (/^(ANTHROPIC_|ELEVENLABS_|TWILIO_|JERICHO_ACCESS_TOKEN$|MY_PHONE_NUMBER$|JARVIS_ACCESS_TOKEN$|CALENDAR_ICS_URL$)/i.test(k)) delete env[k];
   }
   return { ...env, ...extra };
 }

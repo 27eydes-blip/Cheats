@@ -423,3 +423,53 @@ body[data-state="off"] .power-prompt { display: inline-flex; }
   .power-prompt, .mic-live .mic-dot { animation: none !important; }
   body.presence-page .stage3d { transition: none; }
 }
+
+/* ---- alarms ---- */
+.r-alarm { left: 50%; transform: translateX(-50%); top: auto; bottom: 150px; border-left: 0; border-top: 1px solid rgb(255 110 90 / 60%); align-items: center; text-align: center; background: rgb(5 4 3 / 70%); }
+.alarm-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 45%, rgb(60 10 4 / 35%), rgb(5 4 3 / 72%));
+  cursor: pointer;
+  animation: alarm-flash 1s ease-in-out infinite;
+}
+.alarm-panel[hidden] { display: none; }
+@keyframes alarm-flash { 50% { background-color: rgb(120 20 8 / 18%); } }
+.alarm-card {
+  cursor: default;
+  min-width: min(360px, 100%);
+  max-width: 460px;
+  padding: 22px 24px 18px;
+  text-align: center;
+  border: 1px solid rgb(255 150 110 / 60%);
+  border-radius: 14px;
+  background: rgb(10 7 4 / 88%);
+  box-shadow: 0 0 40px rgb(255 80 50 / 30%), inset 0 0 18px rgb(240 180 80 / 10%);
+  font-family: var(--label-font);
+  color: var(--gold-bright);
+}
+.alarm-card p { margin: 0; }
+.alarm-kicker { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 0.75rem; letter-spacing: 0.32em; text-transform: uppercase; color: #ffb0a2; }
+.alarm-kicker .hg { font-size: 1.2rem; }
+.alarm-title { margin-top: 8px !important; font-family: "Cinzel Decorative", Georgia, serif; font-size: 1.6rem; letter-spacing: 0.08em; overflow-wrap: anywhere; }
+.alarm-time { font-size: 2.4rem; letter-spacing: 0.1em; font-variant-numeric: tabular-nums; color: #fff1d6; text-shadow: 0 0 18px rgb(255 120 80 / 55%); }
+.alarm-buttons { display: flex; gap: 12px; justify-content: center; margin: 16px 0 10px; }
+.alarm-buttons button { font-family: var(--label-font); letter-spacing: 0.2em; text-transform: uppercase; border-radius: 999px; cursor: pointer; }
+.alarm-stop { font-size: 1.25rem; padding: 16px 44px; color: #1a0805; background: linear-gradient(180deg, #ffd27a, #e3a03c); border: 0; box-shadow: 0 0 24px rgb(255 190 90 / 50%); }
+.alarm-snooze { font-size: 1rem; padding: 14px 26px; color: var(--gold-bright); background: transparent; border: 1px solid rgb(227 180 92 / 70%); }
+.alarm-stop:focus-visible, .alarm-snooze:focus-visible { outline: 2px solid #fff1d6; outline-offset: 3px; }
+.alarm-hint { font-size: 0.72rem; letter-spacing: 0.06em; color: var(--muted); text-transform: none; }
+.alarm-blocked-hint { display: none; margin-top: 8px !important; font-size: 1rem; letter-spacing: 0.3em; text-transform: uppercase; color: #ffb0a2; }
+body.alarm-blocked .alarm-blocked-hint { display: block; }
+body.alarm-ringing .power-prompt { display: none !important; }
+.panel-sub { margin: 10px 0 0; font-family: var(--label-font); font-weight: 400; font-size: 0.7rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold-deep); }
+.alarm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; }
+.alarm-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.alarm-list li span { color: var(--gold); }
+@media (prefers-reduced-motion: reduce) { .alarm-panel { animation: none; } }
+@media (max-width: 600px) { .alarm-time { font-size: 2rem; } .alarm-stop { padding: 14px 34px; } .r-alarm { display: none !important; } }

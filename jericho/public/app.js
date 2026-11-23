@@ -3,6 +3,8 @@
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
 import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, shouldDropAsEcho } from "./bargein.js";
+import { createAlarmRinger, DEFAULT_ALARM_VOLUME } from "./alarm.js";
+import { alarmCommand } from "./alarmrules.js";
 import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
 const $ = (id) => document.getElementById(id);
@@ -69,6 +71,7 @@ let room = (() => {
   }
 })();
 let calibration = null; // { phase: "quiet" | "voice", quiet: [], voice: [] }
+let alarmRinging = null; // the alarm that's ringing (it overrides mute and conversations)
 function setMode(m, status) {
   mode = m;
   orb.dataset.state = m;
@@ -680,6 +683,7 @@ function isKillPhrase(text) {
 
 /** Stops speech, the request in flight and everything running on the server; clears any waiting yes/no. */
 function stopEverything() {
+  if (alarmRinging) endAlarmLocal(); // the server's kill switch stops the alarm as well
   api("/api/stop", { sessionId }).catch(() => {});
   currentRequest?.abort();
   currentRequest = null;
@@ -706,6 +710,7 @@ function stopEverything() {
   if (running) setTimeout(() => startListening(), 200);
 }
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && alarmRinging) return stopAlarm();
   if (e.key === "Escape" && ["thinking", "speaking", "confirm"].includes(mode)) stopEverything();
   // M mutes and unmutes (not while typing)
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || "") || e.target?.isContentEditable;
@@ -820,6 +825,11 @@ function onHeard(raw, fromBargeIn = false, wakeOk = true) {
   heardTimes = { first: null, last: null };
   const text = raw.trim();
   if (!text) return;
+  // A ringing alarm comes first: only "stop" and "snooze" count, no wake word needed.
+  if (alarmRinging) {
+    alarmHeard(text, true);
+    return;
+  }
   // His own voice coming back (while he talks, in the echo tail, or in the first 400 ms of
   // what was heard): dropped, never sent to the brain.
   if (dropAsEcho(text, utteranceStart)) return;
@@ -877,7 +887,7 @@ function onHeard(raw, fromBargeIn = false, wakeOk = true) {
 }
 
 function startListening() {
-  if (!rec || muted || micLost || !running) return;
+  if (!rec || micLost || ((muted || !running) && !alarmRinging)) return;
   wantListening = true;
   lastStartAttempt = performance.now();
   try { rec.start(); } catch { /* already running */ }
@@ -902,6 +912,10 @@ if (SR) {
         const pick = pickWake(alts, config.wakeWords, wakeSensitivity);
         onHeard(pick.found ? pick.text : alts[0], false, wakeSensitivity !== "low" || pick.found);
       } else interim += r[0].transcript;
+    }
+    if (alarmRinging) {
+      if (interim) alarmHeard(interim, false); // "stop" acts at once, over the alarm
+      return;
     }
     if (replyPlaying()) return; // still talking: transcripts are discarded (only the kill phrase gets through)
     if (interim && dropAsEcho(interim, heardTimes.first, false)) return; // his echo: no thinking animation, no timer reset
@@ -929,7 +943,7 @@ if (SR) {
     else recFailures = 0;
     updateMicIndicator();
     clearTimeout(restartTimer);
-    if (wantListening && !muted && !micLost) restartTimer = setTimeout(() => wantListening && startListening(), backoffDelay(Math.max(0, recFailures - 1)));
+    if (wantListening && (!muted || alarmRinging) && !micLost) restartTimer = setTimeout(() => wantListening && startListening(), backoffDelay(Math.max(0, recFailures - 1)));
   };
 }
 
@@ -944,12 +958,13 @@ let micBuf = null;
 
 let micStarting = false;
 async function startMicMeter() {
-  if (isPhone || micStream || micStarting || muted || micLost || !navigator.mediaDevices?.getUserMedia || !audioCtx) return;
+  if (isPhone || micStream || micStarting || (muted && !alarmRinging) || micLost || !navigator.mediaDevices?.getUserMedia || !audioCtx) return;
   micStarting = true;
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     micStarting = false;
-    if (!running || muted || micLost) return stopMicMeter();
+    if ((!running || muted) && !alarmRinging) return stopMicMeter();
+    if (micLost) return stopMicMeter();
     // unplugged or taken away by the system
     for (const track of micStream.getAudioTracks()) track.onended = () => setMicLost();
     micAnalyser = audioCtx.createAnalyser();
@@ -981,6 +996,7 @@ function stopMicMeter() {
       if (barge.sustained(now, 80)) levelConfirmed();
     }
     if (calibration) calibration[calibration.phase].push(level);
+    if (alarmRinging) ringer.level(level, now); // your voice dips the alarm so "stop" is heard
   }
   showBargeDebug(level, performance.now());
   micPulse *= 0.92;
@@ -1009,6 +1025,7 @@ function silentWav() {
 // later: reconnects a lost mic, unmutes, cuts him off while he talks, or stops what he's
 // doing while he thinks or waits for a yes (what the Stop button used to do).
 orb.addEventListener("click", () => {
+  if (alarmRinging) return stopAlarm(); // tapping the light stops a ringing alarm
   if (!running) return powerOn();
   if (micLost) return reconnectMic();
   if (replyPlaying()) {
@@ -1194,7 +1211,172 @@ events.onmessage = (e) => {
   if (msg.type === "announce") {
     addLog("jericho", msg.text);
     if (running) speak(msg.text);
-  }
+  } else if (msg.type === "alarm") startAlarm(msg.alarm);
+  else if (msg.type === "alarm-stopped") {
+    if (alarmRinging && (msg.ids || []).includes(alarmRinging.id)) endAlarmLocal(); // stopped elsewhere (another tab, the kill switch)
+    refreshAlarmList();
+  } else if (msg.type === "alarms-changed") refreshAlarmList();
 };
+
+// ---- alarms: ringing, stop, snooze, and the list in the settings panel -------------------
+// A ringing alarm beats everything: mute, a conversation, barge-in rules. Stop it with
+// "Jericho, stop", Esc, tapping the light, or the big Stop button; snooze by voice or button.
+const ringer = createAlarmRinger({ getCtx: () => audioCtx, ttsUrl, lang: () => config.speechLang });
+const ALARM_VOL_KEY = "jericho-alarm-volume";
+const SNOOZE_KEY = "jericho-snooze-minutes";
+const alarmVolume = () => Math.min(1, Math.max(0.2, Number(store.get(ALARM_VOL_KEY) ?? DEFAULT_ALARM_VOLUME * 100) / 100));
+const defaultSnooze = () => Math.min(60, Math.max(1, Number(store.get(SNOOZE_KEY)) || serverSnooze || 9));
+let serverSnooze = 9;
+
+/** Stop the reply being spoken (without the kill switch: tools keep going). */
+function silenceReply() {
+  if (!liveTurns.size) return;
+  api("/api/interrupt", { sessionId }).catch(() => {});
+  currentRequest?.abort();
+  currentRequest = null;
+  for (const t of liveTurns) {
+    t.cancelled = true;
+    t.queue.length = 0;
+    t.finish();
+  }
+  for (const p of players) {
+    p.pause();
+    p.onended?.();
+  }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  viz.setSpeechSource(null, false);
+}
+
+function startAlarm(alarm) {
+  if (!alarm || alarmRinging?.id === alarm.id) return;
+  alarmRinging = alarm;
+  silenceReply();
+  document.body.classList.add("alarm-ringing");
+  document.body.classList.remove("alarm-blocked");
+  viz.setAlarm?.(true);
+  $("alarm-label").textContent = alarm.label || "Alarm";
+  $("alarm-time").textContent = alarm.time;
+  $("alarm-panel").hidden = false;
+  $("hud-alarm-label").textContent = alarm.label || "Alarm";
+  $("hud-alarm-time").textContent = alarm.time;
+  $("hud-alarm").hidden = false;
+  addLog("note", `Alarm${alarm.label ? `: ${alarm.label}` : ""} (${alarm.time}). Say “stop” or “snooze”.`);
+  // listen for "stop" and "snooze" even when muted (and before the first tap, if the browser allows)
+  if (rec && !micLost) {
+    wantListening = true;
+    try { rec.start(); } catch { /* already running */ }
+  }
+  startMicMeter();
+  ringer.start(alarm, { volume: alarmVolume() }).then(({ audible }) => {
+    if (alarmRinging?.id !== alarm.id) return;
+    if (audible) api("/api/alarm/ack", { id: alarm.id }).catch(() => {});
+    else {
+      // the browser won't play sound until you tap: the PC plays its own alarm sound instead
+      document.body.classList.add("alarm-blocked");
+      api("/api/alarm/blocked", { id: alarm.id }).catch(() => {});
+    }
+  });
+}
+
+/** Silence it here and put the page back the way it was. */
+function endAlarmLocal() {
+  ringer.stop();
+  alarmRinging = null;
+  document.body.classList.remove("alarm-ringing", "alarm-blocked");
+  viz.setAlarm?.(false);
+  $("alarm-panel").hidden = true;
+  $("hud-alarm").hidden = true;
+  if (muted || !running) {
+    stopListening(); // back to muted / not powered on
+    if (muted) stopMicMeter();
+  }
+}
+function stopAlarm() {
+  if (!alarmRinging) return false;
+  const { id } = alarmRinging;
+  endAlarmLocal();
+  addLog("note", "Alarm stopped.");
+  api("/api/alarm/stop", { id }).catch(() => {}); // also stops the PC's own alarm sound
+  return true;
+}
+function snoozeAlarm(minutes) {
+  if (!alarmRinging) return false;
+  const { id } = alarmRinging;
+  endAlarmLocal();
+  const mins = minutes || defaultSnooze();
+  api("/api/alarm/snooze", { id, minutes: mins })
+    .then((r) => addLog("note", `Snoozed for ${mins} minutes, until ${r.time}.`))
+    .catch(() => {});
+  return true;
+}
+/** Words heard while it rings: "stop", "snooze (for N minutes)". */
+function alarmHeard(text, isFinal) {
+  const c = alarmCommand(text, { spoken: ringer.spoken() });
+  if (!c) return false;
+  if (c.action === "stop") return stopAlarm();
+  // snooze waits for the final words, so "snooze for 15 minutes" isn't cut short
+  if (c.action === "snooze" && isFinal) return snoozeAlarm(c.minutes);
+  return false;
+}
+$("alarm-stop").addEventListener("click", (e) => {
+  e.stopPropagation();
+  stopAlarm();
+});
+$("alarm-snooze").addEventListener("click", (e) => {
+  e.stopPropagation();
+  snoozeAlarm();
+});
+// "Tap to dismiss": a tap anywhere on the alarm screen stops it
+$("alarm-panel").addEventListener("click", () => stopAlarm());
+
+// settings panel: volume, default snooze, upcoming alarms with Cancel buttons
+const volIn = $("alarm-vol");
+const snoozeIn = $("alarm-snooze-min");
+if (volIn) {
+  volIn.value = Math.round(alarmVolume() * 100);
+  $("alarm-vol-val").textContent = `${volIn.value}%`;
+  volIn.addEventListener("input", () => {
+    store.set(ALARM_VOL_KEY, volIn.value);
+    $("alarm-vol-val").textContent = `${volIn.value}%`;
+  });
+}
+snoozeIn?.addEventListener("change", () => {
+  const v = Math.min(60, Math.max(1, Math.round(Number(snoozeIn.value) || 9)));
+  snoozeIn.value = v;
+  store.set(SNOOZE_KEY, String(v));
+});
+async function refreshAlarmList() {
+  try {
+    const r = await api("/api/alarms");
+    serverSnooze = r.snoozeMinutes || 9;
+    if (snoozeIn) snoozeIn.value = defaultSnooze();
+    if (r.ringing?.length && !alarmRinging) startAlarm(r.ringing[0]);
+    const list = $("alarm-list");
+    if (!list) return;
+    list.textContent = "";
+    if (!r.alarms.length) {
+      const li = document.createElement("li");
+      li.className = "hint";
+      li.textContent = "No alarms set. Say “Jericho, set an alarm for 7 AM”.";
+      list.append(li);
+    }
+    for (const a of r.alarms) {
+      const li = document.createElement("li");
+      const text = document.createElement("span");
+      text.textContent = `${a.when}${a.repeat !== "once" ? ` · ${a.repeat}` : ""}${a.label ? ` · ${a.label}` : ""}${a.snoozed ? " · snoozed" : ""}`;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "del";
+      btn.textContent = "Cancel";
+      btn.addEventListener("click", () => api("/api/alarm/cancel", { id: a.id }).then(refreshAlarmList).catch(() => {}));
+      li.append(text, btn);
+      list.append(li);
+    }
+  } catch {
+    /* offline: try again later */
+  }
+}
+refreshAlarmList();
+setInterval(refreshAlarmList, 60_000);
 
 setMode("off");

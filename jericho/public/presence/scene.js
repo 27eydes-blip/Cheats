@@ -789,6 +789,7 @@ export async function createScene(canvas, opts) {
   let running = true;
   // the startup sequence: { start, delay, dur } in ms, null when not booting
   let boot = null;
+  let alarmOn = false; // a ringing alarm: the orb pulses red and gold
   const smooth = (a, b, x) => {
     const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
     return k * k * (3 - 2 * k);
@@ -910,6 +911,13 @@ export async function createScene(canvas, opts) {
     uniforms.uRed.value = fx.red;
     uniforms.uTremble.value = fx.tremble;
     uniforms.uFlare.value = fx.flare;
+    if (alarmOn) {
+      // pulse between gold and red about once a second, with a beat in the glow
+      const a = 0.5 + 0.5 * Math.sin(t * 6.3);
+      uniforms.uRed.value = Math.max(fx.red, a * 0.9);
+      uniforms.uFlare.value = Math.max(fx.flare, 0.25 + a * 0.35);
+      uniforms.uLevel.value = Math.max(uniforms.uLevel.value, 0.2 + a * 0.4);
+    }
     cloud.rotation.y += drift * 0.05; // the whole cloud turns slowly too
     cloud.rotation.x = Math.sin(uniforms.uPTime.value * 0.02) * 0.15;
 
@@ -1164,6 +1172,11 @@ export async function createScene(canvas, opts) {
       }
       boot = { start: performance.now(), delay, dur };
       bg.fade = 0;
+    },
+    /** A ringing alarm: pulse red and gold (also wakes the orb if it's still waiting for the first tap). */
+    setAlarm(on) {
+      alarmOn = Boolean(on);
+      if (alarmOn && boot && boot.delay > 1e9) boot = null;
     },
     /** Before power-on: the orb waits as a single point of light. */
     hold() {

@@ -390,6 +390,21 @@ After the one tap, Jericho listens for his name ("Jericho", "Jer", "hey Jericho"
 - **Stopping:** there's no Start or Stop button any more. Esc and "Jericho, stop" stop everything as before. Tapping the light while he talks cuts him off and listens; while he's thinking or waiting for a yes, it stops everything (what the Stop button did).
 - **Far-field** (settings panel): **Wake sensitivity** Low (the name must come first), Normal, or High (also checks the recognizer's second and third guesses and near-misses like "Jerichow"; best from across the room). **Room mode** lowers the voice level needed to interrupt him and boosts the mic level the orb reacts to. **Calibrate room**: stay quiet for a moment, then say "Jericho" a few times from where you sit; the threshold is set between the room's noise and your voice.
 
+## Alarms
+
+Say "Jericho, set an alarm for 7 AM", "wake me at 6:45 on weekdays for the gym" or "set a daily alarm for 6:30". Times are US Eastern (`alarms.timezone`, default America/Detroit), with daylight saving handled: if the time has already passed today it's set for tomorrow, a time that doesn't exist on the spring-forward night (like 2:30 AM) rings at 3:30, and on the fall-back night 1:30 rings the first time. Jericho says the exact day and time back. "What alarms do I have?" lists them; "cancel alarm 2", "cancel the gym alarm" or "cancel all alarms" (that one asks for your yes) removes them. Alarms are saved in `data/alarms.json` (not in git) and survive restarts; one-time alarms missed by more than 30 minutes are dropped and repeating ones move on.
+
+**When one rings** it overrides mute and any conversation: a loud rising-beep tone (made with Web Audio, capped at a safe level) with Jericho reading the label between rings, the orb pulsing red and gold, and a big Stop / Snooze screen. Stop it with "Jericho, stop", Esc, tapping the light or the Stop button; snooze with "Jericho, snooze" (9 minutes by default) or "snooze for 15 minutes". No wake word is needed while it rings; your voice dips the alarm so you're heard, and Jericho's own voice reading the label is ignored. The kill switch stops it too. It gives up after 30 minutes (`alarms.maxRingMinutes`).
+
+**If the browser blocks sound** (the page just opened with no tap), the page says "Tap to dismiss" and the PC plays a native Windows alarm sound until you stop it; stopping from the page stops that sound too. The native sound also starts if no Jericho page is open within 10 seconds.
+
+**Waking the laptop (Windows):** for each alarm Jericho creates a Scheduled Task called `Jericho Alarm <number>` with "Wake the computer to run this task" on, 2 minutes early (`alarms.wakeLeadMinutes`). It runs only `scripts/alarm-wake.ps1`, which starts Jericho if it isn't running and opens the page; no labels or secrets go into the task, and Jericho only ever touches tasks with that exact name. Cancelling or finishing an alarm removes its task, and leftovers are cleaned up when Jericho starts. Nothing runs as admin: if Windows refuses, Jericho tells you and gives you the one-line command to run yourself.
+- Wake timers must be allowed: Control Panel → Power Options → Change plan settings → Change advanced power settings → Sleep → **Allow wake timers** → Enable (on battery and plugged in). Jericho checks this the first time you set an alarm and tells you if it's off.
+- Waking only works from **sleep**, not when the laptop is shut down (or hibernating on some laptops), and it's most reliable when **plugged in**.
+- Turn the tasks off with `"wakeTasks": false` under `alarms` in `settings.json`.
+
+**Settings panel (sun icon):** alarm volume, default snooze minutes, and the list of upcoming alarms with a Cancel button for each.
+
 ## Interrupting Jericho (barge-in)
 
 So Jericho never hears himself through the speakers:

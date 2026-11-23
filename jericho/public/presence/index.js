@@ -48,7 +48,7 @@ function webglAvailable() {
  * loaded are remembered and replayed, so nothing is lost while it starts.
  */
 export function createPresence({ onTap }) {
-  const pending = { state: "off", mic: 0, speech: [null, false], calling: false };
+  const pending = { state: "off", mic: 0, speech: [null, false], calling: false, alarm: false };
   const power = createPower();
   let impl = null;
   let look = { ...DEFAULT_LOOK, ...store.get("jericho-look", {}) };
@@ -60,6 +60,11 @@ export function createPresence({ onTap }) {
       impl?.setState(s);
       document.body.dataset.state = s;
       power.setMuted(s === "muted"); // the idle hum rests while muted
+    },
+    /** A ringing alarm: the orb pulses red and gold. */
+    setAlarm(on) {
+      pending.alarm = Boolean(on);
+      impl?.setAlarm?.(pending.alarm);
     },
     /** The first tap: the power-up animation and sound. Returns the timeline (or null if already on). */
     powerOn() {
@@ -82,6 +87,7 @@ export function createPresence({ onTap }) {
     impl.setSpeechSource(...pending.speech);
     impl.setCalling?.(pending.calling);
     power.attach(impl);
+    impl.setAlarm?.(pending.alarm);
     document.body.classList.add("presence-ready");
     if (new URLSearchParams(location.search).has("debug")) window.__presence = impl; // for testing only
   }

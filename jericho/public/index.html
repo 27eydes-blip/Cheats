@@ -44,6 +44,7 @@
   <div class="hud-live">
     <div class="readout r-time"><span class="r-label"><span class="hg g-sun" aria-hidden="true"></span>Time</span><span class="r-value" id="hud-time">--:--</span><span class="r-sub" id="hud-date"></span></div>
     <div class="readout r-event" id="hud-event" hidden><span class="r-label"><span class="hg g-scarab" aria-hidden="true"></span>Next</span><span class="r-value" id="hud-event-title"></span><span class="r-sub" id="hud-event-when"></span></div>
+    <div class="readout r-alarm" id="hud-alarm" hidden><span class="r-label"><span class="hg g-sun" aria-hidden="true"></span>Alarm</span><span class="r-value" id="hud-alarm-label"></span><span class="r-sub" id="hud-alarm-time"></span></div>
     <div class="readout r-weather" id="hud-weather" hidden><span class="r-label"><span class="hg g-water" aria-hidden="true"></span>Weather</span><span class="r-value" id="hud-weather-now"></span><span class="r-sub" id="hud-weather-sub"></span></div>
   </div>
 
@@ -69,6 +70,21 @@
   <button id="orb" class="orb" data-state="off" aria-label="Start listening">
     <canvas id="viz" aria-hidden="true" hidden></canvas>
   </button>
+
+  <!-- A ringing alarm: big Stop and Snooze buttons; tapping anywhere else stops it too -->
+  <div id="alarm-panel" class="alarm-panel" hidden role="alertdialog" aria-labelledby="alarm-label" aria-describedby="alarm-time">
+    <div class="alarm-card">
+      <p class="alarm-kicker"><span class="hg g-sun" aria-hidden="true"></span>Alarm</p>
+      <p id="alarm-label" class="alarm-title">Alarm</p>
+      <p id="alarm-time" class="alarm-time"></p>
+      <div class="alarm-buttons">
+        <button id="alarm-stop" class="alarm-stop" type="button">Stop</button>
+        <button id="alarm-snooze" class="alarm-snooze" type="button">Snooze</button>
+      </div>
+      <p class="alarm-hint">Say “Jericho, stop” or “snooze for 15 minutes”. Esc or a tap also stops it.</p>
+      <p class="alarm-blocked-hint">Tap to dismiss</p>
+    </div>
+  </div>
 
   <!-- Shown once on load: the one tap that powers Jericho on (and lets the browser use the mic and sound) -->
   <button id="power-prompt" class="power-prompt" type="button"><span class="hg g-ankh" aria-hidden="true"></span><span>Tap to power on</span></button>
@@ -124,6 +140,15 @@
       <input id="snd-vol" type="range" min="0" max="100" step="5" value="60">
     </label>
     <label class="check"><input id="snd-idle" type="checkbox" checked> Idle hum</label>
+    <h3 class="panel-sub">Alarms</h3>
+    <label>Alarm volume <span id="alarm-vol-val">85%</span>
+      <input id="alarm-vol" type="range" min="20" max="100" step="5" value="85">
+    </label>
+    <label>Snooze (minutes)
+      <input id="alarm-snooze-min" type="number" min="1" max="60" step="1" value="9">
+    </label>
+    <ul id="alarm-list" class="alarm-list" aria-label="Upcoming alarms"></ul>
+    <h3 class="panel-sub">Listening</h3>
     <label>Wake sensitivity
       <select id="wake-sens">
         <option value="low">Low (name first: “Jericho, …”)</option>

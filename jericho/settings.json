@@ -125,5 +125,12 @@
     "name": "",
     "calendarIcsUrl": ""
   },
+  "alarms": {
+    "timezone": "America/Detroit",
+    "snoozeMinutes": 9,
+    "wakeTasks": true,
+    "wakeLeadMinutes": 2,
+    "maxRingMinutes": 30
+  },
   "logFile": "logs/actions.log"
 }
