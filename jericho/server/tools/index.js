@@ -12,6 +12,7 @@ import { forgetTool, recallTool, rememberTool } from "./memory.js";
 import { calendarAddTool, calendarListTool, musicTool } from "./placeholders.js";
 import { checkCalendarTool, weatherTool } from "./weather.js";
 import { alarmTools } from "./alarms.js";
+import { tvTool } from "./tv.js";
 
 const all = [
   lightsTool,
@@ -34,6 +35,7 @@ const all = [
   weatherTool,
   checkCalendarTool,
   ...alarmTools,
+  tvTool,
 ];
 
 export const tools = new Map(all.map((t) => [t.definition.name, t]));

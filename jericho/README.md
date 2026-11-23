@@ -405,6 +405,19 @@ Say "Jericho, set an alarm for 7 AM", "wake me at 6:45 on weekdays for the gym" 
 
 **Settings panel (sun icon):** alarm volume, default snooze minutes, and the list of upcoming alarms with a Cancel button for each.
 
+## Roku TV
+
+Jericho can control a Roku TV (or Roku stick/box) on your home network, using Roku's own External Control Protocol (plain HTTP on port 8060). No account or app needed.
+
+- "Turn on the TV", "turn the TV off", "TV volume up 5", "mute the TV", "press home / back / select / play / rewind / fast forward / replay / info" (and up, down, left, right), "open Netflix on the TV", "open Disney+", "search Netflix for Breaking Bad", "what's playing on the TV?", "what apps are on the TV?"
+- App names are matched loosely against the apps actually installed ("disney" → Disney Plus, "HBO Max" → Max, "prime" → Prime Video).
+- **Finding the TV:** Jericho asks the network (SSDP discovery) and remembers the address in `data/roku.json` (not in git). If the TV's address changes, it finds it again. To pin it, set `ROKU_IP=192.168.1.50` in `.env` (the TV shows its address under Settings > Network > About); that overrides discovery.
+- **Safety:** only home-network addresses (192.168.x, 10.x, 172.16-31.x), and only a device that identifies itself as a Roku. Every request times out after 2.5 seconds, and every TV action is written to `logs/actions.log` (search words only as their length).
+- **If it says "The TV isn't on the network"**: check that the TV is on and on the same Wi-Fi as the PC.
+- **If the TV refuses** (403): on the TV, Settings > System > Advanced system settings > Control by mobile apps > Network access, set to Default or Permissive.
+- **Turning it on:** works when the TV is in standby. A Roku TV that's fully off can only be woken over the network if Settings > System > Power > Fast TV start is on; a Roku stick or box can't turn the TV itself on. Jericho says so when it can't.
+- "What's playing" names the app; the title only when the app shares it (many don't).
+
 ## Interrupting Jericho (barge-in)
 
 So Jericho never hears himself through the speakers:
