@@ -334,6 +334,17 @@ bookings is the ordinary case, but check what applies where you live.
   - Markets: Yahoo Finance, with Stooq and CoinGecko as fallbacks.
   - `briefing.autoTime` (for example `"07:00"`, empty by default): on your first wake after that time each day, Jericho offers the briefing. `briefing.name` sets the name it greets you with (defaults to `calls.ownerName`).
 
+## Interrupting Jericho (barge-in)
+
+On a PC the mic stays on while Jericho talks (with the browser's echo cancellation, noise suppression and auto gain). Just talk over him: he fades out within about a tenth of a second, stops the rest of the reply, and treats what you're saying as your next request, with no wake word needed.
+
+It only counts as an interruption when your voice is clearly above a threshold for about a quarter second and the words aren't his own (echo). For the first second of each reply Jericho measures how loud his own echo is and raises the threshold above it.
+
+- Settings panel (sun icon) → **Interrupt while talking**: Off, Speakers (stricter, the default) or Headphones (more sensitive). Saved in your browser.
+- `settings.json` → `bargeIn`: `enabled`, `minLevel` (default 0.15), `minMs` (default 270), `calibrateMs` (default 1000).
+- Phones keep the mic off while he talks: tap the light (or press Stop) to cut him off and start listening.
+- Interrupting only stops his reply. Running tools, Claude Code jobs and calls keep going, and something said over him never counts as a "yes" to a confirmation. Only "Jericho, stop", the Stop button or Esc stop everything.
+
 ## Settings (`settings.json`)
 
 None of these are secret. Keys live only in `.env`.

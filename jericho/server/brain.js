@@ -234,6 +234,46 @@ export class Brain {
    * hooks.onSentence(text) is called for each sentence as soon as it's ready to speak.
    */
   async handle(sessionId, text, hooks = {}, meta = {}) {
+    if (isKillPhrase(text)) return this.#handleNow(sessionId, text, hooks, meta); // the kill switch never waits
+    // One turn at a time per conversation: a request made by interrupting waits for the
+    // interrupted turn to wrap up (its tools finish), so the history stays in order.
+    const release = await this.#acquire(sessionId);
+    try {
+      return await this.#handleNow(sessionId, text, hooks, meta);
+    } finally {
+      release();
+    }
+  }
+
+  #locks = new Map();
+  #liveTurns = new Map();
+  async #acquire(sessionId) {
+    const prev = this.#locks.get(sessionId) || Promise.resolve();
+    let release;
+    const mine = new Promise((r) => (release = r));
+    const chained = prev.then(() => mine);
+    this.#locks.set(sessionId, chained);
+    await prev;
+    return () => {
+      release();
+      if (this.#locks.get(sessionId) === chained) this.#locks.delete(sessionId);
+    };
+  }
+
+  /**
+   * Barge-in: you talked over Jericho. Stops only the reply being written and spoken for this
+   * conversation. Running tools, Claude Code jobs and calls carry on, and a waiting
+   * confirmation stays waiting (only the kill switch clears those).
+   */
+  interrupt(sessionId) {
+    const turn = this.#liveTurns.get(sessionId);
+    if (!turn) return { interrupted: false };
+    turn.interrupt();
+    logAction("barge_in", { sessionId });
+    return { interrupted: true };
+  }
+
+  async #handleNow(sessionId, text, hooks = {}, meta = {}) {
     if (isKillPhrase(text)) {
       // "Jericho, stop" also works when typed or when it reaches the server
       this.stopAll(sessionId);
@@ -265,17 +305,32 @@ export class Brain {
     if (isBriefingRequest(corrected)) notes.push("They want the morning briefing: call morning_briefing now and follow its howToSpeak.");
     else if (looksHard(corrected)) notes.push("This is a plan, decision or comparison: call deep_think with the context before answering.");
     else if (shouldOfferBriefing()) notes.push("First wake today: after answering, offer the morning briefing in one short question.");
+    if (meta.interrupted) notes.push("They just talked over your last reply to say this. Drop the rest of what you were saying and answer this instead.");
     if (notes.length) s.messages.push({ role: "system", content: notes.join("\n\n") });
     return this.#finishTurn(turn, await this.#loop(sessionId, s, turn));
   }
 
   /** Your answer while a risky action is waiting. */
-  async confirm(sessionId, utterance, hooks = {}) {
+  async confirm(sessionId, utterance, hooks = {}, meta = {}) {
     if (isKillPhrase(utterance)) return this.handle(sessionId, utterance, hooks);
+    const release = await this.#acquire(sessionId);
+    try {
+      return await this.#confirmNow(sessionId, utterance, hooks, meta);
+    } finally {
+      release();
+    }
+  }
+
+  async #confirmNow(sessionId, utterance, hooks, meta) {
     const turn = this.#newTurn(hooks, sessionId);
     const s = this.session(sessionId);
     if (!s.pending) return this.#finishTurn(turn, this.#say(turn, pick(s, "nothingPending")));
     const expired = Date.now() > s.pending.expiresAt;
+    if (meta.interrupted && !expired && isYes(utterance)) {
+      // A "yes" said over the read-back never counts: it may not have been heard in full.
+      logAction("barge_in_yes_ignored", { sessionId });
+      return this.#finishTurn(turn, this.#say(turn, "I stopped. Say yes again to confirm, or no to cancel.", { awaitingConfirmation: true }));
+    }
     const yes = !expired && isYes(utterance);
     logAction(yes ? "confirmed" : "declined", {
       sessionId,
@@ -323,7 +378,22 @@ export class Brain {
   #newTurn(hooks, sessionId) {
     const controller = new AbortController();
     const untrack = track("reply", sessionId, () => controller.abort());
-    return { hooks, spoken: [], sources: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set(), signal: controller.signal, untrack };
+    // Barge-in stops only the reply stream (replySignal); tools get `signal`, which only the kill switch trips.
+    const reply = new AbortController();
+    const turn = {
+      hooks, spoken: [], sources: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set(),
+      signal: controller.signal,
+      replySignal: AbortSignal.any([controller.signal, reply.signal]),
+      interrupted: false,
+      interrupt: () => {
+        turn.interrupted = true;
+        reply.abort();
+      },
+      sessionId,
+      untrack,
+    };
+    this.#liveTurns.set(sessionId, turn);
+    return turn;
   }
 
   /**
@@ -362,6 +432,7 @@ export class Brain {
 
   #finishTurn(turn, result) {
     turn.untrack?.();
+    if (this.#liveTurns.get(turn.sessionId) === turn) this.#liveTurns.delete(turn.sessionId);
     const reply = turn.spoken.join(" ") || "Done.";
     const timings = {
       firstTokenMs: turn.firstToken,
@@ -370,7 +441,17 @@ export class Brain {
       rounds: turn.rounds,
       models: [...turn.models],
     };
-    return { reply, awaitingConfirmation: Boolean(result.awaitingConfirmation), timings, ...(turn.sources.length ? { sources: turn.sources } : {}) };
+    return { reply, awaitingConfirmation: Boolean(result.awaitingConfirmation), ...(result.interrupted ? { interrupted: true } : {}), timings, ...(turn.sources.length ? { sources: turn.sources } : {}) };
+  }
+
+  /** Barge-in: keep what was actually said in the history, so the next answer has context. */
+  #wasInterrupted(s, turn) {
+    const said = turn.spoken.join(" ").trim();
+    if (said && s.messages.at(-1)?.role === "user") {
+      s.messages.push({ role: "assistant", content: [{ type: "text", text: `${said} [cut off: the user interrupted]` }] });
+    }
+    if (said) s.transcript.push({ who: "assistant", text: said });
+    return { awaitingConfirmation: false, interrupted: true };
   }
 
   #declineAll(s, reason) {
@@ -418,10 +499,12 @@ export class Brain {
       turn.rounds++;
       let response;
       if (turn.signal?.aborted) return { awaitingConfirmation: false, stopped: true };
+      if (turn.interrupted) return this.#wasInterrupted(s, turn);
       try {
         response = await this.#streamClaude(s, turn);
       } catch (err) {
         if (turn.signal?.aborted) return { awaitingConfirmation: false, stopped: true }; // the kill switch: stop quietly
+        if (turn.interrupted) return this.#wasInterrupted(s, turn);
         if (isWebSearchUnavailable(err) && !webSearchUnavailable) {
           webSearchUnavailable = true;
           logAction("web_search_unavailable", { sessionId, error: err.message });
@@ -539,7 +622,7 @@ export class Brain {
 
     const splitter = new SentenceSplitter();
     let announcedSearch = false;
-    const stream = this.client.beta.messages.stream(this.#params(s, messages), { signal: turn.signal });
+    const stream = this.client.beta.messages.stream(this.#params(s, messages), { signal: turn.replySignal });
     stream.on("text", (delta) => {
       if (turn.firstToken === null) turn.firstToken = Date.now() - turn.t0;
       for (const sentence of splitter.push(delta)) this.#emit(turn, sentence);

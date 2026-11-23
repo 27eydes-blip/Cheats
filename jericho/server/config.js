@@ -52,5 +52,11 @@ export function publicConfig() {
     conversationTimeoutSeconds: settings.conversationTimeoutSeconds ?? 30,
     speechLang: settings.speechLang,
     elevenLabsEnabled: Boolean(secrets.elevenLabsKey),
+    bargeIn: {
+      enabled: settings.bargeIn?.enabled !== false,
+      minLevel: Number(settings.bargeIn?.minLevel) > 0 ? Number(settings.bargeIn.minLevel) : 0.15,
+      minMs: Number(settings.bargeIn?.minMs) > 0 ? Number(settings.bargeIn.minMs) : 270,
+      calibrateMs: Number(settings.bargeIn?.calibrateMs) >= 0 ? Number(settings.bargeIn?.calibrateMs ?? 1000) : 1000,
+    },
   };
 }

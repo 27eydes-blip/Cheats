@@ -2,6 +2,7 @@
 // and the gold visualizer. All thinking and all API keys live on the server.
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
+import { BARGE_MODES, createBargeDetector, decideBargeIn, DEFAULT_BARGE_MODE } from "./bargein.js";
 
 const $ = (id) => document.getElementById(id);
 const orb = $("orb");
@@ -84,6 +85,7 @@ let config = {
 api("/api/config")
   .then((c) => {
     config = { ...config, ...c };
+    applyBargeSettings();
     $("name").textContent = c.assistantName;
     if (mode === "off" || mode === "idle") setMode(mode);
     document.title = c.assistantName;
@@ -171,7 +173,7 @@ function browserVoice(text, stats) {
     if (!("speechSynthesis" in window)) return resolve();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = config.speechLang;
-    u.onstart = () => { stats.firstAudio ??= performance.now(); };
+    u.onstart = () => { stats.firstAudio ??= performance.now(); replyAudioStarted(stats); };
     u.onend = u.onerror = () => resolve();
     speechSynthesis.speak(u);
   });
@@ -193,7 +195,7 @@ async function elevenLabsVoice(text, stats, next) {
     };
     // If audio hasn't started within 7s, give up and use the browser voice.
     const stall = setTimeout(() => { if (!started) { cleanup(); player.pause(); reject(new Error("TTS stalled")); } }, 7000);
-    player.onplaying = () => { started = true; stats.firstAudio ??= performance.now(); };
+    player.onplaying = () => { started = true; stats.firstAudio ??= performance.now(); replyAudioStarted(stats); };
     player.onended = () => { cleanup(); resolve(); };
     player.onerror = () => { cleanup(); reject(new Error("TTS failed")); };
     player.play().catch((e) => { cleanup(); reject(e); });
@@ -246,6 +248,7 @@ async function playTurn(turn) {
     }
     turn.playing = true;
     lastSpoken = `${lastSpoken} ${normalize(sentence)}`;
+    currentSentence = sentence;
     if (!turn.useBrowser) {
       try {
         await elevenLabsVoice(sentence, turn.stats, turn.queue[0]);
@@ -260,6 +263,8 @@ async function playTurn(turn) {
   }
   turn.playing = false;
   liveTurns.delete(turn);
+  currentSentence = "";
+  if (!replyPlaying()) barge.stop();
   turn.stats.end = performance.now();
   viz.setSpeechSource(null, false);
   if (turn.cancelled) return; // stopped: the kill switch already set things straight
@@ -328,7 +333,7 @@ let confirmTimer;
 let confirmPending = false;
 let lastUtterance = null; // timing of the last thing you said (see the ears section)
 
-async function send(kind, text, { endAfter = false, typed = false } = {}) {
+async function send(kind, text, { endAfter = false, typed = false, interrupted = false } = {}) {
   addLog("you", text);
   stopConversationTimer();
   setMode("thinking", "Thinking…");
@@ -348,7 +353,7 @@ async function send(kind, text, { endAfter = false, typed = false } = {}) {
       method: "POST",
       headers: { "content-type": "application/json", "x-jericho-token": token },
       // how long you spoke for, so Jericho can tell if you're rushed or relaxed
-      body: JSON.stringify({ sessionId, text, typed, speechMs: spoken?.first != null ? Math.round(spoken.last - spoken.first) : undefined }),
+      body: JSON.stringify({ sessionId, text, typed, interrupted: interrupted || undefined, speechMs: spoken?.first != null ? Math.round(spoken.last - spoken.first) : undefined }),
     });
     if (res.status === 401) throw new Error("Access token missing or wrong. Open the page with ?token=…");
     if (!res.ok || !res.body) throw new Error(`Server error ${res.status}`);
@@ -469,6 +474,110 @@ function addCard(card) {
   });
   li.append(node("p", "card-note", card.markets?.disclaimer || "Market moves are for information only, not financial advice."));
   logEl.prepend(li);
+}
+
+// ---- barge-in: talk over Jericho and he stops and listens ------------------------------------
+// PC: the mic stays on while he talks. It only counts as an interruption when your voice is
+// clearly louder than his echo, for about a quarter second, and the words aren't his own.
+// Phones: tap the light (or press Stop) to cut him off.
+// Interrupting only stops his reply: tools, Claude Code jobs and calls keep running, and it
+// never counts as a "yes". Only the kill phrase, the Stop button or Esc stop everything.
+const BARGE_KEY = "jericho-barge-mode";
+let bargeMode = BARGE_MODES[store.get(BARGE_KEY)] !== undefined ? store.get(BARGE_KEY) : DEFAULT_BARGE_MODE;
+let barge = createBargeDetector({}, bargeMode); // re-created with the server's settings once they load
+let currentSentence = "";
+let bargeUtterance = null; // set when you cut him off: the words you're saying are your next request
+
+function replyPlaying() {
+  for (const t of liveTurns) if (t.playing && !t.cancelled) return true;
+  return false;
+}
+function canBargeIn() {
+  return !isPhone && Boolean(micAnalyser) && running && barge.enabled && replyPlaying();
+}
+function replyAudioStarted(stats) {
+  if (stats.bargeCalibrated) return;
+  stats.bargeCalibrated = true;
+  barge.startReply(performance.now()); // the next second measures his echo
+}
+
+/** Fade the voice out over about 100 ms, then stop it. */
+function fadeOut(player, ms = 100) {
+  if (player.paused) return;
+  const start = performance.now();
+  const from = player.volume;
+  const step = () => {
+    const k = Math.min(1, (performance.now() - start) / ms);
+    player.volume = from * (1 - k);
+    if (k < 1) return requestAnimationFrame(step);
+    player.pause();
+    player.volume = 1;
+    player.onended?.(); // lets the sentence that was playing finish its wait
+  };
+  requestAnimationFrame(step);
+}
+
+/** Stop talking and listen. `heard`: the words that cut him off, if they're already final. */
+function cutOff(how, heard = null) {
+  api("/api/interrupt", { sessionId }).catch(() => {}); // stops the reply only; tools keep going
+  currentRequest?.abort();
+  currentRequest = null;
+  for (const t of liveTurns) {
+    t.cancelled = true;
+    t.queue.length = 0;
+    t.finish();
+  }
+  for (const p of players) fadeOut(p);
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  viz.setSpeechSource(null, false);
+  barge.stop();
+  endAfterReply = false;
+  addLog("note", how === "tap" ? "Interrupted." : "Interrupted. Listening…");
+  if (confirmPending) setMode("confirm", "Stopped. Say “yes” to confirm or “no” to cancel.");
+  else {
+    if (running) conversation = true; // no wake word needed: you're already talking to him
+    setMode("active", "Listening…");
+    restartConversationTimer();
+  }
+  if (running) setTimeout(() => startListening(), isPhone ? 150 : 0);
+  if (heard) return onHeard(heard, true);
+  if (how === "voice") bargeUtterance = { at: performance.now() };
+}
+
+/** Words heard while he talks. Returns true if they cut him off. */
+function tryBargeIn(text, isFinal) {
+  if (!canBargeIn()) return false;
+  const now = performance.now();
+  const d = decideBargeIn({
+    text,
+    spoken: lastSpoken,
+    current: currentSentence,
+    sustained: barge.sustained(now),
+    enabled: barge.enabled,
+    confirmPending,
+    isKill: isKillPhrase(text),
+  });
+  if (d.action === "interrupt" || d.action === "reconfirm") {
+    cutOff("voice", isFinal ? text : null);
+    return true;
+  }
+  return false;
+}
+
+// "Interrupt while talking" in the settings panel (the sun icon). Saved in this browser.
+const bargeSelect = $("barge-mode");
+if (bargeSelect) {
+  bargeSelect.value = bargeMode;
+  bargeSelect.addEventListener("change", () => {
+    bargeMode = bargeSelect.value;
+    store.set(BARGE_KEY, bargeMode);
+    barge.setMode(bargeMode);
+  });
+  const note = $("barge-note");
+  if (note && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) note.textContent = "On phones the mic is off while I talk: tap the light or press Stop to interrupt.";
+}
+function applyBargeSettings() {
+  barge = createBargeDetector(config.bargeIn || {}, bargeMode);
 }
 
 // ---- kill switch: "Jericho, stop", "cancel everything", the Stop button or Esc -------------
@@ -606,7 +715,7 @@ function onInterim(text) {
   }, 600);
 }
 
-function onHeard(raw) {
+function onHeard(raw, fromBargeIn = false) {
   clearTimeout(settleTimer);
   if (preThinkingFrom) {
     mode = preThinkingFrom; // carry on as if the animation hadn't switched yet
@@ -618,13 +727,24 @@ function onHeard(raw) {
   if (!text) return;
   // The kill switch works in every state, even while Jericho is talking or thinking.
   if (mode !== "off" && isKillPhrase(text)) return stopEverything();
-  if (isEcho(text)) return;
+  // Talking over him (PC): a real interruption stops him and becomes the next request.
+  if (replyPlaying()) {
+    tryBargeIn(text, true);
+    return;
+  }
+  // The words that cut him off are your next request (no wake word needed).
+  let interrupted = fromBargeIn;
+  if (bargeUtterance) {
+    interrupted = interrupted || performance.now() - bargeUtterance.at < 8000;
+    bargeUtterance = null;
+  }
+  if (!interrupted && isEcho(text)) return;
 
   // Safety confirmations work exactly as before: whatever you say goes to the
   // server, which only accepts a clear yes. "That's all" here is a no, then sleep.
   if (mode === "confirm") {
     const ending = splitEndPhrase(text) !== null;
-    return send("confirm", text, { endAfter: ending });
+    return send("confirm", text, { endAfter: ending, interrupted }); // a "yes" said over him never counts
   }
 
   if (mode === "active") {
@@ -632,10 +752,10 @@ function onHeard(raw) {
     const rest = splitEndPhrase(text);
     if (rest !== null) {
       // "Thanks Jericho" ends it now. "Lights off, that's all" does the request first.
-      return rest.length > 2 ? send("ask", rest, { endAfter: true }) : endConversation();
+      return rest.length > 2 ? send("ask", rest, { endAfter: true, interrupted }) : endConversation();
     }
     const request = text.replace(wakeRegex(), " ").trim();
-    if (request.length > 1) return send("ask", request);
+    if (request.length > 1) return send("ask", request, { interrupted });
     beep(); // just the wake word again: still listening
     return;
   }
@@ -675,7 +795,8 @@ if (SR) {
       if (r.isFinal) onHeard(r[0].transcript);
       else interim += r[0].transcript;
     }
-    if (mode === "speaking") return; // only listening for "stop" now
+    if (interim && replyPlaying()) tryBargeIn(interim, false); // you may be talking over him
+    if (replyPlaying()) return; // still talking: only the kill phrase or a real interruption gets through
     heardEl.textContent = interim;
     if (interim) onInterim(interim);
     if (interim && mode === "active") restartConversationTimer();
@@ -703,7 +824,7 @@ let micBuf = null;
 async function startMicMeter() {
   if (isPhone || micStream || !navigator.mediaDevices?.getUserMedia || !audioCtx) return;
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     if (!running) return stopMicMeter();
     micAnalyser = audioCtx.createAnalyser();
     micAnalyser.fftSize = 512;
@@ -725,6 +846,7 @@ function stopMicMeter() {
     let sum = 0;
     for (let i = 0; i < micBuf.length; i++) sum += micBuf[i] * micBuf[i];
     level = Math.sqrt(sum / micBuf.length) * 4;
+    if (replyPlaying()) barge.level(level, performance.now());
   }
   micPulse *= 0.92;
   viz.setMicLevel(Math.min(1, Math.max(level, micPulse * 0.5)));
@@ -747,6 +869,7 @@ function silentWav() {
   return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
 }
 orb.addEventListener("click", () => {
+  if (running && replyPlaying()) return cutOff("tap"); // tapping while he talks: stop and listen
   if (running) {
     running = false;
     if (conversation) conversationFinished();
