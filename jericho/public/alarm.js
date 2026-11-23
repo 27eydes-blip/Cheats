@@ -1,8 +1,8 @@
 // The alarm ringer, made live with Web Audio (no audio files), and Jericho reading the label
 // between rings. Four sounds:
-//   missile  (default) air-raid siren sweep, sonar pings, a deep rumble with distant blasts,
-//            rapid triple warning beeps on top, and now and then an incoming-missile whoosh
-//            that lands in a low thud
+//   strike   (default) "Missile strike": five missile streaks whoosh across the stereo field and
+//            land in deep impacts; an air-raid siren answers each hit, climbing higher and louder,
+//            then holds at full with rapid warning beeps and sonar pings; a short silence; repeat
 //   siren    the air-raid siren on its own, over the rumble
 //   sonar    sonar/radar pings with soft warning beeps
 //   classic  the original rising beeps
@@ -11,8 +11,8 @@
 // compressor, a brick-wall limiter and a fixed ceiling, so it can't clip or hurt speakers.
 // While you talk over it, the whole thing dips so "stop" or "snooze" can be heard.
 
-export const ALARM_SOUNDS = ["missile", "siren", "sonar", "classic"];
-export const DEFAULT_ALARM_SOUND = "missile";
+export const ALARM_SOUNDS = ["strike", "siren", "sonar", "classic"];
+export const DEFAULT_ALARM_SOUND = "strike";
 export const DEFAULT_ALARM_VOLUME = 0.85;
 export const ALARM_SAFE_MAX = 0.85; // the normal cap on the alarm's master gain
 export const ALARM_MAX_LOUD_CAP = 0.95; // "Max loud" raises it a little
@@ -62,6 +62,7 @@ export function intensity(seconds) {
 }
 
 export function normalizeSound(name) {
+  if (name === "missile") return "strike"; // the previous default, renamed
   return ALARM_SOUNDS.includes(name) ? name : DEFAULT_ALARM_SOUND;
 }
 
@@ -266,51 +267,6 @@ function blast(ctx, out, at, level = 0.7) {
   src.stop(at + 1.45);
 }
 
-/** Incoming missile: a falling whistle and rising air noise over `len` seconds, landing in a thud. */
-function whooshThud(ctx, drive, clean, at, len = 1.5) {
-  const o = ctx.createOscillator();
-  const og = ctx.createGain();
-  o.type = "sine";
-  o.frequency.setValueAtTime(2600, at);
-  o.frequency.exponentialRampToValueAtTime(520, at + len);
-  og.gain.setValueAtTime(0.0001, at);
-  og.gain.exponentialRampToValueAtTime(0.12, at + len * 0.8);
-  og.gain.exponentialRampToValueAtTime(0.0001, at + len);
-  o.connect(og).connect(clean);
-  o.start(at);
-  o.stop(at + len + 0.02);
-  const n = ctx.createBufferSource();
-  n.buffer = noiseBuffer(ctx, 2, false);
-  const bp = ctx.createBiquadFilter();
-  bp.type = "bandpass";
-  bp.Q.value = 1.4;
-  bp.frequency.setValueAtTime(600, at);
-  bp.frequency.exponentialRampToValueAtTime(5200, at + len);
-  const ng = ctx.createGain();
-  ng.gain.setValueAtTime(0.0001, at);
-  ng.gain.exponentialRampToValueAtTime(0.22, at + len * 0.95);
-  ng.gain.exponentialRampToValueAtTime(0.0001, at + len + 0.05);
-  // sweeps from one side to the middle, like it's coming in
-  n.connect(bp).connect(ng).connect(panner(ctx, -0.6, clean));
-  n.start(at);
-  n.stop(at + len + 0.1);
-  // the impact: a low sine drop plus a dark noise burst, slightly driven
-  const hit = at + len;
-  const k = ctx.createOscillator();
-  const kg = ctx.createGain();
-  k.type = "sine";
-  k.frequency.setValueAtTime(72, hit);
-  k.frequency.exponentialRampToValueAtTime(32, hit + 0.55);
-  kg.gain.setValueAtTime(0.0001, hit);
-  kg.gain.exponentialRampToValueAtTime(0.9, hit + 0.01);
-  kg.gain.exponentialRampToValueAtTime(0.0001, hit + 0.7);
-  k.connect(kg).connect(drive);
-  k.start(hit);
-  k.stop(hit + 0.75);
-  blast(ctx, drive, hit, 0.6);
-  return hit + 0.7;
-}
-
 function classicBurst(ctx, out, at, level = 1) {
   const notes = [880, 1047, 1319, 1568];
   for (let run = 0; run < 2; run++) {
@@ -331,6 +287,230 @@ function classicBurst(ctx, out, at, level = 1) {
     });
   }
   return at + 2.25;
+}
+
+// ---- "Missile strike" ------------------------------------------------------------------------------
+export const STRIKE = {
+  streaks: 5,
+  spacing: 1.35, // a new streak every 1.35 s
+  whoosh: 1.0, // each streak flies for 1 s, then hits
+  hold: 7, // full siren after the 5th impact
+  silence: 1.2, // then a short silence before the next cycle
+};
+
+/**
+ * When everything happens in one cycle (seconds from its start). Streaks alternate left->right and
+ * right->left. The siren starts after the first impact and steps up at each one (stage 1 quiet and
+ * low, stage 5 full), then holds.
+ */
+export function strikeTimeline(cycle = 0) {
+  const streaks = Array.from({ length: STRIKE.streaks }, (_, i) => {
+    const start = i * STRIKE.spacing;
+    return { start, impact: start + STRIKE.whoosh, pan: i % 2 === 0 ? [-0.9, 0.9] : [0.9, -0.9] };
+  });
+  const stages = streaks.map((s, i) => {
+    const k = i / (STRIKE.streaks - 1); // 0 at the first impact, 1 at the last
+    return {
+      at: s.impact,
+      level: 0.035 + 0.115 * k, // quiet at first, full at the 5th
+      low: 400 + 40 * k,
+      high: 600 + 600 * k, // 600 Hz at first, the full 400-1200 Hz by the 5th
+      sweep: 1.1 - 0.55 * k, // seconds per rise (and per fall): faster, more urgent
+      square: 0.3 + 0.7 * k, // more of the harsh square wave as it gets more urgent
+    };
+  });
+  const holdStart = streaks.at(-1).impact;
+  const holdEnd = holdStart + STRIKE.hold;
+  // later cycles hit harder (up to 1.0 by the fourth cycle)
+  const power = Math.min(1, 0.7 + 0.1 * cycle);
+  return { streaks, stages, holdStart, holdEnd, end: holdEnd + STRIKE.silence, power };
+}
+
+/** A missile streak: rising filtered noise, a rocket rumble, a Doppler tone, panned across. */
+function streak(ctx, out, at, len, [fromPan, toPan], power) {
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (pan) {
+    pan.pan.setValueAtTime(fromPan, at);
+    pan.pan.linearRampToValueAtTime(toPan, at + len);
+    pan.connect(out);
+  }
+  const dest = pan || out;
+  // the air: noise through a band-pass that sweeps upward
+  const n = ctx.createBufferSource();
+  n.buffer = noiseBuffer(ctx, 2, false);
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.Q.value = 1.2;
+  bp.frequency.setValueAtTime(350, at);
+  bp.frequency.exponentialRampToValueAtTime(5500, at + len);
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.0001, at);
+  ng.gain.exponentialRampToValueAtTime(0.3 * power, at + len * 0.85);
+  ng.gain.exponentialRampToValueAtTime(0.0001, at + len + 0.04);
+  n.connect(bp).connect(ng).connect(dest);
+  n.start(at);
+  n.stop(at + len + 0.1);
+  // the rocket: low rumbling noise opening up as it comes in
+  const r = ctx.createBufferSource();
+  r.buffer = noiseBuffer(ctx, 3, true);
+  const rl = ctx.createBiquadFilter();
+  rl.type = "lowpass";
+  rl.frequency.setValueAtTime(140, at);
+  rl.frequency.exponentialRampToValueAtTime(520, at + len);
+  const rg = ctx.createGain();
+  rg.gain.setValueAtTime(0.0001, at);
+  rg.gain.exponentialRampToValueAtTime(0.55 * power, at + len * 0.9);
+  rg.gain.exponentialRampToValueAtTime(0.0001, at + len + 0.05);
+  r.connect(rl).connect(rg).connect(dest);
+  r.start(at);
+  r.stop(at + len + 0.1);
+  // Doppler: the tone climbs as it approaches, then drops as it passes
+  const o = ctx.createOscillator();
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(320, at);
+  o.frequency.exponentialRampToValueAtTime(760, at + len * 0.72);
+  o.frequency.exponentialRampToValueAtTime(290, at + len);
+  const ol = ctx.createBiquadFilter();
+  ol.type = "lowpass";
+  ol.frequency.value = 1800;
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, at);
+  og.gain.exponentialRampToValueAtTime(0.07 * power, at + len * 0.72);
+  og.gain.exponentialRampToValueAtTime(0.0001, at + len);
+  o.connect(ol).connect(og).connect(dest);
+  o.start(at);
+  o.stop(at + len + 0.02);
+}
+
+/** The impact: a low boom, a sub-bass thud, a short noise burst and a rumble tail. */
+function impact(ctx, drive, clean, at, pan, power) {
+  const p = panner(ctx, pan * 0.5, drive);
+  const boom = ctx.createOscillator();
+  const bg = ctx.createGain();
+  boom.type = "sine";
+  boom.frequency.setValueAtTime(95, at);
+  boom.frequency.exponentialRampToValueAtTime(36, at + 1.1);
+  bg.gain.setValueAtTime(0.0001, at);
+  bg.gain.exponentialRampToValueAtTime(0.85 * power, at + 0.012);
+  bg.gain.exponentialRampToValueAtTime(0.0001, at + 1.3);
+  boom.connect(bg).connect(p);
+  boom.start(at);
+  boom.stop(at + 1.35);
+  const sub = ctx.createOscillator();
+  const sg = ctx.createGain();
+  sub.type = "sine";
+  sub.frequency.setValueAtTime(48, at);
+  sub.frequency.exponentialRampToValueAtTime(27, at + 0.6);
+  sg.gain.setValueAtTime(0.0001, at);
+  sg.gain.exponentialRampToValueAtTime(0.9 * power, at + 0.02);
+  sg.gain.exponentialRampToValueAtTime(0.0001, at + 0.75);
+  sub.connect(sg).connect(clean); // the sub stays clean and centred
+  sub.start(at);
+  sub.stop(at + 0.8);
+  // the crack: a short bright noise burst closing down fast
+  const c = ctx.createBufferSource();
+  c.buffer = noiseBuffer(ctx, 2, false);
+  const cl = ctx.createBiquadFilter();
+  cl.type = "lowpass";
+  cl.frequency.setValueAtTime(3200, at);
+  cl.frequency.exponentialRampToValueAtTime(140, at + 0.35);
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(0.0001, at);
+  cg.gain.exponentialRampToValueAtTime(0.7 * power, at + 0.005);
+  cg.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
+  c.connect(cl).connect(cg).connect(p);
+  c.start(at);
+  c.stop(at + 0.45);
+  // the tail: a dark rumble rolling off
+  const t = ctx.createBufferSource();
+  t.buffer = noiseBuffer(ctx, 3, true);
+  const tl = ctx.createBiquadFilter();
+  tl.type = "lowpass";
+  tl.frequency.value = 95;
+  const tg = ctx.createGain();
+  tg.gain.setValueAtTime(0.0001, at);
+  tg.gain.exponentialRampToValueAtTime(0.7 * power, at + 0.08);
+  tg.gain.exponentialRampToValueAtTime(0.0001, at + 2.6);
+  t.connect(tl).connect(tg).connect(panner(ctx, -pan * 0.3, clean));
+  t.start(at);
+  t.stop(at + 2.7);
+}
+
+/**
+ * The siren that answers the strikes: three detuned oscillators sharing one sweep. At each
+ * impact it jumps to that stage's pitch range, speed and loudness (swelling in), dips while the
+ * next streak passes, and after the last impact holds at full until `holdEnd`.
+ */
+function strikeSiren(ctx, out, tl) {
+  const first = tl.stages[0].at;
+  const end = tl.holdEnd;
+  // the sweep: up and down within each stage's range, faster and wider stage by stage
+  const points = []; // [time, freq]
+  let freq = tl.stages[0].low;
+  points.push([first, freq]);
+  tl.stages.forEach((st, i) => {
+    const stop = i + 1 < tl.stages.length ? tl.stages[i + 1].at : end;
+    let t = st.at;
+    let up = true; // every hit sends it climbing
+    while (t + 0.05 < stop) {
+      const target = up ? st.high : st.low;
+      const next = Math.min(stop, t + st.sweep);
+      // a sweep cut short by the next impact stops part of the way there
+      freq += (target - freq) * ((next - t) / st.sweep);
+      points.push([next, freq]);
+      t = next;
+      up = !up;
+    }
+  });
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 3400;
+  lp.connect(out);
+  const body = ctx.createGain(); // the siren's loudness: swells on each hit, dips for each streak
+  body.gain.setValueAtTime(0.0001, first);
+  body.connect(lp);
+  tl.stages.forEach((st, i) => {
+    body.gain.setTargetAtTime(st.level, st.at, 0.08); // swell
+    const next = tl.streaks[i + 1];
+    if (next) {
+      body.gain.setTargetAtTime(st.level * 0.45, next.start + 0.25, 0.1); // the next streak passes over
+    }
+  });
+  body.gain.setTargetAtTime(0.0001, end - 0.15, 0.05);
+  const squareMix = ctx.createGain(); // the harsh part grows with urgency
+  squareMix.gain.setValueAtTime(tl.stages[0].square, first);
+  tl.stages.forEach((st) => squareMix.gain.setTargetAtTime(st.square, st.at, 0.1));
+  squareMix.connect(body);
+  for (const [type, detune, pan] of [["sawtooth", -9, -0.6], ["sawtooth", 4, 0], ["square", 9, 0.6]]) {
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.detune.value = detune;
+    o.frequency.setValueAtTime(points[0][1], points[0][0]);
+    for (const [t, f] of points.slice(1)) o.frequency.linearRampToValueAtTime(f, t);
+    const g = ctx.createGain();
+    g.gain.value = type === "square" ? 0.55 : 0.8;
+    o.connect(g).connect(panner(ctx, pan, type === "square" ? squareMix : body));
+    o.start(first);
+    o.stop(end + 0.1);
+  }
+  return points;
+}
+
+/** One "Missile strike" cycle. Returns its length (including the silence after it). */
+export function scheduleStrike(ctx, bus, at, cycle = 0) {
+  const { input: clean, drive } = bus;
+  const tl = strikeTimeline(cycle);
+  tl.streaks.forEach((s, i) => {
+    streak(ctx, clean, at + s.start, s.impact - s.start, s.pan, tl.power);
+    impact(ctx, drive, clean, at + s.impact, s.pan[1], tl.power * (0.85 + 0.15 * (i / (tl.streaks.length - 1))));
+  });
+  strikeSiren(ctx, drive, { ...tl, stages: tl.stages.map((st) => ({ ...st, at: at + st.at })), streaks: tl.streaks.map((s) => ({ ...s, start: at + s.start })), holdEnd: at + tl.holdEnd });
+  // the hold: rapid triple beeps and sonar pings under the full siren
+  for (let t = tl.holdStart + 0.2; t < tl.holdEnd - 0.3; t += 0.75) tripleBeep(ctx, clean, at + t, { level: 0.1 + 0.04 * tl.power, freq: 2700 });
+  for (let t = tl.holdStart + 0.5; t < tl.holdEnd - 0.8; t += 1.4) sonar(ctx, clean, at + t, { level: 0.22 });
+  // the low rumble bed under everything (not in the silence)
+  rumble(ctx, clean, at, tl.holdEnd, { level: 0.3 + 0.15 * tl.power, blasts: 0 });
+  return tl.end;
 }
 
 /**
@@ -354,20 +534,8 @@ export function scheduleCycle(ctx, bus, sound, at, { n = 0, heat = 0 } = {}) {
     rumble(ctx, clean, at, end - at, { level: 0.35, blasts: heat > 0.5 ? 1 : 0 });
     return end - at;
   }
-  // missile alert
-  const sweep = 2.4 - heat * 0.7;
-  const sirenEnd = siren(ctx, drive, at, { rise: sweep, fall: sweep, level: 0.13 });
-  const pingGap = 1.6 - heat * 0.5;
-  for (let t = 0.2; t < sirenEnd - at - 0.4; t += pingGap) sonar(ctx, clean, at + t, { level: 0.2 });
-  const beepGap = 1.0 - heat * 0.35; // three quick beeps, pause, repeat (quicker with heat)
-  for (let t = 0.1; t < sirenEnd - at; t += beepGap) tripleBeep(ctx, clean, at + t, { level: 0.08 + heat * 0.05 });
-  rumble(ctx, clean, at, sirenEnd - at, { level: 0.45 + heat * 0.2, blasts: 1 + Math.round(heat * 2) });
-  // the incoming missile: every other cycle at first, every cycle once it's been ringing a while
-  if (n % 2 === 1 || heat >= 0.5) {
-    const end = whooshThud(ctx, drive, clean, sirenEnd - 0.2, 1.5);
-    return end - at;
-  }
-  return sirenEnd - at;
+  // missile strike
+  return scheduleStrike(ctx, bus, at, n);
 }
 
 // ---- the ringer ----------------------------------------------------------------------------------
@@ -425,7 +593,8 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
       const len = scheduleCycle(ctx, out, sound, ctx.currentTime + 0.05, { n, heat: intensity(elapsed) });
       await wait(len * 1000 + 80);
       if (!ringing) break;
-      if (n % 2 === 1) await say(line); // the label between rings
+      // the label between rings (every cycle for the long missile strike, every other one otherwise)
+      if (sound === "strike" || n % 2 === 1) await say(line);
       else await wait(300);
     }
   }
@@ -499,14 +668,25 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
   };
 }
 
-/** A 3-second sample of a sound at the given volume (through the same limiter), for the settings panel. */
-export function previewAlarm(ctx, { sound = DEFAULT_ALARM_SOUND, volume = DEFAULT_ALARM_VOLUME, maxLoud = false } = {}) {
+/**
+ * Preview for the settings panel: one full cycle of the sound (a whole 5-streak strike), at the
+ * given volume, through the same limiter. Returns { stop(), length } and calls onEnd when done.
+ */
+export function previewAlarm(ctx, { sound = DEFAULT_ALARM_SOUND, volume = DEFAULT_ALARM_VOLUME, maxLoud = false } = {}, onEnd = () => {}) {
   const chain = buildOutput(ctx, alarmGain({ volume, maxLoud }), { maxLoud });
   const at = ctx.currentTime + 0.05;
-  scheduleCycle(ctx, chain, normalizeSound(sound), at, { n: 1, heat: 0.3 });
-  // fade out at 3 s, then let go of everything
-  chain.duck.gain.setValueAtTime(1, at + 2.7);
-  chain.duck.gain.linearRampToValueAtTime(0, at + 3);
-  setTimeout(() => chain.duck.disconnect(), 3300);
-  return { stop: () => chain.duck.disconnect() };
+  const len = scheduleCycle(ctx, chain, normalizeSound(sound), at, { n: 1, heat: 0.3 });
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    clearTimeout(timer);
+    const g = chain.duck.gain;
+    g.cancelScheduledValues(ctx.currentTime);
+    g.setTargetAtTime(0, ctx.currentTime, 0.03); // a quick fade, never a click
+    setTimeout(() => chain.duck.disconnect(), 250);
+    onEnd();
+  };
+  const timer = setTimeout(stop, len * 1000 + 300);
+  return { stop, length: len };
 }

@@ -3,7 +3,7 @@
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
 import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, shouldDropAsEcho } from "./bargein.js";
-import { ALARM_SOUNDS, createAlarmRinger, DEFAULT_ALARM_SOUND, DEFAULT_ALARM_VOLUME, previewAlarm } from "./alarm.js";
+import { createAlarmRinger, DEFAULT_ALARM_SOUND, DEFAULT_ALARM_VOLUME, normalizeSound, previewAlarm } from "./alarm.js";
 import { alarmCommand } from "./alarmrules.js";
 import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
@@ -1264,7 +1264,7 @@ const SNOOZE_KEY = "jericho-snooze-minutes";
 const alarmVolume = () => Math.min(1, Math.max(0.2, Number(store.get(ALARM_VOL_KEY) ?? DEFAULT_ALARM_VOLUME * 100) / 100));
 const ALARM_SOUND_KEY = "jericho-alarm-sound";
 const MAX_LOUD_KEY = "jericho-alarm-max-loud";
-const alarmSound = () => (ALARM_SOUNDS.includes(store.get(ALARM_SOUND_KEY)) ? store.get(ALARM_SOUND_KEY) : DEFAULT_ALARM_SOUND);
+const alarmSound = () => normalizeSound(store.get(ALARM_SOUND_KEY) || DEFAULT_ALARM_SOUND);
 const alarmMaxLoud = () => store.get(MAX_LOUD_KEY) === "1";
 const alarmSoundSettings = () => ({ volume: alarmVolume(), sound: alarmSound(), maxLoud: alarmMaxLoud() });
 const defaultSnooze = () => Math.min(60, Math.max(1, Number(store.get(SNOOZE_KEY)) || serverSnooze || 9));
@@ -1292,6 +1292,7 @@ function silenceReply() {
 function startAlarm(alarm) {
   if (!alarm || alarmRinging?.id === alarm.id) return;
   alarmRinging = alarm;
+  preview?.stop(); // a real alarm beats a preview
   silenceReply();
   document.body.classList.add("alarm-ringing");
   document.body.classList.remove("alarm-blocked");
@@ -1386,7 +1387,7 @@ if (volIn) {
 const soundSel = $("alarm-sound");
 const maxLoudBox = $("alarm-max-loud");
 if (soundSel) {
-  soundSel.value = alarmSound();
+  soundSel.value = normalizeSound(alarmSound());
   soundSel.addEventListener("change", () => store.set(ALARM_SOUND_KEY, soundSel.value));
 }
 if (maxLoudBox) {
@@ -1400,8 +1401,14 @@ $("alarm-preview")?.addEventListener("click", async () => {
   audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
   await Promise.race([audioCtx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 300))]);
   preview?.stop();
-  preview = previewAlarm(audioCtx, alarmSoundSettings());
+  const stopBtn = $("alarm-preview-stop");
+  preview = previewAlarm(audioCtx, alarmSoundSettings(), () => {
+    if (stopBtn) stopBtn.hidden = true;
+    preview = null;
+  });
+  if (stopBtn) stopBtn.hidden = false;
 });
+$("alarm-preview-stop")?.addEventListener("click", () => preview?.stop());
 
 snoozeIn?.addEventListener("change", () => {
   const v = Math.min(60, Math.max(1, Math.round(Number(snoozeIn.value) || 9)));

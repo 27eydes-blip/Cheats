@@ -473,3 +473,4 @@ body.alarm-ringing .power-prompt { display: none !important; }
 .alarm-list li span { color: var(--gold); }
 @media (prefers-reduced-motion: reduce) { .alarm-panel { animation: none; } }
 @media (max-width: 600px) { .alarm-time { font-size: 2rem; } .alarm-stop { padding: 14px 34px; } .r-alarm { display: none !important; } }
+.preview-row { display: flex; gap: 8px; flex-wrap: wrap; }
