@@ -241,3 +241,37 @@ body[data-state="thinking"] .stop-btn,
 body[data-state="speaking"] .stop-btn,
 body[data-state="confirm"] .stop-btn { display: inline-block; }
 .stop-btn:hover, .stop-btn:focus-visible { background: rgb(217 105 74 / 18%); }
+
+/* ---- links under searched answers ---- */
+.log .sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.log .sources a {
+  font-size: 0.72rem;
+  color: var(--gold);
+  text-decoration: none;
+  border: 1px solid rgb(227 180 92 / 35%);
+  border-radius: 999px;
+  padding: 1px 8px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.log .sources a:hover, .log .sources a:focus-visible { background: rgb(227 180 92 / 14%); }
+
+/* ---- the Briefing card ---- */
+.log li.card {
+  align-self: stretch;
+  max-width: 100%;
+  background: rgb(23 20 15 / 70%);
+  border: 1px solid rgb(227 180 92 / 30%);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.card p { margin: 0; }
+.card-title { color: var(--gold); font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 6px !important; }
+.card-section { padding: 5px 0; border-top: 1px solid var(--line); }
+.card-label { color: var(--muted); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; }
+.card-muted, .card-skip { color: var(--muted); font-size: 0.74rem; }
+.card .quote.up { color: #b8d48a; }
+.card .quote.down { color: #e39a7a; }
+.card-note { color: var(--muted); font-size: 0.68rem; font-style: italic; margin-top: 6px !important; }

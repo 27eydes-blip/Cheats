@@ -2,11 +2,15 @@
 // runs the tools it picks, and holds risky tool calls until you say "yes".
 // One conversation per browser session.
 import Anthropic from "@anthropic-ai/sdk";
-import { settings } from "./config.js";
+import { ROOT, settings } from "./config.js";
 import { logAction } from "./logger.js";
 import * as memory from "./memory.js";
 import { addWarmer, errorDetails, keepAliveFetch } from "./net.js";
 import { cancelAll, isKillPhrase, track } from "./cancel.js";
+import { DISCLAIMER } from "./briefing/markets.js";
+import { stripLeadingWake } from "../public/wake.js";
+import fs from "node:fs";
+import path from "node:path";
 import { CONFIRM_TIMEOUT_MS, isYes } from "./safety.js";
 import { SentenceSplitter, speakable } from "./speech.js";
 import { updateStyle } from "./style.js";
@@ -30,7 +34,8 @@ const SYSTEM = `You are ${name}, a personal voice assistant running on ${owner}'
 - If a word makes no sense, think about what it sounds like ("lites" is "lights"). Your notes list words the mic often gets wrong; when a request shows it was auto-corrected, trust the correction unless it clearly doesn't fit.
 - Ask one short clarifying question only when you genuinely can't tell what they want, or when a wrong guess would matter (a phone call, deleting something). Otherwise make the sensible choice and say what you did.
 - Use your profile of them, lessons, recent conversations and this conversation to work out what vague requests mean ("start it", "the usual", "do that for Maya").
-- Use web_search for current facts you don't know, like a business's phone number or opening hours.
+- Use web_search for current facts you don't know or that change: news, scores, prices, opening hours, a business's phone number. At most three searches per question.
+- When you answer from a search, say where it came from by name, naturally ("according to ESPN", "the Weather Service says"). Never read a web address aloud: the links are shown on screen.
 
 # How you talk
 - Everything you write is spoken aloud. Write the way people talk: short sentences, contractions, plain words.
@@ -115,12 +120,63 @@ export function deliveryNote(text, meta = {}) {
 }
 
 const WEB_SEARCH = { type: "web_search_20260209", name: "web_search", max_uses: 3 };
+// Set when the API says web search isn't available for this key; from then on it isn't offered.
+let webSearchUnavailable = false;
+function isWebSearchUnavailable(err) {
+  return err instanceof Anthropic.APIError && [400, 403].includes(err.status) && /web[_ ]?search/i.test(String(err.message));
+}
+
+/** The links behind a searched answer: the cited ones first, then the top results. */
+function sourcesFrom(content) {
+  const cited = [];
+  const found = [];
+  for (const b of content || []) {
+    for (const c of b.citations || []) if (c.url) cited.push({ title: c.title || c.url, url: c.url });
+    if (b.type === "web_search_tool_result" && Array.isArray(b.content)) {
+      for (const r of b.content) if (r.type === "web_search_result" && r.url) found.push({ title: r.title || r.url, url: r.url });
+    }
+  }
+  const out = [];
+  for (const x of [...cited, ...found.slice(0, 3)]) {
+    if (/^https?:\/\//i.test(x.url) && !out.some((o) => o.url === x.url)) out.push({ title: String(x.title).slice(0, 120), url: x.url });
+  }
+  return out.slice(0, 5);
+}
+
+// ---- morning briefing triggers -----------------------------------------------------------
+const BRIEFING = /\b(good morning|morning briefing|brief me|my briefing|daily briefing|morning rundown)\b/i;
+export function isBriefingRequest(text) {
+  return BRIEFING.test(String(text));
+}
+const BRIEFING_STATE = () => path.join(process.env.JERICHO_DATA_DIR || path.join(ROOT, "data"), "briefing-state.json");
+/** briefing.autoTime ("07:00"): on the first wake each day after that time, offer the briefing once. */
+export function shouldOfferBriefing(now = new Date()) {
+  const at = String(settings.briefing?.autoTime || "").trim();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(at);
+  if (!m) return false;
+  if (now.getHours() * 60 + now.getMinutes() < +m[1] * 60 + +m[2]) return false;
+  const today = now.toLocaleDateString("en-CA");
+  let state = {};
+  try {
+    state = JSON.parse(fs.readFileSync(BRIEFING_STATE(), "utf8"));
+  } catch {
+    /* first time */
+  }
+  if (state.lastOffered === today) return false;
+  try {
+    fs.mkdirSync(path.dirname(BRIEFING_STATE()), { recursive: true });
+    fs.writeFileSync(BRIEFING_STATE(), JSON.stringify({ lastOffered: today }));
+  } catch {
+    /* best effort */
+  }
+  return true;
+}
 
 /** Tool list sent to Claude: the same every request, so the prompt cache stays warm. */
 function requestTools() {
   // Streaming requests: tool inputs stream as they're generated; we validate them ourselves.
   const list = toolDefinitions.map((d) => ({ ...d, eager_input_streaming: true }));
-  if (claudeCfg.webSearch !== false) list.push(WEB_SEARCH);
+  if (claudeCfg.webSearch !== false && !webSearchUnavailable) list.push(WEB_SEARCH);
   return list;
 }
 
@@ -184,6 +240,8 @@ export class Brain {
       const turn = this.#newTurn(hooks, sessionId);
       return this.#finishTurn(turn, this.#say(turn, pick(this.session(sessionId), "stopped")));
     }
+    // "Hey Jericho, what's the weather" typed or sent as is: drop the wake word first
+    text = stripLeadingWake(text, settings.wakeWords);
     const turn = this.#newTurn(hooks, sessionId);
     const s = this.session(sessionId);
     const { text: corrected, fixes } = applyMishearings(text);
@@ -204,7 +262,9 @@ export class Brain {
       notes.push(`Your memory and notes were updated. Current version:\n${memory.renderForPrompt()}`);
       s.seenVersion = memory.version;
     }
-    if (looksHard(corrected)) notes.push("This is a plan, decision or comparison: call deep_think with the context before answering.");
+    if (isBriefingRequest(corrected)) notes.push("They want the morning briefing: call morning_briefing now and follow its howToSpeak.");
+    else if (looksHard(corrected)) notes.push("This is a plan, decision or comparison: call deep_think with the context before answering.");
+    else if (shouldOfferBriefing()) notes.push("First wake today: after answering, offer the morning briefing in one short question.");
     if (notes.length) s.messages.push({ role: "system", content: notes.join("\n\n") });
     return this.#finishTurn(turn, await this.#loop(sessionId, s, turn));
   }
@@ -263,7 +323,7 @@ export class Brain {
   #newTurn(hooks, sessionId) {
     const controller = new AbortController();
     const untrack = track("reply", sessionId, () => controller.abort());
-    return { hooks, spoken: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set(), signal: controller.signal, untrack };
+    return { hooks, spoken: [], sources: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set(), signal: controller.signal, untrack };
   }
 
   /**
@@ -310,7 +370,7 @@ export class Brain {
       rounds: turn.rounds,
       models: [...turn.models],
     };
-    return { reply, awaitingConfirmation: Boolean(result.awaitingConfirmation), timings };
+    return { reply, awaitingConfirmation: Boolean(result.awaitingConfirmation), timings, ...(turn.sources.length ? { sources: turn.sources } : {}) };
   }
 
   #declineAll(s, reason) {
@@ -341,6 +401,8 @@ export class Brain {
         }
         try {
           const result = await tool.run(t.input || {}, ctx);
+          if (tool.card) turn.hooks.onCard?.(tool.card(result)); // e.g. the Briefing card in the chat panel
+          if (t.name === "morning_briefing" && result.markets?.ok) turn.briefingMarkets = true;
           logAction("tool_result", { sessionId, tool: t.name, input: shortForLog(t.input), result: shortForLog(result) });
           return { type: "tool_result", tool_use_id: t.id, content: JSON.stringify(result) };
         } catch (err) {
@@ -360,6 +422,12 @@ export class Brain {
         response = await this.#streamClaude(s, turn);
       } catch (err) {
         if (turn.signal?.aborted) return { awaitingConfirmation: false, stopped: true }; // the kill switch: stop quietly
+        if (isWebSearchUnavailable(err) && !webSearchUnavailable) {
+          webSearchUnavailable = true;
+          logAction("web_search_unavailable", { sessionId, error: err.message });
+          this.sessions.delete(sessionId); // next conversation starts without the search tool
+          return this.#say(turn, "Web search isn't turned on for this API key, so I can't look that up right now. You can enable it in the Anthropic Console, under privacy settings.");
+        }
         logAction("error", { sessionId, where: "claude", error: err.message, cause: errorDetails(err) });
         // Drop the half-finished conversation so the next request starts clean.
         this.sessions.delete(sessionId);
@@ -379,6 +447,8 @@ export class Brain {
       const toolUses = response.content.filter((b) => b.type === "tool_use");
       if (response.stop_reason !== "tool_use" || toolUses.length === 0) {
         if (turn.spoken.length === 0) this.#say(turn, pick(s, "done"));
+        // the briefing always says the market numbers are information, not advice
+        if (turn.briefingMarkets && !/not (financial |investment )?advice/i.test(turn.spoken.join(" "))) this.#say(turn, DISCLAIMER);
         s.transcript.push({ who: "assistant", text: turn.spoken.join(" ") });
         logAction("reply", { sessionId, reply: turn.spoken.join(" ") });
         return { awaitingConfirmation: false };
@@ -485,6 +555,7 @@ export class Brain {
     const response = await stream.finalMessage();
     for (const sentence of splitter.flush()) this.#emit(turn, sentence);
     turn.models.add(response.model);
+    for (const src of sourcesFrom(response.content)) if (!turn.sources.some((x) => x.url === src.url)) turn.sources.push(src);
     return response;
   }
 }

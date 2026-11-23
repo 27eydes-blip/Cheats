@@ -27,6 +27,7 @@ Object.assign(process.env, {
   MY_PHONE_NUMBER: MINE,
   JERICHO_ACCESS_TOKEN: "local-secret",
   ELEVENLABS_API_KEY: "el-test-key",
+  JERICHO_NO_KEEPALIVE: "1", // fake network below replaces the built-in fetch
 });
 
 const requests = [];

@@ -4,6 +4,7 @@
 import { makeCallTool, recentCallsTool } from "./calls.js";
 import { claudeCodeResultTool, claudeCodeStatusTool, claudeCodeTool } from "./claudeCode.js";
 import { deepThinkTool } from "./deepThink.js";
+import { morningBriefingTool } from "./briefing.js";
 import { saveLessonTool, whatIveLearnedTool } from "./learning.js";
 import { lightsTool } from "./lights.js";
 import { pcTools } from "./pc.js";
@@ -27,6 +28,7 @@ const all = [
   saveLessonTool,
   whatIveLearnedTool,
   ...pcTools,
+  morningBriefingTool,
 ];
 
 export const tools = new Map(all.map((t) => [t.definition.name, t]));

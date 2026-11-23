@@ -35,6 +35,9 @@ export const secrets = {
   twilioToken: process.env.TWILIO_AUTH_TOKEN || "",
   twilioNumber: process.env.TWILIO_PHONE_NUMBER || "",
   myPhoneNumber: process.env.MY_PHONE_NUMBER || "",
+  // Morning briefing calendar (a private iCal link). Listed here so it's scrubbed from logs.
+  calendarIcsUrl: process.env.CALENDAR_ICS_URL || "",
+  calendarIcsUrlFromSettings: settings.briefing?.calendarIcsUrl || "",
 };
 if (!process.env.JERICHO_ACCESS_TOKEN && process.env.JARVIS_ACCESS_TOKEN) {
   console.warn("⚠️  Rename JARVIS_ACCESS_TOKEN to JERICHO_ACCESS_TOKEN in .env (the old name still works for now).");

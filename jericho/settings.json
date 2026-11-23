@@ -105,5 +105,16 @@
     "maxReadKB": 200,
     "apps": {}
   },
+  "location": {
+    "name": "Birmingham, Michigan",
+    "lat": 42.5467,
+    "lon": -83.2113,
+    "units": "fahrenheit"
+  },
+  "briefing": {
+    "autoTime": "",
+    "name": "",
+    "calendarIcsUrl": ""
+  },
   "logFile": "logs/actions.log"
 }

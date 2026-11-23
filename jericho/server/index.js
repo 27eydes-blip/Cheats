@@ -88,7 +88,10 @@ async function streamTurn(req, res, url) {
   if (!sessionId || typeof text !== "string" || !text.trim()) return sendJson(res, 400, { error: "sessionId and text are required" });
   res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
   const send = (obj) => res.write(`${JSON.stringify(obj)}\n`);
-  const hooks = { onSentence: (sentence) => send({ type: "sentence", text: sentence }) };
+  const hooks = {
+    onSentence: (sentence) => send({ type: "sentence", text: sentence }),
+    onCard: (card) => send({ type: "card", card }), // e.g. the Briefing card
+  };
   try {
     const result =
       url.pathname === "/api/ask"

@@ -324,6 +324,16 @@ practice. Test mode costs only the Claude part.
 Rules for automated and AI-voice calls vary by country and state. Calling businesses for your own
 bookings is the ordinary case, but check what applies where you live.
 
+## Web search, "Hey Jericho" and the morning briefing
+
+- **Web search:** ask about news, scores, prices or opening hours. Jericho searches (at most 3 searches per question), answers briefly and names the source out loud ("according to ESPN"). It never reads links aloud: they appear as buttons under the answer in the chat panel. If web search isn't enabled for your API key, Jericho says so and carries on without it (turn it on in the Anthropic Console, under privacy settings).
+- **Wake word:** "Jericho", "Jer", the misheard spellings, and the same with "hey", "hi", "ok" or "okay" in front ("hey jericho", "hey jer", "okay jericho"). The greeting and wake word are removed before your request reaches the brain.
+- **Morning briefing:** say "good morning", "morning briefing" or "brief me". You get your calendar (today, plus tomorrow's first event), the weather, and the direction of S&P 500, Nasdaq and Dow futures plus Bitcoin, in under 45 seconds, plus a Briefing card in the chat panel. Each part is fetched separately and cached for 5 minutes; if one fails, Jericho skips it and says so. Market moves are information only, not advice.
+  - Calendar: put your calendar's private iCal link in `.env` as `CALENDAR_ICS_URL` (see `.env.example`). It's read-only, needs no sign-in, and the link is never spoken or logged.
+  - Weather: Open-Meteo (free, no key). Set `location` in `settings.json` (default Birmingham, Michigan).
+  - Markets: Yahoo Finance, with Stooq and CoinGecko as fallbacks.
+  - `briefing.autoTime` (for example `"07:00"`, empty by default): on your first wake after that time each day, Jericho offers the briefing. `briefing.name` sets the name it greets you with (defaults to `calls.ownerName`).
+
 ## Settings (`settings.json`)
 
 None of these are secret. Keys live only in `.env`.

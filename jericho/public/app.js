@@ -1,6 +1,7 @@
 // Jericho in the browser: ears (speech recognition + wake word), mouth (audio playback)
 // and the gold visualizer. All thinking and all API keys live on the server.
 import { createPresence } from "./presence/index.js";
+import { wakeRegex as buildWakeRegex } from "./wake.js";
 
 const $ = (id) => document.getElementById(id);
 const orb = $("orb");
@@ -369,8 +370,11 @@ async function send(kind, text, { endAfter = false, typed = false } = {}) {
           turn.push(msg.text);
           bubble ||= addLog("jericho", "");
           bubble.textContent = bubble.textContent ? `${bubble.textContent} ${msg.text}` : msg.text;
+        } else if (msg.type === "card") {
+          addCard(msg.card);
         } else if (msg.type === "done") {
           result = msg;
+          if (msg.sources?.length) addSources(bubble || addLog("jericho", ""), msg.sources);
         }
       }
     }
@@ -399,6 +403,72 @@ async function send(kind, text, { endAfter = false, typed = false } = {}) {
   turn.finish();
   await playing;
   reportTiming(turn.stats, result.timings);
+}
+
+// ---- chat panel extras: web links and the Briefing card (built from elements, never HTML text) ----
+function node(tag, className, text) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+/** Links under an answer that used web search (they're never read aloud). */
+function addSources(bubble, sources) {
+  const box = node("span", "sources");
+  for (const s of sources) {
+    let host = "";
+    try {
+      host = new URL(s.url).hostname.replace(/^www\./, "");
+    } catch {
+      continue;
+    }
+    const a = node("a", "", s.title.length > 60 ? `${s.title.slice(0, 57)}…` : s.title);
+    a.href = s.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.title = host;
+    box.append(a);
+  }
+  if (box.children.length) bubble.append(box);
+}
+
+/** The Briefing card: the same info Jericho reads out. */
+function addCard(card) {
+  if (card?.kind !== "briefing") return;
+  const li = node("li", "card briefing");
+  li.append(node("p", "card-title", `Briefing · ${card.date}`));
+  const section = (label, part, fill) => {
+    const sec = node("div", "card-section");
+    sec.append(node("p", "card-label", label));
+    if (!part?.ok) sec.append(node("p", "card-skip", `Skipped: ${part?.reason || "unavailable"}`));
+    else fill(sec);
+    li.append(sec);
+  };
+  section("Calendar", card.calendar, (sec) => {
+    if (!card.calendar.today.length) sec.append(node("p", "", "Nothing on today."));
+    for (const e of card.calendar.today) sec.append(node("p", "", `${e.time} · ${e.title}`));
+    if (card.calendar.tomorrowFirst) sec.append(node("p", "card-muted", `Tomorrow: ${card.calendar.tomorrowFirst.time} · ${card.calendar.tomorrowFirst.title}`));
+  });
+  section("Weather", card.weather, (sec) => {
+    const w = card.weather;
+    sec.append(node("p", "", `${w.place}: ${w.now}°${w.units}, ${w.sky}. High ${w.high}°, low ${w.low}°, rain ${w.rain}%.`));
+    sec.append(node("p", "card-muted", w.advice));
+  });
+  section("Markets", card.markets, (sec) => {
+    for (const q of card.markets.quotes) {
+      if (!q.ok) {
+        sec.append(node("p", "card-muted", `${q.name}: unavailable`));
+        continue;
+      }
+      const arrow = q.direction === "up" ? "▲" : q.direction === "down" ? "▼" : "•";
+      const row = node("p", `quote ${q.direction}`, `${arrow} ${q.name} ${q.changePct > 0 ? "+" : ""}${q.changePct.toFixed(2)}% `);
+      row.append(node("span", "card-muted", q.basis));
+      sec.append(row);
+    }
+  });
+  li.append(node("p", "card-note", card.markets?.disclaimer || "Market moves are for information only, not financial advice."));
+  logEl.prepend(li);
 }
 
 // ---- kill switch: "Jericho, stop", "cancel everything", the Stop button or Esc -------------
@@ -486,8 +556,9 @@ function escapeWords(list) {
     .join("|");
 }
 
+// "Jericho", "Hey Jericho", "Okay Jer", "Hey, Jerico"... (see wake.js)
 function wakeRegex(flags = "i") {
-  return new RegExp(`\\b(?:hey\\s+|ok\\s+|okay\\s+)?(?:${escapeWords(config.wakeWords)})\\b[\\s,.!?]*`, flags);
+  return buildWakeRegex(config.wakeWords, flags);
 }
 
 /** If the utterance contains an end phrase, return what's left once it (and any wake word) is removed. */
