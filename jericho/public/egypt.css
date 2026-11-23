@@ -216,3 +216,97 @@ body[data-state="thinking"] .state-glyph { --ch: "\131A3"; --icon: url("data:ima
   .glyph-loader .hg { animation: none; opacity: 0.8; }
   .hg, .presence-page .top h1.wm-text { transition: none; }
 }
+
+/* ---- live corner readouts: time, weather, next event ---- */
+.hud-live { position: fixed; inset: 0; pointer-events: none; z-index: 3; font-family: var(--label-font); color: var(--gold); }
+.readout {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 230px;
+  padding: 6px 10px 7px 12px;
+  border-left: 1px solid rgb(227 180 92 / 45%);
+  background: linear-gradient(90deg, rgb(5 4 3 / 62%), rgb(5 4 3 / 0%));
+  text-shadow: 0 1px 2px rgb(0 0 0 / 85%);
+  transition: opacity 0.8s ease;
+}
+.readout[hidden] { display: none; }
+.r-label { display: flex; align-items: center; gap: 6px; font-size: 0.66rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold-deep); }
+.r-label .hg { font-size: 0.95rem; color: var(--gold); }
+.r-value { font-size: 1rem; letter-spacing: 0.08em; color: var(--gold-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-time .r-value { font-size: 1.35rem; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+.r-sub { font-size: 0.7rem; letter-spacing: 0.14em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-time { left: 18px; top: calc(max(14px, env(safe-area-inset-top)) + 122px); }
+.r-event { left: 18px; top: calc(max(14px, env(safe-area-inset-top)) + 196px); }
+.r-weather {
+  right: 46px;
+  top: calc(max(14px, env(safe-area-inset-top)) + 80px);
+  align-items: flex-end;
+  text-align: right;
+  border-left: 0;
+  border-right: 1px solid rgb(227 180 92 / 45%);
+  padding: 6px 12px 7px 10px;
+  background: linear-gradient(270deg, rgb(5 4 3 / 62%), rgb(5 4 3 / 0%));
+}
+.r-weather .r-label { flex-direction: row-reverse; }
+/* listening: the readouts' accents turn red with everything else */
+body[data-state="active"] .readout, body[data-state="confirm"] .readout { border-color: rgb(255 80 60 / 50%); }
+body[data-state="active"] .r-label .hg, body[data-state="confirm"] .r-label .hg { color: #ffb0a2; }
+
+/* settings panel: the startup animation switch */
+.look-panel label.check { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.look-panel label.check input { accent-color: var(--gold); width: auto; margin: 0; }
+
+/* ---- startup sequence (body.booting, about 5 seconds; see presence/index.js) ---- */
+body.booting.presence-ready .glyph-loader { opacity: 1; } /* stay until the sequence ends */
+body.booting .glyph-loader .hg { animation: glyph-light 0.8s ease forwards; animation-delay: calc(var(--i) * 0.28s); }
+@keyframes glyph-light {
+  0% { opacity: 0; transform: translateY(4px) scale(0.9); text-shadow: 0 0 0 transparent; }
+  45% { opacity: 1; transform: none; text-shadow: 0 0 18px rgb(255 214 140 / 95%), 0 0 4px rgb(255 240 200 / 90%); color: var(--gold-bright); }
+  100% { opacity: 0.9; transform: none; }
+}
+body.booting .glyph-row .hg { opacity: 0; animation: glyph-light 0.7s ease forwards; }
+body.booting .glyph-row.left .hg:nth-child(4), body.booting .glyph-row.right .hg:nth-child(1) { animation-delay: 1.5s; }
+body.booting .glyph-row.left .hg:nth-child(3), body.booting .glyph-row.right .hg:nth-child(2) { animation-delay: 1.75s; }
+body.booting .glyph-row.left .hg:nth-child(2), body.booting .glyph-row.right .hg:nth-child(3) { animation-delay: 2s; }
+body.booting .glyph-row.left .hg:nth-child(1), body.booting .glyph-row.right .hg:nth-child(4) { animation-delay: 2.25s; }
+body.booting .glyph-row.right .hg { animation-name: glyph-light-mirrored; }
+@keyframes glyph-light-mirrored {
+  0% { opacity: 0; transform: scaleX(-1) translateY(4px); }
+  45% { opacity: 1; transform: scaleX(-1); text-shadow: 0 0 18px rgb(255 214 140 / 95%); color: var(--gold-bright); }
+  100% { opacity: 1; transform: scaleX(-1); }
+}
+/* the wordmark carves in from left to right, with a bright chisel edge */
+body.booting.presence-page .top h1.wm-text {
+  animation: wm-carve 1.6s cubic-bezier(0.25, 0.7, 0.2, 1) 2.3s both, wm-sweep 9s ease-in-out 4s infinite;
+}
+@keyframes wm-carve {
+  from { clip-path: inset(-30% 100% -30% -10%); opacity: 0.4; }
+  to { clip-path: inset(-30% -10% -30% -10%); opacity: 1; }
+}
+body.booting .wm-line { animation: line-draw 0.9s ease 2s both; }
+@keyframes line-draw { from { transform: scaleX(0); } }
+body.booting .wm-line.right { animation-name: line-draw-right; }
+@keyframes line-draw-right { from { transform: scaleX(0); } to { transform: scaleX(-1); } }
+body.booting .status-word, body.booting .hud-live, body.booting .top-links, body.booting .top::after { opacity: 0; }
+.status-word, .hud-live, .top-links, .presence-page .top::after { transition: opacity 1s ease; }
+
+/* ---- phones: the HUD collapses to the time ---- */
+@media (max-width: 600px) {
+  .r-event, .r-weather { display: none !important; }
+  .presence-page .hud-corner.tl { display: none; }
+  .r-time { top: calc(max(14px, env(safe-area-inset-top)) + 112px); left: 14px; padding: 4px 8px 5px 10px; }
+  .r-time .r-value { font-size: 1.05rem; }
+  .r-time .r-sub, .r-time .r-label { display: none; }
+}
+/* short windows: keep the readouts clear of the orb */
+@media (max-height: 560px) { .r-event { display: none !important; } }
+
+/* ---- low power: the readouts stay, without the soft backgrounds ---- */
+body.low-power .readout { background: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.booting .glyph-loader .hg, body.booting .glyph-row .hg, body.booting .wm-line { animation: none; opacity: 0.9; }
+  .status-word, .hud-live, .top-links, .presence-page .top::after { transition: none; }
+}

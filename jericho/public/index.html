@@ -40,6 +40,13 @@
     <div class="hud-ring"><span></span></div>
   </div>
 
+  <!-- Live corner readouts (filled in by hud.js; a readout that can't be fetched stays hidden) -->
+  <div class="hud-live">
+    <div class="readout r-time"><span class="r-label"><span class="hg g-sun" aria-hidden="true"></span>Time</span><span class="r-value" id="hud-time">--:--</span><span class="r-sub" id="hud-date"></span></div>
+    <div class="readout r-event" id="hud-event" hidden><span class="r-label"><span class="hg g-scarab" aria-hidden="true"></span>Next</span><span class="r-value" id="hud-event-title"></span><span class="r-sub" id="hud-event-when"></span></div>
+    <div class="readout r-weather" id="hud-weather" hidden><span class="r-label"><span class="hg g-water" aria-hidden="true"></span>Weather</span><span class="r-value" id="hud-weather-now"></span><span class="r-sub" id="hud-weather-sub"></span></div>
+  </div>
+
   <header class="top">
     <div class="wordmark">
       <span class="glyph-row left" aria-hidden="true"><span class="hg g-was outer"></span><span class="hg g-falcon outer"></span><span class="hg g-feather"></span><span class="hg g-eye"></span></span>
@@ -101,6 +108,7 @@
         <option value="ultra">Ultra</option>
       </select>
     </label>
+    <label class="check"><input id="look-boot" type="checkbox" checked> Startup animation</label>
     <label>Interrupt while talking
       <select id="barge-mode">
         <option value="off">Off</option>
@@ -117,5 +125,6 @@
 
   <script src="app.js" type="module"></script>
   <script src="egypt.js" type="module"></script>
+  <script src="hud.js" type="module"></script>
 </body>
 </html>

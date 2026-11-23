@@ -48,6 +48,7 @@ function webglAvailable() {
  */
 export function createPresence({ onTap }) {
   const pending = { state: "off", mic: 0, speech: [null, false], calling: false };
+  const boot = planBoot();
   let impl = null;
   let look = { ...DEFAULT_LOOK, ...store.get("jericho-look", {}) };
   const stateWord = $("orb-label");
@@ -74,6 +75,7 @@ export function createPresence({ onTap }) {
     impl.setMicLevel(pending.mic);
     impl.setSpeechSource(...pending.speech);
     impl.setCalling?.(pending.calling);
+    boot.attach(impl);
     document.body.classList.add("presence-ready");
     if (new URLSearchParams(location.search).has("debug")) window.__presence = impl; // for testing only
   }
@@ -235,6 +237,11 @@ export function createPresence({ onTap }) {
     save();
     impl?.setQuality?.(look.quality); // applies straight away
   });
+  const bootIn = $("look-boot");
+  if (bootIn) {
+    bootIn.checked = !store.get(BOOT_OFF_KEY, false);
+    bootIn.addEventListener("change", () => store.set(BOOT_OFF_KEY, !bootIn.checked));
+  }
   // live readout: the level in use and the measured frame rate
   setInterval(() => {
     const info = impl?.info?.();
@@ -253,4 +260,82 @@ export function createPresence({ onTap }) {
   });
 
   return proxy;
+}
+
+// ---- startup sequence ---------------------------------------------------------------------
+// On the first load: hieroglyphs light up one by one, the orb powers on from a point with a
+// flash, the rings spin up and the wordmark carves in (about 5 seconds), with a quiet hum if
+// the browser allows sound. Off in the settings panel, skipped on a reload within 10 minutes
+// and with reduced motion. Purely visual: nothing waits for it.
+const BOOT_OFF_KEY = "jericho-boot-off";
+const LAST_LOAD_KEY = "jericho-last-load";
+const BOOT_ORB_AT = 1200; // ms after the page starts: the orb powers on
+const BOOT_ORB_MS = 3800;
+const BOOT_TOTAL = 5400;
+
+function planBoot() {
+  const off = store.get(BOOT_OFF_KEY, false);
+  const last = Number(store.get(LAST_LOAD_KEY, 0)) || 0;
+  store.set(LAST_LOAD_KEY, Date.now());
+  const on = !reduced && !off && !(Date.now() - last < 10 * 60_000);
+  const t0 = performance.now();
+  if (on) {
+    document.body.classList.add("booting");
+    setTimeout(() => document.body.classList.remove("booting"), BOOT_TOTAL);
+  }
+  return {
+    on,
+    attach(impl) {
+      if (!on) return;
+      const late = performance.now() - t0;
+      if (late > 3500) return; // the scene took too long to start: just show it
+      const delay = Math.max(0, BOOT_ORB_AT - late);
+      impl.boot?.({ delay, dur: BOOT_ORB_MS });
+      setTimeout(hum, delay);
+    },
+  };
+}
+
+/** A low, quiet power-on hum. Only if the browser already allows sound; never asks. */
+async function hum() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    if (ctx.state !== "running") await Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 250))]);
+    if (ctx.state !== "running") {
+      ctx.close().catch(() => {});
+      return;
+    }
+    const now = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0, now);
+    out.gain.linearRampToValueAtTime(0.045, now + 0.9);
+    out.gain.setValueAtTime(0.045, now + 2.4);
+    out.gain.linearRampToValueAtTime(0, now + 4);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 380;
+    lp.connect(out);
+    out.connect(ctx.destination);
+    const voices = [
+      { type: "sine", f: [42, 55], g: 1 },
+      { type: "triangle", f: [84, 110], g: 0.35 },
+      { type: "sine", f: [126, 165], g: 0.15 },
+    ];
+    for (const v of voices) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = v.type;
+      o.frequency.setValueAtTime(v.f[0], now);
+      o.frequency.exponentialRampToValueAtTime(v.f[1], now + 1.6); // the pitch rises as it powers on
+      g.gain.value = v.g;
+      o.connect(g).connect(lp);
+      o.start(now);
+      o.stop(now + 4.1);
+    }
+    setTimeout(() => ctx.close().catch(() => {}), 4500);
+  } catch {
+    /* no sound: that's fine */
+  }
 }

@@ -221,3 +221,18 @@ test("claude missing: Jericho says so and names the fix, without asking for a ye
   assert.equal(st.status, "FAIL");
   assert.match(st.reason, /Install Claude Code/);
 });
+
+// ---- HUD: the next calendar event --------------------------------------------------------------
+test("HUD next event: later today first, then the next days; all-day events skipped", async () => {
+  const { nextEvent, parseIcs } = await import("../server/briefing/calendar.js");
+  const now = new Date(2026, 10, 23, 12, 0); // Monday noon
+  const ics = (lines) => parseIcs(["BEGIN:VCALENDAR", ...lines, "END:VCALENDAR"].join("\r\n"));
+  const ev = (start, title, extra = []) => ["BEGIN:VEVENT", `DTSTART:${start}`, `SUMMARY:${title}`, ...extra, "END:VEVENT"];
+  let n = nextEvent(ics([...ev("20261123T090000", "Done already"), ...ev("20261123T150000", "Dentist"), ...ev("20261124T080000", "Gym")]), now);
+  assert.deepEqual([n.title, n.day, n.time], ["Dentist", "Today", "3:00 PM"]);
+  n = nextEvent(ics([...ev("20261123T090000", "Done already"), ...ev("20261124T080000", "Gym"), "BEGIN:VEVENT", "DTSTART;VALUE=DATE:20261123", "SUMMARY:Holiday", "END:VEVENT"]), now);
+  assert.deepEqual([n.title, n.day], ["Gym", "Tomorrow"]);
+  n = nextEvent(ics(ev("20261126T100000", "Call")), now);
+  assert.equal(n.day, "Thu");
+  assert.equal(nextEvent(ics([]), now), null);
+});

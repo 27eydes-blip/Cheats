@@ -14,6 +14,8 @@ import { callSettings } from "./calls/policy.js";
 import { errorDetails, setWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
 import { selfTest } from "./selftest.js";
+import { getNextEvent } from "./briefing/calendar.js";
+import { getWeather } from "./briefing/weather.js";
 import { controlInfo } from "./tools/pc.js";
 import { streamSpeech } from "./tts.js";
 
@@ -192,6 +194,14 @@ async function handler(req, res) {
     if (req.method === "POST" && url.pathname === "/api/stop") {
       const { sessionId } = await readJson(req);
       return sendJson(res, 200, { ok: true, ...brain.stopAll(String(sessionId || "")) });
+    }
+
+    // The page's corner readouts: current weather and the next calendar event (each may be missing).
+    if (req.method === "GET" && url.pathname === "/api/hud") {
+      const [w, next] = await Promise.all([getWeather().catch(() => ({ ok: false })), getNextEvent().catch(() => ({ ok: false }))]);
+      const weather = w.ok ? { ok: true, place: w.place, now: w.now, units: w.units, sky: w.sky, high: w.high, low: w.low } : { ok: false };
+      const event = next.ok ? { ok: true, title: String(next.title).slice(0, 80), day: next.day, time: next.time } : { ok: false };
+      return sendJson(res, 200, { weather, event });
     }
 
     // The Control section of the Memory page: allowed folders, tiers and the last 20 actions.

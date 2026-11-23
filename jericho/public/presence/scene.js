@@ -399,7 +399,12 @@ export async function createScene(canvas, opts) {
   // ---- gyroscope: three thin gold rings close around the orb, each turning on its own axis,
   // with small bright beads travelling round them --------------------------------------------
   // fewer beads and rays on lower quality levels
-  const DETAIL = { low: { beads: 2, rays: 10 }, medium: { beads: 3, rays: 16 }, high: { beads: 5, rays: 24 }, ultra: { beads: 7, rays: 32 } };
+  const DETAIL = {
+    low: { beads: 2, rays: 10, bgLines: 0, ripples: 3 },
+    medium: { beads: 3, rays: 16, bgLines: 3, ripples: 4 },
+    high: { beads: 5, rays: 24, bgLines: 5, ripples: 6 },
+    ultra: { beads: 7, rays: 32, bgLines: 7, ripples: 6 },
+  };
   const gyroSpecs = [
     { r: 1.12, tube: 0.009, axis: new THREE.Vector3(1, 0, 0), tilt: [0.35, 0, 0.2], speed: 0.22 },
     { r: 1.24, tube: 0.008, axis: new THREE.Vector3(0, 1, 0), tilt: [1.3, 0.4, 0], speed: -0.17 },
@@ -507,8 +512,112 @@ export async function createScene(canvas, opts) {
   rays.renderOrder = -1; // drawn first, behind the orb
   scene.add(rays);
   function applyDetail() {
-    rayMat.uniforms.uRays.value = DETAIL[TIER_ORDER[tierIdx]].rays;
+    const d = DETAIL[TIER_ORDER[tierIdx]];
+    rayMat.uniforms.uRays.value = d.rays;
     buildGyroBeads();
+    bg.lines.material.uniforms.uLines.value = d.bgLines;
+    bg.lines.visible = d.bgLines > 0;
+    bg.rippleCount = d.ripples;
+  }
+
+  // ---- reactive background: a perspective grid of light under the orb, faint energy lines
+  // behind it. Jericho's voice sends ripples of light out across the grid. The lines run on
+  // their own clock, which stops (and they turn red) exactly when the particles freeze.
+  // Kept dim so the text stays readable. Fewer lines on Low and Medium.
+  const MAX_RIPPLES = 6;
+  const bg = {
+    ripples: Array.from({ length: MAX_RIPPLES }, () => new THREE.Vector2(0, 0)), // radius, strength
+    rippleCount: 4,
+    clock: 0,
+    fade: 1,
+  };
+  const gridMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uRed: uniforms.uRed,
+      uGlow: uniforms.uGlow,
+      uIntensity: { value: 0.0 },
+      uRipples: { value: bg.ripples },
+      uClock: { value: 0 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec3 vWorld;
+      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: /* glsl */ `
+      uniform float uRed, uGlow, uIntensity, uClock; uniform vec2 uRipples[${MAX_RIPPLES}];
+      varying vec3 vWorld;
+      float lineAA(vec2 p){ vec2 g = abs(fract(p - 0.5) - 0.5) / max(fwidth(p), vec2(1e-4)); return 1.0 - min(min(g.x, g.y), 1.0); }
+      void main(){
+        vec2 p = vWorld.xz;
+        float d = length(p);
+        float grid = lineAA(p * 0.5);                        // 2-unit cells, always about a pixel wide
+        float major = lineAA(p * 0.1) * 0.6;                 // every fifth line a little brighter
+        float circle = 1.0 - min(abs(fract(d * 0.25 + uClock * 0.02) - 0.5) / max(fwidth(d * 0.25), 1e-4), 1.0); // faint rings
+        float rip = 0.0;
+        for (int i = 0; i < ${MAX_RIPPLES}; i++) {
+          vec2 r = uRipples[i];
+          if (r.y <= 0.001) continue;
+          rip += exp(-pow((d - r.x) * 1.4, 2.0)) * r.y;
+        }
+        float fade = smoothstep(30.0, 7.0, d) * smoothstep(1.2, 3.5, d);   // fades far away and right under the orb
+        float light = (max(grid, major) * (0.55 + rip * 4.0) + circle * 0.18 + rip * 0.12) * fade;
+        vec3 col = mix(vec3(1.0, 0.74, 0.36), vec3(0.85, 0.08, 0.05), uRed * 0.85);
+        float a = light * uIntensity * (0.7 + uGlow * 0.4);
+        gl_FragColor = vec4(col * a, a);
+      }`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  bg.grid = new THREE.Mesh(new THREE.PlaneGeometry(64, 64), gridMat);
+  bg.grid.rotation.x = -Math.PI / 2;
+  bg.grid.position.y = -2.7;
+  bg.grid.renderOrder = -3;
+  bg.grid.frustumCulled = false;
+  scene.add(bg.grid);
+
+  const linesMat = new THREE.ShaderMaterial({
+    uniforms: { uRed: uniforms.uRed, uLevel: uniforms.uLevel, uIntensity: { value: 0 }, uClock: { value: 0 }, uLines: { value: 5 } },
+    vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */ `
+      uniform float uRed, uLevel, uIntensity, uClock; uniform int uLines; varying vec2 vUv;
+      void main(){
+        float x = vUv.x * 2.0 - 1.0;
+        float y = vUv.y * 2.0 - 1.0;
+        float px = fwidth(y);
+        float sum = 0.0;
+        for (int i = 0; i < 7; i++) {
+          if (i >= uLines) break;
+          float fi = float(i);
+          float base = -0.55 + fi * 0.18 + 0.05 * sin(fi * 2.3);
+          float yy = base + 0.09 * sin(x * (2.2 + fi * 0.37) + uClock * (0.35 + fi * 0.05) + fi * 1.7)
+                          + 0.035 * sin(x * (6.1 - fi * 0.4) - uClock * 0.6 + fi);
+          float dy = abs(y - yy);
+          float core = 1.0 - smoothstep(px * 0.6, px * 1.8, dy);           // a crisp hair-line
+          float glow = exp(-dy * dy / 0.0012) * 0.25;
+          float travel = 0.35 + 0.65 * pow(0.5 + 0.5 * sin(x * 5.0 - uClock * 1.4 + fi * 2.1), 3.0); // light running along it
+          sum += (core + glow) * travel * (0.6 + 0.4 * fract(fi * 0.618));
+        }
+        float edge = smoothstep(1.0, 0.55, abs(x)) * smoothstep(1.0, 0.6, abs(y));
+        vec3 col = mix(vec3(1.0, 0.76, 0.38), vec3(0.85, 0.08, 0.05), uRed * 0.85);
+        float a = sum * edge * uIntensity * (1.0 + uLevel * 0.8);
+        gl_FragColor = vec4(col * a, a);
+      }`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  bg.lines = new THREE.Mesh(new THREE.PlaneGeometry(46, 20), linesMat);
+  bg.lines.renderOrder = -2;
+  bg.lines.frustumCulled = false;
+  scene.add(bg.lines);
+  function spawnRipple(strength) {
+    let slot = -1;
+    for (let i = 0; i < bg.rippleCount; i++) if (bg.ripples[i].y <= 0.001) { slot = i; break; }
+    if (slot < 0) {
+      slot = 0;
+      for (let i = 1; i < bg.rippleCount; i++) if (bg.ripples[i].x > bg.ripples[slot].x) slot = i; // reuse the oldest
+    }
+    bg.ripples[slot].set(1.5, Math.min(1, 0.35 + strength * 0.65));
   }
 
   // ---- speech pulses: glowing ring waves that spread from the orb with Jericho's voice ----------
@@ -677,6 +786,12 @@ export async function createScene(canvas, opts) {
   let last = performance.now();
   let arcTimer = 0;
   let running = true;
+  // the startup sequence: { start, delay, dur } in ms, null when not booting
+  let boot = null;
+  const smooth = (a, b, x) => {
+    const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return k * k * (3 - 2 * k);
+  };
   const coreScreen = new THREE.Vector3();
   const light = new THREE.Vector2(0.5, 0.5);
 
@@ -752,6 +867,19 @@ export async function createScene(canvas, opts) {
     look.level += (rawLevel - look.level) * lk;
     const level = look.level * (reducedMotion ? 0.5 : 1);
 
+    // ---- startup: a point of light, a flash, the orb grows, the rings spin up -----------------
+    let bootK = 1;
+    if (boot) {
+      bootK = Math.max(0, (now - boot.start - boot.delay) / boot.dur);
+      if (bootK >= 1) boot = null;
+    }
+    const grow = boot ? smooth(0.12, 0.55, bootK) : 1;
+    const flash = boot ? Math.exp(-Math.pow((bootK - 0.14) / 0.045, 2)) : 0;
+    const spinUp = boot ? 1 + 7 * Math.sin(Math.PI * smooth(0.15, 1.0, bootK)) : 1;
+    // overshoot a little, like something powering on
+    const scaleIn = boot ? Math.max(0.035, grow + Math.sin(grow * Math.PI) * 0.08) : 1;
+    being.scale.setScalar(scaleIn);
+
     uniforms.uTime.value = t;
     uniforms.uGlow.value = look.glow * (0.6 + 0.4 * glowScale) + look.calling * 0.2;
     uniforms.uBreath.value = look.breath;
@@ -801,7 +929,7 @@ export async function createScene(canvas, opts) {
     // gyroscope: each ring turns on its own axis, beads travel round them
     const gyroSpeed = (0.45 + look.ringSpeed * 0.55) * calm;
     for (const g of gyro) {
-      g.spin.rotateOnAxis(g.axis, dt * g.speed * gyroSpeed);
+      g.spin.rotateOnAxis(g.axis, dt * g.speed * gyroSpeed * (boot ? spinUp : 1));
       g.pivot.rotation.y += dt * 0.02 * Math.sign(g.speed) * calm;
     }
     beadMat.uniforms.uBeadTime.value += dt * gyroSpeed;
@@ -818,6 +946,7 @@ export async function createScene(canvas, opts) {
       const peak = level - lastPulseLevel > 0.15;
       if (pulseTimer <= 0 || peak) {
         spawnPulse(level);
+        spawnRipple(level); // and a ripple of light across the grid
         pulseTimer = (0.22 + (1 - level) * 0.3) * (reducedMotion ? 2.5 : 1);
       }
     }
@@ -835,11 +964,51 @@ export async function createScene(canvas, opts) {
       pz.material.uniforms.uAlpha.value = (0.25 + pz.userData.strength * 0.35) * (1 - age) * (1 - age) * glowScale;
     }
 
+    // (the startup values are worked out at the top of the frame)
+    if (boot) {
+      heart.scale.multiplyScalar(1 + flash * 26 + (1 - grow) * 3);
+      heart.material.opacity = Math.min(1, heart.material.opacity + flash + (bootK < 0.12 ? 0.6 : 0));
+      halo.material.opacity *= grow + flash * 2;
+      uniforms.uPSpread.value *= 0.04 + 0.96 * smooth(0.14, 0.85, bootK);
+    }
+
+    // ---- background grid, ripples and energy lines --------------------------------------------
+    bg.fade = boot ? smooth(0.45, 1.0, bootK) : Math.min(1, bg.fade + dt);
+    bg.clock += dt * motion * (1 - fx.freeze); // stops when the particles freeze
+    gridMat.uniforms.uClock.value = bg.clock;
+    linesMat.uniforms.uClock.value = bg.clock;
+    const dim = (0.6 + 0.4 * glowScale) * bg.fade * (1 - fx.red * 0.2);
+    gridMat.uniforms.uIntensity.value = 0.3 * dim * (1 + look.calling * 0.3);
+    linesMat.uniforms.uIntensity.value = 0.3 * dim * (0.85 + look.glow * 0.3);
+    gridMat.uniforms.uRed.value = fx.red;
+    // fade the floor out when the camera is turned underneath it
+    gridMat.uniforms.uIntensity.value *= smooth(-2.0, 0.5, camera.position.y);
+    for (let i = 0; i < MAX_RIPPLES; i++) {
+      const r = bg.ripples[i];
+      if (r.y <= 0.001) continue;
+      if (i >= bg.rippleCount) {
+        r.y = 0;
+        continue;
+      }
+      // ripples travel outward at ~6 units/s (slower with reduced motion) and fade as they go;
+      // they stop where they are while the scene is frozen
+      r.x += dt * (reducedMotion ? 2.5 : 6) * (1 - fx.freeze);
+      r.y *= Math.exp(-dt * (reducedMotion ? 0.9 : 0.55));
+      if (r.x > 34 || r.y < 0.01) r.y = 0;
+    }
+    // the lines hang far behind the orb, facing the camera
+    bg.lines.quaternion.copy(camera.quaternion);
+    bg.lines.position.copy(camera.position).normalize().multiplyScalar(-13);
+
     // rings at their own speeds and depths
+    rings.forEach((ring, i) => {
+      if (boot) ring.mesh.scale.setScalar(smooth(0.2 + i * 0.07, 0.5 + i * 0.07, bootK));
+    });
     for (const ring of rings) {
-      ring.mesh.rotation.z += dt * ring.speed * look.ringSpeed * (1 - fx.red * 0.75) * motion;
+      ring.mesh.rotation.z += dt * ring.speed * look.ringSpeed * (1 - fx.red * 0.75) * motion * spinUp;
       ring.pivot.rotation.y += dt * 0.03 * ring.speed * motion;
-      ring.mesh.scale.setScalar(1 + level * 0.06 * Math.sign(ring.speed) + look.calling * 0.03 * Math.sin(t * 1.5 + ring.r));
+      const ringIn = boot ? Math.max(0.001, ring.mesh.scale.x) : 1;
+      ring.mesh.scale.setScalar(ringIn * (1 + level * 0.06 * Math.sign(ring.speed) + look.calling * 0.03 * Math.sin(t * 1.5 + ring.r)));
     }
 
     // arcs crackle while thinking
@@ -888,7 +1057,7 @@ export async function createScene(canvas, opts) {
       const onScreen = coreScreen.z < 1 && Math.abs(coreScreen.x) < 1.2 && Math.abs(coreScreen.y) < 1.2 ? 1 : 0;
       pipeline.render({
         // a little less bloom while red, so the red stays red instead of washing out to white
-        bloom: (0.55 + look.glow * 0.3 + level * 0.25 + look.calling * 0.15) * glowScale * (1 - fx.red * 0.35),
+        bloom: (0.55 + look.glow * 0.3 + level * 0.25 + look.calling * 0.15) * glowScale * (1 - fx.red * 0.35) * (1 + flash * 1.6),
         light,
         lightVisible: onScreen,
         rays: (0.25 + look.glow * 0.15) * (1 - fx.red * 0.5) * glowScale, // the soft ray fan now does most of this
@@ -985,6 +1154,12 @@ export async function createScene(canvas, opts) {
   return {
     setState(s) {
       mode = s;
+    },
+    /** Startup sequence: the orb powers on from a point after `delay` ms, over `dur` ms. */
+    boot({ delay = 0, dur = 3800 } = {}) {
+      if (reducedMotion) return;
+      boot = { start: performance.now(), delay, dur };
+      bg.fade = 0;
     },
     setMicLevel(v) {
       micLevel = v;

@@ -140,6 +140,12 @@ Changes between states always ease in, never snap.
   and calmer. The red freeze still happens, with a gentler drift and tremble.
 - **No WebGL:** without it, the earlier 2D gold visualizer is used instead.
 
+### Background, live HUD and startup
+
+- **Background:** a faint perspective grid of light under the orb and thin gold energy lines behind it. When Jericho speaks, ripples of light travel out across the grid with his real voice level. When you talk while he listens, the lines stop and turn red with the particles. Low quality shows the grid only; Medium adds 3 lines, High 5, Ultra 7.
+- **Live HUD:** the time and date, the current weather (same Open-Meteo data as the weather tool) and your next calendar event (same iCal link as the calendar tools), refreshed every 5 minutes. A readout that can't be fetched just stays hidden. On phones it collapses to the time.
+- **Startup:** on the first load the hieroglyphs light up one by one, the orb powers on from a point with a flash, the rings spin up and the wordmark carves in (about 5 seconds), with a quiet hum if your browser already allows sound. Turn it off with **Startup animation** in the settings panel (sun icon). It's skipped when you reload within 10 minutes, and with reduced motion.
+
 ## Memory and learning how you talk
 
 - "Jericho, remember that I take my coffee black" saves a memory to `data/memory.json`, with the

@@ -220,3 +220,28 @@ export async function checkCalendar() {
       : "link unreachable: couldn't connect to the calendar server";
   return { status: "FAIL", reason: why };
 }
+
+/** The next timed event from now (today, then the next 7 days), for the page's HUD. */
+export function nextEvent(events, now = new Date()) {
+  const today = startOfDay(now);
+  for (let i = 0; i < 8; i++) {
+    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    const upcoming = eventsOnDay(events, day).filter((e) => !e.allDay && (i > 0 || e.start > now));
+    if (upcoming.length) {
+      const e = upcoming[0];
+      const when = i === 0 ? "Today" : i === 1 ? "Tomorrow" : e.start.toLocaleDateString("en-US", { weekday: "short" });
+      return { title: e.title, day: when, time: e.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }), at: e.start.toISOString() };
+    }
+  }
+  return null;
+}
+
+/** For the HUD: the next event, or { ok: false } quietly. Never includes the link. */
+export async function getNextEvent(now = new Date()) {
+  const url = calendarUrl();
+  if (!url) return { ok: false };
+  const r = await readCalendar(url);
+  if (!r.ok) return { ok: false };
+  const next = nextEvent(r.events, now);
+  return next ? { ok: true, ...next } : { ok: false, reason: "nothing coming up" };
+}
