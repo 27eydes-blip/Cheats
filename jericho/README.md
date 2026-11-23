@@ -91,11 +91,28 @@ Changes between states always ease in, never snap.
 - **Moving around:** drag to rotate, scroll or pinch to zoom. Moving the mouse (or tilting the
   phone) adds a little parallax. A quick tap on the light does what the old start button did.
 - **Chat:** the bubbles sit at the bottom; **Hide chat** tucks them away.
-- **Settings:** the ✺ button opens a small panel for glow strength, particle amount and quality
-  (Auto, High or Low power), saved in your browser.
-- **Low power:** chosen automatically on phones, small screens and slower machines. It uses
-  fewer particles and no bloom. A device that turns out to run below about 38 frames a second
-  switches to it after a few seconds.
+- **Settings:** the ✺ button opens a small panel for glow strength, particle amount and quality,
+  saved in your browser. The panel shows the level in use, the measured frame rate, the drawing
+  resolution and the antialiasing.
+- **Image quality:**
+  - Rendered in HDR at your screen's full pixel density, up to 2× and never beyond native 4K.
+  - Antialiased with MSAA, or FXAA where that isn't available.
+  - ACES filmic tone mapping.
+  - Bloom with a tight core and a wide soft falloff.
+  - Light shafts from the core.
+  - A faint lens streak, and chromatic aberration on the brightest parts.
+  - Very light film grain so dark gradients don't band.
+  - Particles blur gently the further they are from the being.
+
+| Quality | Pixel density | Antialiasing | Effects | Particles |
+|---|---|---|---|---|
+| Low | up to 1.25× | FXAA | no bloom, grain | 35% |
+| Medium | up to 1.5× | 4× MSAA | bloom, lens streak and aberration, grain | 65% |
+| High | up to 2× | 4× MSAA | two-layer bloom, light shafts, lens, grain | 100% |
+| Ultra | up to 2× (4K cap) | 8× MSAA where supported | the same with finer shafts and core detail | 140% |
+| Auto (default) | — | — | measures the frame rate every 2 seconds: drops a level below 50 fps, goes up a level after 6 seconds at 57 fps or more, and won't retry a level that was too slow | — |
+
+  Auto starts at High on computers and Medium on phones (where it stays at Low or Medium).
 - **Reduced motion:** with "reduce motion" on in your system settings, everything moves slower
   and calmer. The red freeze still happens, with a gentler drift and tremble.
 - **No WebGL:** without it, the earlier 2D gold visualizer is used instead.
@@ -288,7 +305,8 @@ server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json
 server/tools/calls.js     make_call + recent_calls tools
 server/tools/deepThink.js sends hard questions to the stronger model
 public/                   the web page (index.html, app.js, style.css)
-public/presence/          the 3D presence: scene.js (Three.js), index.js (loading, fallback, HUD, settings)
+public/presence/          the 3D presence: scene.js (Three.js scene), postfx.js (quality levels and effects),
+                          index.js (loading, fallback, HUD, settings)
 public/presence.css       full-screen layout, HUD and dock
 public/visualizer.js      the 2D fallback visualizer
 public/memory.html, memory.js  the /memory page

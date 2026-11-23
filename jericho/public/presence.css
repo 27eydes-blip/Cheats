@@ -73,9 +73,10 @@ body.presence-page {
 /* ---- status word ---- */
 .status-word {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   top: calc(max(14px, env(safe-area-inset-top)) + 58px);
-  transform: translateX(-50%);
+  justify-content: center; /* centred without a transform, so the text stays pixel-sharp */
   display: flex;
   align-items: center;
   gap: 10px;
@@ -219,3 +220,4 @@ body.calling .hud-ring { border-color: rgb(95 230 214 / 22%); }
   .loading-glow, .hud-glyphs .g, .hud-ring { animation: none; }
 }
 .orb canvas[hidden] { display: none; }
+body.presence-page { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }

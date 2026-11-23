@@ -24,12 +24,13 @@ const store = {
 const DEFAULT_LOOK = { glow: 1, particles: 1, quality: "auto" };
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function autoLowPower() {
+/** Phones and small screens: lighter geometry, and Auto quality stays at Low or Medium. */
+function isMobile() {
   const small = Math.min(window.innerWidth, window.innerHeight) < 700;
   const phone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  const weak = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
-  return phone || small || weak;
+  return phone || small;
 }
+const QUALITIES = ["auto", "low", "medium", "high", "ultra"];
 
 function webglAvailable() {
   try {
@@ -89,30 +90,21 @@ export function createPresence({ onTap }) {
     if (!webglAvailable()) return fallback2D();
     try {
       const { createScene } = await import("./scene.js");
-      const lowPower = look.quality === "low" || (look.quality === "auto" && autoLowPower());
-      const scene = createScene($("stage3d"), { lowPower, reducedMotion: reduced, glow: look.glow, particles: look.particles, onTap });
-      document.body.classList.toggle("low-power", lowPower);
-      if (look.quality === "auto" && !lowPower) {
-        // Too slow on this device? Switch to low power once, for this visit.
-        scene.onSlow(() => {
-          scene.dispose();
-          const lite = createScene(freshCanvas(), { lowPower: true, reducedMotion: reduced, glow: look.glow, particles: look.particles, onTap });
-          document.body.classList.add("low-power");
-          attach(lite);
-        });
-      }
+      if (!QUALITIES.includes(look.quality)) look.quality = "auto";
+      const scene = await createScene($("stage3d"), {
+        mobile: isMobile(),
+        reducedMotion: reduced,
+        glow: look.glow,
+        particles: look.particles,
+        quality: look.quality,
+        onTap,
+        onQuality: (tier) => document.body.classList.toggle("low-power", tier === "low"),
+      });
       attach(scene);
     } catch (err) {
       console.warn("3D presence unavailable, using 2D:", err);
       fallback2D();
     }
-  }
-
-  function freshCanvas() {
-    const old = $("stage3d");
-    const c = old.cloneNode(false);
-    old.replaceWith(c);
-    return c;
   }
 
   requestAnimationFrame(() => setTimeout(start3D, 0));
@@ -241,13 +233,22 @@ export function createPresence({ onTap }) {
   qualIn.addEventListener("change", () => {
     look.quality = qualIn.value;
     save();
-    $("look-note").textContent = "Quality changes apply when the page reloads.";
+    impl?.setQuality?.(look.quality); // applies straight away
   });
+  // live readout: the level in use and the measured frame rate
+  setInterval(() => {
+    const info = impl?.info?.();
+    if (!info || panel.hidden) return;
+    const fps = info.fps ? `${Math.round(info.fps)} fps` : "measuring…";
+    const level = info.tier[0].toUpperCase() + info.tier.slice(1);
+    $("look-note").textContent = `${info.quality === "auto" ? `Auto: ${level}` : level} · ${fps} · ${info.width}×${info.height}${info.msaa ? ` · ${info.msaa}× MSAA` : " · FXAA"}`;
+  }, 500);
   $("look-reset").addEventListener("click", () => {
     look = { ...DEFAULT_LOOK };
     save();
     impl?.setGlow?.(look.glow);
     impl?.setParticles?.(look.particles);
+    impl?.setQuality?.(look.quality);
     show();
   });
 

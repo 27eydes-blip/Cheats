@@ -1,11 +1,8 @@
-// The 3D presence: a luminous gold organism built from a pulsing core, tilted rings,
-// orbiting particles and rippling tendrils, floating in a starfield.
+// The 3D presence: a luminous gold organism built from a plasma core, tilted rings,
+// floating particles and rippling tendrils, in a starfield.
 // It only *shows* state: the app tells it the mode, mic level and voice analyser.
 import * as THREE from "three";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { createPipeline, pixelRatioFor, TIER_ORDER, TIERS } from "./postfx.js";
 
 const TAU = Math.PI * 2;
 const GOLD = new THREE.Color(0xf2b950);
@@ -56,15 +53,16 @@ const LOOKS = {
 
 function makeGlowTexture() {
   const c = document.createElement("canvas");
-  c.width = c.height = 128;
+  c.width = c.height = 256;
   const g = c.getContext("2d");
-  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
   grad.addColorStop(0, "rgba(255,244,214,1)");
-  grad.addColorStop(0.25, "rgba(255,200,110,0.55)");
-  grad.addColorStop(0.6, "rgba(220,140,50,0.12)");
+  grad.addColorStop(0.12, "rgba(255,214,140,0.7)");
+  grad.addColorStop(0.3, "rgba(255,180,90,0.28)");
+  grad.addColorStop(0.6, "rgba(200,120,40,0.08)");
   grad.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = grad;
-  g.fillRect(0, 0, 128, 128);
+  g.fillRect(0, 0, 256, 256);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
@@ -72,20 +70,47 @@ function makeGlowTexture() {
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
-export function createScene(canvas, opts) {
-  const { lowPower, reducedMotion } = opts;
+/** Shared GLSL: soft round sprite with depth of field (sharp in focus, wide and dim when not). */
+const SPRITE_VERT = /* glsl */ `
+  uniform float uPixel, uFocus, uDof, uMinPx;
+  // returns the point size in pixels and writes the blur amount and an energy factor
+  float spriteSize(float baseSize, float dist, out float blur, out float energy){
+    blur = clamp((abs(dist - uFocus) - 1.2) * 0.09 * uDof, 0.0, 1.5);  // a sharp zone around the being
+    float s = baseSize * uPixel * (18.0 / dist) * (1.0 + blur * 2.2);
+    float minPx = uMinPx * uPixel;
+    energy = 1.0 / ((1.0 + blur * 2.2) * (1.0 + blur * 2.2)) * (1.0 + blur * 0.6);
+    if (s < minPx) { energy *= s / minPx; s = minPx; }   // never sub-pixel: dimmer instead, so no flicker
+    return min(s, 42.0 * uPixel);
+  }`;
+const SPRITE_FRAG = /* glsl */ `
+  float spriteShape(vec2 pc, float blur){
+    float d = length(pc - 0.5) * 2.0;                       // 0 centre, 1 edge
+    float sharp = exp(-d * d * 7.0) * (1.0 - smoothstep(0.82, 1.0, d));
+    float bokeh = (1.0 - smoothstep(0.7, 1.0, d)) * (0.55 + 0.45 * d * d); // out of focus: a soft disc
+    return mix(sharp, bokeh * 0.55, clamp(blur, 0.0, 1.0));
+  }`;
+
+/**
+ * opts: { mobile, reducedMotion, glow, particles, quality ("auto"|"low"|"medium"|"high"|"ultra"), onTap, onQuality }
+ */
+export async function createScene(canvas, opts) {
+  const { mobile, reducedMotion } = opts;
   let glowScale = opts.glow ?? 1;
   let particleScale = opts.particles ?? 1;
+  let quality = opts.quality || "auto";
+  const maxTier = mobile ? 1 : 3; // phones: Auto stays at Low or Medium
+  let tierIdx = quality === "auto" ? (mobile ? 1 : 2) : TIER_ORDER.indexOf(quality); // Auto starts at Medium on phones, High elsewhere
+  if (tierIdx < 0) tierIdx = mobile ? 1 : 2;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowPower, powerPreference: "high-performance", alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1.25 : 2));
+  // Antialiasing happens in the HDR render target (MSAA) or FXAA, so the canvas itself doesn't need it.
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance", alpha: false, stencil: false, depth: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.9;
+  renderer.toneMappingExposure = 0.95;
   renderer.setClearColor(0x050403, 1);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x050403, 0.045);
+  scene.fog = new THREE.FogExp2(0x050403, 0.04);
   const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
   const being = new THREE.Group();
   scene.add(being);
@@ -98,7 +123,7 @@ export function createScene(canvas, opts) {
     uLean: { value: 0 },
     uSwirl: { value: 0.3 },
     uSpread: { value: 1 },
-    uPixel: { value: renderer.getPixelRatio() },
+    uPixel: { value: 1 },
     uMotion: { value: reducedMotion ? 0.3 : 1 },
     // particles: their own clock (stops when they freeze), red shift, tremble, voice flare
     uPTime: { value: 0 },
@@ -106,13 +131,21 @@ export function createScene(canvas, opts) {
     uRed: { value: 0 },
     uTremble: { value: 0 },
     uFlare: { value: 0 },
+    // image quality
+    uFocus: { value: 8.2 },
+    uDof: { value: 1 },
+    uMinPx: { value: 1.6 },
+    uViewH: { value: 1000 },
+    uTanHalfFov: { value: Math.tan(THREE.MathUtils.degToRad(26)) },
+    uOctaves: { value: 4 },
   };
 
-  // ---- starfield ----------------------------------------------------------------
-  const starCount = lowPower ? 900 : 2600;
+  // ---- starfield: soft round points, slightly out of focus ------------------------
+  const starCount = mobile ? 1200 : 3200;
   const starGeo = new THREE.BufferGeometry();
   const sp = new Float32Array(starCount * 3);
   const sc = new Float32Array(starCount * 3);
+  const ss = new Float32Array(starCount);
   for (let i = 0; i < starCount; i++) {
     const r = rand(25, 90);
     const th = Math.random() * TAU;
@@ -120,51 +153,88 @@ export function createScene(canvas, opts) {
     sp.set([r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)], i * 3);
     const c = Math.random() < 0.06 ? (Math.random() < 0.5 ? TEAL : VIOLET) : PALE.clone().lerp(GOLD, Math.random() * 0.6);
     sc.set([c.r, c.g, c.b], i * 3);
+    ss[i] = Math.random() < 0.02 ? rand(2.2, 3.4) : rand(0.8, 1.8);
   }
   starGeo.setAttribute("position", new THREE.BufferAttribute(sp, 3));
   starGeo.setAttribute("color", new THREE.BufferAttribute(sc, 3));
+  starGeo.setAttribute("aSize", new THREE.BufferAttribute(ss, 1));
   const stars = new THREE.Points(
     starGeo,
-    new THREE.PointsMaterial({ size: lowPower ? 0.16 : 0.09, vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false, fog: false, sizeAttenuation: true }),
+    new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: /* glsl */ `
+        attribute vec3 color; attribute float aSize;
+        uniform float uPixel, uTime, uMotion; varying vec3 vColor; varying float vA;
+        void main(){
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          float s = aSize * uPixel;
+          vA = 0.75 + 0.25 * sin(uTime * uMotion * 0.8 + position.x * 3.1);
+          if (s < 1.6 * uPixel) { vA *= s / (1.6 * uPixel); s = 1.6 * uPixel; }
+          gl_PointSize = s; vColor = color;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        varying vec3 vColor; varying float vA;
+        void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = exp(-d * d * 5.0) * (1.0 - smoothstep(0.8, 1.0, d)) * vA * 0.8; gl_FragColor = vec4(vColor * a, a); }`,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
   );
+  stars.frustumCulled = false;
   scene.add(stars);
 
-  // ---- core ---------------------------------------------------------------------
+  // ---- core: a luminous body of plasma with fine glowing veins -----------------------
   const coreMat = new THREE.ShaderMaterial({
     uniforms: { ...uniforms, uColorA: { value: AMBER }, uColorB: { value: PALE }, uRim: { value: TEAL } },
     vertexShader: /* glsl */ `
       ${NOISE}
       uniform float uTime, uBreath, uLevel, uMotion;
-      varying vec3 vNormal; varying vec3 vView; varying float vN;
+      varying vec3 vNormal; varying vec3 vView; varying vec3 vObj;
       void main(){
         float t = uTime * uMotion;
         float n = snoise(normal * 0.9 + vec3(t * 0.22)) * 0.7 + snoise(normal * 2.2 - vec3(t * 0.3)) * 0.3;
         float breath = sin(t * 1.1) * 0.06 * uBreath;
         vec3 p = position * (1.0 + breath + uLevel * 0.3) + normal * n * (0.05 + uLevel * 0.22);
-        vN = n;
+        vObj = normal;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vNormal = normalize(normalMatrix * normal); vView = normalize(-mv.xyz);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uGlow, uLevel, uRed; uniform vec3 uColorA, uColorB, uRim;
-      varying vec3 vNormal; varying vec3 vView; varying float vN;
+      ${NOISE}
+      uniform float uGlow, uLevel, uRed, uTime, uMotion; uniform int uOctaves; uniform vec3 uColorA, uColorB, uRim;
+      varying vec3 vNormal; varying vec3 vView; varying vec3 vObj;
+      float fbm(vec3 p){
+        float a = 0.5, s = 0.0;
+        for (int i = 0; i < 5; i++) { if (i >= uOctaves) break; s += a * snoise(p); p *= 2.07; a *= 0.5; }
+        return s;
+      }
       void main(){
-        float facing = max(dot(vNormal, vView), 0.0);
+        float t = uTime * uMotion;
+        vec3 n = normalize(vNormal);
+        float facing = abs(dot(n, vView));
         float fres = pow(1.0 - facing, 2.5);
-        // see-through body: bright veins of light inside, a glowing rim outside
-        float veins = smoothstep(0.15, 0.6, vN) * 0.6;
-        vec3 col = mix(uColorA, uColorB, 0.35 + veins);
-        col = mix(col, uRim, fres * 0.22);            // faint teal edge
-        col = mix(col, vec3(0.85, 0.08, 0.05), uRed * 0.65); // red tint while you're talking
-        float a = (0.1 + veins * 0.3 + fres * 0.7) * (0.45 + uGlow * 0.55 + uLevel * 0.8) * (1.0 - uRed * 0.25);
+        // plasma: domain-warped noise that flows slowly over the surface
+        vec3 q = vObj * 1.9 + vec3(0.0, t * 0.12, t * 0.05);
+        float warp = fbm(q * 0.8 + vec3(t * 0.08));
+        float f = fbm(q + warp * 0.9);
+        float veins = pow(1.0 - abs(f), 9.0);                  // thin bright filaments
+        float fine = pow(1.0 - abs(fbm(q * 2.6 - warp)), 14.0) * 0.6; // finer hair-lines
+        float plasma = 0.5 + 0.5 * fbm(vObj * 1.2 - vec3(t * 0.1));
+        vec3 col = mix(uColorA * 0.45, uColorB * 0.8, plasma * 0.4);
+        col += vec3(1.0, 0.72, 0.36) * (veins * 1.6 + fine * 0.9);   // HDR: the veins drive the bloom
+        col = mix(col, uRim, fres * 0.2);                            // faint teal edge
+        col = mix(col, vec3(0.85, 0.08, 0.05) * (1.0 + veins * 1.5), uRed * 0.65); // red tint while you're talking
+        float a = (0.04 + plasma * 0.06 + veins * 0.5 + fine * 0.22 + fres * 0.6) * (0.45 + uGlow * 0.55 + uLevel * 0.8) * (1.0 - uRed * 0.25);
         gl_FragColor = vec4(col * a, a);
       }`,
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
+    side: THREE.DoubleSide, // the far side's veins show through, giving it depth
   });
-  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.78, lowPower ? 24 : 48), coreMat);
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.78, mobile ? 32 : 64), coreMat);
   being.add(core);
 
   const glowTex = makeGlowTexture();
@@ -175,20 +245,36 @@ export function createScene(canvas, opts) {
   heart.scale.setScalar(2);
   being.add(heart);
 
-  // ---- rings -------------------------------------------------------------------
-  const ringMat = (color, dashes) =>
+  // ---- rings: fine thin bands that never fall below a pixel (so they don't shimmer) --------
+  const ringMat = (color, dashes, R, tube) =>
     new THREE.ShaderMaterial({
-      uniforms: { ...uniforms, uColor: { value: color }, uDashes: { value: dashes }, uOpacity: { value: 1 } },
-      vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      uniforms: { ...uniforms, uColor: { value: color }, uDashes: { value: dashes }, uOpacity: { value: 1 }, uR: { value: R }, uTube: { value: tube } },
+      vertexShader: /* glsl */ `
+        uniform float uR, uTube, uViewH, uTanHalfFov;
+        varying vec2 vUv; varying float vThin;
+        void main(){
+          vUv = uv;
+          // widen the tube to at least ~0.9 px on screen, and remember how much to dim it
+          vec2 dir = normalize(position.xy);
+          vec3 centre = vec3(dir * uR, 0.0);
+          vec3 off = position - centre;
+          vec4 mvc = modelViewMatrix * vec4(centre, 1.0);
+          float worldPerPx = 2.0 * -mvc.z * uTanHalfFov / uViewH;
+          float minR = worldPerPx * 0.9;
+          float r = max(uTube, minR);
+          vThin = uTube / r;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(centre + normalize(off) * r, 1.0);
+        }`,
       fragmentShader: /* glsl */ `
-        uniform vec3 uColor; uniform float uDashes, uGlow, uLevel, uOpacity, uTime;
-        varying vec2 vUv;
+        uniform vec3 uColor; uniform float uDashes, uGlow, uLevel, uOpacity;
+        varying vec2 vUv; varying float vThin;
         void main(){
           float d = fract(vUv.x * uDashes);
           float dash = uDashes > 0.0 ? smoothstep(0.0, 0.08, d) * smoothstep(0.62, 0.5, d) : 1.0;
           float tick = step(0.985, fract(vUv.x * 96.0)) * 0.8;
-          float a = (max(dash, tick) * 0.55 + 0.08) * (0.35 + uGlow * 0.8 + uLevel * 0.9) * uOpacity;
-          gl_FragColor = vec4(uColor * a, a);
+          float edge = sin(vUv.y * 3.14159);   // softer at the tube's silhouette
+          float a = (max(dash, tick) * 0.55 + 0.08) * (0.35 + uGlow * 0.8 + uLevel * 0.9) * uOpacity * mix(0.55, 1.0, edge) * vThin;
+          gl_FragColor = vec4(uColor * a * 1.4, a);
         }`,
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -196,16 +282,16 @@ export function createScene(canvas, opts) {
       side: THREE.DoubleSide,
     });
   const ringSpecs = [
-    { r: 1.45, tube: 0.012, tilt: [1.2, 0.2, 0], speed: 0.9, dashes: 0, color: GOLD },
-    { r: 1.95, tube: 0.01, tilt: [0.5, 0.9, 0.3], speed: -0.6, dashes: 18, color: PALE },
-    { r: 2.55, tube: 0.008, tilt: [1.9, -0.4, 0.6], speed: 0.4, dashes: 7, color: GOLD },
-    { r: 3.25, tube: 0.006, tilt: [0.2, 0.3, 1.3], speed: -0.25, dashes: 40, color: AMBER },
-    { r: 4.1, tube: 0.004, tilt: [1.5, 1.1, -0.2], speed: 0.15, dashes: 3, color: AMBER },
+    { r: 1.45, tube: 0.007, tilt: [1.2, 0.2, 0], speed: 0.9, dashes: 0, color: GOLD },
+    { r: 1.95, tube: 0.006, tilt: [0.5, 0.9, 0.3], speed: -0.6, dashes: 18, color: PALE },
+    { r: 2.55, tube: 0.005, tilt: [1.9, -0.4, 0.6], speed: 0.4, dashes: 7, color: GOLD },
+    { r: 3.25, tube: 0.004, tilt: [0.2, 0.3, 1.3], speed: -0.25, dashes: 40, color: AMBER },
+    { r: 4.1, tube: 0.003, tilt: [1.5, 1.1, -0.2], speed: 0.15, dashes: 3, color: AMBER },
   ];
-  const rings = ringSpecs.slice(0, lowPower ? 4 : 5).map((s) => {
+  const rings = ringSpecs.map((s) => {
     const pivot = new THREE.Group();
     pivot.rotation.set(...s.tilt);
-    const mesh = new THREE.Mesh(new THREE.TorusGeometry(s.r, s.tube, 6, lowPower ? 160 : 320), ringMat(s.color, s.dashes));
+    const mesh = new THREE.Mesh(new THREE.TorusGeometry(s.r, s.tube, 8, mobile ? 360 : 720), ringMat(s.color, s.dashes, s.r, s.tube));
     pivot.add(mesh);
     being.add(pivot);
     return { pivot, mesh, ...s };
@@ -218,11 +304,12 @@ export function createScene(canvas, opts) {
   const particleMat = new THREE.ShaderMaterial({
     uniforms,
     vertexShader: /* glsl */ `
+      ${SPRITE_VERT}
       attribute vec4 aOrbit;   // radius, angle, inclination, swirl speed
       attribute vec3 aWander;  // wander frequencies
       attribute vec3 aColor; attribute float aSize; attribute float aPhase;
-      uniform float uTime, uPTime, uPSpread, uFlare, uTremble, uRed, uPixel;
-      varying vec3 vColor; varying float vAlpha;
+      uniform float uTime, uPTime, uPSpread, uFlare, uTremble, uRed;
+      varying vec3 vColor; varying float vAlpha; varying float vBlur;
       void main(){
         float t = uPTime;
         float r0 = aOrbit.x * uPSpread;
@@ -241,22 +328,24 @@ export function createScene(canvas, opts) {
         p += vec3(sin(uTime * 37.0 + aPhase * 11.0), sin(uTime * 43.0 + aPhase * 7.0), sin(uTime * 31.0 + aPhase * 5.0)) * uTremble * 0.03;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         float dist = -mv.z;
-        gl_PointSize = min(aSize * uPixel * (1.0 + uFlare * 1.4 + uRed * 0.15) * (18.0 / dist), 26.0 * uPixel);
+        float energy;
+        gl_PointSize = spriteSize(aSize * (1.0 + uFlare * 1.4 + uRed * 0.15), dist, vBlur, energy);
         gl_Position = projectionMatrix * mv;
         vec3 red = vec3(0.62, 0.025, 0.02) * (0.75 + 0.4 * fract(aPhase * 3.7)); // deep red
         vColor = mix(aColor, red, uRed);
         float twinkle = 0.55 + 0.45 * sin(t * 1.3 + aPhase * 5.0);
         float shimmer = 1.0 + uTremble * 0.45 * sin(uTime * 23.0 + aPhase * 13.0);
-        vAlpha = twinkle * shimmer * smoothstep(0.5, 2.2, dist) * (1.0 + uFlare * 0.9);
+        vAlpha = twinkle * shimmer * smoothstep(0.5, 2.2, dist) * (1.0 + uFlare * 0.9) * energy;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uGlow, uRed; varying vec3 vColor; varying float vAlpha;
+      ${SPRITE_FRAG}
+      uniform float uGlow, uRed; varying vec3 vColor; varying float vAlpha; varying float vBlur;
       void main(){
-        float d = length(gl_PointCoord - 0.5);
-        float core = smoothstep(0.5, 0.0, d);
-        float glow = smoothstep(0.5, 0.1, d) * 0.3 * uRed;   // soft red glow around each point
-        float a = (core + glow) * vAlpha * (0.38 + uGlow * 0.4) * (1.0 + uRed * 0.15);
-        gl_FragColor = vec4(vColor * a, a);
+        float shape = spriteShape(gl_PointCoord, vBlur);
+        float d = length(gl_PointCoord - 0.5) * 2.0;
+        float glow = (1.0 - smoothstep(0.2, 1.0, d)) * 0.3 * uRed;   // soft red glow around each point
+        float a = (shape + glow) * vAlpha * (0.6 + uGlow * 0.6) * (1.0 + uRed * 0.15);
+        gl_FragColor = vec4(vColor * a * 1.5, a);
       }`,
     transparent: true,
     blending: THREE.AdditiveBlending,
@@ -266,12 +355,15 @@ export function createScene(canvas, opts) {
   const cloud = new THREE.Group();
   scene.add(cloud);
   let particles = null;
+  let builtCount = 0;
   function buildParticles() {
+    const count = Math.round(7000 * TIERS[TIER_ORDER[tierIdx]].particles * particleScale);
+    if (particles && count === builtCount) return;
     if (particles) {
       cloud.remove(particles);
       particles.geometry.dispose();
     }
-    const count = Math.round((lowPower ? 2000 : 7000) * particleScale);
+    builtCount = count;
     const g = new THREE.BufferGeometry();
     const orbit = new Float32Array(count * 4);
     const wander = new Float32Array(count * 3);
@@ -287,7 +379,9 @@ export function createScene(canvas, opts) {
       wander.set([rand(0.05, 0.22), rand(0.04, 0.18), rand(0.05, 0.2)], i * 3);
       const c = Math.random() < 0.04 ? (Math.random() < 0.5 ? TEAL : VIOLET) : GOLD.clone().lerp(Math.random() < 0.5 ? AMBER : PALE, Math.random());
       color.set([c.r, c.g, c.b], i * 3);
-      size[i] = rand(0.9, 2.8) * (Math.random() < 0.03 ? 2.5 : 1) * (r > 5 ? 0.8 : 1);
+      // varied sizes: mostly fine dust, some motes, a few large glints
+      const roll = Math.random();
+      size[i] = (roll < 0.6 ? rand(0.8, 1.6) : roll < 0.96 ? rand(1.6, 3.0) : rand(3.5, 5.5)) * (r > 5 ? 0.85 : 1);
       phase[i] = Math.random() * TAU;
     }
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3)); // computed in the shader
@@ -302,92 +396,163 @@ export function createScene(canvas, opts) {
   }
   buildParticles();
 
-  // ---- tendrils ------------------------------------------------------------------
-  const SEG = lowPower ? 48 : 96;
-  const tendrilMat = (pointMode) =>
-    new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: /* glsl */ `
-        ${NOISE}
-        attribute float aT; attribute vec3 aDir; attribute float aSeed; attribute float aLen;
-        uniform float uTime, uLean, uLevel, uBreath, uPixel, uMotion;
-        varying float vT;
-        void main(){
-          float t = uTime * uMotion;
-          vec3 dir = normalize(aDir);
-          vec3 side = normalize(cross(dir, vec3(0.0, 1.0, 0.2)));
-          vec3 up = cross(side, dir);
-          float s = aT * aLen * (1.0 + uLevel * 0.25) * (1.0 - uLean * 0.35);
-          // ripple travelling down the tendril, like a jellyfish arm
-          float w = sin(aT * 7.0 - t * 1.8 + aSeed) * (0.12 + aT * 0.55);
-          float n = snoise(vec3(aT * 2.0, aSeed, t * 0.25)) * aT * 0.8;
-          vec3 p = dir * (0.8 + s) + side * (w + n) + up * cos(aT * 5.0 - t * 1.3 + aSeed) * aT * 0.35;
-          // listening: arms curl in toward the core
-          p = mix(p, p * (1.0 - aT * 0.45), uLean);
-          p.y -= aT * aT * 0.6 * (1.0 - uLean);   // a gentle droop
-          vT = aT;
-          vec4 mv = modelViewMatrix * vec4(p, 1.0);
-          gl_PointSize = ${pointMode ? "(1.0 - aT) * 3.0 * uPixel * (14.0 / -mv.z) * (1.0 + uLevel)" : "1.0"};
-          gl_Position = projectionMatrix * mv;
-        }`,
-      fragmentShader: /* glsl */ `
-        uniform float uGlow, uLevel, uRed; varying float vT;
-        void main(){
-          ${pointMode ? "if (length(gl_PointCoord - 0.5) > 0.5) discard;" : ""}
-          vec3 col = mix(vec3(1.0, 0.86, 0.55), vec3(1.0, 0.45, 0.12), vT);
-          col = mix(col, vec3(0.45, 0.4, 1.0), smoothstep(0.75, 1.0, vT) * 0.35); // violet tips
-          col = mix(col, vec3(0.9, 0.12, 0.08), uRed * 0.6);
-          float a = pow(1.0 - vT, 0.9) * (0.3 + uGlow * 0.45 + uLevel * 0.5) * (1.0 - uRed * 0.45);
-          gl_FragColor = vec4(col * a, a);
-        }`,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-  const tendrilCount = lowPower ? 9 : 16;
-  const tGeo = new THREE.BufferGeometry();
-  const tPos = new Float32Array(tendrilCount * SEG * 3);
-  const tT = new Float32Array(tendrilCount * SEG);
-  const tDir = new Float32Array(tendrilCount * SEG * 3);
-  const tSeed = new Float32Array(tendrilCount * SEG);
-  const tLen = new Float32Array(tendrilCount * SEG);
-  const tIndex = [];
-  for (let k = 0; k < tendrilCount; k++) {
-    // mostly downward and outward, a few reaching sideways and up
-    const th = (k / tendrilCount) * TAU + rand(-0.2, 0.2);
-    const down = k % 4 === 0 ? rand(-0.2, 0.5) : rand(-1.0, -0.35);
-    const dir = new THREE.Vector3(Math.cos(th), down, Math.sin(th)).normalize();
-    const seed = rand(0, 100);
-    const len = rand(2.2, 4.2);
-    for (let i = 0; i < SEG; i++) {
-      const idx = k * SEG + i;
-      tT[idx] = i / (SEG - 1);
-      tDir.set([dir.x, dir.y, dir.z], idx * 3);
-      tSeed[idx] = seed;
-      tLen[idx] = len;
-      if (i < SEG - 1) tIndex.push(idx, idx + 1);
+  // ---- tendrils: smooth tapered ribbons, plus glowing beads along them ----------------
+  const SEG = mobile ? 72 : 140;
+  const TENDRIL_PATH = /* glsl */ `
+    ${NOISE}
+    uniform float uTime, uLean, uLevel, uMotion;
+    vec3 tendrilPoint(float T, vec3 aDirIn, float aSeed, float aLen){
+      float t = uTime * uMotion;
+      vec3 dir = normalize(aDirIn);
+      vec3 side = normalize(cross(dir, vec3(0.0, 1.0, 0.2)));
+      vec3 up = cross(side, dir);
+      float s = T * aLen * (1.0 + uLevel * 0.25) * (1.0 - uLean * 0.35);
+      // ripple travelling down the tendril, like a jellyfish arm
+      float w = sin(T * 7.0 - t * 1.8 + aSeed) * (0.12 + T * 0.55);
+      float n = snoise(vec3(T * 2.0, aSeed, t * 0.25)) * T * 0.8;
+      vec3 p = dir * (0.8 + s) + side * (w + n) + up * cos(T * 5.0 - t * 1.3 + aSeed) * T * 0.35;
+      // listening: arms curl in toward the core
+      p = mix(p, p * (1.0 - T * 0.45), uLean);
+      p.y -= T * T * 0.6 * (1.0 - uLean);   // a gentle droop
+      return p;
+    }`;
+  const tendrilColor = /* glsl */ `
+    vec3 tendrilColor(float vT){
+      vec3 col = mix(vec3(1.0, 0.76, 0.42), vec3(1.0, 0.42, 0.1), vT);
+      col = mix(col, vec3(0.45, 0.4, 1.0), smoothstep(0.75, 1.0, vT) * 0.35); // violet tips
+      return mix(col, vec3(0.9, 0.12, 0.08), uRed * 0.6);
+    }`;
+  const ribbonMat = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: /* glsl */ `
+      ${TENDRIL_PATH}
+      attribute float aT; attribute vec3 aDir; attribute float aSeed; attribute float aLen; attribute float aSide;
+      uniform float uViewH, uTanHalfFov;
+      varying float vT; varying float vAcross; varying float vThin;
+      void main(){
+        float e = 0.004;
+        vec3 p = tendrilPoint(aT, aDir, aSeed, aLen);
+        vec3 p2 = tendrilPoint(min(aT + e, 1.0), aDir, aSeed, aLen);
+        vec3 p0 = tendrilPoint(max(aT - e, 0.0), aDir, aSeed, aLen);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vec3 tangent = normalize((modelViewMatrix * vec4(p2, 1.0)).xyz - (modelViewMatrix * vec4(p0, 1.0)).xyz);
+        vec3 across = normalize(cross(tangent, normalize(-mv.xyz)));
+        float worldPerPx = 2.0 * -mv.z * uTanHalfFov / uViewH;
+        float width = mix(0.028, 0.0035, aT) * (1.0 + uLevel * 0.4);   // tapers to a fine tip
+        float minW = worldPerPx * 1.4;                                    // at least ~1.4 px wide, dimmer instead
+        vThin = width / max(width, minW);
+        mv.xyz += across * max(width, minW) * aSide;
+        vT = aT; vAcross = aSide;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform float uGlow, uLevel, uRed; varying float vT; varying float vAcross; varying float vThin;
+      ${tendrilColor}
+      void main(){
+        float soft = 1.0 - smoothstep(0.35, 1.0, abs(vAcross));   // smooth, unaliased edges
+        float a = pow(1.0 - vT, 0.9) * (0.3 + uGlow * 0.45 + uLevel * 0.5) * (1.0 - uRed * 0.45) * soft * vThin;
+        gl_FragColor = vec4(tendrilColor(vT) * a * 1.3, a);
+      }`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const beadMat = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: /* glsl */ `
+      ${TENDRIL_PATH}
+      ${SPRITE_VERT}
+      attribute float aT; attribute vec3 aDir; attribute float aSeed; attribute float aLen;
+      varying float vT; varying float vBlur; varying float vEnergy;
+      void main(){
+        vec3 p = tendrilPoint(aT, aDir, aSeed, aLen);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = spriteSize((1.0 - aT) * 1.6 * (1.0 + uLevel), -mv.z, vBlur, vEnergy);
+        vT = aT;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      ${SPRITE_FRAG}
+      uniform float uGlow, uLevel, uRed; varying float vT; varying float vBlur; varying float vEnergy;
+      ${tendrilColor}
+      void main(){
+        float a = spriteShape(gl_PointCoord, vBlur) * vEnergy * pow(1.0 - vT, 0.9) * (0.3 + uGlow * 0.45 + uLevel * 0.5) * (1.0 - uRed * 0.45);
+        gl_FragColor = vec4(tendrilColor(vT) * a * 1.5, a);
+      }`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const tendrilCount = mobile ? 11 : 16;
+  {
+    const rT = [];
+    const rDir = [];
+    const rSeed = [];
+    const rLen = [];
+    const rSide = [];
+    const rIndex = [];
+    const bT = [];
+    const bDir = [];
+    const bSeed = [];
+    const bLen = [];
+    for (let k = 0; k < tendrilCount; k++) {
+      // mostly downward and outward, a few reaching sideways and up
+      const th = (k / tendrilCount) * TAU + rand(-0.2, 0.2);
+      const down = k % 4 === 0 ? rand(-0.2, 0.5) : rand(-1.0, -0.35);
+      const dir = new THREE.Vector3(Math.cos(th), down, Math.sin(th)).normalize();
+      const seed = rand(0, 100);
+      const len = rand(2.2, 4.2);
+      for (let i = 0; i < SEG; i++) {
+        const T = i / (SEG - 1);
+        for (const side of [-1, 1]) {
+          rT.push(T);
+          rDir.push(dir.x, dir.y, dir.z);
+          rSeed.push(seed);
+          rLen.push(len);
+          rSide.push(side);
+        }
+        if (i < SEG - 1) {
+          const v = (k * SEG + i) * 2;
+          rIndex.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
+        }
+        if (i % 3 === 0) {
+          bT.push(T);
+          bDir.push(dir.x, dir.y, dir.z);
+          bSeed.push(seed);
+          bLen.push(len);
+        }
+      }
     }
+    const rg = new THREE.BufferGeometry();
+    rg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(rT.length * 3), 3));
+    rg.setAttribute("aT", new THREE.Float32BufferAttribute(rT, 1));
+    rg.setAttribute("aDir", new THREE.Float32BufferAttribute(rDir, 3));
+    rg.setAttribute("aSeed", new THREE.Float32BufferAttribute(rSeed, 1));
+    rg.setAttribute("aLen", new THREE.Float32BufferAttribute(rLen, 1));
+    rg.setAttribute("aSide", new THREE.Float32BufferAttribute(rSide, 1));
+    rg.setIndex(rIndex);
+    const ribbons = new THREE.Mesh(rg, ribbonMat);
+    ribbons.frustumCulled = false;
+    being.add(ribbons);
+    const bg = new THREE.BufferGeometry();
+    bg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(bT.length * 3), 3));
+    bg.setAttribute("aT", new THREE.Float32BufferAttribute(bT, 1));
+    bg.setAttribute("aDir", new THREE.Float32BufferAttribute(bDir, 3));
+    bg.setAttribute("aSeed", new THREE.Float32BufferAttribute(bSeed, 1));
+    bg.setAttribute("aLen", new THREE.Float32BufferAttribute(bLen, 1));
+    const beads = new THREE.Points(bg, beadMat);
+    beads.frustumCulled = false;
+    being.add(beads);
   }
-  tGeo.setAttribute("position", new THREE.BufferAttribute(tPos, 3));
-  tGeo.setAttribute("aT", new THREE.BufferAttribute(tT, 1));
-  tGeo.setAttribute("aDir", new THREE.BufferAttribute(tDir, 3));
-  tGeo.setAttribute("aSeed", new THREE.BufferAttribute(tSeed, 1));
-  tGeo.setAttribute("aLen", new THREE.BufferAttribute(tLen, 1));
-  tGeo.setIndex(tIndex);
-  tGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 8);
-  being.add(new THREE.LineSegments(tGeo, tendrilMat(false)));
-  const beadGeo = tGeo.clone();
-  beadGeo.setIndex(null);
-  beadGeo.boundingSphere = tGeo.boundingSphere;
-  being.add(new THREE.Points(beadGeo, tendrilMat(true)));
 
   // ---- energy arcs (thinking) ----------------------------------------------------
-  const ARCS = lowPower ? 4 : 8;
-  const ARC_SEG = 14;
+  const ARCS = mobile ? 5 : 8;
+  const ARC_SEG = 18;
   const arcGeo = new THREE.BufferGeometry();
   const arcPos = new Float32Array(ARCS * (ARC_SEG - 1) * 2 * 3);
   arcGeo.setAttribute("position", new THREE.BufferAttribute(arcPos, 3));
-  const arcMat = new THREE.LineBasicMaterial({ color: 0xfff0c0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const arcMat = new THREE.LineBasicMaterial({ color: new THREE.Color(1.6, 1.4, 1.0), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
   const arcLines = new THREE.LineSegments(arcGeo, arcMat);
   arcLines.frustumCulled = false;
   being.add(arcLines);
@@ -411,7 +576,7 @@ export function createScene(canvas, opts) {
       for (let i = 1; i < ARC_SEG; i++) {
         const f = i / (ARC_SEG - 1);
         const p = tmpA.clone().lerp(tmpB, f);
-        if (i < ARC_SEG - 1) p.add(new THREE.Vector3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(0.18 * Math.sin(f * Math.PI)));
+        if (i < ARC_SEG - 1) p.add(new THREE.Vector3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(0.16 * Math.sin(f * Math.PI)));
         arcPos.set([prev.x, prev.y, prev.z, p.x, p.y, p.z], o);
         o += 6;
         prev = p;
@@ -424,7 +589,7 @@ export function createScene(canvas, opts) {
   const rippleMat = () =>
     new THREE.MeshBasicMaterial({ color: 0x8ff0e4, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const ripples = [0, 1, 2].map((i) => {
-    const m = new THREE.Mesh(new THREE.RingGeometry(0.98, 1, 128), rippleMat());
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.985, 1, 256), rippleMat());
     m.rotation.x = -Math.PI / 2 + 0.25;
     m.userData.offset = i / 3;
     being.add(m);
@@ -434,39 +599,63 @@ export function createScene(canvas, opts) {
   callGlow.scale.setScalar(9);
   being.add(callGlow);
 
-  // ---- bloom -----------------------------------------------------------------------
-  let composer = null;
-  let bloom = null;
-  if (!lowPower) {
-    composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.8, 0.55, 0.18);
-    composer.addPass(bloom);
-    composer.addPass(new OutputPass());
-  }
-
   // ---- camera: slow drifting orbit, drag/pinch/scroll, parallax -------------------
-  const cam = { theta: 0.6, phi: 1.25, radius: 10.5, targetRadius: 10.5, vTheta: 0, vPhi: 0 };
+  const cam = { theta: 0.6, phi: 1.25, radius: 10.5, targetRadius: 10.5, vTheta: 0, vPhi: 0, baseRadius: 8.2 };
   const parallax = { x: 0, y: 0, tx: 0, ty: 0 };
   let dragging = false;
   let userActive = 0;
 
+  // ---- quality level + post-processing ---------------------------------------------
+  let pipeline = null; // built after the first frame, so the page shows something at once
+  let size = { w: 1, h: 1 };
+  function applyTier() {
+    const name = TIER_ORDER[tierIdx];
+    const cfg = TIERS[name];
+    renderer.setPixelRatio(pixelRatioFor(name, size.w, size.h));
+    renderer.setSize(size.w, size.h, false);
+    uniforms.uPixel.value = renderer.getPixelRatio();
+    uniforms.uViewH.value = size.h * renderer.getPixelRatio();
+    uniforms.uDof.value = cfg.dof * (reducedMotion ? 0.8 : 1);
+    uniforms.uOctaves.value = cfg.octaves;
+    buildParticles();
+    if (pipeline) {
+      pipeline.dispose();
+      pipeline = createPipeline(renderer, scene, camera, name, size.w, size.h);
+    }
+    document.body.dataset.quality = name;
+    opts.onQuality?.(name);
+  }
+
   function resize() {
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
-    renderer.setSize(w, h, false);
+    size = { w, h };
+    renderer.setPixelRatio(pixelRatioFor(TIER_ORDER[tierIdx], w, h));
+    renderer.setSize(w, h, false); // the canvas is sized by CSS; the drawing buffer matches it exactly
+    uniforms.uPixel.value = renderer.getPixelRatio();
+    uniforms.uViewH.value = h * renderer.getPixelRatio();
     camera.aspect = w / h;
     // portrait phones: pull back so the whole being fits
     cam.baseRadius = w < h ? 11.5 : 8.2;
     camera.updateProjectionMatrix();
-    if (composer) {
-      composer.setSize(w, h);
-      bloom.resolution.set(w / 2, h / 2);
-    }
+    pipeline?.setSize(w, h);
   }
   resize();
   cam.radius = cam.targetRadius = cam.baseRadius;
   window.addEventListener("resize", resize);
+  // moving the window to a screen with a different pixel density
+  let dprQuery = null;
+  function watchDpr() {
+    dprQuery?.removeEventListener("change", onDpr);
+    dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+    dprQuery.addEventListener("change", onDpr);
+  }
+  function onDpr() {
+    resize();
+    watchDpr();
+  }
+  watchDpr();
+  applyTier();
 
   // ---- state ---------------------------------------------------------------------
   let mode = "off";
@@ -487,8 +676,42 @@ export function createScene(canvas, opts) {
   let last = performance.now();
   let arcTimer = 0;
   let running = true;
-  const perf = { start: performance.now(), frames: 0, time: 0 };
-  let onSlow = null;
+  const coreScreen = new THREE.Vector3();
+  const light = new THREE.Vector2(0.5, 0.5);
+
+  // Auto quality: measure the frame rate in 2-second windows and step up or down.
+  const auto = { start: performance.now(), frames: 0, time: 0, goodWindows: 0, failed: new Set(), fps: 0 };
+  function setTier(idx) {
+    if (idx === tierIdx) return;
+    tierIdx = idx;
+    applyTier();
+    auto.start = performance.now();
+    auto.frames = auto.time = auto.goodWindows = 0;
+  }
+  function measure(now, raw) {
+    if (document.hidden || raw > 3000) {
+      auto.frames = auto.time = 0; // tab was hidden: don't count that gap
+      return;
+    }
+    if (now - auto.start < 2000) return; // let a new level settle first
+    auto.frames++;
+    auto.time += raw;
+    if (auto.time < 2000) return;
+    const fps = (auto.frames * 1000) / auto.time;
+    auto.fps = fps;
+    auto.frames = auto.time = 0;
+    if (quality !== "auto") return;
+    if (fps < 50 && tierIdx > 0) {
+      auto.failed.add(tierIdx); // don't try this level again this visit
+      setTier(tierIdx - 1);
+    } else if (fps >= 57) {
+      auto.goodWindows++;
+      const next = tierIdx + 1;
+      if (auto.goodWindows >= 3 && next <= maxTier && !auto.failed.has(next)) setTier(next);
+    } else {
+      auto.goodWindows = 0;
+    }
+  }
 
   function voiceLevel(t) {
     if (speech.analyser) {
@@ -516,23 +739,7 @@ export function createScene(canvas, opts) {
     last = now;
     const t = now / 1000;
     const motion = reducedMotion ? 0.3 : 1;
-
-    // watch the frame rate (after a 1s warm-up, over 3s): if it's struggling, ask for low power once
-    if (onSlow && now - perf.start > 1000) {
-      perf.frames++;
-      perf.time += raw;
-      if (perf.time >= 3000) {
-        const fps = (perf.frames * 1000) / perf.time;
-        perf.frames = 0;
-        perf.time = 0;
-        if (fps < 38) {
-          const cb = onSlow;
-          onSlow = null;
-          cb();
-          return;
-        }
-      }
-    }
+    if (pipeline) measure(now, raw);
 
     // ease every look value toward the current state (never snaps)
     const target = LOOKS[mode] || LOOKS.idle;
@@ -579,8 +786,7 @@ export function createScene(canvas, opts) {
 
     // core + halos
     const breathe = 0.5 + 0.5 * Math.sin(t * 1.1 * motion);
-    // without bloom (low power) the halo does more of the glowing
-    halo.material.opacity = (0.16 + 0.22 * look.glow + 0.12 * breathe * look.breath + level * 0.4) * (0.5 + 0.5 * glowScale) * (lowPower ? 1.5 : 0.75);
+    halo.material.opacity = (0.16 + 0.22 * look.glow + 0.12 * breathe * look.breath + level * 0.4) * (0.5 + 0.5 * glowScale) * (pipeline?.bloom ? 0.7 : 1.3); // without bloom the halo does more of the glowing
     halo.scale.setScalar(5 + breathe * 0.6 * look.breath + level * 2.5);
     halo.material.color.copy(HALO_GOLD).lerp(HALO_RED, fx.red * 0.6);
     halo.material.opacity *= 1 - fx.red * 0.35; // a deeper, less hazy red
@@ -633,13 +839,24 @@ export function createScene(canvas, opts) {
     const ph = cam.phi + parallax.y * 0.12;
     camera.position.set(cam.radius * Math.sin(ph) * Math.sin(th), cam.radius * Math.cos(ph), cam.radius * Math.sin(ph) * Math.cos(th));
     camera.lookAt(0, camera.aspect < 1 ? -0.9 : -0.45, 0); // portrait: being sits a little higher, above the chat
+    uniforms.uFocus.value = cam.radius; // focus on the being; nearer and further particles blur gently
 
-    if (composer) {
-      // a little less bloom while red, so the red stays red instead of washing out to white
-      bloom.strength = (0.3 + look.glow * 0.3 + level * 0.6 + look.calling * 0.15) * glowScale * (1 - fx.red * 0.35);
-      composer.render();
+    if (pipeline) {
+      // where the core is on screen, for the light shafts and lens flare
+      coreScreen.set(0, 0, 0).project(camera);
+      light.set(coreScreen.x * 0.5 + 0.5, coreScreen.y * 0.5 + 0.5);
+      const onScreen = coreScreen.z < 1 && Math.abs(coreScreen.x) < 1.2 && Math.abs(coreScreen.y) < 1.2 ? 1 : 0;
+      pipeline.render({
+        // a little less bloom while red, so the red stays red instead of washing out to white
+        bloom: (0.55 + look.glow * 0.35 + level * 0.7 + look.calling * 0.15) * glowScale * (1 - fx.red * 0.35),
+        light,
+        lightVisible: onScreen,
+        rays: (0.5 + look.glow * 0.5 + level * 0.8) * (1 - fx.red * 0.5) * glowScale,
+        flare: (0.4 + look.glow * 0.4 + level * 0.8) * (1 - fx.red * 0.6),
+        time: t,
+      });
     } else {
-      renderer.render(scene, camera);
+      renderer.render(scene, camera); // first frames: plain render while the effects get built
     }
   }
 
@@ -708,7 +925,22 @@ export function createScene(canvas, opts) {
   }
   window.addEventListener("deviceorientation", onTilt);
 
-  requestAnimationFrame(frame);
+  // Compile the shaders without freezing the page (where the browser supports it),
+  // draw the first frame, then build the heavy effects.
+  try {
+    await renderer.compileAsync(scene, camera);
+  } catch {
+    /* falls back to compiling on first draw */
+  }
+  requestAnimationFrame((now) => {
+    last = now;
+    frame(now);
+    setTimeout(() => {
+      if (!running) return;
+      pipeline = createPipeline(renderer, scene, camera, TIER_ORDER[tierIdx], size.w, size.h);
+      auto.start = performance.now();
+    }, 0);
+  });
 
   return {
     setState(s) {
@@ -727,12 +959,27 @@ export function createScene(canvas, opts) {
       glowScale = v;
     },
     setParticles(v) {
-      if (Math.abs(v - particleScale) < 0.01) return;
       particleScale = v;
       buildParticles();
     },
-    onSlow(cb) {
-      onSlow = cb;
+    /** "auto" | "low" | "medium" | "high" | "ultra" */
+    setQuality(q) {
+      quality = q;
+      auto.failed.clear();
+      if (q === "auto") setTier(Math.min(tierIdx, maxTier));
+      else setTier(TIER_ORDER.indexOf(q));
+    },
+    /** Current level and measured frame rate, for the settings panel. */
+    info() {
+      return {
+        quality,
+        tier: TIER_ORDER[tierIdx],
+        fps: auto.fps,
+        pixelRatio: renderer.getPixelRatio(),
+        width: Math.round(size.w * renderer.getPixelRatio()),
+        height: Math.round(size.h * renderer.getPixelRatio()),
+        msaa: pipeline?.samples ?? 0,
+      };
     },
     /** Read-only numbers for checking the effects (open the page with ?debug). */
     stats() {
@@ -742,8 +989,9 @@ export function createScene(canvas, opts) {
       running = false;
       window.removeEventListener("resize", resize);
       window.removeEventListener("deviceorientation", onTilt);
+      dprQuery?.removeEventListener("change", onDpr);
+      pipeline?.dispose();
       renderer.dispose();
     },
-    lowPower,
   };
 }
