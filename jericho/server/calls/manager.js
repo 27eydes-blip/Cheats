@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ROOT, secrets } from "../config.js";
 import { logAction, scrubEnvValues } from "../logger.js";
-import { keepAliveFetch } from "../net.js";
+import { errorDetails, keepAliveFetch } from "../net.js";
 import { jobEvents } from "../tools/claudeCode.js";
 import { synthesize } from "../tts.js";
 import { agentTurn, disclosure, openingRequest, pickScenario, simulatedReply } from "./agent.js";
@@ -126,7 +126,7 @@ export async function startCall(input, client) {
     simulate(call, client).catch((err) => finish(call, "failed", `The test call hit an error: ${err.message}`));
   } else {
     dialTwilio(call, client).catch((err) => {
-      logAction("call_error", { id: call.id, error: err.message });
+      logAction("call_error", { id: call.id, error: err.message, cause: errorDetails(err) });
       finish(call, "failed", "Twilio couldn't place the call.");
     });
   }
@@ -204,7 +204,7 @@ function newAudio(text) {
   audio.set(
     id,
     synthesize(text, { outputFormat: "mp3_22050_32" }).catch((err) => {
-      logAction("call_tts_error", { error: err.message });
+      logAction("call_tts_error", { error: err.message, cause: errorDetails(err) });
       return null;
     }),
   );
@@ -324,7 +324,7 @@ export async function handleTwilio(kind, callId, params) {
     try {
       next = await agentTurn(state.client, call, { wrapUp });
     } catch (err) {
-      logAction("call_error", { id: call.id, error: err.message });
+      logAction("call_error", { id: call.id, error: err.message, cause: errorDetails(err) });
       next = { say: `Sorry, I'm having trouble on my end. ${cfg.ownerName} will call you back. Goodbye.`, end_call: true, outcome: "needs_callback", summary: "The assistant had a technical problem mid-call." };
     }
     if (next.say) call.transcript.push({ who: "agent", text: next.say });

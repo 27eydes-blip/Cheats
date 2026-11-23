@@ -5,17 +5,18 @@
   "description": "Personal voice assistant: browser ears, Claude brain, ElevenLabs voice.",
   "type": "module",
   "engines": {
-    "node": ">=20.12"
+    "node": ">=20.18.1"
   },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node --test test/*.test.js",
+    "selftest": "node server/selftest.js",
     "make-cert": "mkdir -p certs && openssl req -x509 -newkey rsa:2048 -nodes -days 825 -keyout certs/key.pem -out certs/cert.pem -subj /CN=jericho.local"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",
     "three": "^0.170.0",
-    "undici": "^6.29.1"
+    "undici": "~7.30.2"
   }
 }

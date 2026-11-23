@@ -17,7 +17,7 @@ A personal voice assistant that runs on your laptop. Open the page, tap **Start*
 
 ## Run it
 
-Needs Node 20.12 or newer.
+Needs Node 20.18 or newer (tested on Node 22 and Node 26).
 
 ```bash
 cd jericho
@@ -47,6 +47,29 @@ Try:
 - "Jericho, what's on my calendar tomorrow?": Jericho says the calendar isn't connected yet.
 
 Run the offline tests (no API keys needed, nothing billed): `npm test`.
+
+### If replies fail or it falls back to the browser voice
+
+When it starts, Jericho checks its connections and prints the result:
+
+```
+   Self-test (Node v26.13.1, connections: keep-alive pool):
+     Claude      ✅ PASS  191 ms
+     ElevenLabs  ✅ PASS  420 ms, voice Qy7xBgqsDA40HK0hK0SY
+```
+
+A FAIL line says why: the key was rejected, the voice ID wasn't found, or the connection itself
+failed and what lay behind it (for example `ENOTFOUND` means the name couldn't be looked up, and
+`ECONNREFUSED` or `ETIMEDOUT` usually mean a firewall or proxy). Run the same check on its own
+any time with `npm run selftest`. The Claude check is free; the ElevenLabs check speaks three
+characters.
+
+- **Error details:** every failed request logs its real cause in `logs/actions.log`, never just
+  "fetch failed". Keys are never written there.
+- **Connection pool:** Jericho keeps its connections open between requests for speed. If that
+  connection pool ever fails while a plain request works, it switches to Node's built-in fetch by
+  itself, prints a warning and logs `net_fallback` once. To switch the pool off entirely, start it
+  with `$env:JERICHO_NO_KEEPALIVE = 1; npm start` (PowerShell).
 
 ## Using it from your phone
 

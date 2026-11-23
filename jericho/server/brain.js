@@ -5,7 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { settings } from "./config.js";
 import { logAction } from "./logger.js";
 import * as memory from "./memory.js";
-import { addWarmer, dispatcher } from "./net.js";
+import { addWarmer, errorDetails, keepAliveFetch } from "./net.js";
 import { CONFIRM_TIMEOUT_MS, isYes } from "./safety.js";
 import { SentenceSplitter, speakable } from "./speech.js";
 import { updateStyle } from "./style.js";
@@ -78,7 +78,7 @@ export function applyMishearings(text) {
 export class Brain {
   /** @param {{ client?: Anthropic }} [opts] — inject a fake client in tests. */
   constructor(opts = {}) {
-    this.client = opts.client || new Anthropic({ fetchOptions: { dispatcher } });
+    this.client = opts.client || new Anthropic({ fetch: (url, init) => keepAliveFetch(url, init) });
     this.sessions = new Map();
     if (!opts.client) {
       // Keeps the connection to Claude open while a page is connected (a free request).
@@ -169,7 +169,7 @@ export class Brain {
       await this.client.beta.messages.create({ ...this.#params(s, [{ role: "user", content: "warmup" }]), max_tokens: 0 });
       return true;
     } catch (err) {
-      logAction("prewarm_error", { sessionId, error: err.message });
+      logAction("prewarm_error", { sessionId, error: err.message, cause: errorDetails(err) });
       return false;
     }
   }
@@ -241,7 +241,7 @@ export class Brain {
           logAction("tool_result", { sessionId, tool: t.name, input: t.input, result });
           return { type: "tool_result", tool_use_id: t.id, content: JSON.stringify(result) };
         } catch (err) {
-          logAction("tool_error", { sessionId, tool: t.name, input: t.input, error: err.message });
+          logAction("tool_error", { sessionId, tool: t.name, input: t.input, error: err.message, cause: errorDetails(err) });
           return { type: "tool_result", tool_use_id: t.id, content: `Error: ${err.message}`, is_error: true };
         }
       }),
@@ -255,7 +255,7 @@ export class Brain {
       try {
         response = await this.#streamClaude(s, turn);
       } catch (err) {
-        logAction("error", { sessionId, where: "claude", error: err.message });
+        logAction("error", { sessionId, where: "claude", error: err.message, cause: errorDetails(err) });
         // Drop the half-finished conversation so the next request starts clean.
         this.sessions.delete(sessionId);
         return this.#say(turn, friendlyApiError(err));

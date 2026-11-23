@@ -11,8 +11,9 @@ import { logAction, logPath } from "./logger.js";
 import * as memory from "./memory.js";
 import { callAudio, handleTwilio, publicCalls, validTwilioSignature } from "./calls/manager.js";
 import { callSettings } from "./calls/policy.js";
-import { setWarm } from "./net.js";
+import { errorDetails, setWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
+import { selfTest } from "./selftest.js";
 import { streamSpeech } from "./tts.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
@@ -73,7 +74,7 @@ async function twilioRoute(req, res, url) {
     const xml = await handleTwilio(kind, url.searchParams.get("call"), params);
     res.writeHead(200, { "content-type": xml ? "text/xml" : "text/plain" }).end(xml);
   } catch (err) {
-    logAction("error", { where: url.pathname, error: err.message });
+    logAction("error", { where: url.pathname, error: err.message, cause: errorDetails(err) });
     res.writeHead(200, { "content-type": "text/xml" }).end('<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>');
   }
 }
@@ -92,7 +93,7 @@ async function streamTurn(req, res, url) {
         : await brain.confirm(String(sessionId), text.trim(), hooks);
     send({ type: "done", ...result });
   } catch (err) {
-    logAction("error", { where: url.pathname, error: err.message });
+    logAction("error", { where: url.pathname, error: err.message, cause: errorDetails(err) });
     send({ type: "sentence", text: "Sorry, something went wrong on my end." });
     send({ type: "done", reply: "", awaitingConfirmation: false });
   }
@@ -218,7 +219,7 @@ async function handler(req, res) {
 
     sendJson(res, 404, { error: "Unknown endpoint" });
   } catch (err) {
-    logAction("error", { where: url.pathname, error: err.message });
+    logAction("error", { where: url.pathname, error: err.message, cause: errorDetails(err) });
     sendJson(res, 500, { error: "Server error" });
   }
 }
@@ -245,4 +246,6 @@ server.listen(port, settings.host || "0.0.0.0", () => {
   console.log(`   Phone calls: ${calls.testMode ? "TEST MODE (simulated, nothing is dialed)" : `LIVE via Twilio, webhooks at ${calls.publicUrl || "(calls.publicUrl not set!)"}`}`);
   if (!secrets.accessToken) console.log("   Tip: set JERICHO_ACCESS_TOKEN in .env before opening Jericho from other devices.");
   console.log("");
+  // One tiny request to Claude and one to ElevenLabs, so a broken connection or key shows up now.
+  if (process.env.JERICHO_SKIP_SELFTEST !== "1") selfTest(brain.client).then(() => console.log(""));
 });

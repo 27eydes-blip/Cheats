@@ -3,6 +3,7 @@
 import { getStyle, saveStyle } from "./memory.js";
 import { settings } from "./config.js";
 import { logAction } from "./logger.js";
+import { errorDetails } from "./net.js";
 
 const SCHEMA = {
   type: "object",
@@ -60,7 +61,7 @@ export async function updateStyle(client, transcript, sessionId) {
     const text = response.content.filter((b) => b.type === "text").map((b) => b.text).join("");
     return saveStyle(JSON.parse(text), "style-update");
   } catch (err) {
-    logAction("style_update_error", { sessionId, error: err.message });
+    logAction("style_update_error", { sessionId, error: err.message, cause: errorDetails(err) });
     return null;
   }
 }

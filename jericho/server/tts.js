@@ -7,7 +7,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { loadSettings, ROOT, secrets } from "./config.js";
 import { logAction } from "./logger.js";
-import { addWarmer, keepAliveFetch } from "./net.js";
+import { addWarmer, errorDetails, keepAliveFetch } from "./net.js";
 
 const MAX_CHARS = 1000;
 const CACHE_DIR = path.join(process.env.JERICHO_DATA_DIR || path.join(ROOT, "data"), "audio-cache");
@@ -98,7 +98,7 @@ export async function streamSpeech(text, res) {
   try {
     upstream = await requestSpeech(text, v);
   } catch (err) {
-    logAction("tts_error", { status: err.status, error: err.message, detail: err.detail });
+    logAction("tts_error", { status: err.status, error: err.message, detail: err.detail, cause: err.status ? undefined : errorDetails(err) });
     res.writeHead(err.status ? 502 : 503, { "content-type": "text/plain" }).end(err.message);
     return;
   }
