@@ -56,7 +56,9 @@ export function publicConfig() {
       enabled: settings.bargeIn?.enabled !== false,
       minLevel: Number(settings.bargeIn?.minLevel) > 0 ? Number(settings.bargeIn.minLevel) : 0.15,
       minMs: Number(settings.bargeIn?.minMs) > 0 ? Number(settings.bargeIn.minMs) : 270,
-      calibrateMs: Number(settings.bargeIn?.calibrateMs) >= 0 ? Number(settings.bargeIn?.calibrateMs ?? 1000) : 1000,
+      calibrateMs: Number(settings.bargeIn?.calibrateMs) > 0 ? Number(settings.bargeIn.calibrateMs) : 1500,
+      echoTailMs: Number(settings.bargeIn?.echoTailMs) >= 0 && settings.bargeIn?.echoTailMs !== "" && settings.bargeIn?.echoTailMs != null ? Number(settings.bargeIn.echoTailMs) : 700,
+      duckTo: Number(settings.bargeIn?.duckTo) > 0 && Number(settings.bargeIn?.duckTo) <= 1 ? Number(settings.bargeIn.duckTo) : 0.85,
     },
   };
 }

@@ -275,3 +275,4 @@ body[data-state="confirm"] .stop-btn { display: inline-block; }
 .card .quote.up { color: #b8d48a; }
 .card .quote.down { color: #e39a7a; }
 .card-note { color: var(--muted); font-size: 0.68rem; font-style: italic; margin-top: 6px !important; }
+.look-panel .barge-debug { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }

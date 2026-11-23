@@ -17,7 +17,9 @@
     "enabled": true,
     "minLevel": 0.15,
     "minMs": 270,
-    "calibrateMs": 1000
+    "calibrateMs": 1500,
+    "echoTailMs": 700,
+    "duckTo": 0.85
   },
   "endPhrases": [
     "thanks jericho",

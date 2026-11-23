@@ -2,7 +2,7 @@
 // and the gold visualizer. All thinking and all API keys live on the server.
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
-import { BARGE_MODES, createBargeDetector, decideBargeIn, DEFAULT_BARGE_MODE } from "./bargein.js";
+import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, shouldDropAsEcho } from "./bargein.js";
 
 const $ = (id) => document.getElementById(id);
 const orb = $("orb");
@@ -127,6 +127,7 @@ function beep() {
 
 // ElevenLabs audio goes through an AnalyserNode so the bars follow the real voice.
 let voiceAnalyser = null;
+let duckGain = null;
 const routed = new Set();
 function routeThroughAnalyser(player) {
   if (routed.has(player)) return true;
@@ -136,7 +137,10 @@ function routeThroughAnalyser(player) {
       voiceAnalyser = audioCtx.createAnalyser();
       voiceAnalyser.fftSize = 256;
       voiceAnalyser.smoothingTimeConstant = 0.72;
-      voiceAnalyser.connect(audioCtx.destination);
+      // analyser -> duck gain -> speakers: the visualizer sees the full voice, the room hears it a bit lower
+      duckGain = audioCtx.createGain();
+      voiceAnalyser.connect(duckGain);
+      duckGain.connect(audioCtx.destination);
     }
     audioCtx.createMediaElementSource(player).connect(voiceAnalyser);
     routed.add(player);
@@ -173,6 +177,7 @@ function browserVoice(text, stats) {
     if (!("speechSynthesis" in window)) return resolve();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = config.speechLang;
+    u.volume = voiceVolume();
     u.onstart = () => { stats.firstAudio ??= performance.now(); replyAudioStarted(stats); };
     u.onend = u.onerror = () => resolve();
     speechSynthesis.speak(u);
@@ -186,6 +191,7 @@ async function elevenLabsVoice(text, stats, next) {
   if (next) preload(next); // the other player fetches the next sentence while this one speaks
   const isRouted = routeThroughAnalyser(player);
   viz.setSpeechSource(isRouted ? voiceAnalyser : null, !isRouted);
+  applyVoiceVolume(player, isRouted);
   return new Promise((resolve, reject) => {
     let started = false;
     const cleanup = () => {
@@ -241,14 +247,17 @@ async function playTurn(turn) {
     const sentence = turn.queue.shift();
     if (mode !== "speaking") {
       stopConversationTimer();
-      // Phones: the mic is off while Jericho talks (it can't hear itself, and iPhones play audio
-      // badly with the mic open). Computers keep listening, but only for "Jericho, stop".
-      if (isPhone) stopListening();
+      // Speech recognition is paused while he talks, so it can't transcribe his own voice.
+      // On a PC a separate echo-cancelled mic stream keeps measuring the level; a confirmed
+      // interruption (loud enough, long enough) is what turns recognition back on.
+      if (!earsDuringReply) stopListening();
       setMode("speaking", "");
     }
     turn.playing = true;
     lastSpoken = `${lastSpoken} ${normalize(sentence)}`;
     currentSentence = sentence;
+    recentSentences.push(sentence);
+    if (recentSentences.length > 3) recentSentences.shift();
     if (!turn.useBrowser) {
       try {
         await elevenLabsVoice(sentence, turn.stats, turn.queue[0]);
@@ -264,7 +273,11 @@ async function playTurn(turn) {
   turn.playing = false;
   liveTurns.delete(turn);
   currentSentence = "";
-  if (!replyPlaying()) barge.stop();
+  if (!replyPlaying()) {
+    barge.stop();
+    earsDuringReply = false;
+    tailUntil = performance.now() + echoTailMs(); // room echo and speaker decay
+  }
   turn.stats.end = performance.now();
   viz.setSpeechSource(null, false);
   if (turn.cancelled) return; // stopped: the kill switch already set things straight
@@ -289,8 +302,8 @@ function afterSpeaking() {
   } else if (running) setMode("idle", `Say “${config.assistantName}”…`);
   else setMode("off", "Tap start to talk to me.");
   endAfterReply = false;
-  // Short pause before the mic comes back, so the tail of the audio isn't picked up.
-  if (running) setTimeout(() => mode !== "speaking" && startListening(), 350);
+  // The echo tail: the mic stays deaf a moment longer, so room echo isn't transcribed.
+  if (running) setTimeout(() => !replyPlaying() && startListening(), echoTailMs());
 }
 
 // ---- conversation (stays open after the wake word) ------------------------------
@@ -492,18 +505,65 @@ function replyPlaying() {
   for (const t of liveTurns) if (t.playing && !t.cancelled) return true;
   return false;
 }
-function canBargeIn() {
-  return !isPhone && Boolean(micAnalyser) && running && barge.enabled && replyPlaying();
+let earsDuringReply = false; // recognition turned back on during a reply ("Jericho, stop" with interrupting off)
+let tailUntil = 0; // until then, transcripts that sound like his last sentences are dropped
+const recentSentences = []; // his last 3 sentences, for echo matching
+let echoIgnored = 0;
+const echoTailMs = () => config.bargeIn?.echoTailMs ?? BARGE_DEFAULTS.echoTailMs;
+
+/** PC with a working level meter: barge-in by voice is possible (phones: tap instead). */
+function canListenForBargeIn() {
+  return !isPhone && Boolean(micAnalyser) && running;
 }
 function replyAudioStarted(stats) {
   if (stats.bargeCalibrated) return;
   stats.bargeCalibrated = true;
-  barge.startReply(performance.now()); // the next second measures his echo
+  barge.startReply(performance.now()); // the next 1.5 seconds measure his echo
+}
+
+/** His voice is a little lower while the mic listens for interruptions (less leaks back in). */
+function voiceVolume() {
+  return canListenForBargeIn() && bargeMode !== "off" && barge.enabled ? (config.bargeIn?.duckTo ?? BARGE_DEFAULTS.duckTo) : 1;
+}
+function applyVoiceVolume(player, isRouted) {
+  const v = voiceVolume();
+  if (isRouted && duckGain) {
+    duckGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    duckGain.gain.value = v;
+    player.volume = 1;
+  } else player.volume = v;
+}
+
+/** Drop transcripts that are his own voice coming back (and count them). */
+function dropAsEcho(text, utteranceStart = heardTimes.first, count = true) {
+  const drop = shouldDropAsEcho({ text, recent: recentSentences, now: performance.now(), speaking: replyPlaying(), tailUntil, utteranceStart: utteranceStart ?? null });
+  if (drop && count) {
+    echoIgnored++;
+    console.debug("[jericho] echo ignored:", text);
+  }
+  return drop;
+}
+
+/** The level meter confirmed you're talking over him: loud enough, for long enough. */
+function levelConfirmed() {
+  if (bargeMode !== "off" && barge.enabled) return cutOff("voice");
+  // Interrupting is off: still listen for "Jericho, stop" (only the kill phrase gets through).
+  if (!earsDuringReply) {
+    earsDuringReply = true;
+    startListening();
+  }
 }
 
 /** Fade the voice out over about 100 ms, then stop it. */
 function fadeOut(player, ms = 100) {
   if (player.paused) return;
+  if (routed.has(player) && duckGain && audioCtx) {
+    const g = duckGain.gain;
+    const t = audioCtx.currentTime;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(0, t + ms / 1000);
+  }
   const start = performance.now();
   const from = player.volume;
   const step = () => {
@@ -531,6 +591,8 @@ function cutOff(how, heard = null) {
   if ("speechSynthesis" in window) speechSynthesis.cancel();
   viz.setSpeechSource(null, false);
   barge.stop();
+  earsDuringReply = false;
+  tailUntil = performance.now() + echoTailMs(); // listening again, but his echo is still dropped
   endAfterReply = false;
   addLog("note", how === "tap" ? "Interrupted." : "Interrupted. Listening…");
   if (confirmPending) setMode("confirm", "Stopped. Say “yes” to confirm or “no” to cancel.");
@@ -544,26 +606,6 @@ function cutOff(how, heard = null) {
   if (how === "voice") bargeUtterance = { at: performance.now() };
 }
 
-/** Words heard while he talks. Returns true if they cut him off. */
-function tryBargeIn(text, isFinal) {
-  if (!canBargeIn()) return false;
-  const now = performance.now();
-  const d = decideBargeIn({
-    text,
-    spoken: lastSpoken,
-    current: currentSentence,
-    sustained: barge.sustained(now),
-    enabled: barge.enabled,
-    confirmPending,
-    isKill: isKillPhrase(text),
-  });
-  if (d.action === "interrupt" || d.action === "reconfirm") {
-    cutOff("voice", isFinal ? text : null);
-    return true;
-  }
-  return false;
-}
-
 // "Interrupt while talking" in the settings panel (the sun icon). Saved in this browser.
 const bargeSelect = $("barge-mode");
 if (bargeSelect) {
@@ -575,6 +617,23 @@ if (bargeSelect) {
   });
   const note = $("barge-note");
   if (note && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) note.textContent = "On phones the mic is off while I talk: tap the light or press Stop to interrupt.";
+}
+$("barge-recal")?.addEventListener("click", () => {
+  barge.recalibrate(replyPlaying() ? performance.now() : null);
+  const note = $("barge-note");
+  if (note) note.textContent = "Re-calibrating: I'll measure my echo during the next second and a half I talk.";
+});
+let debugAt = 0;
+function showBargeDebug(level, now) {
+  if (now - debugAt < 200) return;
+  debugAt = now;
+  const el = $("barge-debug");
+  if (!el || el.offsetParent === null) return; // panel closed
+  const ears = replyPlaying() ? (earsDuringReply ? "listening for stop" : "ears paused") : now < tailUntil ? "echo tail" : "listening";
+  const cal = barge.calibrating(now) ? " · calibrating" : "";
+  el.textContent = micAnalyser
+    ? `Mic ${level.toFixed(2)} · threshold ${barge.threshold(now).toFixed(2)} · echo ignored ${echoIgnored} · ${ears}${cal}`
+    : `No mic meter here (phone or mic blocked) · echo ignored ${echoIgnored}`;
 }
 function applyBargeSettings() {
   barge = createBargeDetector(config.bargeIn || {}, bargeMode);
@@ -722,16 +781,17 @@ function onHeard(raw, fromBargeIn = false) {
     preThinkingFrom = null;
   }
   lastUtterance = { first: heardTimes.first, last: heardTimes.last ?? performance.now(), final: performance.now() };
+  const utteranceStart = heardTimes.first ?? performance.now();
   heardTimes = { first: null, last: null };
   const text = raw.trim();
   if (!text) return;
+  // His own voice coming back (while he talks, in the echo tail, or in the first 400 ms of
+  // what was heard): dropped, never sent to the brain.
+  if (dropAsEcho(text, utteranceStart)) return;
   // The kill switch works in every state, even while Jericho is talking or thinking.
   if (mode !== "off" && isKillPhrase(text)) return stopEverything();
-  // Talking over him (PC): a real interruption stops him and becomes the next request.
-  if (replyPlaying()) {
-    tryBargeIn(text, true);
-    return;
-  }
+  // Anything else heard while he's still talking is discarded.
+  if (replyPlaying()) return;
   // The words that cut him off are your next request (no wake word needed).
   let interrupted = fromBargeIn;
   if (bargeUtterance) {
@@ -795,8 +855,8 @@ if (SR) {
       if (r.isFinal) onHeard(r[0].transcript);
       else interim += r[0].transcript;
     }
-    if (interim && replyPlaying()) tryBargeIn(interim, false); // you may be talking over him
-    if (replyPlaying()) return; // still talking: only the kill phrase or a real interruption gets through
+    if (replyPlaying()) return; // still talking: transcripts are discarded (only the kill phrase gets through)
+    if (interim && dropAsEcho(interim, heardTimes.first, false)) return; // his echo: no thinking animation, no timer reset
     heardEl.textContent = interim;
     if (interim) onInterim(interim);
     if (interim && mode === "active") restartConversationTimer();
@@ -846,8 +906,13 @@ function stopMicMeter() {
     let sum = 0;
     for (let i = 0; i < micBuf.length; i++) sum += micBuf[i] * micBuf[i];
     level = Math.sqrt(sum / micBuf.length) * 4;
-    if (replyPlaying()) barge.level(level, performance.now());
+    const now = performance.now();
+    if (replyPlaying() && canListenForBargeIn()) {
+      barge.level(level, now);
+      if (barge.sustained(now, 80)) levelConfirmed();
+    }
   }
+  showBargeDebug(level, performance.now());
   micPulse *= 0.92;
   viz.setMicLevel(Math.min(1, Math.max(level, micPulse * 0.5)));
   requestAnimationFrame(meterLoop);

@@ -336,14 +336,18 @@ bookings is the ordinary case, but check what applies where you live.
 
 ## Interrupting Jericho (barge-in)
 
-On a PC the mic stays on while Jericho talks (with the browser's echo cancellation, noise suppression and auto gain). Just talk over him: he fades out within about a tenth of a second, stops the rest of the reply, and treats what you're saying as your next request, with no wake word needed.
+So Jericho never hears himself through the speakers:
 
-It only counts as an interruption when your voice is clearly above a threshold for about a quarter second and the words aren't his own (echo). For the first second of each reply Jericho measures how loud his own echo is and raises the threshold above it.
-
-- Settings panel (sun icon) → **Interrupt while talking**: Off, Speakers (stricter, the default) or Headphones (more sensitive). Saved in your browser.
-- `settings.json` → `bargeIn`: `enabled`, `minLevel` (default 0.15), `minMs` (default 270), `calibrateMs` (default 1000).
+- **Speech recognition is paused while he talks.** On a PC a separate mic stream (with the browser's echo cancellation, noise suppression and auto gain) only measures the level. When your voice is clearly above the threshold for about a quarter second, he fades out within about a tenth of a second, stops the rest of the reply, and recognition starts again. Your words from that point on are your next request (no wake word needed). Words from before that point are never transcribed.
+- **Echo tail:** after he finishes, the mic stays deaf for 700 ms more (`bargeIn.echoTailMs`), so room echo isn't transcribed.
+- **Text check:** anything heard during his speech, in the tail, or in the first 400 ms of a new utterance is compared with his last 3 sentences (case and punctuation ignored, small recognition slips allowed). If 60% or more of the words are his, it's dropped as echo and never sent to the brain. One- or two-word replies like "yes" are only dropped if they repeat a whole sentence of his.
+- **Ducking:** while the mic listens for interruptions, his voice plays at 85% (`bargeIn.duckTo`) to reduce leakage.
+- **Calibration:** for the first 1.5 seconds of each reply Jericho measures his own echo, and the threshold is at least 1.8× that. The loudest echo measured is kept for the session, so a quiet reply doesn't lower the bar. Press **Re-calibrate** in the settings panel to measure again (after changing the volume or switching to headphones).
+- **Debug line** in the settings panel (sun icon): the mic level, the current threshold, how many transcripts were dropped as echo, and whether the ears are paused, in the echo tail or listening. The dropped text itself only goes to the browser console (`[jericho] echo ignored`).
+- Settings panel → **Interrupt while talking**: Off, Speakers (stricter, the default) or Headphones (more sensitive). Saved in your browser. With Off, talking loudly over him only turns on listening for "Jericho, stop".
+- `settings.json` → `bargeIn`: `enabled`, `minLevel` (0.15), `minMs` (270), `calibrateMs` (1500), `echoTailMs` (700), `duckTo` (0.85). If he still cuts himself off, raise `minLevel` or press Re-calibrate; if he misses you, lower it or choose Headphones.
 - Phones keep the mic off while he talks: tap the light (or press Stop) to cut him off and start listening.
-- Interrupting only stops his reply. Running tools, Claude Code jobs and calls keep going, and something said over him never counts as a "yes" to a confirmation. Only "Jericho, stop", the Stop button or Esc stop everything.
+- Interrupting only stops his reply. Running tools, Claude Code jobs and calls keep going, and something said over him never counts as a "yes" to a confirmation. "Jericho, stop", the Stop button and Esc still stop everything. While he's talking, "Jericho, stop" works like this: your voice cuts him off first, then the "stop" is heard. If the first word gets clipped, say "stop" again or press Esc.
 
 ## Settings (`settings.json`)
 

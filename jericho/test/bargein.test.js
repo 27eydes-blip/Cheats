@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fakeClient, say, use } from "./fake-client.js";
-import { BARGE_DEFAULTS, createBargeDetector, decideBargeIn, isEcho, soundsLikeEcho } from "../public/bargein.js";
+import { BARGE_DEFAULTS, createBargeDetector, decideBargeIn, echoMatch, isEcho, MIN_ECHO_MARGIN, shouldDropAsEcho, soundsLikeEcho, wordsMatch } from "../public/bargein.js";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-barge-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
@@ -27,7 +27,7 @@ function feed(det, level, from, ms) {
 }
 
 test("settings.json has the barge-in settings and the page gets them", () => {
-  assert.deepEqual(base.bargeIn, { enabled: true, minLevel: BARGE_DEFAULTS.minLevel, minMs: BARGE_DEFAULTS.minMs, calibrateMs: 1000 });
+  assert.deepEqual(base.bargeIn, { enabled: true, minLevel: BARGE_DEFAULTS.minLevel, minMs: BARGE_DEFAULTS.minMs, calibrateMs: 1500, echoTailMs: 700, duckTo: 0.85 });
   assert.ok(base.bargeIn.minMs >= 250 && base.bargeIn.minMs <= 300);
   assert.deepEqual(publicConfig().bargeIn, base.bargeIn);
 });
@@ -65,7 +65,7 @@ test("a yes said over a confirmation read-back never counts as yes", () => {
 test("level must be clearly above the threshold for about 270 ms", () => {
   const det = createBargeDetector({}, "speakers");
   det.startReply(0);
-  let t = feed(det, 0.05, 0, 1000); // his echo during the first second
+  let t = feed(det, 0.05, 0, 1500); // his echo during the first second and a half
   assert.ok(Math.abs(det.echoLevel() - 0.05) < 1e-9, "echo level measured");
   const th = det.threshold(t + 1);
   assert.ok(th >= BARGE_DEFAULTS.minLevel * 1.4, "speakers are stricter than the base level");
@@ -80,7 +80,7 @@ test("level must be clearly above the threshold for about 270 ms", () => {
 test("calibration raises the threshold above loud echo; headphones are more sensitive", () => {
   const det = createBargeDetector({}, "speakers");
   det.startReply(0);
-  let t = feed(det, 0.3, 0, 1000); // loud speakers: lots of echo
+  let t = feed(det, 0.3, 0, 1500); // loud speakers: lots of echo
   assert.ok(det.threshold(t + 1) >= 0.3 * 2.2 - 1e-9);
   t = feed(det, 0.35, t + 16, 400); // his echo, a bit louder: still not you
   assert.equal(det.sustained(t), false);
@@ -89,12 +89,84 @@ test("calibration raises the threshold above loud echo; headphones are more sens
   const speakers = createBargeDetector({}, "speakers");
   for (const d of [phones, speakers]) {
     d.startReply(0);
-    feed(d, 0.01, 0, 1000);
+    feed(d, 0.01, 0, 1500);
   }
   assert.ok(phones.threshold(2000) < speakers.threshold(2000));
   const off = createBargeDetector({}, "off");
   assert.equal(off.enabled, false);
   assert.equal(createBargeDetector({ enabled: false }, "speakers").enabled, false);
+});
+
+// ---- echo: matching, the tail, calibration --------------------------------------------------
+test("echo matching: his last sentences, fuzzy, case and punctuation ignored", () => {
+  const recent = ["Good morning, Sammy.", "It's forty one degrees and cloudy.", "Bring a jacket today."];
+  for (const heard of [
+    "its forty one degrees and cloudy", // punctuation and case
+    "IT'S FORTY-ONE DEGREES AND CLOUDY!",
+    "forty one degree and cloud", // small recognition slips
+    "bring a jacket to day",
+    "cloudy bring a jacket", // spanning two sentences
+    "good morning sammy",
+  ]) assert.equal(echoMatch(heard, recent), true, heard);
+  for (const heard of ["what about tomorrow", "turn off the kitchen lights", "no I meant the other jacket please now", "yes", "okay"]) {
+    assert.equal(echoMatch(heard, recent), false, heard);
+  }
+  assert.equal(echoMatch("sure", ["Sure."]), true, "a short echo of a whole short sentence");
+  assert.equal(echoMatch("yes", ["Should I send it to Sam? Say yes to confirm."]), false, "your short yes is never thrown away");
+  assert.equal(wordsMatch("weather", "whether"), false, "two letters apart");
+  assert.equal(wordsMatch("degrees", "degree"), true);
+  assert.equal(wordsMatch("the", "she"), false, "short words must match exactly");
+});
+
+test("only checked while he talks, in the echo tail, or the first 400 ms of an utterance", () => {
+  const recent = ["The Lions won thirty one to twenty four."];
+  const echo = "the lions won thirty one";
+  const base = { text: echo, recent };
+  assert.equal(shouldDropAsEcho({ ...base, now: 5000, speaking: true }), true, "while he talks");
+  assert.equal(shouldDropAsEcho({ ...base, now: 5000, tailUntil: 5700 }), true, "inside the 700 ms tail");
+  assert.equal(shouldDropAsEcho({ ...base, now: 5800, tailUntil: 5700, utteranceStart: 5500 }), true, "first 400 ms of a new utterance");
+  assert.equal(shouldDropAsEcho({ ...base, now: 9000, tailUntil: 5700, utteranceStart: 8000 }), false, "later, you can repeat his words on purpose");
+  assert.equal(shouldDropAsEcho({ text: "what about the bears", recent, now: 5000, speaking: true }), false, "your own words aren't echo");
+});
+
+test("calibration: 1.5 s window, threshold at least 1.8x the echo, highest value kept per session", () => {
+  const det = createBargeDetector({}, "headphones");
+  det.startReply(0);
+  let t = feed(det, 0.2, 0, 1400);
+  assert.equal(det.calibrating(t), true, "still measuring at 1.4 s");
+  t = feed(det, 0.2, t + 16, 200);
+  assert.equal(det.calibrating(t), false, "done after 1.5 s");
+  assert.ok(det.threshold(t) >= 0.2 * MIN_ECHO_MARGIN - 1e-9, "at least 1.8x the echo, even with headphones");
+
+  // a quieter next reply doesn't lower the bar: the session keeps the loudest echo
+  det.startReply(10_000);
+  t = feed(det, 0.02, 10_000, 1600);
+  assert.ok(det.threshold(t) >= 0.2 * MIN_ECHO_MARGIN - 1e-9);
+  assert.ok(Math.abs(det.sessionEcho() - 0.2) < 1e-9);
+
+  // echo just under 1.8x never interrupts; your louder voice does
+  t = feed(det, 0.2 * 1.75, t + 16, 500);
+  assert.equal(det.sustained(t), false);
+  t = feed(det, 0.2 * 2.2, t + 16, 300);
+  assert.equal(det.sustained(t), true);
+
+  // Re-calibrate forgets it and measures again
+  det.recalibrate(null);
+  assert.equal(det.sessionEcho(), 0);
+  det.startReply(20_000);
+  t = feed(det, 0.03, 20_000, 1600);
+  assert.ok(det.threshold(t) < 0.2 * MIN_ECHO_MARGIN, "lower again after re-calibrating");
+});
+
+test("a confirmed interruption needs about 270 ms, not a click or a word", () => {
+  const det = createBargeDetector({ minMs: 270 }, "speakers");
+  det.startReply(0);
+  let t = feed(det, 0.01, 0, 1600);
+  const loud = det.threshold(t) * 1.5;
+  t = feed(det, loud, t + 16, 200);
+  assert.equal(det.sustained(t, 80), false);
+  t = feed(det, loud, t + 16, 100);
+  assert.equal(det.sustained(t, 80), true);
 });
 
 // ---- the server ------------------------------------------------------------------------------

@@ -6,13 +6,15 @@
 // The threshold is calibrated per reply: for the first second Jericho talks, the mic level
 // (which is then mostly his echo) is measured, and the threshold is raised above it.
 
-export const BARGE_DEFAULTS = { enabled: true, minLevel: 0.15, minMs: 270, calibrateMs: 1000 };
+export const BARGE_DEFAULTS = { enabled: true, minLevel: 0.15, minMs: 270, calibrateMs: 1500, echoTailMs: 700, duckTo: 0.85 };
+/** The threshold is always at least this many times his measured echo level. */
+export const MIN_ECHO_MARGIN = 1.8;
 
 /** Speakers: stricter (more echo reaches the mic). Headphones: more sensitive. */
 export const BARGE_MODES = {
   off: null,
   speakers: { levelFactor: 1.4, echoMargin: 2.2 },
-  headphones: { levelFactor: 0.7, echoMargin: 1.4 },
+  headphones: { levelFactor: 0.7, echoMargin: 1.8 },
 };
 export const DEFAULT_BARGE_MODE = "speakers";
 
@@ -39,6 +41,70 @@ export function soundsLikeEcho(text, spoken, current = "") {
   return mine.length / words.length < 0.4;
 }
 
+// ---- fuzzy echo matching -------------------------------------------------------------------
+function editDistanceAtMostOne(a, b) {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    if (++edits > 1) return false;
+    if (a.length > b.length) i++;
+    else if (b.length > a.length) j++;
+    else {
+      i++;
+      j++;
+    }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+/** Same word, allowing small recognition slips ("weather"/"whether", "seventy"/"seventie"). */
+export function wordsMatch(a, b) {
+  if (a === b) return true;
+  const strip = (w) => w.replace(/'/g, "");
+  a = strip(a);
+  b = strip(b);
+  if (a === b) return true;
+  if (a.length >= 4 && b.length >= 4) {
+    if (editDistanceAtMostOne(a, b)) return true;
+    if (a.startsWith(b) || b.startsWith(a)) return true; // cut-off words
+  }
+  return false;
+}
+
+/**
+ * Does `text` sound like his own recent sentences coming back through the speakers?
+ * Normalized (case and punctuation ignored), fuzzy per word, and at least `minOverlap`
+ * of the heard words (60% or more) found in his last few sentences. One or two heard words only count
+ * as echo when they're one of his whole sentences ("Sure."), so a short "yes" from you
+ * isn't thrown away just because he said "say yes to confirm".
+ */
+export function echoMatch(text, sentences, { minOverlap = 0.6 } = {}) {
+  const words = normalizeText(text).split(" ").filter(Boolean);
+  if (!words.length || !sentences?.length) return false;
+  const recent = sentences.map((x) => normalizeText(x)).filter(Boolean);
+  if (words.length < 3) return recent.includes(words.join(" "));
+  const his = recent.join(" ").split(" ").filter(Boolean);
+  const found = words.filter((w) => his.some((h) => wordsMatch(w, h))).length;
+  return found / words.length >= minOverlap;
+}
+
+/**
+ * Should a transcript be dropped as echo? Only checked while he talks, during the echo
+ * tail after he stops, or in the first 400 ms of a new utterance.
+ */
+export function shouldDropAsEcho({ text, recent, now, speaking = false, tailUntil = 0, utteranceStart = null, earlyMs = 400 }) {
+  const inTail = now < tailUntil;
+  const early = utteranceStart !== null && now - utteranceStart < earlyMs;
+  if (!speaking && !inTail && !early) return false;
+  return echoMatch(text, recent);
+}
+
 const YES = /\b(yes|yeah|yep|yup|yah|sure|confirm|confirmed|ok|okay|do it|go ahead|go for it|affirmative|correct|right)\b/i;
 /** Anything that might be read as a yes. Heard mid-sentence, it never counts as one. */
 export function soundsLikeYes(text) {
@@ -58,6 +124,7 @@ export function createBargeDetector(settings = {}, mode = DEFAULT_BARGE_MODE) {
   let echoLevel = 0;
   let loudSince = null;
   let lastLoudRun = null; // { from, to } of the latest run above the threshold
+  let sessionEcho = 0; // the highest echo level measured so far this session
   const base = () => cfg.minLevel * (m ? m.levelFactor : 1);
   const calibrating = (now) => replyStart !== null && now - replyStart < cfg.calibrateMs;
 
@@ -69,6 +136,7 @@ export function createBargeDetector(settings = {}, mode = DEFAULT_BARGE_MODE) {
       m = BARGE_MODES[next] === undefined ? BARGE_MODES[DEFAULT_BARGE_MODE] : BARGE_MODES[next];
     },
     startReply(now) {
+      sessionEcho = Math.max(sessionEcho, echoLevel); // keep the loudest earlier reply
       replyStart = now;
       echo = [];
       echoLevel = 0;
@@ -80,13 +148,23 @@ export function createBargeDetector(settings = {}, mode = DEFAULT_BARGE_MODE) {
       loudSince = null;
       lastLoudRun = null;
     },
-    /** What counts as "clearly above": the base level, or well above his echo, whichever is higher. */
+    /** Forget what was measured; the next second and a half of his voice measures it again. */
+    recalibrate(now = null) {
+      sessionEcho = 0;
+      echoLevel = 0;
+      echo = [];
+      if (replyStart !== null && now !== null) replyStart = now;
+    },
+    /** What counts as "clearly above": the base level, or well above his echo (at least 1.8x), whichever is higher. */
     threshold(now = Infinity) {
-      const t = Math.max(base(), echoLevel * (m ? m.echoMargin : 2));
+      const margin = Math.max(MIN_ECHO_MARGIN, m ? m.echoMargin : 2);
+      const t = Math.max(base(), Math.max(echoLevel, sessionEcho) * margin);
       // still calibrating: be extra strict, the echo level isn't known yet
       return calibrating(now) ? Math.max(t, base() * 1.6) : t;
     },
     echoLevel: () => echoLevel,
+    sessionEcho: () => Math.max(sessionEcho, echoLevel),
+    calibrating: (now) => calibrating(now),
     level(value, now) {
       if (replyStart === null) return;
       if (calibrating(now)) {
