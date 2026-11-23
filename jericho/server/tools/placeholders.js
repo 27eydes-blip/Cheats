@@ -1,11 +1,13 @@
 // Calendar and music placeholders. Each one tells Claude it isn't connected yet,
 // so Jericho says so out loud instead of pretending. Fill in run() later.
+// Reading the calendar works once CALENDAR_ICS_URL is set (read-only, the briefing's link).
+import { listCalendar } from "../briefing/calendar.js";
 
 export const calendarListTool = {
   risky: false,
   definition: {
     name: "calendar_list_events",
-    description: "List upcoming calendar events in a date range. (Not connected yet.)",
+    description: "List calendar events in a date range (read-only, from the user's private iCal link). Use it for 'what's on my calendar', 'am I free Friday'.",
     input_schema: {
       type: "object",
       properties: {
@@ -16,9 +18,16 @@ export const calendarListTool = {
       additionalProperties: false,
     },
   },
-  async run() {
-    // TODO: Google Calendar API (events.list) or CalDAV.
-    return { ok: false, error: "The calendar isn't connected yet." };
+  async run({ from, to }) {
+    const parse = (v) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || ""));
+      return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date();
+    };
+    const r = await listCalendar(parse(from), parse(to || from));
+    if (!r.ok) {
+      return { ok: false, error: r.reason === "no calendar link set" ? "No calendar is linked: CALENDAR_ICS_URL isn't set in .env." : `Couldn't read the calendar: ${r.reason}.` };
+    }
+    return r;
   },
 };
 

@@ -1,13 +1,21 @@
 // Calendar for the briefing: read-only, from a private iCal (.ics) link. No sign-in.
 // The link comes from CALENDAR_ICS_URL in .env (preferred) or briefing.calendarIcsUrl in
 // settings.json. It's a secret: it's never logged, spoken or sent to the page.
-import { settings } from "../config.js";
+import { cleanCalendarLink, envNotes, settings } from "../config.js";
 import { keepAliveFetch } from "../net.js";
-import { cached } from "./cache.js";
+import { cached, forget } from "./cache.js";
+
+/** Where the link comes from: .env first, then settings.json. Empty or blank counts as not set. */
+export function calendarSource(env = process.env, s = settings) {
+  const fromEnv = cleanCalendarLink(env.CALENDAR_ICS_URL);
+  if (fromEnv) return { url: fromEnv, from: ".env" };
+  const fromSettings = cleanCalendarLink(s.briefing?.calendarIcsUrl);
+  if (fromSettings) return { url: fromSettings, from: "settings.json" };
+  return { url: "", from: "" };
+}
 
 export function calendarUrl() {
-  const raw = (process.env.CALENDAR_ICS_URL || settings.briefing?.calendarIcsUrl || "").trim();
-  return raw.replace(/^webcal:\/\//i, "https://");
+  return calendarSource().url;
 }
 
 // ---- a small iCal reader --------------------------------------------------------------
@@ -100,6 +108,37 @@ function occurrenceOn(ev, day) {
 export function eventsFor(events, now = new Date()) {
   const today = startOfDay(now);
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const pick = (day) => eventsOnDay(events, day);
+  const todays = pick(today);
+  const tomorrows = pick(tomorrow);
+  return {
+    today: todays.map(fmt),
+    tomorrowFirst: tomorrows.length ? fmt(tomorrows.find((e) => !e.allDay) || tomorrows[0]) : null,
+  };
+}
+
+/** Each day from `from` to `to` (at most 31 days) with its events, for "what's on my calendar". */
+export function eventsBetween(events, from, to) {
+  const start = startOfDay(from);
+  const end = startOfDay(to < from ? from : to);
+  const out = [];
+  for (let d = new Date(start), n = 0; d <= end && n < 31; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), n++) {
+    out.push({ date: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }), events: eventsOnDay(events, d).map(fmt) });
+  }
+  return out;
+}
+
+/** Calendar events between two dates, read-only from the iCal link. */
+export async function listCalendar(from, to) {
+  const url = calendarUrl();
+  if (!url) return { ok: false, reason: "no calendar link set" };
+  const r = await readCalendar(url);
+  if (!r.ok) return r;
+  return { ok: true, days: eventsBetween(r.events, from, to) };
+}
+
+/** One day's events, sorted, with moved and cancelled occurrences handled. */
+function eventsOnDay(events, day) {
   // A moved single occurrence of a repeating event comes as its own event with a RECURRENCE-ID;
   // the repeating event then mustn't also show up at the old time that day.
   const overrides = events.filter((e) => e.recurrenceId);
@@ -116,12 +155,7 @@ export function eventsFor(events, now = new Date()) {
       })
       .filter(Boolean)
       .sort((a, b) => a.start - b.start);
-  const todays = pick(today);
-  const tomorrows = pick(tomorrow);
-  return {
-    today: todays.map(fmt),
-    tomorrowFirst: tomorrows.length ? fmt(tomorrows.find((e) => !e.allDay) || tomorrows[0]) : null,
-  };
+  return pick(day);
 }
 
 function fmt(e) {
@@ -137,18 +171,52 @@ function fmt(e) {
 export async function getCalendar() {
   const url = calendarUrl();
   if (!url) return { ok: false, reason: "no calendar link set" };
-  if (!/^https:\/\//i.test(url)) return { ok: false, reason: "the calendar link has to start with https or webcal" };
+  const r = await readCalendar(url);
+  return r.ok ? { ok: true, ...eventsFor(r.events) } : r;
+}
+
+/** Fetch (cached 5 minutes) and parse the calendar. Errors never include the link. */
+async function readCalendar(url) {
+  if (!/^https:\/\/[^/]+\.[^/]+\//i.test(url)) return { ok: false, reason: "the calendar link has to start with https or webcal" };
   try {
     const text = await cached("calendar", 5 * 60_000, async () => {
       const res = await keepAliveFetch(url, { headers: { accept: "text/calendar" } });
       if (!res.ok) throw new Error(`the calendar server answered ${res.status}`);
       return res.text();
     });
-    if (!/BEGIN:VCALENDAR/.test(text)) return { ok: false, reason: "that link didn't return a calendar" };
-    return { ok: true, ...eventsFor(parseIcs(text)) };
+    if (!/BEGIN:VCALENDAR/.test(text)) {
+      forget("calendar"); // don't keep a bad answer for 5 minutes
+      return { ok: false, reason: "that link didn't return a calendar" };
+    }
+    return { ok: true, events: parseIcs(text) };
   } catch (err) {
     // Never pass the raw error on: it can contain the link.
     const safe = /answered \d+/.test(err.message) ? err.message : "couldn't reach the calendar";
     return { ok: false, reason: safe };
   }
+}
+
+/**
+ * The calendar check (startup self-test and "check my calendar"): PASS with today's number
+ * of events, or FAIL with a plain reason and what to do. Never includes the link.
+ */
+export async function checkCalendar() {
+  const { url, from } = calendarSource();
+  if (!url) {
+    const hints = envNotes.length ? ` Also: ${envNotes.join("; ")}.` : "";
+    return { status: "FAIL", reason: `not set. Add CALENDAR_ICS_URL=your secret iCal link to .env, then restart Jericho.${hints}` };
+  }
+  forget("calendar"); // a fresh look, not the cached one
+  const r = await getCalendar();
+  if (r.ok) {
+    const n = r.today.length;
+    return { status: "PASS", reason: `${n} event${n === 1 ? "" : "s"} today (link from ${from})`, count: n, calendar: r };
+  }
+  const why =
+    /https or webcal/.test(r.reason) ? "the link isn't a web address. It should start with https:// (or webcal://)"
+      : /answered (401|403|404)/.test(r.reason) ? `link unreachable (${r.reason}). The secret link may have been reset: copy it again`
+      : /answered/.test(r.reason) ? `link unreachable (${r.reason})`
+      : /didn't return a calendar/.test(r.reason) ? "not a valid calendar. Use the secret address in iCal format (it ends in .ics), not the public or embed link"
+      : "link unreachable: couldn't connect to the calendar server";
+  return { status: "FAIL", reason: why };
 }

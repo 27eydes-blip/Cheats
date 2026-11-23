@@ -9,6 +9,7 @@ import { track } from "../cancel.js";
 import { logAction, scrubEnvValues } from "../logger.js";
 import { resolvePath } from "../pc/policy.js";
 import { isSensitive } from "../secrets.js";
+import { CLAUDE_FIX, claudeSpawnSpec, findClaude } from "./claudePath.js";
 
 const cfg = settings.claudeCode || {};
 const projectsDir = path.resolve(expandHome(cfg.projectsDir || "~/jericho-projects"));
@@ -52,28 +53,66 @@ function summarize(text) {
   return s.length > 240 ? `${s.slice(0, 237)}...` : s || "No summary.";
 }
 
+/** Where claude is (claudeCode.path, the PATH, or the usual install folders). */
+export function locateClaude() {
+  return findClaude({ setting: cfg.path, command: cfg.command || "claude" });
+}
+
+/** Said out loud when claude can't be found. */
+export function claudeMissingMessage(found = locateClaude()) {
+  return `I can't find the claude command, so Claude Code can't start: ${found.reason}. ${CLAUDE_FIX}`;
+}
+
 function startJob(folder, task) {
+  const claude = locateClaude();
+  if (!claude.found) {
+    logAction("claude_code_missing", { tried: claude.tried.length });
+    const err = new Error(claudeMissingMessage(claude));
+    err.code = "CLAUDE_NOT_FOUND";
+    throw err;
+  }
   const cwd = resolveProjectFolder(folder);
   fs.mkdirSync(cwd, { recursive: true });
   const job = { id: nextId++, folder, task, status: "running", startedAt: new Date().toISOString() };
   jobs.push(job);
 
   const prompt = `${task}\n\nWhen you are completely done, end your final message with one short line starting with "SUMMARY:" that says what you did, suitable for reading aloud.`;
-  const args = ["-p", prompt, "--output-format", "json"];
-  if (cfg.permissionMode) args.push("--permission-mode", cfg.permissionMode);
-  args.push(...(cfg.extraArgs || []));
-
-  // No shell: the task text is passed as one argument and can't inject commands.
-  const child = spawn(cfg.command || "claude", args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  const fixed = ["--output-format", "json"];
+  if (cfg.permissionMode) fixed.push("--permission-mode", cfg.permissionMode);
+  fixed.push(...(cfg.extraArgs || []));
+  // claude.exe: no shell, the task is one argument and can't inject commands.
+  // claude.cmd (Windows npm install): runs through cmd.exe /c with only fixed, escaped
+  // arguments; the task text goes in on stdin, never on cmd's command line.
+  const viaCmd = claudeSpawnSpec(claude, []).viaCmd;
+  const spec = claudeSpawnSpec(claude, viaCmd ? ["-p", ...fixed] : ["-p", prompt, ...fixed]);
+  const isWin = process.platform === "win32";
+  const child = spawn(spec.command, spec.args, { ...spec.options, cwd, windowsHide: true, detached: !isWin, stdio: [viaCmd ? "pipe" : "ignore", "pipe", "pipe"] });
+  if (viaCmd) {
+    child.stdin.on("error", () => {}); // it may exit before reading
+    child.stdin.end(prompt);
+  }
+  // Stop the whole tree (cmd.exe -> claude -> its tools), not just the first process.
+  const killTree = () => {
+    try {
+      if (isWin) spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
+      else process.kill(-child.pid, "SIGTERM");
+    } catch {
+      try {
+        child.kill("SIGTERM");
+      } catch {
+        /* already gone */
+      }
+    }
+  };
   let out = "";
   let err = "";
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (err += d));
-  const timer = setTimeout(() => child.kill("SIGTERM"), (cfg.timeoutMinutes ?? 30) * 60_000);
+  const timer = setTimeout(killTree, (cfg.timeoutMinutes ?? 30) * 60_000);
   let stoppedByUser = false;
   const untrack = track("claude_code", folder, () => {
     stoppedByUser = true;
-    child.kill("SIGTERM");
+    killTree();
   });
 
   const finish = (status, summary, resultText = "") => {
@@ -100,7 +139,7 @@ function startJob(folder, task) {
   };
 
   child.on("error", (e) =>
-    finish("failed", e.code === "ENOENT" ? "The claude command isn't installed or isn't on the PATH." : e.message),
+    finish("failed", e.code === "ENOENT" ? claudeMissingMessage({ reason: "the claude command wasn't found when the job started" }) : e.message),
   );
   child.on("close", (code) => {
     let result = out;
@@ -125,6 +164,9 @@ export const claudeCodeTool = {
   describe: ({ folder, task }) => `run Claude Code in the "${folder}" folder to: ${task}`,
   /** Unknown or blocked folders are refused before you're asked to confirm. */
   precheck({ folder }) {
+    // Missing claude: say so (and how to fix it) before asking for a yes.
+    const claude = locateClaude();
+    if (!claude.found) return { ok: false, reason: claudeMissingMessage(claude) };
     try {
       resolveProjectFolder(folder);
       return { ok: true };
@@ -151,7 +193,13 @@ export const claudeCodeTool = {
     },
   },
   async run({ folder, task }) {
-    const job = startJob(folder, task);
+    let job;
+    try {
+      job = startJob(folder, task);
+    } catch (err) {
+      if (err.code === "CLAUDE_NOT_FOUND") return { ok: false, started: false, error: err.message, sayThis: "Tell the user plainly that the claude command wasn't found and the fix." };
+      throw err;
+    }
     return { ok: true, started: true, jobId: job.id, note: "Running in the background; the user will hear when it finishes." };
   },
 };

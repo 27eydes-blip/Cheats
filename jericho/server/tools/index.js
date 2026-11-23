@@ -10,6 +10,7 @@ import { lightsTool } from "./lights.js";
 import { pcTools } from "./pc.js";
 import { forgetTool, recallTool, rememberTool } from "./memory.js";
 import { calendarAddTool, calendarListTool, musicTool } from "./placeholders.js";
+import { checkCalendarTool, weatherTool } from "./weather.js";
 
 const all = [
   lightsTool,
@@ -29,6 +30,8 @@ const all = [
   whatIveLearnedTool,
   ...pcTools,
   morningBriefingTool,
+  weatherTool,
+  checkCalendarTool,
 ];
 
 export const tools = new Map(all.map((t) => [t.definition.name, t]));

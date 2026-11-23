@@ -472,6 +472,7 @@ function addCard(card) {
     const w = card.weather;
     sec.append(node("p", "", `${w.place}: ${w.now}°${w.units}, ${w.sky}. High ${w.high}°, low ${w.low}°, rain ${w.rain}%.`));
     sec.append(node("p", "card-muted", w.advice));
+    if (w.tomorrow) sec.append(node("p", "card-muted", `Tomorrow: high ${w.tomorrow.high}°, low ${w.tomorrow.low}°, ${w.tomorrow.sky}, rain ${w.tomorrow.rain}%.`));
   });
   section("Markets", card.markets, (sec) => {
     for (const q of card.markets.quotes) {

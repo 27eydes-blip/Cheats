@@ -334,6 +334,46 @@ bookings is the ordinary case, but check what applies where you live.
   - Markets: Yahoo Finance, with Stooq and CoinGecko as fallbacks.
   - `briefing.autoTime` (for example `"07:00"`, empty by default): on your first wake after that time each day, Jericho offers the briefing. `briefing.name` sets the name it greets you with (defaults to `calls.ownerName`).
 
+## Linking your Google Calendar (for the briefing and "what's on my calendar")
+
+Jericho only reads your calendar, through its secret iCal link. No sign-in is needed.
+
+1. On your PC, open [calendar.google.com](https://calendar.google.com) in a browser (this isn't available in the phone app).
+2. Click the gear icon (top right), then **Settings**.
+3. In the left column under **Settings for my calendars**, click your calendar (usually your name).
+4. Click **Integrate calendar** (or scroll down to it).
+5. Find **Secret address in iCal format** and click the copy icon next to it. It starts with `https://calendar.google.com/calendar/ical/` and ends with `/basic.ics`. Don't use the "Public address", which only works for public calendars.
+6. Open `.env` in the `jericho` folder (in Notepad: File → Open, set the file type to **All files**, then choose `.env`). Add a line with the link right after the `=`:
+   ```
+   CALENDAR_ICS_URL=https://calendar.google.com/calendar/ical/.../private-.../basic.ics
+   ```
+   Save it as `.env`, not `.env.txt`.
+7. Restart Jericho (Ctrl+C, then `npm start`). The startup self-test should show `Calendar ✅ PASS  N events today`.
+
+Then say "check my calendar" at any time: Jericho runs the same test and tells you the result.
+
+- Spaces around the link, quotes around it, and `webcal://` links are all fixed automatically. `.env` files saved by Notepad as "Unicode", with a byte order mark, or accidentally named `.env.txt` are read too, and the self-test tells you to fix the file.
+- The link can also go in `settings.json` as `briefing.calendarIcsUrl`, but `.env` is better because it stays out of git. If both are set, `.env` wins.
+- If the self-test says **not set**, the line is missing or empty, or Jericho wasn't restarted. **Link unreachable** means Google refused the link (copy it again; resetting it in Google makes the old one stop working) or there's no internet. **Not a valid calendar** means a different link was pasted (for example the embed or public address).
+- Treat the link like a password. Jericho never prints, logs or says it.
+
+## Claude Code on Windows
+
+Jericho finds the `claude` command by itself: first `claudeCode.path` in `settings.json`, then your PATH, then the usual install folders:
+`%USERPROFILE%\.local\bin\claude.exe` (the official installer), `%APPDATA%\npm\claude.cmd` (npm) and `%LOCALAPPDATA%\Programs\claude`.
+A `claude.cmd` is run through `cmd.exe /c` with fixed, escaped arguments, and your task is sent on its input, so nothing you say can turn into a command.
+
+The startup self-test shows `Claude Code ✅ PASS` with where it was found and its version. If it says FAIL:
+1. Install Claude Code: in PowerShell run `irm https://claude.ai/install.ps1 | iex`, then run `claude` once to log in.
+2. Restart Jericho.
+3. If it's installed somewhere unusual, find it with `where.exe claude` in PowerShell and put that path in `settings.json`, e.g. `"path": "C:\\Users\\you\\.local\\bin\\claude.exe"` under `claudeCode` (backslashes doubled in JSON).
+
+If Claude Code is missing when you ask for a job, Jericho says so and tells you the fix instead of asking for a yes.
+
+## Weather
+
+Ask "what's the weather tomorrow", "will it rain this weekend", "weather for Friday" or "what's the next few days look like". Jericho answers with the high and low, the rain chance and a short tip, from Open-Meteo for the location in `settings.json` (`location`). The forecast goes 7 days ahead and is cached for 5 minutes. The morning briefing includes tomorrow in one short sentence.
+
 ## Interrupting Jericho (barge-in)
 
 So Jericho never hears himself through the speakers:
@@ -367,6 +407,7 @@ None of these are secret. Keys live only in `.env`.
 | `claude.webSearch` | Lets Jericho look things up, such as a restaurant's number or hours. About 1 cent per search. |
 | `claude.fallbacks` | On by default. If the main model declines a request on safety grounds, the API retries it on a fallback model inside the same call. Set to `false` to turn it off. |
 | `lights.provider` / `lights.rooms` | `mock` for now. `hue` and `kasa` are stubs with setup notes inside. |
+| `claudeCode.path` | Full path to `claude.exe` or `claude.cmd` (or its folder), if Jericho can't find it on its own. Empty = search automatically. |
 | `claudeCode.projectsDir` | Claude Code only runs in folders inside this directory. |
 | `claudeCode.permissionMode` | Passed to `claude --permission-mode`. `acceptEdits` lets it write files but not run arbitrary shell commands. Add `"extraArgs": ["--allowedTools", "Bash(npm *)"]` to allow specific commands. |
 | `confirmation.yesWords` / `timeoutSeconds` | What counts as yes, and how long a risky action waits. |

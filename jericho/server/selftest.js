@@ -6,6 +6,8 @@ import { pathToFileURL } from "node:url";
 import { loadSettings, secrets } from "./config.js";
 import { logAction } from "./logger.js";
 import { connectionMode, errorDetails, errorSummary, keepAliveFetch } from "./net.js";
+import { checkCalendar } from "./briefing/calendar.js";
+import { CLAUDE_FIX, claudeVersion, findClaude } from "./tools/claudePath.js";
 
 function claudeReason(err) {
   if (err instanceof Anthropic.AuthenticationError) return "the API key was rejected (401). Check ANTHROPIC_API_KEY in .env";
@@ -58,14 +60,38 @@ async function testElevenLabs() {
   }
 }
 
-/** Runs both checks and prints the result. Returns true if nothing failed. */
+/** Where Claude Code's `claude` command is, and its version. */
+export async function testClaudeCode(cfg = loadSettings().claudeCode || {}) {
+  const found = findClaude({ setting: cfg.path, command: cfg.command || "claude" });
+  if (!found.found) return { status: "FAIL", reason: `${found.reason}. ${CLAUDE_FIX}` };
+  try {
+    const version = await claudeVersion(found);
+    return { status: "PASS", reason: `${found.path} (found via ${found.via}), ${version}` };
+  } catch (err) {
+    return { status: "FAIL", reason: `found ${found.path}, but it didn't run: ${errorSummary(err)}. ${CLAUDE_FIX}` };
+  }
+}
+
+/** The calendar link: PASS with today's count, or FAIL with a plain reason. Never prints the link. */
+export async function testCalendar() {
+  try {
+    const r = await checkCalendar();
+    return { status: r.status, reason: r.reason };
+  } catch (err) {
+    return { status: "FAIL", reason: "the check itself failed" };
+  }
+}
+
+/** Runs the checks and prints the result. Returns true if Claude and ElevenLabs didn't fail. */
 export async function selfTest(client = new Anthropic({ fetch: (url, init) => keepAliveFetch(url, init) })) {
-  const [claude, eleven] = await Promise.all([testClaude(client), testElevenLabs()]);
+  const [claude, eleven, calendar, claudeCode] = await Promise.all([testClaude(client), testElevenLabs(), testCalendar(), testClaudeCode()]);
   const mark = { PASS: "✅ PASS", FAIL: "❌ FAIL", SKIP: "➖ SKIP" };
   console.log(`   Self-test (Node ${process.version}, connections: ${connectionMode()}):`);
   console.log(`     Claude      ${mark[claude.status]}  ${claude.reason}`);
   console.log(`     ElevenLabs  ${mark[eleven.status]}  ${eleven.reason}`);
-  logAction("selftest", { node: process.version, connections: connectionMode(), claude, elevenlabs: eleven });
+  console.log(`     Calendar    ${mark[calendar.status]}  ${calendar.reason}`);
+  console.log(`     Claude Code ${mark[claudeCode.status]}  ${claudeCode.reason}`);
+  logAction("selftest", { node: process.version, connections: connectionMode(), claude, elevenlabs: eleven, calendar, claudeCode });
   return claude.status !== "FAIL" && eleven.status !== "FAIL";
 }
 

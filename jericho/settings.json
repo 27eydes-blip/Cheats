@@ -67,6 +67,7 @@
     ]
   },
   "claudeCode": {
+    "path": "",
     "command": "claude",
     "projectsDir": "~/jericho-projects",
     "permissionMode": "acceptEdits",

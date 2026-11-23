@@ -10,6 +10,10 @@ export async function cached(key, ttlMs, fn) {
   return value;
 }
 
+export function forget(key) {
+  store.delete(key);
+}
+
 export function clearCache() {
   store.clear();
 }
