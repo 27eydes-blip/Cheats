@@ -4,6 +4,7 @@
 import { makeCallTool, recentCallsTool } from "./calls.js";
 import { claudeCodeStatusTool, claudeCodeTool } from "./claudeCode.js";
 import { deepThinkTool } from "./deepThink.js";
+import { saveLessonTool, whatIveLearnedTool } from "./learning.js";
 import { lightsTool } from "./lights.js";
 import { forgetTool, recallTool, rememberTool } from "./memory.js";
 import { calendarAddTool, calendarListTool, musicTool } from "./placeholders.js";
@@ -21,6 +22,8 @@ const all = [
   deepThinkTool,
   makeCallTool,
   recentCallsTool,
+  saveLessonTool,
+  whatIveLearnedTool,
 ];
 
 export const tools = new Map(all.map((t) => [t.definition.name, t]));

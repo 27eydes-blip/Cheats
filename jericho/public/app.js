@@ -319,7 +319,7 @@ let confirmTimer;
 let confirmPending = false;
 let lastUtterance = null; // timing of the last thing you said (see the ears section)
 
-async function send(kind, text, { endAfter = false } = {}) {
+async function send(kind, text, { endAfter = false, typed = false } = {}) {
   addLog("you", text);
   stopConversationTimer();
   setMode("thinking", "Thinking…");
@@ -335,7 +335,8 @@ async function send(kind, text, { endAfter = false } = {}) {
     const res = await fetch(kind === "confirm" ? "/api/confirm" : "/api/ask", {
       method: "POST",
       headers: { "content-type": "application/json", "x-jericho-token": token },
-      body: JSON.stringify({ sessionId, text }),
+      // how long you spoke for, so Jericho can tell if you're rushed or relaxed
+      body: JSON.stringify({ sessionId, text, typed, speechMs: spoken?.first != null ? Math.round(spoken.last - spoken.first) : undefined }),
     });
     if (res.status === 401) throw new Error("Access token missing or wrong. Open the page with ?token=…");
     if (!res.ok || !res.body) throw new Error(`Server error ${res.status}`);
@@ -652,9 +653,9 @@ $("typed").addEventListener("submit", (e) => {
   const text = input.value.trim();
   if (!text) return;
   input.value = "";
-  if (mode === "confirm") return send("confirm", text);
+  if (mode === "confirm") return send("confirm", text, { typed: true });
   if (mode === "active" || mode === "idle") conversation = running; // typing counts as talking
-  send("ask", text);
+  send("ask", text, { typed: true });
 });
 
 // ---- announcements (e.g. "Claude Code finished") -------------------------------

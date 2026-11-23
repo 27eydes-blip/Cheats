@@ -59,7 +59,7 @@ test("saying no cancels the risky action", async () => {
   const brain = new Brain({ client });
   await brain.handle("s3", "wipe the project");
   const r = await brain.confirm("s3", "no don't");
-  assert.equal(r.reply, "Okay, I won't.");
+  assert.match(r.reply, /^(Okay, I won.t\.|Got it, I.ll leave it\.|No problem, cancelled\.|Okay, not doing that\.)$/);
   assert.equal(fs.existsSync(path.join(tmp, "projects/nope")), false);
   const log = fs.readFileSync(path.join(tmp, "actions.log"), "utf8");
   assert.match(log, /"type":"declined"/);

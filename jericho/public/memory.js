@@ -43,8 +43,38 @@ function emptyRow(text) {
 
 async function load() {
   try {
-    const { memories, style } = await api("/api/memory");
+    const { memories, style, profile, lessons, categories } = await api("/api/memory");
     $("status").textContent = "";
+
+    const lessonList = $("lessons");
+    lessonList.replaceChildren();
+    if (!lessons.length) lessonList.append(emptyRow("None yet. Correct Jericho when it gets something wrong (“no, I meant the office”) and it'll remember."));
+    for (const l of [...lessons].reverse()) {
+      lessonList.append(itemRow(l.text, `${l.date}${l.times > 1 ? ` · corrected ${l.times} times` : ""}`, () => api("/api/lessons/delete", { id: l.id })));
+    }
+    $("lessons-raw").textContent = JSON.stringify({ lessons }, null, 2);
+
+    const box = $("profile");
+    box.replaceChildren();
+    const label = { projects: "Projects", goals: "Goals", people: "People", preferences: "Preferences", routines: "Routines", topics: "Topics you come back to" };
+    for (const cat of categories) {
+      const items = profile.items.filter((i) => i.category === cat);
+      box.append(el("p", { className: "subhead" }, label[cat] || cat));
+      const ul = el("ul", { className: "items" });
+      if (!items.length) ul.append(emptyRow("Nothing yet."));
+      for (const i of items) {
+        const meta = `since ${i.firstSeen}${i.mentions > 1 ? ` · mentioned ${i.mentions} times` : ""}`;
+        ul.append(itemRow(i.text, meta, () => api("/api/profile/delete", { id: i.id })));
+      }
+      box.append(ul);
+    }
+    box.append(el("p", { className: "subhead" }, "Recent conversations"));
+    const recentUl = el("ul", { className: "items" });
+    if (!profile.recent.length) recentUl.append(emptyRow("Nothing yet."));
+    profile.recent.forEach((r, idx) => recentUl.append(itemRow(r.text, r.date, () => api("/api/profile/recent/delete", { index: idx }))));
+    box.append(recentUl);
+    $("profile-updated").textContent = profile.updatedAt ? `Last updated ${new Date(profile.updatedAt).toLocaleString()}.` : "";
+    $("profile-raw").textContent = JSON.stringify(profile, null, 2);
 
     const list = $("memories");
     list.replaceChildren();
@@ -54,14 +84,14 @@ async function load() {
     }
     $("memories-raw").textContent = JSON.stringify({ memories }, null, 2);
 
-    const box = $("style");
-    box.replaceChildren();
+    const styleBox = $("style");
+    styleBox.replaceChildren();
     const section = (title, rows) => {
-      box.append(el("p", { className: "subhead" }, title));
+      styleBox.append(el("p", { className: "subhead" }, title));
       const ul = el("ul", { className: "items" });
       if (!rows.length) ul.append(emptyRow("Nothing noted yet."));
       ul.append(...rows);
-      box.append(ul);
+      styleBox.append(ul);
     };
     const del = (sectionName, index) => () => api("/api/style/delete", { section: sectionName, index });
     section("Phrases and slang", style.phrases.map((p, i) => itemRow(p, "", del("phrases", i))));
@@ -79,7 +109,7 @@ async function load() {
 }
 
 $("wipe").addEventListener("click", async () => {
-  if (!confirm("Wipe all memories and all notes on how you talk? This can't be undone.")) return;
+  if (!confirm("Wipe all memories, lessons, your profile and the notes on how you talk? This can't be undone.")) return;
   try {
     await api("/api/memory/wipe", {});
     await load();

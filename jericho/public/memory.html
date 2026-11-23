@@ -18,6 +18,20 @@
     <p id="status" class="status" role="status"></p>
 
     <section class="panel">
+      <h2>Lessons from your corrections</h2>
+      <p class="hint">Saved when you correct Jericho (“no, I meant…”), and always followed. Stored in <code>data/lessons.json</code>.</p>
+      <ul id="lessons" class="items"></ul>
+      <details><summary>Raw file</summary><pre id="lessons-raw" class="raw"></pre></details>
+    </section>
+
+    <section class="panel">
+      <h2>What Jericho has learned about you</h2>
+      <p class="hint">Updated after each conversation, only from things you said, kept under about 500 words. Stored in <code>data/profile.json</code>. <span id="profile-updated"></span></p>
+      <div id="profile"></div>
+      <details><summary>Raw file</summary><pre id="profile-raw" class="raw"></pre></details>
+    </section>
+
+    <section class="panel">
       <h2>What Jericho remembers</h2>
       <p class="hint">Saved when you say “remember that…”. Stored in <code>data/memory.json</code>, never committed.</p>
       <ul id="memories" class="items"></ul>
@@ -33,6 +47,7 @@
 
     <div>
       <button id="wipe" class="btn danger">Wipe everything</button>
+      <p class="hint">Deletes memories, lessons, your profile and the notes on how you talk. All of it lives only on this PC and is never committed to git.</p>
     </div>
   </main>
   <script src="memory.js" type="module"></script>

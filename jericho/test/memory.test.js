@@ -88,6 +88,7 @@ test("style notes: updated after a conversation, capped, secrets dropped, items 
   await new Promise((r) => setTimeout(r, 50));
   const req = client.calls[1];
   assert.equal(req.output_config.format.type, "json_schema");
+  assert.ok(req.output_config.format.schema.properties.profile, "one call learns style and profile together");
   assert.match(req.messages[0].content, /User: yo hit the lights/);
   const style = memory.getStyle();
   assert.deepEqual(style.phrases, ["yo", "hit the lights"], "sensitive phrase dropped");

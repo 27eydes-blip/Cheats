@@ -81,7 +81,9 @@ async function twilioRoute(req, res, url) {
 
 /** /api/ask and /api/confirm stream one JSON line per sentence, so speaking can start early. */
 async function streamTurn(req, res, url) {
-  const { sessionId, text, t } = await readJson(req);
+  const { sessionId, text, speechMs, typed } = await readJson(req);
+  // how it was said (speaking time from the page), so Jericho can read pace
+  const meta = { speechMs: Number.isFinite(Number(speechMs)) ? Math.max(0, Math.min(120_000, Number(speechMs))) : undefined, typed: Boolean(typed) };
   if (!sessionId || typeof text !== "string" || !text.trim()) return sendJson(res, 400, { error: "sessionId and text are required" });
   res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
   const send = (obj) => res.write(`${JSON.stringify(obj)}\n`);
@@ -89,7 +91,7 @@ async function streamTurn(req, res, url) {
   try {
     const result =
       url.pathname === "/api/ask"
-        ? await brain.handle(String(sessionId), text.trim(), hooks)
+        ? await brain.handle(String(sessionId), text.trim(), hooks, meta)
         : await brain.confirm(String(sessionId), text.trim(), hooks);
     send({ type: "done", ...result });
   } catch (err) {
@@ -179,7 +181,25 @@ async function handler(req, res) {
 
     // ---- memory page + conversation learning ----
     if (req.method === "GET" && url.pathname === "/api/memory") {
-      return sendJson(res, 200, { memories: memory.listMemories(), style: memory.getStyle() });
+      return sendJson(res, 200, {
+        memories: memory.listMemories(),
+        style: memory.getStyle(),
+        profile: memory.getProfile(),
+        lessons: memory.listLessons(),
+        categories: memory.PROFILE_CATEGORIES,
+      });
+    }
+    if (req.method === "POST" && url.pathname === "/api/profile/delete") {
+      const { id } = await readJson(req);
+      return sendJson(res, 200, memory.deleteProfileItem(String(id), "memory-page"));
+    }
+    if (req.method === "POST" && url.pathname === "/api/profile/recent/delete") {
+      const { index } = await readJson(req);
+      return sendJson(res, 200, memory.deleteRecentSummary(Number(index), "memory-page"));
+    }
+    if (req.method === "POST" && url.pathname === "/api/lessons/delete") {
+      const { id } = await readJson(req);
+      return sendJson(res, 200, memory.deleteLesson(String(id), "memory-page"));
     }
     if (req.method === "POST" && url.pathname === "/api/memory/delete") {
       const { id } = await readJson(req);

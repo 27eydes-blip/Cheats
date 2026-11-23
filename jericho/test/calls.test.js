@@ -79,7 +79,7 @@ test("saying no means no call", async () => {
   const brain = new Brain({ client });
   await brain.handle("b", "call them");
   const r = await brain.confirm("b", "no");
-  assert.equal(r.reply, "Okay, I won't.");
+  assert.match(r.reply, /^(Okay, I won.t\.|Got it, I.ll leave it\.|No problem, cancelled\.|Okay, not doing that\.)$/);
   assert.equal(listCalls().length, before);
 });
 

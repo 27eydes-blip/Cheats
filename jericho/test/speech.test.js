@@ -58,7 +58,7 @@ test("hard questions go to the stronger model from settings, with a spoken heads
   );
   const heard = [];
   const r = await new Brain({ client }).handle("c", "which mortgage is cheaper", { onSentence: (t) => heard.push(t) });
-  assert.equal(heard[0], "Let me think that through.");
+  assert.match(heard[0], /think|work (that|it) out|work through it/i, "a short heads-up first");
   assert.match(r.reply, /fixed one/);
   const hard = client.calls.find((c) => c.model === "claude-fable-5-2");
   assert.equal(hard.output_config.effort, "high");

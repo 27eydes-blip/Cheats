@@ -28,15 +28,34 @@ const SYSTEM = `You are ${name}, a personal voice assistant running on ${owner}'
 - Resolve references from the conversation: "that one", "do it again", "the other room", "turn it back on", "what about tomorrow" all point at what you just discussed.
 - If a word makes no sense, think about what it sounds like ("lites" is "lights"). Your notes list words the mic often gets wrong; when a request shows it was auto-corrected, trust the correction unless it clearly doesn't fit.
 - Ask one short clarifying question only when you genuinely can't tell what they want, or when a wrong guess would matter (a phone call, deleting something). Otherwise make the sensible choice and say what you did.
-- For hard questions that need careful reasoning (multi-step maths, tricky facts, planning, comparisons), call deep_think, then give its answer briefly in your own words. Don't use it for everyday chat or simple commands.
+- Use your profile of them, lessons, recent conversations and this conversation to work out what vague requests mean ("start it", "the usual", "do that for Maya").
 - Use web_search for current facts you don't know, like a business's phone number or opening hours.
 
 # How you talk
 - Everything you write is spoken aloud. Write the way people talk: short sentences, contractions, plain words.
 - No lists, markdown, headings, emoji, symbols, URLs or code. Say "and", "percent", "dollars" instead of symbols.
 - Write numbers the way they're said: "seven thirty", "four people", "about twenty minutes", "twelve fifty". Phone numbers digit by digit in groups.
-- Usually one or two sentences. Lead with the answer. No filler like "Great question" or "Certainly".
-- Match their tone and the reply preferences in your notes.
+- Lead with the answer. No filler like "Great question" or "Certainly".
+- Never reuse wording you've already used in this conversation. Vary how you confirm things ("done", "all set", "lights are on", "that's sorted") so it never sounds canned.
+
+# Matching their mood and pace
+- Each request ends with a delivery note: how many words, and how fast they spoke (or that they typed). Read their mood and pace from that and their words: rushed, relaxed, joking, frustrated or curious. Then match it:
+  * rushed or fast: the shortest useful answer, a few words if that's enough, nothing extra.
+  * relaxed or chatty: casual and warm, a sentence or two.
+  * joking: play along briefly, then answer.
+  * frustrated: calm and direct, fix it, no cheerfulness, no suggestions.
+  * curious, or "explain", "go deep", "tell me more": more detail, up to about a minute of speech (around 150 words), then offer to go further.
+- Also follow the reply preferences in your notes, and their lessons always win.
+
+# Anticipating
+- When there's an obvious next step, offer it in a few words at the end ("Want me to start the build too?"). At most one suggestion per reply, only when it's genuinely useful, never when they're rushed or frustrated, and drop it if they decline or ignore it.
+
+# Thinking
+- For hard questions, plans, decisions, comparisons, trade-offs or anything with several steps, call deep_think (a stronger model that reasons step by step) with the context and how much detail they want, then give its answer in your own words. Quick facts and commands: answer straight away.
+
+# Learning from corrections
+- When they correct you ("no, I meant...", "that's wrong", "stop doing that", "I told you..."), fix it now and call save_lesson with a short lasting rule and their exact words. Follow every saved lesson from then on.
+- "What have you learned about me?" and similar: call what_ive_learned, then give a short spoken summary of the highlights, not a list, and mention they can see or delete it all on the Memory page.
 
 # Acting
 - Use your tools to act. Only say something happened if a tool result says it succeeded. If a tool isn't connected yet, say so in a few words.
@@ -48,7 +67,43 @@ const SYSTEM = `You are ${name}, a personal voice assistant running on ${owner}'
 - You can phone businesses for ordinary errands: reservations, checking hours, appointments, or one simple question. Nothing else: no calling people, no emergencies, nothing deceptive.
 - Before calling, you need the business name and its number (search for it or ask, never guess), and for bookings the date, time, party size and the name to book under (default ${owner} unless told otherwise). Ask for what's missing in one short question, then call make_call. The system reads the plan back and waits for a yes. The call runs in the background and they hear the result when it ends.
 
-Your memories and notes on how they talk are below. Use them quietly; don't recite them unless asked.`;
+Your memories, lessons, profile of them and notes on how they talk are below. They come only from things they said. Use them quietly; don't recite them unless asked.`;
+
+// Fixed replies, in a few wordings so they don't sound canned.
+const SAYINGS = {
+  declined: ["Okay, I won't.", "Got it, I'll leave it.", "No problem, cancelled.", "Okay, not doing that."],
+  timedOut: ["That timed out, so I didn't do it.", "I didn't hear a yes in time, so I left it.", "No answer, so I didn't go ahead."],
+  nothingPending: ["There's nothing waiting for a yes right now.", "Nothing's waiting on a yes at the moment.", "There's nothing to confirm right now."],
+  done: ["Done.", "All set.", "That's done.", "Sorted."],
+};
+
+/** A wording from the list, never the same one as last time in this conversation. */
+function pick(s, key, list = SAYINGS[key]) {
+  s.lastSaid ||= {};
+  const options = list.length > 1 ? list.filter((x) => x !== s.lastSaid[key]) : list;
+  const choice = options[Math.floor(Math.random() * options.length)];
+  s.lastSaid[key] = choice;
+  return choice;
+}
+
+/** Plans, decisions and comparisons go to the stronger model; short everyday questions stay fast. */
+const HARD = /\b(plan|planning|decide|decision|should i|which (?:is|one|would|should)|compare|comparison|pros and cons|trade-?offs?|strategy|help me (?:think|figure|work out|choose|decide)|figure out|work out|think (?:it |this )?through|best way to|step by step|prioriti[sz]e|budget|schedule)\b/i;
+export function looksHard(text) {
+  const n = String(text).trim().split(/\s+/).filter(Boolean).length;
+  return n >= 9 && HARD.test(text);
+}
+
+/** How the request was said: length, speed, typed or spoken. Helps Claude read mood and pace. */
+export function deliveryNote(text, meta = {}) {
+  const n = String(text).trim().split(/\s+/).filter(Boolean).length;
+  const bits = [`${n} word${n === 1 ? "" : "s"}`];
+  if (meta.typed) bits.push("typed");
+  else if (meta.speechMs > 300 && n >= 3) {
+    const wpm = Math.round(n / (meta.speechMs / 60000));
+    bits.push(`spoken at about ${wpm} words a minute (${wpm >= 190 ? "fast" : wpm <= 110 ? "slow and unhurried" : "normal pace"})`);
+  }
+  return bits.join(", ");
+}
 
 const WEB_SEARCH = { type: "web_search_20260209", name: "web_search", max_uses: 3 };
 
@@ -113,7 +168,7 @@ export class Brain {
    * A normal spoken request (after the wake word).
    * hooks.onSentence(text) is called for each sentence as soon as it's ready to speak.
    */
-  async handle(sessionId, text, hooks = {}) {
+  async handle(sessionId, text, hooks = {}, meta = {}) {
     const turn = this.#newTurn(hooks);
     const s = this.session(sessionId);
     const { text: corrected, fixes } = applyMishearings(text);
@@ -124,14 +179,18 @@ export class Brain {
       content.push(...this.#declineAll(s, "The user moved on without confirming. Not done."));
     }
     const note = fixes.length ? ` (speech-to-text heard "${text}"; auto-corrected ${fixes.join(", ")})` : "";
-    content.push({ type: "text", text: `[${new Date().toString()}] ${corrected}${note}` });
+    content.push({ type: "text", text: `[${new Date().toString()}] ${corrected}${note} (delivery: ${deliveryNote(text, meta)})` });
     s.messages.push({ role: "user", content });
     s.transcript.push({ who: "user", text });
+    // Notes for this turn, in one appended system message (the instructions themselves stay frozen).
+    const notes = [];
     if (s.seenVersion !== memory.version) {
-      // Memories or style notes changed since this conversation started.
-      s.messages.push({ role: "system", content: `Your memory and notes were updated. Current version:\n${memory.renderForPrompt()}` });
+      // Memories, lessons, profile or style notes changed since this conversation started.
+      notes.push(`Your memory and notes were updated. Current version:\n${memory.renderForPrompt()}`);
       s.seenVersion = memory.version;
     }
+    if (looksHard(corrected)) notes.push("This is a plan, decision or comparison: call deep_think with the context before answering.");
+    if (notes.length) s.messages.push({ role: "system", content: notes.join("\n\n") });
     return this.#finishTurn(turn, await this.#loop(sessionId, s, turn));
   }
 
@@ -139,7 +198,7 @@ export class Brain {
   async confirm(sessionId, utterance, hooks = {}) {
     const turn = this.#newTurn(hooks);
     const s = this.session(sessionId);
-    if (!s.pending) return this.#finishTurn(turn, this.#say(turn, "There's nothing waiting for a yes right now."));
+    if (!s.pending) return this.#finishTurn(turn, this.#say(turn, pick(s, "nothingPending")));
     const expired = Date.now() > s.pending.expiresAt;
     const yes = !expired && isYes(utterance);
     logAction(yes ? "confirmed" : "declined", {
@@ -151,7 +210,7 @@ export class Brain {
     if (!yes) {
       const results = this.#declineAll(s, expired ? "Confirmation timed out. Not done." : "The user said no. Not done.");
       s.messages.push({ role: "user", content: results });
-      return this.#finishTurn(turn, this.#say(turn, expired ? "That timed out, so I didn't do it." : "Okay, I won't."));
+      return this.#finishTurn(turn, this.#say(turn, expired ? pick(s, "timedOut") : pick(s, "declined")));
     }
     const { toolUses, prefailed } = s.pending;
     s.pending = null;
@@ -223,10 +282,15 @@ export class Brain {
   }
 
   async #runTools(sessionId, toolUses, approved, turn, prefailed = {}) {
-    const ctx = { client: this.client, sessionId };
+    const s = this.sessions.get(sessionId);
+    // the last few things the user said: lessons must quote one of them
+    const userText = s ? s.transcript.filter((x) => x.who === "user").slice(-4).map((x) => x.text).join("\n") : "";
+    const ctx = { client: this.client, sessionId, userText };
     for (const t of toolUses) {
       const tool = tools.get(t.name);
-      if (tool?.announce && !prefailed[t.id]) this.#emit(turn, tool.announce);
+      if (tool?.announce && !prefailed[t.id]) {
+        this.#emit(turn, Array.isArray(tool.announce) && s ? pick(s, `announce:${t.name}`, tool.announce) : [].concat(tool.announce)[0]);
+      }
     }
     return Promise.all(
       toolUses.map(async (t) => {
@@ -273,7 +337,7 @@ export class Brain {
 
       const toolUses = response.content.filter((b) => b.type === "tool_use");
       if (response.stop_reason !== "tool_use" || toolUses.length === 0) {
-        if (turn.spoken.length === 0) this.#say(turn, "Done.");
+        if (turn.spoken.length === 0) this.#say(turn, pick(s, "done"));
         s.transcript.push({ who: "assistant", text: turn.spoken.join(" ") });
         logAction("reply", { sessionId, reply: turn.spoken.join(" ") });
         return { awaitingConfirmation: false };

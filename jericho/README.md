@@ -159,6 +159,40 @@ Changes between states always ease in, never snap.
 - `data/` is git-ignored, so none of it is ever committed. Every save, delete and wipe goes in
   the action log.
 
+## Getting to know you
+
+Jericho adapts to how you talk and gets better the more you use it. Everything it learns stays in
+`data/`, which is git-ignored, and you can see and delete all of it on the **Memory** page.
+
+- **Matching your mood and pace:** each request carries a short note on how you said it: how
+  many words, how fast you spoke, or that you typed it. Jericho reads your mood from that and your
+  words, and matches it:
+  - rushed: a few words;
+  - relaxed or joking: casual;
+  - frustrated: calm and direct;
+  - "go deep": more detail, up to about a minute.
+
+  Its fixed replies come in several wordings, so it doesn't repeat itself.
+- **Profile (`data/profile.json`):** after each conversation, one small Claude call updates your
+  projects, goals, people, preferences, routines, the topics you keep coming back to, and short
+  summaries of recent conversations. It also updates the style notes and lessons.
+  - **Only what you said:** every new item has to quote your own words, or it's rejected.
+  - **No guesses:** guesses and anything about health, personality or private life are refused in
+    code, as are passwords, keys, card and ID numbers.
+  - **Kept short:** duplicates are merged and stale items dropped, keeping it under about 500
+    words.
+- **Anticipating:** with the profile and recent conversations it works out what vague requests
+  mean ("get that going"). It may offer one obvious next step, never more than one per reply,
+  and never when you're rushed or frustrated.
+- **Thinking:** plans, decisions and comparisons go to the stronger model (`claude.hardModel`),
+  which works through them step by step. Jericho says a short "let me think" line first. Quick
+  questions stay on the fast model.
+- **Lessons (`data/lessons.json`):** when you correct it ("no, I meant...", "that's wrong",
+  "stop doing that"), it saves a lasting rule straight away, quoting your words, and follows it
+  from then on.
+- **Ask it:** "what have you learned about me?" gets a short spoken summary.
+- **The log:** every change goes in the action log as IDs and counts only, never the personal text.
+
 ## Speed
 
 - Claude's reply is streamed. Each sentence is sent to ElevenLabs as soon as it's complete, and
@@ -318,7 +352,7 @@ server/tools/claudeCode.js  runs `claude -p` in a project folder, announces when
 server/tools/placeholders.js  calendar + music stubs
 server/tools/memory.js    remember / recall / forget tools
 server/memory.js          data/memory.json + data/style.json (read, save, delete, wipe)
-server/style.js           the after-conversation call that updates style notes
+server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
 server/secrets.js         detects passwords, keys, card and ID numbers
 server/speech.js          sentence splitter + clean-up for natural speech
 server/net.js             keep-alive connections and warm-up pings
@@ -326,7 +360,8 @@ server/calls/policy.js    what may be called: numbers, purposes, limits, safety 
 server/calls/agent.js     the Claude agent on the phone, and the pretend business for test mode
 server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json, announcements
 server/tools/calls.js     make_call + recent_calls tools
-server/tools/deepThink.js sends hard questions to the stronger model
+server/tools/deepThink.js sends hard questions, plans and decisions to the stronger model
+server/tools/learning.js  save_lesson + what_ive_learned tools
 public/                   the web page (index.html, app.js, style.css)
 public/presence/          the 3D presence: scene.js (Three.js scene), postfx.js (quality levels and effects),
                           index.js (loading, fallback, HUD, settings)
