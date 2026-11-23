@@ -59,11 +59,13 @@ export const listAlarmsTool = {
 };
 
 export const cancelAlarmTool = {
-  // cancelling every alarm needs a yes; one alarm doesn't
-  risky: (input) => /^\s*(all|every|everything|all alarms|all of them)\s*$/i.test(String(input?.which || "")),
-  confirmPrompt: () => {
-    const n = alarms.list().length;
-    return n === 1 ? "Should I cancel your only alarm?" : `Should I cancel all ${n} alarms?`;
+  // cancelling several alarms at once needs a yes (however it's worded); one alarm doesn't
+  risky: (input) => /^\s*(all|every|everything|all alarms|all of them)\s*$/i.test(String(input?.which || "")) || alarms.resolve(input?.which).length > 1,
+  confirmPrompt: (input) => {
+    const n = alarms.resolve(input?.which).length;
+    const total = alarms.list().length;
+    if (n === total) return total === 1 ? "Should I cancel your only alarm?" : `Should I cancel all ${total} alarms?`;
+    return `Should I cancel ${n} alarms?`;
   },
   definition: {
     name: "cancel_alarm",

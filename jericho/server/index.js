@@ -15,6 +15,7 @@ import { errorDetails, setWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
 import { selfTest } from "./selftest.js";
 import { getNextEvent } from "./briefing/calendar.js";
+import { checkApiRequest } from "./guard.js";
 import { alarms } from "./alarms/manager.js";
 import { getWeather } from "./briefing/weather.js";
 import { controlInfo } from "./tools/pc.js";
@@ -151,8 +152,18 @@ const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : undefin
 
 // Three.js is served from node_modules (only its build and examples/jsm folders).
 const THREE_DIR = path.join(ROOT, "node_modules", "three");
+/** decodeURIComponent that answers 400 instead of throwing on a broken %-sequence. */
+function safeDecode(s) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return null;
+  }
+}
+
 function serveVendor(url, res) {
-  const rel = decodeURIComponent(url.pathname.slice("/vendor/three/".length));
+  const rel = safeDecode(url.pathname.slice("/vendor/three/".length));
+  if (rel === null) return res.writeHead(400).end("Bad request");
   const file = path.resolve(THREE_DIR, rel);
   const allowed = [path.join(THREE_DIR, "build") + path.sep, path.join(THREE_DIR, "examples", "jsm") + path.sep];
   if (!allowed.some((dir) => file.startsWith(dir)) || !file.endsWith(".js") || !fs.existsSync(file)) {
@@ -166,7 +177,9 @@ function serveVendor(url, res) {
 function serveStatic(url, res) {
   if (url.pathname.startsWith("/vendor/three/")) return serveVendor(url, res);
   const pages = { "/": "index.html", "/memory": "memory.html", "/calls": "calls.html" };
-  const rel = pages[url.pathname] || decodeURIComponent(url.pathname).replace(/^\/+/, "");
+  const decoded = pages[url.pathname] ? null : safeDecode(url.pathname);
+  if (!pages[url.pathname] && decoded === null) return res.writeHead(400).end("Bad request");
+  const rel = pages[url.pathname] || decoded.replace(/^\/+/, "");
   const file = path.resolve(PUBLIC_DIR, rel);
   if (!file.startsWith(PUBLIC_DIR + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     res.writeHead(404).end("Not found");
@@ -180,9 +193,28 @@ function serveStatic(url, res) {
 }
 
 async function handler(req, res) {
-  const url = new URL(req.url, "http://localhost");
+  try {
+    await route(req, res);
+  } catch (err) {
+    // nothing may leave a request hanging
+    logAction("error", { where: "request", error: err.message });
+    if (!res.headersSent) sendJson(res, 500, { error: "Server error" });
+    else res.end();
+  }
+}
+
+async function route(req, res) {
+  let url;
+  try {
+    url = new URL(req.url, "http://localhost");
+  } catch {
+    return res.writeHead(400).end("Bad request");
+  }
   if (url.pathname.startsWith("/twilio/")) return twilioRoute(req, res, url);
   if (!url.pathname.startsWith("/api/")) return serveStatic(url, res);
+  // other websites, DNS tricks, and (without a token) other devices are refused first
+  const refused = checkApiRequest({ headers: req.headers, remoteAddress: req.socket?.remoteAddress, hasToken: Boolean(secrets.accessToken), extraHosts: settings.allowedHosts || [] });
+  if (refused) return sendJson(res, refused.status, { error: refused.error });
   if (!authorized(req, url)) return sendJson(res, 401, { error: "Wrong or missing access token" });
 
   try {

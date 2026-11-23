@@ -26,7 +26,7 @@ const isMac = process.platform === "darwin";
 export function cleanEnv(extra = {}) {
   const env = { ...process.env };
   for (const k of Object.keys(env)) {
-    if (/^(ANTHROPIC_|ELEVENLABS_|TWILIO_|JERICHO_ACCESS_TOKEN$|MY_PHONE_NUMBER$|JARVIS_ACCESS_TOKEN$|CALENDAR_ICS_URL$)/i.test(k)) delete env[k];
+    if (/^(ANTHROPIC_|ELEVENLABS_|TWILIO_|JERICHO_ACCESS_TOKEN$|MY_PHONE_NUMBER$|JARVIS_ACCESS_TOKEN$|CALENDAR_ICS_URL$|ROKU_IP$)/i.test(k)) delete env[k];
   }
   return { ...env, ...extra };
 }

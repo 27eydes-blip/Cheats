@@ -21,6 +21,7 @@ export const CANT_WAKE =
 export function isLocalAddress(ip) {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip || "").trim());
   if (!m) return false;
+  if (m.slice(1).some((part) => part.length > 1 && part.startsWith("0"))) return false; // "010" would be read as octal elsewhere
   const [a, b, c, d] = m.slice(1).map(Number);
   if ([a, b, c, d].some((n) => n > 255)) return false;
   if (d === 0 || d === 255) return false;

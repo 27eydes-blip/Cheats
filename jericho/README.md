@@ -86,10 +86,16 @@ Browsers only allow the microphone on `https://` pages (or `localhost`), so
 
 Set `JERICHO_ACCESS_TOKEN` in `.env` before you do either, then open the page once as
 `https://…/?token=<your token>`. The phone remembers it, and every API call without it gets
-refused. Don't expose Jericho to the internet without a token: anyone who can reach it can run
-Claude Code on your laptop once they say "yes".
+refused. **Without a token, Jericho only answers this PC itself**: other devices get a message
+asking for one. Don't expose Jericho to the internet without a token: anyone who can reach it
+can run Claude Code on your laptop once they say "yes".
 
-Phone notes: tap **Start** each time you open the page, because phones only allow audio after a
+Jericho also refuses requests from other websites (so a web page you visit can't send it
+commands or say "yes" for you), and only answers when opened by this PC's name or address, a
+home-network address, or a Tailscale `….ts.net` name. If you use another name (for example
+your own domain through a tunnel), add it to `"allowedHosts": []` in `settings.json`.
+
+Phone notes: tap **Tap to power on** each time you open the page, because phones only allow audio after a
 tap. Keep the screen on, because phones stop listening when the screen locks. Android Chrome
 may beep when it restarts listening.
 
@@ -482,8 +488,17 @@ are the exception.
 - Every request, tool call, confirmation, refusal, result and error is appended to
   `logs/actions.log` as one JSON line.
 
-Risky today: `claude_code` and `calendar_add_event`, because it can email invites. When you add a
-tool that deletes files, runs shell commands, spends money or sends messages, set `risky: true`.
+Risky today: `claude_code`, `calendar_add_event` (it can email invites), phone calls, PC actions
+that write, move, delete or run commands, forgetting memories, and cancelling more than one
+alarm. When you add a tool that deletes files, runs shell commands, spends money or sends
+messages, set `risky: true`.
+
+- The blocklist of commands that read secret files (`.env` and similar) in `run_command` is a
+  best-effort extra: a determined command can get around it, which is why every command needs
+  your yes and its output is scrubbed of keys before it's shown or spoken.
+- Child processes (commands, Claude Code, scheduled tasks) never get Jericho's keys, the access
+  token, your phone number, the calendar link or the TV's address. Claude Code only gets
+  `ANTHROPIC_API_KEY`, in case it needs it to sign in.
 
 ## Files
 

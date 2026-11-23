@@ -58,6 +58,35 @@ function inside(child, parent) {
 // Files that hold secrets: never read, listed, written, moved or deleted.
 const SECRET_NAME = /^(\.env(\..*)?|.*\.pem|.*\.key|.*\.p12|.*\.pfx|.*\.kdbx|id_(rsa|dsa|ecdsa|ed25519)(\.pub)?|\.npmrc|\.pypirc|\.netrc|\.git-credentials|credentials(\..*)?|secrets?(\..*)?|.*\.keystore|known_hosts|authorized_keys)$/i;
 const SECRET_DIR = /(^|[\\/])(\.ssh|\.gnupg|\.aws|\.azure|\.kube|\.docker|\.git)([\\/]|$)/i;
+/**
+ * Windows path tricks that slip past name checks: alternate data streams ("notes.txt:hidden",
+ * ".env::$DATA") and 8.3 short names ("ENV~1", "GIT~1"). Refused outright.
+ */
+export function hasWindowsPathTricks(p) {
+  // the drive letter's colon is fine (also after Windows' long-path prefix \\?\)
+  const s = String(p || "").replace(/^(\\\\\?\\)?[a-z]:(?=[\\/])/i, "");
+  if (s.includes(":")) return true;
+  return s.split(/[\\/]/).some((part) => /~\d/.test(part));
+}
+
+/** The real path: links followed on the nearest part that exists, the rest added on. */
+export function realPathOf(full) {
+  const real = fs.realpathSync.native || fs.realpathSync;
+  const rest = [];
+  let cur = full;
+  for (;;) {
+    try {
+      const r = real(cur);
+      return rest.length ? path.join(r, ...rest.reverse()) : r;
+    } catch {
+      const parent = path.dirname(cur);
+      if (parent === cur) return full;
+      rest.push(path.basename(cur));
+      cur = parent;
+    }
+  }
+}
+
 export function isSecretPath(p) {
   return SECRET_NAME.test(path.basename(p)) || SECRET_DIR.test(p);
 }
@@ -71,6 +100,7 @@ export function resolvePath(input, { mustExist = false } = {}) {
   const raw = String(input || "").trim().replace(/^["']|["']$/g, "");
   if (!raw) return { ok: false, reason: "No path given." };
   if (/\0/.test(raw)) return { ok: false, reason: "That path isn't valid." };
+  if (isWin && hasWindowsPathTricks(raw)) return { ok: false, reason: "That path isn't valid." };
   const roots = allowedRoots();
   let full;
   if (path.isAbsolute(raw) || /^[a-z]:[\\/]/i.test(raw) || raw.startsWith("~")) {
@@ -83,17 +113,10 @@ export function resolvePath(input, { mustExist = false } = {}) {
     }
     full = path.resolve(root, raw.split(/[\\/]/).slice(1).join(path.sep));
   }
-  // Follow links, so a shortcut can't lead outside the allowed folders.
-  let real = full;
-  try {
-    real = fs.realpathSync(full);
-  } catch {
-    try {
-      real = path.join(fs.realpathSync(path.dirname(full)), path.basename(full));
-    } catch {
-      real = full;
-    }
-  }
+  // Follow links, so a shortcut can't lead outside the allowed folders, even through folders
+  // that don't exist yet ("Desktop/link/newdir/x.txt" where "link" points elsewhere).
+  const real = realPathOf(full);
+  if (isWin && hasWindowsPathTricks(real)) return { ok: false, reason: "That path isn't valid." };
   if (!roots.some((r) => inside(real, r))) {
     return { ok: false, reason: `That's outside the folders I'm allowed to use (${roots.map((r) => path.basename(r)).join(", ")}).` };
   }

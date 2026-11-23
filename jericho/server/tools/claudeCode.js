@@ -10,6 +10,18 @@ import { logAction, scrubEnvValues } from "../logger.js";
 import { resolvePath } from "../pc/policy.js";
 import { isSensitive } from "../secrets.js";
 import { CLAUDE_FIX, claudeSpawnSpec, findClaude } from "./claudePath.js";
+import { cleanEnv } from "./pc.js";
+
+/**
+ * What Claude Code gets to see: none of Jericho's keys (ElevenLabs, Twilio, the access token,
+ * your phone number, the calendar link). Only the Anthropic key passes through, because
+ * Claude Code may need it to sign in, as it did before.
+ */
+export function claudeEnv() {
+  return cleanEnv(process.env.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY } : {});
+}
+/** Lines that look secret hidden, and any .env value blanked: for anything said or shown. */
+const scrubText = (text) => scrubEnvValues(String(text).split(/\r?\n/).map((l) => (isSensitive(l) ? "[hidden]" : l)).join("\n")).trim();
 
 const cfg = settings.claudeCode || {};
 const projectsDir = path.resolve(expandHome(cfg.projectsDir || "~/jericho-projects"));
@@ -86,7 +98,7 @@ function startJob(folder, task) {
   const viaCmd = claudeSpawnSpec(claude, []).viaCmd;
   const spec = claudeSpawnSpec(claude, viaCmd ? ["-p", ...fixed] : ["-p", prompt, ...fixed]);
   const isWin = process.platform === "win32";
-  const child = spawn(spec.command, spec.args, { ...spec.options, cwd, windowsHide: true, detached: !isWin, stdio: [viaCmd ? "pipe" : "ignore", "pipe", "pipe"] });
+  const child = spawn(spec.command, spec.args, { ...spec.options, cwd, env: claudeEnv(), windowsHide: true, detached: !isWin, stdio: [viaCmd ? "pipe" : "ignore", "pipe", "pipe"] });
   if (viaCmd) {
     child.stdin.on("error", () => {}); // it may exit before reading
     child.stdin.end(prompt);
@@ -124,7 +136,8 @@ function startJob(folder, task) {
       summary = "Stopped by you.";
     }
     // the result, ready to read aloud: secret-looking lines hidden
-    const clean = scrubEnvValues(String(resultText).split(/\r?\n/).map((l) => (isSensitive(l) ? "[hidden]" : l)).join("\n")).trim();
+    const clean = scrubText(resultText);
+    summary = scrubText(summary) || "No summary."; // spoken and shown: same scrubbing as the result
     Object.assign(job, { status, summary, result: clean.length > 1500 ? `${clean.slice(-1500)}` : clean, finishedAt: new Date().toISOString() });
     if (stoppedByUser) {
       logAction("claude_code_finished", { id: job.id, folder, status });

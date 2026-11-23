@@ -105,6 +105,8 @@ export const secrets = {
   calendarIcsUrlFromSettings: settings.briefing?.calendarIcsUrl || "",
   calendarIcsUrlClean: cleanCalendarLink(process.env.CALENDAR_ICS_URL),
   calendarIcsUrlFromSettingsClean: cleanCalendarLink(settings.briefing?.calendarIcsUrl),
+  // the TV's home-network address (not a key, but no reason to spread it around)
+  rokuIp: process.env.ROKU_IP || "",
 };
 if (!process.env.JERICHO_ACCESS_TOKEN && process.env.JARVIS_ACCESS_TOKEN) {
   console.warn("⚠️  Rename JARVIS_ACCESS_TOKEN to JERICHO_ACCESS_TOKEN in .env (the old name still works for now).");
