@@ -16,14 +16,20 @@ const cfg = () => settings.alarms || {};
 const labelForLog = (label) => (label ? `[${String(label).length} characters]` : "");
 
 // ---- the native backup sound (Windows): a looping system alarm sound, or beeps ----------------
-const NATIVE_SCRIPT = `
+// The looping Windows alarm sound with a rapid triple-beep warning on top (faster the longer it
+// rings). Fixed text: nothing from outside goes in. It plays at the PC's own volume; Jericho never
+// changes your system volume.
+export const NATIVE_SCRIPT = `
 $f = Join-Path $env:WINDIR 'Media\\Alarm01.wav'
-if (Test-Path $f) {
-  $p = New-Object System.Media.SoundPlayer $f
-  $p.PlayLooping()
-  Start-Sleep -Seconds 1800
-} else {
-  for ($i = 0; $i -lt 600; $i++) { [console]::Beep(880, 220); [console]::Beep(1175, 220); [console]::Beep(1568, 320); Start-Sleep -Milliseconds 700 }
+if (Test-Path $f) { $p = New-Object System.Media.SoundPlayer $f; $p.PlayLooping() }
+$end = (Get-Date).AddMinutes(30)
+$n = 0
+while ((Get-Date) -lt $end) {
+  $n++
+  $gap = [Math]::Max(350, 900 - 15 * $n)
+  for ($i = 0; $i -lt 3; $i++) { [console]::Beep(2600, 70); Start-Sleep -Milliseconds 50 }
+  Start-Sleep -Milliseconds $gap
+  if ($n % 4 -eq 0) { [console]::Beep(880, 160); [console]::Beep(1175, 160); [console]::Beep(1568, 260) }
 }`;
 export const nativeSound = {
   child: null,

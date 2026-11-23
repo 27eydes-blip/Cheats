@@ -144,6 +144,16 @@
     <label>Alarm volume <span id="alarm-vol-val">85%</span>
       <input id="alarm-vol" type="range" min="20" max="100" step="5" value="85">
     </label>
+    <label>Alarm sound
+      <select id="alarm-sound">
+        <option value="missile">Missile alert</option>
+        <option value="siren">Air raid siren</option>
+        <option value="sonar">Sonar ping</option>
+        <option value="classic">Classic beeps</option>
+      </select>
+    </label>
+    <label class="check"><input id="alarm-max-loud" type="checkbox"> Max loud (a little louder, still limited)</label>
+    <button id="alarm-preview" class="del" type="button">Preview (3 seconds)</button>
     <label>Snooze (minutes)
       <input id="alarm-snooze-min" type="number" min="1" max="60" step="1" value="9">
     </label>

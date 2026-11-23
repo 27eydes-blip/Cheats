@@ -3,7 +3,7 @@
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
 import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, shouldDropAsEcho } from "./bargein.js";
-import { createAlarmRinger, DEFAULT_ALARM_VOLUME } from "./alarm.js";
+import { ALARM_SOUNDS, createAlarmRinger, DEFAULT_ALARM_SOUND, DEFAULT_ALARM_VOLUME, previewAlarm } from "./alarm.js";
 import { alarmCommand } from "./alarmrules.js";
 import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
@@ -1262,6 +1262,11 @@ const ringer = createAlarmRinger({ getCtx: () => audioCtx, ttsUrl, lang: () => c
 const ALARM_VOL_KEY = "jericho-alarm-volume";
 const SNOOZE_KEY = "jericho-snooze-minutes";
 const alarmVolume = () => Math.min(1, Math.max(0.2, Number(store.get(ALARM_VOL_KEY) ?? DEFAULT_ALARM_VOLUME * 100) / 100));
+const ALARM_SOUND_KEY = "jericho-alarm-sound";
+const MAX_LOUD_KEY = "jericho-alarm-max-loud";
+const alarmSound = () => (ALARM_SOUNDS.includes(store.get(ALARM_SOUND_KEY)) ? store.get(ALARM_SOUND_KEY) : DEFAULT_ALARM_SOUND);
+const alarmMaxLoud = () => store.get(MAX_LOUD_KEY) === "1";
+const alarmSoundSettings = () => ({ volume: alarmVolume(), sound: alarmSound(), maxLoud: alarmMaxLoud() });
 const defaultSnooze = () => Math.min(60, Math.max(1, Number(store.get(SNOOZE_KEY)) || serverSnooze || 9));
 let serverSnooze = 9;
 
@@ -1304,7 +1309,7 @@ function startAlarm(alarm) {
     try { rec.start(); } catch { /* already running */ }
   }
   startMicMeter();
-  ringer.start(alarm, { volume: alarmVolume() }).then(({ audible }) => {
+  ringer.start(alarm, alarmSoundSettings()).then(({ audible }) => {
     if (alarmRinging?.id !== alarm.id) return;
     if (audible) api("/api/alarm/ack", { id: alarm.id }).catch(() => {});
     else {
@@ -1377,6 +1382,27 @@ if (volIn) {
     $("alarm-vol-val").textContent = `${volIn.value}%`;
   });
 }
+// the alarm sound, "Max loud", and a 3-second preview at the current settings
+const soundSel = $("alarm-sound");
+const maxLoudBox = $("alarm-max-loud");
+if (soundSel) {
+  soundSel.value = alarmSound();
+  soundSel.addEventListener("change", () => store.set(ALARM_SOUND_KEY, soundSel.value));
+}
+if (maxLoudBox) {
+  maxLoudBox.checked = alarmMaxLoud();
+  maxLoudBox.addEventListener("change", () => store.set(MAX_LOUD_KEY, maxLoudBox.checked ? "1" : "0"));
+}
+let preview = null;
+$("alarm-preview")?.addEventListener("click", async () => {
+  if (alarmRinging) return; // the real thing is already playing
+  // this click lets the browser play sound, even before the first "power on" tap
+  audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+  await Promise.race([audioCtx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 300))]);
+  preview?.stop();
+  preview = previewAlarm(audioCtx, alarmSoundSettings());
+});
+
 snoozeIn?.addEventListener("change", () => {
   const v = Math.min(60, Math.max(1, Math.round(Number(snoozeIn.value) || 9)));
   snoozeIn.value = v;
