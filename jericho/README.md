@@ -144,7 +144,7 @@ Changes between states always ease in, never snap.
 
 - **Background:** a faint perspective grid of light under the orb and thin gold energy lines behind it. When Jericho speaks, ripples of light travel out across the grid with his real voice level. When you talk while he listens, the lines stop and turn red with the particles. Low quality shows the grid only; Medium adds 3 lines, High 5, Ultra 7.
 - **Live HUD:** the time and date, the current weather (same Open-Meteo data as the weather tool) and your next calendar event (same iCal link as the calendar tools), refreshed every 5 minutes. A readout that can't be fetched just stays hidden. On phones it collapses to the time.
-- **Startup:** on the first load the hieroglyphs light up one by one, the orb powers on from a point with a flash, the rings spin up and the wordmark carves in (about 5 seconds), with a quiet hum if your browser already allows sound. Turn it off with **Startup animation** in the settings panel (sun icon). It's skipped when you reload within 10 minutes, and with reduced motion.
+- **Power on:** the page opens with a single **Tap to power on** prompt (the orb waits as a point of light). That tap plays the power-up, made live with Web Audio (no sound files): a low hum rising for about 2 seconds, rising tones as the rings spin up, a bright metallic chime exactly when the orb flashes, then a soft idle hum. The hieroglyphs light up and the wordmark carves in alongside it. A reload within 10 minutes gets a shorter version. Settings panel (sun icon): **Startup animation**, **Power-up sound**, **Sound volume**, **Idle hum**. With reduced motion only the sound plays.
 
 ## Memory and learning how you talk
 
@@ -379,6 +379,16 @@ If Claude Code is missing when you ask for a job, Jericho says so and tells you 
 ## Weather
 
 Ask "what's the weather tomorrow", "will it rain this weekend", "weather for Friday" or "what's the next few days look like". Jericho answers with the high and low, the rain chance and a short tip, from Open-Meteo for the location in `settings.json` (`location`). The forecast goes 7 days ahead and is cached for 5 minutes. The morning briefing includes tomorrow in one short sentence.
+
+## Always listening
+
+After the one tap, Jericho listens for his name ("Jericho", "Jer", "hey Jericho"…) nonstop; no more clicks. After he answers he keeps listening for follow-ups (conversation mode), then goes back to waiting for his name.
+
+- **Listening indicator** (under the state word): `Mic live` (red dot) when the microphone is really on, `Mic paused` while he speaks (so he never hears himself; the echo tail and echo matching still apply), `Muted`, or `Mic lost · tap to reconnect`.
+- **Mute:** the small gold mic button, the **M** key, or say "Jericho, go to sleep". Muted means nothing is listened to at all (the browser's mic light goes off); the orb dims and the idle hum rests. Tap the light, the button, or press M to unmute.
+- **Auto-recover:** if speech recognition stops or errors, it restarts on its own (250 ms, backing off to 5 s if it keeps failing). If the microphone is unplugged or blocked, the page says so and one tap reconnects it.
+- **Stopping:** there's no Start or Stop button any more. Esc and "Jericho, stop" stop everything as before. Tapping the light while he talks cuts him off and listens; while he's thinking or waiting for a yes, it stops everything (what the Stop button did).
+- **Far-field** (settings panel): **Wake sensitivity** Low (the name must come first), Normal, or High (also checks the recognizer's second and third guesses and near-misses like "Jerichow"; best from across the room). **Room mode** lowers the voice level needed to interrupt him and boosts the mic level the orb reacts to. **Calibrate room**: stay quiet for a moment, then say "Jericho" a few times from where you sit; the threshold is set between the room's noise and your voice.
 
 ## Interrupting Jericho (barge-in)
 

@@ -70,13 +70,23 @@
     <canvas id="viz" aria-hidden="true" hidden></canvas>
   </button>
 
+  <!-- Shown once on load: the one tap that powers Jericho on (and lets the browser use the mic and sound) -->
+  <button id="power-prompt" class="power-prompt" type="button"><span class="hg g-ankh" aria-hidden="true"></span><span>Tap to power on</span></button>
+
+  <!-- Mute (M) and the listening indicator: always shows whether the mic is live -->
+  <div class="mic-ctl">
+    <button id="mute-btn" class="mute-btn" type="button" aria-pressed="false" aria-label="Mute the microphone (M)" title="Mute / unmute (M)">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.6" y="1.8" width="4.8" height="8" rx="2.4"/><path d="M3.4 7.6a4.6 4.6 0 0 0 9.2 0M8 12.2v2.2M5.6 14.4h4.8"/><path class="slash" d="M2.5 2.5l11 11"/></svg>
+    </button>
+    <span id="mic-live" class="mic-live" data-mic="off" role="status" aria-live="polite"><span class="mic-dot" aria-hidden="true"></span><span class="mic-text">Mic off</span></span>
+  </div>
+
   <div class="status-word" aria-hidden="true"><span class="tick"></span><span class="hg state-glyph"></span><span id="hud-word">Start</span><span class="tick"></span></div>
   <p id="orb-label" class="state-label sr-only">Start</p>
 
   <section class="dock">
-    <p id="status" class="status" role="status">Tap the light, then say “Jericho”.</p>
+    <p id="status" class="status" role="status"></p>
     <p id="heard" class="heard" aria-live="polite"></p>
-    <button id="stop-btn" class="stop-btn" type="button" title="Stop everything (Esc)">Stop</button>
     <div id="confirm" class="confirm" hidden>
       <button id="yes" class="yes">Yes</button>
       <button id="no" class="no">No</button>
@@ -109,6 +119,21 @@
       </select>
     </label>
     <label class="check"><input id="look-boot" type="checkbox" checked> Startup animation</label>
+    <label class="check"><input id="snd-power" type="checkbox" checked> Power-up sound</label>
+    <label>Sound volume <span id="snd-vol-val">60%</span>
+      <input id="snd-vol" type="range" min="0" max="100" step="5" value="60">
+    </label>
+    <label class="check"><input id="snd-idle" type="checkbox" checked> Idle hum</label>
+    <label>Wake sensitivity
+      <select id="wake-sens">
+        <option value="low">Low (name first: “Jericho, …”)</option>
+        <option value="normal">Normal</option>
+        <option value="high">High (far away or noisy rooms)</option>
+      </select>
+    </label>
+    <label class="check"><input id="room-mode" type="checkbox"> Room mode (talking from across the room)</label>
+    <button id="room-cal" class="del" type="button">Calibrate room</button>
+    <p id="room-note" class="hint">Room mode off</p>
     <label>Interrupt while talking
       <select id="barge-mode">
         <option value="off">Off</option>

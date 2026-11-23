@@ -267,10 +267,11 @@ body.booting .glyph-loader .hg { animation: glyph-light 0.8s ease forwards; anim
   100% { opacity: 0.9; transform: none; }
 }
 body.booting .glyph-row .hg { opacity: 0; animation: glyph-light 0.7s ease forwards; }
-body.booting .glyph-row.left .hg:nth-child(4), body.booting .glyph-row.right .hg:nth-child(1) { animation-delay: 1.5s; }
-body.booting .glyph-row.left .hg:nth-child(3), body.booting .glyph-row.right .hg:nth-child(2) { animation-delay: 1.75s; }
-body.booting .glyph-row.left .hg:nth-child(2), body.booting .glyph-row.right .hg:nth-child(3) { animation-delay: 2s; }
-body.booting .glyph-row.left .hg:nth-child(1), body.booting .glyph-row.right .hg:nth-child(4) { animation-delay: 2.25s; }
+body.booting .glyph-row.left .hg:nth-child(4), body.booting .glyph-row.right .hg:nth-child(1) { animation-delay: 0.3s; }
+body.booting .glyph-row.left .hg:nth-child(3), body.booting .glyph-row.right .hg:nth-child(2) { animation-delay: 0.55s; }
+body.booting .glyph-row.left .hg:nth-child(2), body.booting .glyph-row.right .hg:nth-child(3) { animation-delay: 0.8s; }
+body.booting .glyph-row.left .hg:nth-child(1), body.booting .glyph-row.right .hg:nth-child(4) { animation-delay: 1.05s; }
+body.booting-short .glyph-row .hg { animation-delay: 0.05s !important; animation-duration: 0.4s; }
 body.booting .glyph-row.right .hg { animation-name: glyph-light-mirrored; }
 @keyframes glyph-light-mirrored {
   0% { opacity: 0; transform: scaleX(-1) translateY(4px); }
@@ -279,18 +280,25 @@ body.booting .glyph-row.right .hg { animation-name: glyph-light-mirrored; }
 }
 /* the wordmark carves in from left to right, with a bright chisel edge */
 body.booting.presence-page .top h1.wm-text {
-  animation: wm-carve 1.6s cubic-bezier(0.25, 0.7, 0.2, 1) 2.3s both, wm-sweep 9s ease-in-out 4s infinite;
+  animation: wm-carve 1.4s cubic-bezier(0.25, 0.7, 0.2, 1) 2s both, wm-sweep 9s ease-in-out 3.6s infinite;
 }
+body.booting-short.presence-page .top h1.wm-text { animation: wm-carve 0.8s cubic-bezier(0.25, 0.7, 0.2, 1) 0.5s both, wm-sweep 9s ease-in-out 1.5s infinite; }
 @keyframes wm-carve {
   from { clip-path: inset(-30% 100% -30% -10%); opacity: 0.4; }
   to { clip-path: inset(-30% -10% -30% -10%); opacity: 1; }
 }
-body.booting .wm-line { animation: line-draw 0.9s ease 2s both; }
+body.booting .wm-line { animation: line-draw 0.9s ease 1.8s both; }
+body.booting-short .wm-line { animation-delay: 0.4s; animation-duration: 0.5s; }
 @keyframes line-draw { from { transform: scaleX(0); } }
 body.booting .wm-line.right { animation-name: line-draw-right; }
 @keyframes line-draw-right { from { transform: scaleX(0); } to { transform: scaleX(-1); } }
-body.booting .status-word, body.booting .hud-live, body.booting .top-links, body.booting .top::after { opacity: 0; }
-.status-word, .hud-live, .top-links, .presence-page .top::after { transition: opacity 1s ease; }
+body.booting .status-word, body.booting .hud-live, body.booting .top-links, body.booting .top::after, body.booting .mic-ctl { opacity: 0; }
+.status-word, .hud-live, .top-links, .presence-page .top::after, .mic-ctl { transition: opacity 1s ease; }
+
+/* ---- dormant: before the first tap, only the glyph row, the waiting point of light and the prompt ---- */
+body.dormant .glyph-loader, body.dormant.presence-ready .glyph-loader { opacity: 1; }
+body.dormant .presence-page .top h1.wm-text, body.dormant.presence-page .top h1.wm-text { clip-path: inset(0 100% 0 0); animation: none; }
+body.dormant .glyph-row, body.dormant .wm-line, body.dormant .status-word, body.dormant .hud-live, body.dormant .mic-ctl, body.dormant .top::after { opacity: 0; }
 
 /* ---- phones: the HUD collapses to the time ---- */
 @media (max-width: 600px) {
@@ -309,4 +317,109 @@ body.low-power .readout { background: none; }
 @media (prefers-reduced-motion: reduce) {
   body.booting .glyph-loader .hg, body.booting .glyph-row .hg, body.booting .wm-line { animation: none; opacity: 0.9; }
   .status-word, .hud-live, .top-links, .presence-page .top::after { transition: none; }
+}
+
+/* ---- muted and mic-lost states ---- */
+body[data-state="muted"] .state-glyph { --ch: "\13184"; --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.8c3.4 4.4 3.4 12.6 0 18.4-3.4-5.8-3.4-14 0-18.4z'/%3E%3Cpath d='M12 6v15'/%3E%3C/svg%3E"); color: var(--muted); text-shadow: none; }
+body[data-state="lost"] .state-glyph { --ch: "\13216"; --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 12.5l1.6-1.6 1.6 1.6 1.6-1.6 1.6 1.6 1.6-1.6 1.6 1.6 1.6-1.6 1.6 1.6 1.6-1.6 1.6 1.6 1.6-1.6'/%3E%3C/svg%3E"); color: #f0a35a; }
+body[data-state="muted"] .status-word, body[data-state="lost"] .status-word { color: var(--muted); text-shadow: none; }
+body[data-state="lost"] .status-word { color: #f0b070; }
+body.presence-page .stage3d { transition: filter 0.9s ease; }
+body.muted .stage3d { filter: brightness(0.36) saturate(0.55); }  /* the orb dims while muted */
+body.muted .presence-page .top h1.wm-text, body.muted.presence-page .top h1.wm-text { --wm-glow: rgb(240 180 80 / 12%); }
+
+/* ---- the one prompt on load ---- */
+.power-prompt {
+  position: fixed;
+  left: 50%;
+  top: 72%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px 10px 18px;
+  font-family: var(--label-font);
+  font-size: 0.95rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  background: rgb(8 6 3 / 60%);
+  border: 1px solid rgb(227 180 92 / 60%);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgb(240 180 80 / 22%), inset 0 0 10px rgb(240 180 80 / 10%);
+  animation: prompt-breathe 2.6s ease-in-out infinite;
+}
+.power-prompt .hg { font-size: 1.3rem; }
+.power-prompt:hover, .power-prompt:focus-visible { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 26px rgb(240 180 80 / 40%), inset 0 0 12px rgb(240 180 80 / 16%); }
+body[data-state="off"] .power-prompt { display: inline-flex; }
+@keyframes prompt-breathe { 50% { box-shadow: 0 0 30px rgb(240 180 80 / 38%), inset 0 0 12px rgb(240 180 80 / 16%); } }
+
+/* ---- mute button and listening indicator ---- */
+.mic-ctl {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: calc(max(14px, env(safe-area-inset-top)) + 84px);
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.mute-btn {
+  pointer-events: auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgb(227 180 92 / 45%);
+  background: rgb(8 6 3 / 55%);
+  color: var(--gold);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+.mute-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; }
+.mute-btn .slash { opacity: 0; }
+.mute-btn[aria-pressed="true"] { color: #ffb0a2; border-color: rgb(255 120 100 / 60%); }
+.mute-btn[aria-pressed="true"] .slash { opacity: 1; }
+.mute-btn:hover, .mute-btn:focus-visible { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 12px rgb(240 180 80 / 30%); }
+.mic-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-family: var(--label-font);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: rgb(8 6 3 / 55%);
+  border: 1px solid rgb(227 180 92 / 22%);
+  white-space: nowrap;
+}
+.mic-dot { width: 7px; height: 7px; border-radius: 50%; background: #6b6253; flex: none; }
+.mic-live[data-mic="live"] { color: var(--gold-bright); border-color: rgb(255 90 72 / 45%); }
+.mic-live[data-mic="live"] .mic-dot { background: #ff5a48; box-shadow: 0 0 8px #ff5a48; animation: mic-pulse 1.6s ease-in-out infinite; }
+.mic-live[data-mic="paused"] .mic-dot { background: transparent; border: 1px solid var(--gold); }
+.mic-live[data-mic="paused"] { color: var(--gold); }
+.mic-live[data-mic="wait"] .mic-dot { background: var(--gold); animation: mic-pulse 0.8s ease-in-out infinite; }
+.mic-live[data-mic="lost"] { color: #f0b070; border-color: rgb(240 160 90 / 50%); }
+.mic-live[data-mic="lost"] .mic-dot { background: #f0a35a; animation: mic-pulse 0.8s ease-in-out infinite; }
+@keyframes mic-pulse { 50% { opacity: 0.35; } }
+
+@media (max-width: 600px) {
+  .mic-ctl { top: calc(max(14px, env(safe-area-inset-top)) + 116px); }
+  .r-time { top: calc(max(14px, env(safe-area-inset-top)) + 150px); }
+  .power-prompt { top: 66%; font-size: 0.85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .power-prompt, .mic-live .mic-dot { animation: none !important; }
+  body.presence-page .stage3d { transition: none; }
 }

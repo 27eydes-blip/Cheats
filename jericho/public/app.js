@@ -3,6 +3,7 @@
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
 import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, shouldDropAsEcho } from "./bargein.js";
+import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
 const $ = (id) => document.getElementById(id);
 const orb = $("orb");
@@ -48,21 +49,44 @@ async function api(path, body) {
 // active   in a conversation: no wake word needed until the timeout runs out
 // thinking / speaking / confirm   as they say
 let mode = "off";
+// always listening: mute, a lost mic, and the recognizer's own state (see "power on" below)
+let muted = false;
+let micLost = false;
+let recActive = false;
+let recStartedAt = 0;
+let recFailures = 0;
+let restartTimer;
+let lastStartAttempt = 0;
+// far-field settings (see "far-field" below)
+const SENS_KEY = "jericho-wake-sensitivity";
+const ROOM_KEY = "jericho-room";
+let wakeSensitivity = SENSITIVITIES.includes(store.get(SENS_KEY)) ? store.get(SENS_KEY) : DEFAULT_SENSITIVITY;
+let room = (() => {
+  try {
+    return JSON.parse(store.get(ROOM_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
+})();
+let calibration = null; // { phase: "quiet" | "voice", quiet: [], voice: [] }
 function setMode(m, status) {
   mode = m;
   orb.dataset.state = m;
   viz.setState(m);
   orbLabel.textContent = {
-    off: "Start",
+    off: "Tap to power on",
     idle: `Say ${config.assistantName}`,
+    muted: "Muted",
+    lost: "Mic lost",
     active: "Listening",
     thinking: "Thinking",
     speaking: "Speaking",
     confirm: "Yes / No?",
   }[m];
-  orb.setAttribute("aria-label", m === "off" ? "Start listening" : "Pause listening");
+  orb.setAttribute("aria-label", m === "off" ? "Power on Jericho" : m === "muted" ? "Unmute" : m === "lost" ? "Reconnect the microphone" : "Interrupt Jericho");
   confirmBox.hidden = m !== "confirm";
   if (status !== undefined) statusEl.textContent = status;
+  updateMicIndicator();
 }
 function addLog(who, text) {
   const li = document.createElement("li");
@@ -294,13 +318,14 @@ function speak(text) {
 }
 
 function afterSpeaking() {
-  if (confirmPending) setMode("confirm", "Say “yes” or “confirm” to go ahead.");
+  if (confirmPending) setMode("confirm", muted ? "Muted: tap Yes or No." : "Say “yes” or “confirm” to go ahead.");
+  else if (muted || micLost) restingMode();
   else if (endAfterReply) endConversation();
   else if (conversation && running) {
     setMode("active", "Listening… (no need to say my name)");
     restartConversationTimer(); // Jericho finished talking: timer starts again
   } else if (running) setMode("idle", `Say “${config.assistantName}”…`);
-  else setMode("off", "Tap start to talk to me.");
+  else setMode("off", "Tap to power on.");
   endAfterReply = false;
   // The echo tail: the mic stays deaf a moment longer, so room echo isn't transcribed.
   if (running) setTimeout(() => !replyPlaying() && startListening(), echoTailMs());
@@ -335,10 +360,11 @@ function endConversation() {
   if (conversation) conversationFinished();
   conversation = false;
   stopConversationTimer();
-  if (running) {
+  if (running && (muted || micLost)) restingMode();
+  else if (running) {
     sleepTone();
     setMode("idle", `Say “${config.assistantName}”…`);
-  } else setMode("off", "Tap start to talk to me.");
+  } else setMode("off", "Tap to power on.");
 }
 
 // ---- brain round trips ----------------------------------------------------------
@@ -637,7 +663,9 @@ function showBargeDebug(level, now) {
     : `No mic meter here (phone or mic blocked) · echo ignored ${echoIgnored}`;
 }
 function applyBargeSettings() {
-  barge = createBargeDetector(config.bargeIn || {}, bargeMode);
+  const base = config.bargeIn || {};
+  // room mode loosens the level you need to reach to count as talking
+  barge = createBargeDetector({ ...base, minLevel: roomThreshold(base.minLevel ?? BARGE_DEFAULTS.minLevel, room) }, bargeMode);
 }
 
 // ---- kill switch: "Jericho, stop", "cancel everything", the Stop button or Esc -------------
@@ -670,15 +698,21 @@ function stopEverything() {
   confirmPending = false;
   endAfterReply = false;
   addLog("note", "Stopped.");
-  if (conversation && running) {
+  if (running && (muted || micLost)) restingMode();
+  else if (conversation && running) {
     setMode("active", "Stopped. Listening…");
     restartConversationTimer();
   } else setMode(running ? "idle" : "off", "Stopped.");
   if (running) setTimeout(() => startListening(), 200);
 }
-$("stop-btn")?.addEventListener("click", stopEverything);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ["thinking", "speaking", "confirm"].includes(mode)) stopEverything();
+  // M mutes and unmutes (not while typing)
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || "") || e.target?.isContentEditable;
+  if ((e.key === "m" || e.key === "M") && !typing && !e.ctrlKey && !e.metaKey && !e.altKey && running) {
+    e.preventDefault();
+    setMuted(!muted);
+  }
 });
 
 /** Logs how long each step took, so slow spots show up in logs/actions.log. */
@@ -775,7 +809,7 @@ function onInterim(text) {
   }, 600);
 }
 
-function onHeard(raw, fromBargeIn = false) {
+function onHeard(raw, fromBargeIn = false, wakeOk = true) {
   clearTimeout(settleTimer);
   if (preThinkingFrom) {
     mode = preThinkingFrom; // carry on as if the animation hadn't switched yet
@@ -793,6 +827,12 @@ function onHeard(raw, fromBargeIn = false) {
   if (mode !== "off" && isKillPhrase(text)) return stopEverything();
   // Anything else heard while he's still talking is discarded.
   if (replyPlaying()) return;
+  if (calibration) return; // calibrating the room: saying "Jericho" mustn't wake him
+  // "Jericho, go to sleep": mute (a tap or M unmutes)
+  if ((mode === "idle" || mode === "active") && isSleepCommand(text, config.wakeWords, { inConversation: mode === "active" })) {
+    addLog("note", "Muted. Tap the light or press M to listen again.");
+    return setMuted(true);
+  }
   // The words that cut him off are your next request (no wake word needed).
   let interrupted = fromBargeIn;
   if (bargeUtterance) {
@@ -823,6 +863,7 @@ function onHeard(raw, fromBargeIn = false) {
 
   if (mode !== "idle") return; // thinking or speaking: ignore
   if (splitEndPhrase(text) !== null) return; // "thanks Jericho" while asleep: stay asleep
+  if (!wakeOk) return; // low sensitivity: the wake word has to open the sentence
   const m = wakeRegex().exec(text);
   if (!m) return; // not for us
   const rest = text.slice(m.index + m[0].length).trim();
@@ -836,8 +877,9 @@ function onHeard(raw, fromBargeIn = false) {
 }
 
 function startListening() {
-  if (!rec) return;
+  if (!rec || muted || micLost || !running) return;
   wantListening = true;
+  lastStartAttempt = performance.now();
   try { rec.start(); } catch { /* already running */ }
 }
 function stopListening() {
@@ -849,12 +891,17 @@ if (SR) {
   rec = new SR();
   rec.continuous = true;
   rec.interimResults = true;
+  rec.maxAlternatives = 3; // High wake sensitivity also checks the second and third guesses
   rec.onresult = (e) => {
+    recFailures = 0; // it's working
     let interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const r = e.results[i];
-      if (r.isFinal) onHeard(r[0].transcript);
-      else interim += r[0].transcript;
+      if (r.isFinal) {
+        const alts = Array.from({ length: r.length }, (_, k) => r[k].transcript);
+        const pick = pickWake(alts, config.wakeWords, wakeSensitivity);
+        onHeard(pick.found ? pick.text : alts[0], false, wakeSensitivity !== "low" || pick.found);
+      } else interim += r[0].transcript;
     }
     if (replyPlaying()) return; // still talking: transcripts are discarded (only the kill phrase gets through)
     if (interim && dropAsEcho(interim, heardTimes.first, false)) return; // his echo: no thinking animation, no timer reset
@@ -863,14 +910,27 @@ if (SR) {
     if (interim && mode === "active") restartConversationTimer();
     micPulse = Math.min(1, micPulse + 0.18); // works even where we can't meter the mic
   };
-  rec.onerror = (e) => {
-    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-      wantListening = false;
-      setMode("off", "Microphone blocked. Allow mic access (and use HTTPS on the phone).");
-    }
+  rec.onstart = () => {
+    recActive = true;
+    recStartedAt = performance.now();
+    updateMicIndicator();
   };
-  // Browsers stop listening every so often; quietly restart.
-  rec.onend = () => { if (wantListening) setTimeout(() => wantListening && startListening(), 250); };
+  rec.onerror = (e) => {
+    const kind = classifyRecError(e.error);
+    if (kind === "blocked") return setMicLost("Microphone blocked. Allow mic access for this page (and use HTTPS on the phone), then tap to reconnect.");
+    if (kind === "lost") return setMicLost();
+    if (kind === "retry") recFailures++;
+  };
+  // Browsers stop listening every so often, and errors end it too: restart on its own, with a
+  // backoff if it keeps failing straight away.
+  rec.onend = () => {
+    recActive = false;
+    if (performance.now() - recStartedAt < 2000) recFailures++;
+    else recFailures = 0;
+    updateMicIndicator();
+    clearTimeout(restartTimer);
+    if (wantListening && !muted && !micLost) restartTimer = setTimeout(() => wantListening && startListening(), backoffDelay(Math.max(0, recFailures - 1)));
+  };
 }
 
 // ---- mic volume for the visualizer -----------------------------------------------
@@ -882,17 +942,25 @@ let micAnalyser = null;
 let micPulse = 0;
 let micBuf = null;
 
+let micStarting = false;
 async function startMicMeter() {
-  if (isPhone || micStream || !navigator.mediaDevices?.getUserMedia || !audioCtx) return;
+  if (isPhone || micStream || micStarting || muted || micLost || !navigator.mediaDevices?.getUserMedia || !audioCtx) return;
+  micStarting = true;
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    if (!running) return stopMicMeter();
+    micStarting = false;
+    if (!running || muted || micLost) return stopMicMeter();
+    // unplugged or taken away by the system
+    for (const track of micStream.getAudioTracks()) track.onended = () => setMicLost();
     micAnalyser = audioCtx.createAnalyser();
     micAnalyser.fftSize = 512;
     audioCtx.createMediaStreamSource(micStream).connect(micAnalyser); // analysed only, never played
     micBuf = new Float32Array(micAnalyser.fftSize);
-  } catch {
+  } catch (err) {
+    micStarting = false;
     micStream = null;
+    if (err?.name === "NotAllowedError") setMicLost("Microphone blocked. Allow mic access for this page, then tap to reconnect.");
+    else if (err?.name === "NotFoundError" || err?.name === "NotReadableError") setMicLost();
   }
 }
 function stopMicMeter() {
@@ -912,10 +980,12 @@ function stopMicMeter() {
       barge.level(level, now);
       if (barge.sustained(now, 80)) levelConfirmed();
     }
+    if (calibration) calibration[calibration.phase].push(level);
   }
   showBargeDebug(level, performance.now());
   micPulse *= 0.92;
-  viz.setMicLevel(Math.min(1, Math.max(level, micPulse * 0.5)));
+  // room mode: a voice from across the room still moves the orb
+  viz.setMicLevel(muted ? 0 : Math.min(1, Math.max(level * roomGain(room), micPulse * 0.5)));
   requestAnimationFrame(meterLoop);
 })();
 
@@ -934,20 +1004,23 @@ function silentWav() {
   v.setUint16(34, 16, true); str(36, "data"); v.setUint32(40, samples * 2, true);
   return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
 }
+// ---- power on, always listening, mute ------------------------------------------------
+// One tap powers Jericho on; after that he listens for his name nonstop. Tapping the light
+// later: reconnects a lost mic, unmutes, cuts him off while he talks, or stops what he's
+// doing while he thinks or waits for a yes (what the Stop button used to do).
 orb.addEventListener("click", () => {
-  if (running && replyPlaying()) return cutOff("tap"); // tapping while he talks: stop and listen
-  if (running) {
-    running = false;
-    if (conversation) conversationFinished();
-    conversation = false;
-    stopMicMeter();
-    stopConversationTimer();
-    stopListening();
-    speechSynthesis?.cancel();
-    for (const p of players) p.pause();
-    setMode("off", "Paused. Tap to start again.");
-    return;
+  if (!running) return powerOn();
+  if (micLost) return reconnectMic();
+  if (replyPlaying()) {
+    if (muted) setMuted(false);
+    return cutOff("tap"); // tapping while he talks: stop and listen
   }
+  if (muted) return setMuted(false);
+  if (mode === "thinking" || mode === "confirm") return stopEverything();
+});
+$("power-prompt")?.addEventListener("click", () => orb.click());
+
+function powerOn() {
   running = true;
   // This tap unlocks audio playback on phones.
   audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
@@ -956,6 +1029,7 @@ orb.addEventListener("click", () => {
     p.src = silentWav();
     p.play().catch(() => {});
   }
+  viz.powerOn?.(); // the power-up animation and sound
   if (!SR) {
     setMode("idle", "Speech recognition isn't supported here (try Chrome or Safari). You can type instead.");
     return;
@@ -963,7 +1037,142 @@ orb.addEventListener("click", () => {
   setMode("idle", `Say “${config.assistantName}”…`);
   startListening();
   startMicMeter();
+}
+
+
+/** Where to rest when not listening: muted or waiting for the mic. */
+function restingMode() {
+  if (micLost) setMode("lost", "Mic lost. Tap to reconnect.");
+  else setMode("muted", "Muted. Tap the light or press M to listen again.");
+}
+
+function setMuted(on) {
+  if (on === muted || !running) return;
+  muted = on;
+  document.body.classList.toggle("muted", on);
+  $("mute-btn")?.setAttribute("aria-pressed", String(on));
+  if (on) {
+    if (conversation) conversationFinished();
+    conversation = false;
+    stopConversationTimer();
+    clearTimeout(settleTimer);
+    clearTimeout(restartTimer);
+    stopListening();
+    stopMicMeter(); // nothing is listened to (the browser's mic light goes off)
+    sleepTone();
+    if (!replyPlaying()) confirmPending ? setMode("confirm", "Muted: tap Yes or No.") : restingMode();
+  } else {
+    if (!replyPlaying()) {
+      if (confirmPending) setMode("confirm", "Say “yes” or “confirm” to go ahead.");
+      else if (!micLost) setMode("idle", `Say “${config.assistantName}”…`);
+      startListening();
+    }
+    startMicMeter();
+    beep();
+  }
+  updateMicIndicator();
+}
+$("mute-btn")?.addEventListener("click", () => (running ? setMuted(!muted) : powerOn()));
+
+function setMicLost(message = "Mic lost. Tap to reconnect.") {
+  if (!running || micLost) return;
+  micLost = true;
+  clearTimeout(restartTimer);
+  stopListening();
+  stopMicMeter();
+  if (conversation) conversationFinished();
+  conversation = false;
+  stopConversationTimer();
+  if (!replyPlaying()) setMode("lost", message);
+  else statusEl.textContent = message;
+  updateMicIndicator();
+}
+function reconnectMic() {
+  micLost = false;
+  recFailures = 0;
+  if (!muted) setMode("idle", `Say “${config.assistantName}”…`);
+  startMicMeter();
+  startListening();
+}
+
+// Watchdog: if recognition should be running but isn't (and no restart is on its way), start it.
+setInterval(() => {
+  if (!running || muted || micLost) return;
+  if (wantListening && !recActive && performance.now() - lastStartAttempt > 4000) startListening();
+  if (!isPhone && !micStream && !micStarting && audioCtx) startMicMeter();
+  updateMicIndicator();
+}, 3000);
+
+/** The listening indicator: always shows whether the mic is live. */
+function updateMicIndicator() {
+  const el = $("mic-live");
+  if (!el) return;
+  let state;
+  let text;
+  if (!running) [state, text] = ["off", "Mic off"];
+  else if (micLost) [state, text] = ["lost", "Mic lost · tap to reconnect"];
+  else if (muted) [state, text] = ["muted", "Muted · tap or press M"];
+  else if (!SR) [state, text] = ["off", "No speech recognition here"];
+  else if (replyPlaying()) [state, text] = ["paused", canListenForBargeIn() && bargeMode !== "off" ? "Mic paused · talk over me to interrupt" : "Mic paused while I speak"];
+  else if (recActive) [state, text] = ["live", mode === "active" || mode === "confirm" ? "Mic live · listening" : `Mic live · say “${config.assistantName}”`];
+  else [state, text] = ["wait", "Mic reconnecting…"];
+  el.dataset.mic = state;
+  const t = el.querySelector(".mic-text");
+  if (t && t.textContent !== text) t.textContent = text;
+}
+
+// ---- far-field: wake sensitivity and room mode (settings panel) -------------------------------
+const sensSelect = $("wake-sens");
+if (sensSelect) {
+  sensSelect.value = wakeSensitivity;
+  sensSelect.addEventListener("change", () => {
+    wakeSensitivity = sensSelect.value;
+    store.set(SENS_KEY, wakeSensitivity);
+  });
+}
+const roomBox = $("room-mode");
+const roomNote = $("room-note");
+function showRoom() {
+  if (roomBox) roomBox.checked = Boolean(room.on);
+  if (roomNote && !calibration) {
+    roomNote.textContent = room.on
+      ? Number.isFinite(room.voice)
+        ? `Room mode on · calibrated (background ${room.noise.toFixed(3)}, your voice ${room.voice.toFixed(3)})`
+        : "Room mode on · not calibrated yet (uses looser defaults)"
+      : "Room mode off";
+  }
+}
+function saveRoom() {
+  store.set(ROOM_KEY, JSON.stringify(room));
+  applyBargeSettings();
+  showRoom();
+}
+roomBox?.addEventListener("change", () => {
+  room = { ...room, on: roomBox.checked };
+  saveRoom();
 });
+$("room-cal")?.addEventListener("click", () => {
+  if (calibration) return;
+  if (!running || muted || micLost || !micAnalyser) {
+    if (roomNote) roomNote.textContent = isPhone ? "Calibrating needs a PC (phones don't give a mic level)." : "Power on and unmute first, then calibrate.";
+    return;
+  }
+  calibration = { phase: "quiet", quiet: [], voice: [] };
+  if (roomNote) roomNote.textContent = "Step 1 of 2: stay quiet for a moment…";
+  setTimeout(() => {
+    calibration.phase = "voice";
+    if (roomNote) roomNote.textContent = `Step 2 of 2: from where you usually sit, say “${config.assistantName}” a few times…`;
+    setTimeout(() => {
+      const r = calibrateRoom(calibration.quiet, calibration.voice);
+      calibration = null;
+      if (r.ok) {
+        room = { on: true, noise: r.noise, voice: r.voice };
+        saveRoom();
+      } else if (roomNote) roomNote.textContent = r.reason;
+    }, 4000);
+  }, 2500);
+});
+showRoom();
 
 $("yes").addEventListener("click", () => mode === "confirm" && send("confirm", "yes"));
 $("no").addEventListener("click", () => mode === "confirm" && send("confirm", "no"));

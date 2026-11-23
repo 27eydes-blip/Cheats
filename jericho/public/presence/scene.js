@@ -3,6 +3,7 @@
 // It only *shows* state: the app tells it the mode, mic level and voice analyser.
 import * as THREE from "three";
 import { createPipeline, pixelRatioFor, TIER_ORDER, TIERS } from "./postfx.js";
+import { BOOT_FLASH_AT } from "../power.js";
 
 const TAU = Math.PI * 2;
 const GOLD = new THREE.Color(0xf2b950);
@@ -874,7 +875,7 @@ export async function createScene(canvas, opts) {
       if (bootK >= 1) boot = null;
     }
     const grow = boot ? smooth(0.12, 0.55, bootK) : 1;
-    const flash = boot ? Math.exp(-Math.pow((bootK - 0.14) / 0.045, 2)) : 0;
+    const flash = boot ? Math.exp(-Math.pow((bootK - BOOT_FLASH_AT) / 0.045, 2)) : 0; // lands on the power-up chime
     const spinUp = boot ? 1 + 7 * Math.sin(Math.PI * smooth(0.15, 1.0, bootK)) : 1;
     // overshoot a little, like something powering on
     const scaleIn = boot ? Math.max(0.035, grow + Math.sin(grow * Math.PI) * 0.08) : 1;
@@ -1157,8 +1158,17 @@ export async function createScene(canvas, opts) {
     },
     /** Startup sequence: the orb powers on from a point after `delay` ms, over `dur` ms. */
     boot({ delay = 0, dur = 3800 } = {}) {
-      if (reducedMotion) return;
+      if (reducedMotion) {
+        boot = null;
+        return;
+      }
       boot = { start: performance.now(), delay, dur };
+      bg.fade = 0;
+    },
+    /** Before power-on: the orb waits as a single point of light. */
+    hold() {
+      if (reducedMotion) return;
+      boot = { start: performance.now(), delay: 1e12, dur: 1 };
       bg.fade = 0;
     },
     setMicLevel(v) {

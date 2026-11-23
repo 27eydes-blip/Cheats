@@ -2,6 +2,7 @@
 // pieces of page chrome around it: HUD glyphs, the look settings panel, the chat toggle,
 // and the "call in progress" signal. Everything here is visual; app logic is untouched.
 import { createVisualizer } from "../visualizer.js";
+import { playPowerUp, powerUpPlan } from "../power.js";
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -48,7 +49,7 @@ function webglAvailable() {
  */
 export function createPresence({ onTap }) {
   const pending = { state: "off", mic: 0, speech: [null, false], calling: false };
-  const boot = planBoot();
+  const power = createPower();
   let impl = null;
   let look = { ...DEFAULT_LOOK, ...store.get("jericho-look", {}) };
   const stateWord = $("orb-label");
@@ -58,6 +59,11 @@ export function createPresence({ onTap }) {
       pending.state = s;
       impl?.setState(s);
       document.body.dataset.state = s;
+      power.setMuted(s === "muted"); // the idle hum rests while muted
+    },
+    /** The first tap: the power-up animation and sound. Returns the timeline (or null if already on). */
+    powerOn() {
+      return power.powerOn();
     },
     setMicLevel(v) {
       pending.mic = v;
@@ -75,7 +81,7 @@ export function createPresence({ onTap }) {
     impl.setMicLevel(pending.mic);
     impl.setSpeechSource(...pending.speech);
     impl.setCalling?.(pending.calling);
-    boot.attach(impl);
+    power.attach(impl);
     document.body.classList.add("presence-ready");
     if (new URLSearchParams(location.search).has("debug")) window.__presence = impl; // for testing only
   }
@@ -242,6 +248,23 @@ export function createPresence({ onTap }) {
     bootIn.checked = !store.get(BOOT_OFF_KEY, false);
     bootIn.addEventListener("change", () => store.set(BOOT_OFF_KEY, !bootIn.checked));
   }
+  // power-up sound: on/off, volume, idle hum
+  const snd = power.sound();
+  const sndPower = $("snd-power");
+  const sndVol = $("snd-vol");
+  const sndIdle = $("snd-idle");
+  if (sndPower && sndVol && sndIdle) {
+    sndPower.checked = snd.power;
+    sndIdle.checked = snd.idle;
+    sndVol.value = Math.round(snd.volume * 100);
+    $("snd-vol-val").textContent = `${sndVol.value}%`;
+    sndPower.addEventListener("change", () => power.updateSound({ power: sndPower.checked }));
+    sndIdle.addEventListener("change", () => power.updateSound({ idle: sndIdle.checked }));
+    sndVol.addEventListener("input", () => {
+      $("snd-vol-val").textContent = `${sndVol.value}%`;
+      power.updateSound({ volume: sndVol.value / 100 });
+    });
+  }
   // live readout: the level in use and the measured frame rate
   setInterval(() => {
     const info = impl?.info?.();
@@ -262,80 +285,92 @@ export function createPresence({ onTap }) {
   return proxy;
 }
 
-// ---- startup sequence ---------------------------------------------------------------------
-// On the first load: hieroglyphs light up one by one, the orb powers on from a point with a
-// flash, the rings spin up and the wordmark carves in (about 5 seconds), with a quiet hum if
-// the browser allows sound. Off in the settings panel, skipped on a reload within 10 minutes
-// and with reduced motion. Purely visual: nothing waits for it.
+// ---- power on: the startup animation and sound -----------------------------------------------
+// The page opens dormant ("Tap to power on"), the orb a single point of light. The first tap
+// plays the power-up: hieroglyphs light up, the hum rises, rising tones as the rings spin up,
+// a chime exactly when the orb flashes, the wordmark carves in, then a soft idle hum.
+// A reload within 10 minutes gets a shorter version. "Startup animation" off, or reduced
+// motion, skips the visuals (the sound can still play). Purely look and sound.
 const BOOT_OFF_KEY = "jericho-boot-off";
-const LAST_LOAD_KEY = "jericho-last-load";
-const BOOT_ORB_AT = 1200; // ms after the page starts: the orb powers on
-const BOOT_ORB_MS = 3800;
-const BOOT_TOTAL = 5400;
+const LAST_POWER_KEY = "jericho-last-power";
+const SOUND_KEY = "jericho-sound";
+const DEFAULT_SOUND = { power: true, volume: 0.6, idle: true };
 
-function planBoot() {
-  const off = store.get(BOOT_OFF_KEY, false);
-  const last = Number(store.get(LAST_LOAD_KEY, 0)) || 0;
-  store.set(LAST_LOAD_KEY, Date.now());
-  const on = !reduced && !off && !(Date.now() - last < 10 * 60_000);
-  const t0 = performance.now();
-  if (on) {
-    document.body.classList.add("booting");
-    setTimeout(() => document.body.classList.remove("booting"), BOOT_TOTAL);
+function createPower() {
+  let impl = null;
+  let powered = false;
+  let pendingOrb = null; // { plan, at } waiting for the 3D scene
+  let audio = null; // controls from playPowerUp
+  let muted = false;
+  let snd = { ...DEFAULT_SOUND, ...store.get(SOUND_KEY, {}) };
+  document.body.classList.add("dormant");
+
+  function startOrb() {
+    const { plan, at } = pendingOrb;
+    pendingOrb = null;
+    const late = (performance.now() - at) / 1000;
+    // the scene came up after the flash should have happened: just show it
+    if (late > plan.orbDelay + 0.15) impl.boot?.({ delay: 0, dur: 1 });
+    else impl.boot?.({ delay: (plan.orbDelay - late) * 1000, dur: plan.orbDur * 1000 });
   }
+
   return {
-    on,
-    attach(impl) {
-      if (!on) return;
-      const late = performance.now() - t0;
-      if (late > 3500) return; // the scene took too long to start: just show it
-      const delay = Math.max(0, BOOT_ORB_AT - late);
-      impl.boot?.({ delay, dur: BOOT_ORB_MS });
-      setTimeout(hum, delay);
+    attach(next) {
+      impl = next;
+      if (pendingOrb) startOrb();
+      else if (!powered) impl.hold?.();
+    },
+    powerOn() {
+      if (powered) return null;
+      powered = true;
+      const last = Number(store.get(LAST_POWER_KEY, 0)) || 0;
+      store.set(LAST_POWER_KEY, Date.now());
+      const plan = powerUpPlan(Date.now() - last < 10 * 60_000 ? "short" : "full");
+      const animate = !reduced && !store.get(BOOT_OFF_KEY, false);
+      document.body.classList.remove("dormant");
+      if (animate) {
+        document.body.classList.add("booting");
+        document.body.classList.toggle("booting-short", plan.kind === "short");
+        setTimeout(() => document.body.classList.remove("booting", "booting-short"), plan.total * 1000);
+        pendingOrb = { plan, at: performance.now() };
+        if (impl) startOrb();
+      } else {
+        impl?.boot?.({ delay: 0, dur: 1 }); // release the waiting point straight away
+      }
+      // The sound starts inside this tap, which is what lets the browser play it.
+      if (snd.power || snd.idle) {
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          const ctx = new Ctx();
+          ctx.resume?.();
+          audio = playPowerUp(ctx, animate ? plan : powerUpPlan("short"), { volume: snd.volume, power: snd.power, idle: snd.idle && !muted });
+        } catch {
+          /* no Web Audio: silent power-up */
+        }
+      }
+      return plan;
+    },
+    setMuted(on) {
+      if (on === muted) return;
+      muted = on;
+      audio?.setIdle(snd.idle && !muted);
+    },
+    sound: () => ({ ...snd }),
+    updateSound(change) {
+      snd = { ...snd, ...change };
+      store.set(SOUND_KEY, snd);
+      if ("volume" in change) audio?.setVolume(snd.volume);
+      if ("idle" in change) {
+        // turned on later from the panel (a click, so sound is allowed): start just the hum
+        if (!audio && powered && snd.idle) {
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            audio = playPowerUp(ctx, powerUpPlan("short"), { volume: snd.volume, power: false, idle: !muted });
+          } catch {
+            /* no Web Audio */
+          }
+        } else audio?.setIdle(snd.idle && !muted);
+      }
     },
   };
-}
-
-/** A low, quiet power-on hum. Only if the browser already allows sound; never asks. */
-async function hum() {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    if (ctx.state !== "running") await Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 250))]);
-    if (ctx.state !== "running") {
-      ctx.close().catch(() => {});
-      return;
-    }
-    const now = ctx.currentTime;
-    const out = ctx.createGain();
-    out.gain.setValueAtTime(0, now);
-    out.gain.linearRampToValueAtTime(0.045, now + 0.9);
-    out.gain.setValueAtTime(0.045, now + 2.4);
-    out.gain.linearRampToValueAtTime(0, now + 4);
-    const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = 380;
-    lp.connect(out);
-    out.connect(ctx.destination);
-    const voices = [
-      { type: "sine", f: [42, 55], g: 1 },
-      { type: "triangle", f: [84, 110], g: 0.35 },
-      { type: "sine", f: [126, 165], g: 0.15 },
-    ];
-    for (const v of voices) {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = v.type;
-      o.frequency.setValueAtTime(v.f[0], now);
-      o.frequency.exponentialRampToValueAtTime(v.f[1], now + 1.6); // the pitch rises as it powers on
-      g.gain.value = v.g;
-      o.connect(g).connect(lp);
-      o.start(now);
-      o.stop(now + 4.1);
-    }
-    setTimeout(() => ctx.close().catch(() => {}), 4500);
-  } catch {
-    /* no sound: that's fine */
-  }
 }

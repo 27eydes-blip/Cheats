@@ -222,25 +222,7 @@ body.calling .hud-ring { border-color: rgb(95 230 214 / 22%); }
 .orb canvas[hidden] { display: none; }
 body.presence-page { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 
-/* ---- kill switch button: shown while Jericho is busy ---- */
-.stop-btn {
-  display: none;
-  padding: 7px 18px;
-  border-radius: 999px;
-  border: 1px solid rgb(217 105 74 / 70%);
-  background: rgb(23 20 15 / 70%);
-  color: #f0a080;
-  font: inherit;
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
-}
-body[data-state="thinking"] .stop-btn,
-body[data-state="speaking"] .stop-btn,
-body[data-state="confirm"] .stop-btn { display: inline-block; }
-.stop-btn:hover, .stop-btn:focus-visible { background: rgb(217 105 74 / 18%); }
+/* (the Stop button was removed: Esc, tapping the light and "Jericho, stop" do its job) */
 
 /* ---- links under searched answers ---- */
 .log .sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
