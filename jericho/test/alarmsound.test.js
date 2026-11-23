@@ -36,12 +36,16 @@ function mockCtx() {
     resume: async () => {},
     createGain: () => node("gain", { gain: param(1) }),
     createOscillator: () => node("osc", { type: "sine", frequency: param(440), detune: param(0), start(t) { this.startAt = t; }, stop() {} }),
-    createBiquadFilter: () => node("filter", { type: "lowpass", frequency: param(350), Q: param(1) }),
+    createBiquadFilter: () => node("filter", { type: "lowpass", frequency: param(350), Q: param(1), gain: param(0) }),
+    createConvolver: () => node("conv", { buffer: null, normalize: true }),
     createStereoPanner: () => node("pan", { pan: param(0) }),
     createDelay: () => node("delay", { delayTime: param(0) }),
     createWaveShaper: () => node("shaper", { curve: null, oversample: "none" }),
     createDynamicsCompressor: () => node("comp", { threshold: param(-24), knee: param(30), ratio: param(12), attack: param(0.003), release: param(0.25) }),
-    createBuffer: (ch, len) => ({ getChannelData: () => new Float32Array(len) }),
+    createBuffer: (ch, len, rate) => {
+      const data = Array.from({ length: ch }, () => new Float32Array(len));
+      return { length: len, sampleRate: rate, numberOfChannels: ch, duration: len / rate, getChannelData: (c) => data[c] };
+    },
     createBufferSource: () => node("buffer", { buffer: null, loop: false, start(t) { this.startAt = t; }, stop() {} }),
   };
   return { ctx, edges, nodes, destination };
@@ -138,115 +142,161 @@ test("every layer of every sound reaches the speakers only through the limiter",
   }
 });
 
-test("missile strike timing: 5 streaks, heavier hits, and the siren silent until the 3rd impact", () => {
-  const tl = A.strikeTimeline(0);
-  assert.equal(tl.streaks.length, 5);
-  for (let i = 1; i < 5; i++) {
-    const gap = tl.streaks[i].start - tl.streaks[i - 1].start;
-    assert.ok(gap >= 1 && gap <= 1.5, `spacing ${gap}`);
-  }
-  for (const s of tl.streaks) assert.ok(s.impact > s.start && s.impact - s.start <= 1.5, "each streak lands");
-  assert.deepEqual(tl.streaks.map((s) => Math.sign(s.pan[1] - s.pan[0])), [1, -1, 1, -1, 1], "left/right in turn");
-  // every hit heavier than the last; the 5th almost double the 1st
-  for (let i = 1; i < 5; i++) assert.ok(tl.streaks[i].weight > tl.streaks[i - 1].weight);
-  const ratio = tl.streaks[4].weight / tl.streaks[0].weight;
-  assert.ok(ratio >= 1.8 && ratio < 2, `5th/1st = ${ratio}`);
-  // the siren: nothing until the 3rd impact; then 3rd, 4th, 5th each step it up
-  assert.equal(tl.sirenStart, tl.streaks[2].impact);
-  assert.deepEqual(tl.stages.map((st) => st.at), [tl.streaks[2].impact, tl.streaks[3].impact, tl.streaks[4].impact]);
-  for (let i = 1; i < tl.stages.length; i++) {
-    assert.ok(tl.stages[i].high > tl.stages[i - 1].high, "higher");
-    assert.ok(tl.stages[i].level > tl.stages[i - 1].level, "louder");
-    assert.ok(tl.stages[i].sweep < tl.stages[i - 1].sweep, "more urgent");
-  }
-  assert.ok(tl.stages[0].level < tl.stages.at(-1).level / 3, "starts low and quiet");
-  assert.equal(tl.stages.at(-1).high, 1200, "the full 400-1200 Hz at the end");
-  // full siren for 6 to 8 seconds after the 5th impact, then a short silence
-  assert.equal(tl.holdStart, tl.streaks[4].impact);
-  assert.ok(tl.holdEnd - tl.holdStart >= 6 && tl.holdEnd - tl.holdStart <= 8);
-  assert.ok(tl.end - tl.holdEnd > 0.5 && tl.end - tl.holdEnd <= 2, "a short silence");
-  // the same rule every cycle, and later cycles hit harder
-  for (const c of [1, 2, 5]) assert.equal(A.strikeTimeline(c).sirenStart, A.strikeTimeline(c).streaks[2].impact);
-  assert.ok(A.strikeTimeline(3).power > A.strikeTimeline(0).power);
-  assert.equal(A.strikeTimeline(10).power, 1);
-});
-
-/** The siren's nodes: its oscillators sweep through many frequency points. */
-const sirenOscsOf = (m) => m.nodes.filter((n) => n.kind === "osc" && n.frequency.calls.length > 6);
-
-for (const cycle of [0, 1, 4]) {
-  test(`no siren sound is scheduled before the 3rd impact (cycle ${cycle + 1}, and in the preview)`, () => {
-    const m = mockCtx();
-    const bus = A.buildOutput(m.ctx, 0.8);
-    A.scheduleCycle(m.ctx, bus, "strike", 10, { n: cycle });
-    const third = 10 + A.strikeTimeline(cycle).streaks[2].impact;
-    const sirens = sirenOscsOf(m);
-    assert.equal(sirens.length, 3, "sawtooth pair + square");
-    for (const o of sirens) {
-      assert.ok(o.startAt >= third - 1e-9, `starts at ${o.startAt}, 3rd impact ${third}`);
-      for (const [, , t] of o.frequency.calls) assert.ok(t >= third - 1e-9, "no pitch change before it either");
-    }
-    // the siren's loudness is silent until then too
-    const body = m.nodes.find((n) => n.kind === "gain" && n.gain.calls.filter(([fn]) => fn === "setTargetAtTime").length >= 5);
-    assert.deepEqual(body.gain.calls[0], ["setValueAtTime", 0.0001, third]);
-  });
-}
-test("the preview follows the same rule", () => {
-  const m = mockCtx();
-  A.previewAlarm(m.ctx, { sound: "strike", volume: 0.8 });
-  const third = m.ctx.currentTime + 0.05 + A.strikeTimeline(1).streaks[2].impact;
-  for (const o of sirenOscsOf(m)) assert.ok(o.startAt >= third - 1e-9);
-});
-
-test("missile strike sounds: Doppler streaks, layered impacts that get heavier, everything else ducks before each hit", () => {
+// ---- "Missile strike" ----------------------------------------------------------------------------
+const startsBetween = (m, from, to) => m.nodes.filter((n) => (n.kind === "osc" || n.kind === "buffer") && n.startAt > from + 1e-9 && n.startAt < to - 1e-9);
+/** The siren's oscillators: they follow many frequency points (missiles and hits use a few). */
+const sirenOscsOf = (m) => m.nodes.filter((n) => n.kind === "osc" && n.frequency.calls.filter(([fn]) => fn === "linearRampToValueAtTime").length >= 5);
+const strikeAt = (cycle = 0, at = 10) => {
   const m = mockCtx();
   const bus = A.buildOutput(m.ctx, 0.8);
-  const len = A.scheduleCycle(m.ctx, bus, "strike", 10, { n: 3 });
-  const tl = A.strikeTimeline(3);
-  assert.equal(len, tl.end);
+  const len = A.scheduleCycle(m.ctx, bus, "strike", at, { n: cycle });
+  return { m, bus, len, tl: A.strikeTimeline(cycle) };
+};
+
+test("missile strike timing: 5 missiles 1.35 s apart, each with a half-second silence before its impact", () => {
+  const tl = A.strikeTimeline(0);
+  assert.equal(tl.streaks.length, 5);
+  for (let i = 1; i < 5; i++) assert.ok(Math.abs(tl.streaks[i].impact - tl.streaks[i - 1].impact - 1.35) < 1e-9, "impacts 1.35 s apart");
+  for (const [i, s] of tl.streaks.entries()) {
+    assert.ok(Math.abs(s.impact - s.silenceStart - 0.5) < 1e-9, "half a second of silence before each hit");
+    assert.ok(s.silenceStart > s.start, "the scream comes first");
+    // the next missile only starts screaming after this one has hit: nothing breaks the silence
+    if (tl.streaks[i + 1]) assert.ok(tl.streaks[i + 1].start >= s.impact, "no overlap with the next");
+  }
+  // heavier every time; the 5th almost double the 1st
+  for (let i = 1; i < 5; i++) assert.ok(tl.streaks[i].weight > tl.streaks[i - 1].weight);
+  const ratio = tl.streaks[4].weight / tl.streaks[0].weight;
+  assert.ok(ratio >= 1.8 && ratio < 2);
+  // the echo grows longer on later hits
+  for (let i = 1; i < 5; i++) assert.ok(tl.streaks[i].reverb > tl.streaks[i - 1].reverb);
+  // the siren: only from the 3rd impact; higher and louder at the 4th and 5th; then the hold
+  assert.equal(tl.sirenStart, tl.streaks[2].impact);
+  assert.deepEqual(tl.stages.map((st) => st.at), tl.streaks.slice(2).map((s) => s.impact));
+  for (let i = 1; i < 3; i++) assert.ok(tl.stages[i].peak > tl.stages[i - 1].peak && tl.stages[i].level > tl.stages[i - 1].level);
+  assert.ok(tl.stages[2].peak >= 1100 && tl.stages[2].peak <= 1250, "up to ~1200 Hz");
+  // ringing ears and the concussion muffle after hits 3, 4 and 5 only, at 4-8 kHz
+  assert.deepEqual(tl.ringing.map((r) => r.at), tl.streaks.slice(2).map((s) => s.impact));
+  for (const r of tl.ringing) assert.ok(r.freq >= 4000 && r.freq <= 8000 && r.seconds >= 2 && r.seconds <= 3);
+  assert.deepEqual(tl.muffles.map((m) => m.at), tl.ringing.map((r) => r.at));
+  for (const m of tl.muffles) assert.ok(m.until - m.at >= 0.8 && m.until - m.at <= 1.3, "about a second");
+  // the hold and the closing silence
+  assert.equal(tl.holdStart, tl.streaks[4].impact);
+  assert.ok(tl.holdEnd - tl.holdStart >= 6 && tl.holdEnd - tl.holdStart <= 8);
+  assert.ok(tl.end - tl.holdEnd >= 1 && tl.end - tl.holdEnd <= 2.5, "a short, tense silence");
+  assert.ok(A.strikeTimeline(3).power > A.strikeTimeline(0).power, "later cycles hit harder");
+});
+
+test("every missile is different: pitch, stereo path and distance (and the next cycle differs again)", () => {
+  const key = (s) => `${s.pitch.toFixed(0)}|${s.pan.map((p) => p.toFixed(2)).join(">")}|${s.distance.toFixed(2)}`;
+  const all = new Set();
+  for (const c of [0, 1, 2]) {
+    const tl = A.strikeTimeline(c);
+    for (const field of ["pitch", "distance"]) assert.equal(new Set(tl.streaks.map((s) => s[field].toFixed(3))).size, 5, `${field} differs in cycle ${c + 1}`);
+    assert.equal(new Set(tl.streaks.map((s) => s.pan.join())).size, 5, "stereo paths differ");
+    for (const s of tl.streaks) {
+      assert.ok(Math.sign(s.pan[0]) !== Math.sign(s.pan[1]), "it crosses the stereo field");
+      assert.ok(s.pitch > 2000 && s.pitch < 4200 && s.drop > 0.35 && s.drop < 0.7, "a high scream that drops as it passes");
+      all.add(key(s));
+    }
+  }
+  assert.equal(all.size, 15, "never two identical missiles");
+  assert.deepEqual(A.strikeTimeline(1), A.strikeTimeline(1), "a given cycle is repeatable");
+});
+
+for (const cycle of [0, 1, 4]) {
+  test(`the silence before each hit is real, and no siren sound before the 3rd impact (cycle ${cycle + 1})`, () => {
+    const { m, tl } = strikeAt(cycle);
+    const ducked = m.nodes.filter((n) => n.kind === "gain" && n.gain.calls.filter(([fn, v]) => fn === "linearRampToValueAtTime" && v < 0.05).length === 5);
+    assert.equal(ducked.length, 2, "the world bus and the hits bus both drop in every silence");
+    const world = ducked.find((n) => n.gain.calls[0][1] === A.STRIKE.bedLevel);
+    const hits = ducked.find((n) => n !== world);
+    const reaches = (from, target, seen = new Set()) => from === target || (!seen.has(from) && (seen.add(from), m.edges.filter(([a]) => a === from).some(([, b]) => reaches(b, target, seen))));
+    for (const s of tl.streaks) {
+      // the only sound that starts in the silence unducked is the "air sucked out" rush;
+      // the next missile waits for the hit; anything else lingering is pulled down to near-silence
+      const inside = startsBetween(m, 10 + s.silenceStart - 1e-6, 10 + s.impact);
+      const loose = inside.filter((n) => !ducked.some((b) => reaches(n, b)));
+      assert.ok(loose.length === 1 && loose[0].kind === "buffer" && Math.abs(loose[0].startAt - (10 + s.silenceStart)) < 1e-9, `before the hit at ${s.impact}: ${loose.length} unducked sounds`);
+      assert.ok(!inside.some((n) => n.kind === "osc" && n.frequency.calls.some(([, v]) => v > 2000 && v < 4300) && n.type === "sine" && n.frequency.calls.length === 3), "no missile scream starts in the silence");
+      // the hits bus is back at full exactly on the hit
+      const back = hits.gain.calls.find(([fn, v, t]) => fn === "linearRampToValueAtTime" && v === 1 && Math.abs(t - (10 + s.impact)) < 1e-9);
+      assert.ok(back, "full on the hit");
+    }
+    for (const s of tl.streaks) {
+      const drop = world.gain.calls.find(([fn, v, t]) => fn === "linearRampToValueAtTime" && v === A.STRIKE.silenceLevel * A.STRIKE.bedLevel && Math.abs(t - (10 + s.silenceStart + 0.04)) < 1e-9);
+      assert.ok(drop, "drops right at the start of the silence");
+      assert.ok(A.STRIKE.silenceLevel <= 0.05, "near-silence");
+    }
+    // the siren: nothing before the 3rd impact, not even a pitch change
+    const third = 10 + tl.streaks[2].impact;
+    const sirens = sirenOscsOf(m);
+    assert.equal(sirens.length, 4, "stacked sawtooth/square tones with an octave");
+    assert.ok(sirens.some((o) => o.type === "sawtooth") && sirens.some((o) => o.type === "square") && sirens.some((o) => o.detune.value > 1100));
+    for (const o of sirens) {
+      assert.ok(o.startAt >= third - 1e-9, `starts at ${o.startAt}, 3rd impact ${third}`);
+      for (const [, , t] of o.frequency.calls) assert.ok(t >= third - 1e-9);
+      assert.ok(o.frequency.calls[0][1] < 150, "spins up from a low growl");
+    }
+  });
+}
+
+test("the preview follows the same rules", () => {
+  const m = mockCtx();
+  const pv = A.previewAlarm(m.ctx, { sound: "strike", volume: 0.8 });
+  const at = m.ctx.currentTime + 0.05;
+  const tl = A.strikeTimeline(1);
+  assert.equal(pv.length, tl.end);
+  for (const o of sirenOscsOf(m)) assert.ok(o.startAt >= at + tl.streaks[2].impact - 1e-9);
+  pv.stop();
+});
+
+test("impacts: layered, heavier each time, echoing longer, never ducked; ringing ears only after hits 3-5", () => {
+  const { m, bus, tl } = strikeAt(3);
   const oscs = m.nodes.filter((n) => n.kind === "osc");
-  // Doppler: five tones that climb then drop
-  assert.equal(oscs.filter((o) => o.frequency.calls.some(([, v]) => v === 760)).length, 5);
-  // the sub thud: 50 -> 30 Hz at each impact, longer and heavier each time
+  // sub thud 50 -> 30 Hz at each impact, heavier each time
   const subs = oscs.filter((o) => o.frequency.calls[0]?.[1] === 50);
   assert.deepEqual(subs.map((o) => o.startAt), tl.streaks.map((s) => 10 + s.impact));
   assert.ok(subs.every((o) => o.frequency.calls.some(([fn, v]) => fn === "exponentialRampToValueAtTime" && v === 30)));
   const peakOf = (o) => Math.max(...m.edges.filter(([a]) => a === o).map(([, g]) => Math.max(...g.gain.calls.map(([, v]) => v))));
   const subPeaks = subs.map(peakOf);
-  for (let i = 1; i < 5; i++) assert.ok(subPeaks[i] > subPeaks[i - 1], "each thud heavier");
+  for (let i = 1; i < 5; i++) assert.ok(subPeaks[i] > subPeaks[i - 1]);
   assert.ok(subPeaks[4] / subPeaks[0] > 1.8, "the 5th about double the 1st");
-  // the long boom, the whump, the crack, debris and the tail are all there
-  assert.equal(oscs.filter((o) => o.frequency.calls[0]?.[1] === 92).length, 5, "booms");
+  // the other layers: mid boom, whump, crack, debris, falling-debris crackle
+  assert.equal(oscs.filter((o) => o.type === "triangle" && o.frequency.calls[0]?.[1] === 140).length, 5, "mid booms");
   assert.equal(oscs.filter((o) => o.frequency.calls[0]?.[1] === 78).length, 5, "whumps");
   const filters = m.nodes.filter((n) => n.kind === "filter");
-  assert.ok(filters.filter((f) => f.type === "highpass" && f.frequency.value === 1200).length === 5, "a crack at each impact");
-  assert.ok(filters.filter((f) => f.type === "bandpass" && f.Q.value === 2.5).length >= 5 * 5, "debris bursts");
-  // everything except the impacts dips right before each hit, then comes back
-  const dipLevel = A.STRIKE.preDuck.depth * A.STRIKE.bedLevel;
-  const beds = m.nodes.filter((n) => n.kind === "gain" && n.gain.calls.filter(([fn, v]) => fn === "linearRampToValueAtTime" && Math.abs(v - dipLevel) < 1e-12).length === 5);
-  assert.equal(beds.length, 2, "clean and driven beds");
-  for (const s of tl.streaks) {
-    const hit = 10 + s.impact;
-    const dip = beds[0].gain.calls.find(([fn, v, t]) => fn === "linearRampToValueAtTime" && Math.abs(v - dipLevel) < 1e-12 && Math.abs(t - (hit - A.STRIKE.preDuck.to)) < 1e-9);
-    assert.ok(dip, `dips just before the hit at ${hit}`);
+  assert.equal(filters.filter((f) => f.type === "highpass" && f.frequency.value === 1200).length, 5, "a crack at each hit");
+  assert.ok(filters.filter((f) => f.type === "bandpass" && f.Q.value === 2.5).length >= 30, "debris bursts");
+  assert.ok(filters.filter((f) => f.type === "highpass" && f.frequency.value >= 2200 && f.frequency.value !== 1200).length >= 5 * 14, "falling-debris crackle");
+  // the city echo: a generated impulse response that decays, longer for later hits
+  const convs = m.nodes.filter((n) => n.kind === "conv");
+  const lengths = [...new Set(convs.map((c) => +c.buffer.duration.toFixed(2)))].sort((a, b) => a - b);
+  assert.ok(lengths.length >= 5, `impulse lengths ${lengths}`);
+  const ir = A.cityImpulse(m.ctx, 3);
+  const d = ir.getChannelData(0);
+  const energy = (a, b) => d.slice(Math.floor(a * d.length), Math.floor(b * d.length)).reduce((x, v) => x + v * v, 0);
+  assert.ok(energy(0, 0.1) > 50 * energy(0.9, 1), "it decays");
+  // the hits are never ducked: no path from a sub thud goes through the world bus
+  const world = m.nodes.find((n) => n.kind === "gain" && n.gain.calls.filter(([fn, v]) => fn === "linearRampToValueAtTime" && v < 0.05).length === 5);
+  const reaches = (from, target, seen = new Set()) => from === target || (!seen.has(from) && (seen.add(from), m.edges.filter(([a]) => a === from).some(([, b]) => reaches(b, target, seen))));
+  for (const sub of subs) assert.ok(!reaches(sub, world));
+  // the concussion: everything else muffled at hits 3-5, clearing over about a second
+  const muffle = m.nodes.find((n) => n.kind === "filter" && n.frequency.calls.some(([, v]) => v === A.STRIKE.muffle.to));
+  assert.deepEqual(muffle.frequency.calls.filter(([, v]) => v === A.STRIKE.muffle.to).map(([, , t]) => t), tl.muffles.map((x) => 10 + x.at));
+  assert.ok(reaches(world, muffle), "the world goes through the muffle");
+  // ringing ears: soft high tones at hits 3-5 only, easing in, never a harsh peak
+  const rings = oscs.filter((o) => o.type === "sine" && o.frequency.value >= 4000 && o.frequency.value <= 8100);
+  assert.deepEqual([...new Set(rings.map((o) => o.startAt))], tl.ringing.map((r) => 10 + r.at));
+  for (const o of rings) {
+    const g = m.edges.find(([a]) => a === o)[1];
+    const attack = g.gain.calls.find(([fn]) => fn === "exponentialRampToValueAtTime");
+    assert.ok(attack[1] <= A.STRIKE.ringPeak && attack[1] <= 0.05, "gentle");
+    assert.ok(attack[2] - o.startAt >= 0.1, "eases in");
   }
-  // the impacts never go through the ducking bed
-  const bedSet = new Set(beds);
-  const reaches = (from, target, seen = new Set()) => {
-    if (from === target) return true;
-    if (seen.has(from)) return false;
-    seen.add(from);
-    return m.edges.filter(([a]) => a === from).some(([, b]) => reaches(b, target, seen));
-  };
-  for (const sub of subs) assert.ok(![...bedSet].some((b) => reaches(sub, b)), "the thud is never ducked");
-  // the siren is in the bed (it dips before hits) and still answers each hit after the 3rd
-  const sirens = sirenOscsOf(m);
-  assert.ok(sirens.some((o) => o.type === "sawtooth") && sirens.some((o) => o.type === "square") && sirens.some((o) => o.detune.value !== 0));
-  assert.ok(sirens.every((o) => [...bedSet].some((b) => reaches(o, b))));
-  assert.ok(A.STRIKE.bedLevel < 1 && A.STRIKE.impactLevel * A.STRIKE.lastWeight <= 1, "punch from contrast and weight, not from more output");
-  // the hold: triple beeps and sonar pings
+  // the hold: triple beeps, sonar pings, and distant explosions under the siren
   assert.ok(oscs.filter((o) => o.type === "square" && o.frequency.value === 2700).length >= 3 * 8);
   assert.ok(m.nodes.filter((n) => n.kind === "delay").length >= 4);
+  assert.ok(bus.nodes.shaper.curve instanceof Float32Array, "a little smooth distortion");
 });
 
 test("ringing: starts at 60% and ramps to full over 20 s at the capped volume; the preview uses the same chain", async () => {
@@ -262,7 +312,7 @@ test("ringing: starts at 60% and ramps to full over 20 s at the capped volume; t
   const full = mockCtx();
   let ended = false;
   const pv = A.previewAlarm(full.ctx, { sound: "strike", volume: 0.7 }, () => (ended = true));
-  assert.equal(pv.length, A.strikeTimeline(1).end, "the preview is one whole 5-streak cycle");
+  assert.equal(pv.length, A.strikeTimeline(1).end, "the preview is one whole 5-missile cycle");
   pv.stop();
   assert.equal(ended, true, "Stop preview ends it");
   const p = mockCtx();
