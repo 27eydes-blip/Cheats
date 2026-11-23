@@ -296,34 +296,44 @@ export const STRIKE = {
   whoosh: 1.0, // each streak flies for 1 s, then hits
   hold: 7, // full siren after the 5th impact
   silence: 1.2, // then a short silence before the next cycle
+  sirenFromImpact: 3, // the siren stays silent until the 3rd impact lands
+  lastWeight: 1.9, // the 5th impact carries almost double the weight of the 1st
+  preDuck: { from: 0.16, to: 0.06, depth: 0.22, back: 0.45 }, // everything else dips just before each hit
+  impactLevel: 0.34, // how loud a weight-1 hit is (see impact())
+  bedLevel: 0.55, // the siren, beeps, pings and rumble sit this much under the hits
 };
 
 /**
  * When everything happens in one cycle (seconds from its start). Streaks alternate left->right and
- * right->left. The siren starts after the first impact and steps up at each one (stage 1 quiet and
- * low, stage 5 full), then holds.
+ * right->left; each lands harder than the one before (weight 1 up to 1.9 for the 5th). The siren is
+ * silent until the 3rd impact, starts there low and rising, steps up at the 4th and 5th, then holds.
  */
 export function strikeTimeline(cycle = 0) {
-  const streaks = Array.from({ length: STRIKE.streaks }, (_, i) => {
+  const n = STRIKE.streaks;
+  const streaks = Array.from({ length: n }, (_, i) => {
     const start = i * STRIKE.spacing;
-    return { start, impact: start + STRIKE.whoosh, pan: i % 2 === 0 ? [-0.9, 0.9] : [0.9, -0.9] };
+    return { start, impact: start + STRIKE.whoosh, pan: i % 2 === 0 ? [-0.9, 0.9] : [0.9, -0.9], weight: 1 + (STRIKE.lastWeight - 1) * (i / (n - 1)) };
   });
-  const stages = streaks.map((s, i) => {
-    const k = i / (STRIKE.streaks - 1); // 0 at the first impact, 1 at the last
+  const sirenAt = STRIKE.sirenFromImpact - 1;
+  const answering = streaks.slice(sirenAt);
+  const stages = answering.map((s, j) => {
+    const k = answering.length > 1 ? j / (answering.length - 1) : 1; // 0 at the 3rd impact, 1 at the 5th
+    const next = streaks[sirenAt + j + 1];
     return {
       at: s.impact,
-      level: 0.035 + 0.115 * k, // quiet at first, full at the 5th
+      nextStreak: next ? next.start : null, // dips while this one passes over
+      level: 0.04 + 0.11 * k, // low and quiet at first, full at the 5th
       low: 400 + 40 * k,
-      high: 600 + 600 * k, // 600 Hz at first, the full 400-1200 Hz by the 5th
-      sweep: 1.1 - 0.55 * k, // seconds per rise (and per fall): faster, more urgent
-      square: 0.3 + 0.7 * k, // more of the harsh square wave as it gets more urgent
+      high: 650 + 550 * k, // 650 Hz at the 3rd impact, the full 400-1200 Hz by the 5th
+      sweep: 1.0 - 0.45 * k, // seconds per rise (and per fall): faster, more urgent
+      square: 0.35 + 0.65 * k, // more of the harsh square wave as it gets more urgent
     };
   });
   const holdStart = streaks.at(-1).impact;
   const holdEnd = holdStart + STRIKE.hold;
   // later cycles hit harder (up to 1.0 by the fourth cycle)
   const power = Math.min(1, 0.7 + 0.1 * cycle);
-  return { streaks, stages, holdStart, holdEnd, end: holdEnd + STRIKE.silence, power };
+  return { streaks, stages, sirenStart: stages[0].at, holdStart, holdEnd, end: holdEnd + STRIKE.silence, power };
 }
 
 /** A missile streak: rising filtered noise, a rocket rumble, a Doppler tone, panned across. */
@@ -382,58 +392,114 @@ function streak(ctx, out, at, len, [fromPan, toPan], power) {
   o.stop(at + len + 0.02);
 }
 
-/** The impact: a low boom, a sub-bass thud, a short noise burst and a rumble tail. */
-function impact(ctx, drive, clean, at, pan, power) {
-  const p = panner(ctx, pan * 0.5, drive);
-  const boom = ctx.createOscillator();
-  const bg = ctx.createGain();
-  boom.type = "sine";
-  boom.frequency.setValueAtTime(95, at);
-  boom.frequency.exponentialRampToValueAtTime(36, at + 1.1);
-  bg.gain.setValueAtTime(0.0001, at);
-  bg.gain.exponentialRampToValueAtTime(0.85 * power, at + 0.012);
-  bg.gain.exponentialRampToValueAtTime(0.0001, at + 1.3);
-  boom.connect(bg).connect(p);
-  boom.start(at);
-  boom.stop(at + 1.35);
+/**
+ * The impact, in layers, scaled by `w` (1 for the 1st, up to 1.9 for the 5th; times the cycle's power):
+ * a sharp crack, a pressure-wave whump, a deep 50->30 Hz sub thud, a long boom (lightly driven),
+ * debris bursts flying out to the sides, and a long rumbling tail. Heavier hits are also longer.
+ */
+function impact(ctx, drive, clean, at, pan, weight) {
+  // `weight` sets how long and full the hit is; `w` how loud. The 1st hit sits well under the
+  // limiter so the heavier ones have room to be clearly bigger, instead of all being flattened.
+  const len = (base, extra) => base + extra * (Math.max(1, weight) - 1);
+  const w = weight * STRIKE.impactLevel;
+  // the crack: a few milliseconds of bright noise, the loudest instant of the hit
+  const c = ctx.createBufferSource();
+  c.buffer = noiseBuffer(ctx, 2, false);
+  const ch = ctx.createBiquadFilter();
+  ch.type = "highpass";
+  ch.frequency.value = 1200;
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(0.0001, at);
+  cg.gain.exponentialRampToValueAtTime(0.75 * w, at + 0.002);
+  cg.gain.exponentialRampToValueAtTime(0.0001, at + 0.06);
+  c.connect(ch).connect(cg).connect(panner(ctx, pan * 0.4, clean));
+  c.start(at);
+  c.stop(at + 0.08);
+  // the whump: a short, heavy push of air
+  const wp = ctx.createOscillator();
+  const wg = ctx.createGain();
+  wp.type = "sine";
+  wp.frequency.setValueAtTime(78, at);
+  wp.frequency.exponentialRampToValueAtTime(42, at + 0.2);
+  wg.gain.setValueAtTime(0.0001, at);
+  wg.gain.exponentialRampToValueAtTime(0.7 * w, at + 0.008);
+  wg.gain.exponentialRampToValueAtTime(0.0001, at + 0.24);
+  wp.connect(wg).connect(clean);
+  wp.start(at);
+  wp.stop(at + 0.26);
+  const wn = ctx.createBufferSource();
+  wn.buffer = noiseBuffer(ctx, 2, false);
+  const wl = ctx.createBiquadFilter();
+  wl.type = "lowpass";
+  wl.frequency.value = 240;
+  const wng = ctx.createGain();
+  wng.gain.setValueAtTime(0.0001, at);
+  wng.gain.exponentialRampToValueAtTime(0.6 * w, at + 0.01);
+  wng.gain.exponentialRampToValueAtTime(0.0001, at + 0.2);
+  wn.connect(wl).connect(wng).connect(clean);
+  wn.start(at);
+  wn.stop(at + 0.22);
+  // the sub thud: deep (50 -> 30 Hz), clean and centred, longer for heavier hits
   const sub = ctx.createOscillator();
   const sg = ctx.createGain();
   sub.type = "sine";
-  sub.frequency.setValueAtTime(48, at);
-  sub.frequency.exponentialRampToValueAtTime(27, at + 0.6);
+  const subLen = len(1.2, 0.9);
+  sub.frequency.setValueAtTime(50, at);
+  sub.frequency.exponentialRampToValueAtTime(30, at + subLen * 0.7);
   sg.gain.setValueAtTime(0.0001, at);
-  sg.gain.exponentialRampToValueAtTime(0.9 * power, at + 0.02);
-  sg.gain.exponentialRampToValueAtTime(0.0001, at + 0.75);
-  sub.connect(sg).connect(clean); // the sub stays clean and centred
+  sg.gain.exponentialRampToValueAtTime(0.55 * w, at + 0.015);
+  sg.gain.exponentialRampToValueAtTime(0.0001, at + subLen);
+  sub.connect(sg).connect(clean);
   sub.start(at);
-  sub.stop(at + 0.8);
-  // the crack: a short bright noise burst closing down fast
-  const c = ctx.createBufferSource();
-  c.buffer = noiseBuffer(ctx, 2, false);
-  const cl = ctx.createBiquadFilter();
-  cl.type = "lowpass";
-  cl.frequency.setValueAtTime(3200, at);
-  cl.frequency.exponentialRampToValueAtTime(140, at + 0.35);
-  const cg = ctx.createGain();
-  cg.gain.setValueAtTime(0.0001, at);
-  cg.gain.exponentialRampToValueAtTime(0.7 * power, at + 0.005);
-  cg.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
-  c.connect(cl).connect(cg).connect(p);
-  c.start(at);
-  c.stop(at + 0.45);
-  // the tail: a dark rumble rolling off
-  const t = ctx.createBufferSource();
-  t.buffer = noiseBuffer(ctx, 3, true);
+  sub.stop(at + subLen + 0.05);
+  // the boom: fuller and longer, a touch of drive for weight
+  const boom = ctx.createOscillator();
+  const bg = ctx.createGain();
+  boom.type = "sine";
+  const boomLen = len(1.8, 1.0);
+  boom.frequency.setValueAtTime(92, at);
+  boom.frequency.exponentialRampToValueAtTime(33, at + boomLen * 0.8);
+  bg.gain.setValueAtTime(0.0001, at);
+  bg.gain.exponentialRampToValueAtTime(0.5 * w, at + 0.02);
+  bg.gain.exponentialRampToValueAtTime(0.0001, at + boomLen);
+  boom.connect(bg).connect(panner(ctx, pan * 0.3, drive));
+  boom.start(at);
+  boom.stop(at + boomLen + 0.05);
+  // debris: short filtered noise bursts scattered to the sides over the first moment
+  const pieces = 5 + Math.round(3 * (Math.max(1, weight) - 1));
+  for (let i = 0; i < pieces; i++) {
+    const t = at + 0.03 + Math.random() * len(0.6, 0.4);
+    const d = ctx.createBufferSource();
+    d.buffer = noiseBuffer(ctx, 2, false);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 2.5;
+    bp.frequency.value = 900 + Math.random() * 2600;
+    const dg = ctx.createGain();
+    const lvl = (0.25 + Math.random() * 0.15) * w * (1 - (t - at) / 1.2);
+    dg.gain.setValueAtTime(0.0001, t);
+    dg.gain.exponentialRampToValueAtTime(Math.max(0.002, lvl), t + 0.004);
+    dg.gain.exponentialRampToValueAtTime(0.0001, t + 0.05 + Math.random() * 0.07);
+    d.connect(bp).connect(dg).connect(panner(ctx, (Math.random() * 2 - 1) * 0.95, clean));
+    d.start(t);
+    d.stop(t + 0.14);
+  }
+  // the tail: a dark rumble rolling on for seconds
+  const tail = ctx.createBufferSource();
+  tail.buffer = noiseBuffer(ctx, 3, true);
+  tail.loop = true;
   const tl = ctx.createBiquadFilter();
   tl.type = "lowpass";
-  tl.frequency.value = 95;
+  tl.frequency.setValueAtTime(160, at);
+  tl.frequency.exponentialRampToValueAtTime(70, at + 1.5);
   const tg = ctx.createGain();
+  const tailLen = len(3.2, 1.8);
   tg.gain.setValueAtTime(0.0001, at);
-  tg.gain.exponentialRampToValueAtTime(0.7 * power, at + 0.08);
-  tg.gain.exponentialRampToValueAtTime(0.0001, at + 2.6);
-  t.connect(tl).connect(tg).connect(panner(ctx, -pan * 0.3, clean));
-  t.start(at);
-  t.stop(at + 2.7);
+  tg.gain.exponentialRampToValueAtTime(0.65 * w, at + 0.1);
+  tg.gain.exponentialRampToValueAtTime(0.0001, at + tailLen);
+  tail.connect(tl).connect(tg).connect(panner(ctx, -pan * 0.3, clean));
+  tail.start(at);
+  tail.stop(at + tailLen + 0.05);
 }
 
 /**
@@ -469,12 +535,9 @@ function strikeSiren(ctx, out, tl) {
   const body = ctx.createGain(); // the siren's loudness: swells on each hit, dips for each streak
   body.gain.setValueAtTime(0.0001, first);
   body.connect(lp);
-  tl.stages.forEach((st, i) => {
+  tl.stages.forEach((st) => {
     body.gain.setTargetAtTime(st.level, st.at, 0.08); // swell
-    const next = tl.streaks[i + 1];
-    if (next) {
-      body.gain.setTargetAtTime(st.level * 0.45, next.start + 0.25, 0.1); // the next streak passes over
-    }
+    if (st.nextStreak != null) body.gain.setTargetAtTime(st.level * 0.45, st.nextStreak + 0.25, 0.1); // the next streak passes over
   });
   body.gain.setTargetAtTime(0.0001, end - 0.15, 0.05);
   const squareMix = ctx.createGain(); // the harsh part grows with urgency
@@ -500,16 +563,39 @@ function strikeSiren(ctx, out, tl) {
 export function scheduleStrike(ctx, bus, at, cycle = 0) {
   const { input: clean, drive } = bus;
   const tl = strikeTimeline(cycle);
-  tl.streaks.forEach((s, i) => {
-    streak(ctx, clean, at + s.start, s.impact - s.start, s.pan, tl.power);
-    impact(ctx, drive, clean, at + s.impact, s.pan[1], tl.power * (0.85 + 0.15 * (i / (tl.streaks.length - 1))));
+  // Everything except the impacts plays through this bed, which dips for a moment right before
+  // each hit, so the hit lands on near-silence and feels much bigger (contrast, not more volume).
+  const bedClean = ctx.createGain();
+  const bedDrive = ctx.createGain();
+  bedClean.connect(clean);
+  bedDrive.connect(drive);
+  const { from, to, depth, back } = STRIKE.preDuck;
+  for (const bed of [bedClean, bedDrive]) {
+    const level = STRIKE.bedLevel;
+    bed.gain.setValueAtTime(level, at);
+    for (const s of tl.streaks) {
+      const hit = at + s.impact;
+      bed.gain.setValueAtTime(level, hit - from);
+      bed.gain.linearRampToValueAtTime(depth * level, hit - to);
+      bed.gain.setValueAtTime(depth * level, hit + 0.08);
+      bed.gain.linearRampToValueAtTime(level, hit + back);
+    }
+  }
+  tl.streaks.forEach((s) => {
+    streak(ctx, bedClean, at + s.start, s.impact - s.start, s.pan, tl.power);
+    impact(ctx, drive, clean, at + s.impact, s.pan[1], tl.power * s.weight); // straight out: never ducked
   });
-  strikeSiren(ctx, drive, { ...tl, stages: tl.stages.map((st) => ({ ...st, at: at + st.at })), streaks: tl.streaks.map((s) => ({ ...s, start: at + s.start })), holdEnd: at + tl.holdEnd });
+  // the siren: silent until the 3rd impact
+  strikeSiren(ctx, bedDrive, {
+    ...tl,
+    stages: tl.stages.map((st) => ({ ...st, at: at + st.at, nextStreak: st.nextStreak == null ? null : at + st.nextStreak })),
+    holdEnd: at + tl.holdEnd,
+  });
   // the hold: rapid triple beeps and sonar pings under the full siren
-  for (let t = tl.holdStart + 0.2; t < tl.holdEnd - 0.3; t += 0.75) tripleBeep(ctx, clean, at + t, { level: 0.1 + 0.04 * tl.power, freq: 2700 });
-  for (let t = tl.holdStart + 0.5; t < tl.holdEnd - 0.8; t += 1.4) sonar(ctx, clean, at + t, { level: 0.22 });
+  for (let t = tl.holdStart + 0.2; t < tl.holdEnd - 0.3; t += 0.75) tripleBeep(ctx, bedClean, at + t, { level: 0.1 + 0.04 * tl.power, freq: 2700 });
+  for (let t = tl.holdStart + 0.5; t < tl.holdEnd - 0.8; t += 1.4) sonar(ctx, bedClean, at + t, { level: 0.22 });
   // the low rumble bed under everything (not in the silence)
-  rumble(ctx, clean, at, tl.holdEnd, { level: 0.3 + 0.15 * tl.power, blasts: 0 });
+  rumble(ctx, bedClean, at, tl.holdEnd, { level: 0.25 + 0.12 * tl.power, blasts: 0 });
   return tl.end;
 }
 
