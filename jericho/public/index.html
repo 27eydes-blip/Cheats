@@ -8,6 +8,11 @@
   <title>Jericho</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="presence.css">
+  <!-- Egyptian look: fonts hosted locally in /fonts (SIL Open Font License, see fonts/OFL-*.txt) -->
+  <link rel="preload" href="fonts/cinzel-decorative-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/marcellus-sc-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/noto-sans-egyptian-hieroglyphs-subset.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="egypt.css">
   <link rel="modulepreload" href="/vendor/three/build/three.module.min.js">
   <script type="importmap">
     {
@@ -21,6 +26,9 @@
 <body class="presence-page" data-state="off">
   <!-- Shows instantly while the 3D scene starts -->
   <div class="loading-glow" aria-hidden="true"></div>
+  <div class="glyph-loader" aria-hidden="true">
+    <span class="hg g-ankh" style="--i:0"></span><span class="hg g-eye" style="--i:1"></span><span class="hg g-sun" style="--i:2"></span><span class="hg g-falcon" style="--i:3"></span><span class="hg g-scarab" style="--i:4"></span><span class="hg g-feather" style="--i:5"></span><span class="hg g-was" style="--i:6"></span><span class="hg g-water" style="--i:7"></span>
+  </div>
   <canvas id="stage3d" class="stage3d" aria-hidden="true"></canvas>
 
   <!-- Small HUD details around the edges -->
@@ -33,7 +41,13 @@
   </div>
 
   <header class="top">
-    <h1 id="name">Jericho</h1>
+    <div class="wordmark">
+      <span class="glyph-row left" aria-hidden="true"><span class="hg g-was outer"></span><span class="hg g-falcon outer"></span><span class="hg g-feather"></span><span class="hg g-eye"></span></span>
+      <span class="wm-line" aria-hidden="true"></span>
+      <h1 id="name" class="wm-text">Jericho</h1>
+      <span class="wm-line right" aria-hidden="true"></span>
+      <span class="glyph-row right" aria-hidden="true"><span class="hg g-eye"></span><span class="hg g-feather"></span><span class="hg g-falcon outer"></span><span class="hg g-was outer"></span></span>
+    </div>
     <nav class="top-links">
       <a class="top-link" href="/calls">Calls</a>
       <a class="top-link" href="/memory">Memory</a>
@@ -49,7 +63,7 @@
     <canvas id="viz" aria-hidden="true" hidden></canvas>
   </button>
 
-  <div class="status-word" aria-hidden="true"><span class="tick"></span><span id="hud-word">Start</span><span class="tick"></span></div>
+  <div class="status-word" aria-hidden="true"><span class="tick"></span><span class="hg state-glyph"></span><span id="hud-word">Start</span><span class="tick"></span></div>
   <p id="orb-label" class="state-label sr-only">Start</p>
 
   <section class="dock">
@@ -102,5 +116,6 @@
   </aside>
 
   <script src="app.js" type="module"></script>
+  <script src="egypt.js" type="module"></script>
 </body>
 </html>

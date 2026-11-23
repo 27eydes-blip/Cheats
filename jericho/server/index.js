@@ -18,7 +18,7 @@ import { controlInfo } from "./tools/pc.js";
 import { streamSpeech } from "./tts.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json" };
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8" };
 
 if (!secrets.anthropicKey) console.warn("⚠️  ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add it.");
 if (!secrets.elevenLabsKey) console.warn("⚠️  ELEVENLABS_API_KEY is not set. Jericho will use the browser's built-in voice.");
@@ -162,7 +162,10 @@ function serveStatic(url, res) {
     res.writeHead(404).end("Not found");
     return;
   }
-  res.writeHead(200, { "content-type": MIME[path.extname(file)] || "application/octet-stream" });
+  const ext = path.extname(file);
+  // Fonts never change: let the browser keep them (they're also why the page works offline).
+  const cache = ext === ".woff2" ? { "cache-control": "public, max-age=31536000, immutable" } : {};
+  res.writeHead(200, { "content-type": MIME[ext] || "application/octet-stream", ...cache });
   fs.createReadStream(file).pipe(res);
 }
 
