@@ -74,6 +74,7 @@ export function createPresence({ onTap }) {
     impl.setSpeechSource(...pending.speech);
     impl.setCalling?.(pending.calling);
     document.body.classList.add("presence-ready");
+    if (new URLSearchParams(location.search).has("debug")) window.__presence = impl; // for testing only
   }
 
   function fallback2D() {

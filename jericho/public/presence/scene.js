@@ -13,6 +13,10 @@ const AMBER = new THREE.Color(0xff8a2a);
 const PALE = new THREE.Color(0xfff1cc);
 const TEAL = new THREE.Color(0x3fd6c8);
 const VIOLET = new THREE.Color(0x9a6bff);
+const HALO_GOLD = new THREE.Color(0xffc070);
+const HALO_RED = new THREE.Color(0xff2a18);
+const HEART_GOLD = new THREE.Color(0xfff3d6);
+const HEART_RED = new THREE.Color(0xff5a48);
 
 // Ashima/Stefan Gustavson simplex noise (MIT), used to make the core and tendrils feel organic.
 const NOISE = /* glsl */ `
@@ -96,6 +100,12 @@ export function createScene(canvas, opts) {
     uSpread: { value: 1 },
     uPixel: { value: renderer.getPixelRatio() },
     uMotion: { value: reducedMotion ? 0.3 : 1 },
+    // particles: their own clock (stops when they freeze), red shift, tremble, voice flare
+    uPTime: { value: 0 },
+    uPSpread: { value: 1 },
+    uRed: { value: 0 },
+    uTremble: { value: 0 },
+    uFlare: { value: 0 },
   };
 
   // ---- starfield ----------------------------------------------------------------
@@ -137,7 +147,7 @@ export function createScene(canvas, opts) {
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uGlow, uLevel; uniform vec3 uColorA, uColorB, uRim;
+      uniform float uGlow, uLevel, uRed; uniform vec3 uColorA, uColorB, uRim;
       varying vec3 vNormal; varying vec3 vView; varying float vN;
       void main(){
         float facing = max(dot(vNormal, vView), 0.0);
@@ -146,7 +156,8 @@ export function createScene(canvas, opts) {
         float veins = smoothstep(0.15, 0.6, vN) * 0.6;
         vec3 col = mix(uColorA, uColorB, 0.35 + veins);
         col = mix(col, uRim, fres * 0.22);            // faint teal edge
-        float a = (0.1 + veins * 0.3 + fres * 0.7) * (0.45 + uGlow * 0.55 + uLevel * 0.8);
+        col = mix(col, vec3(0.85, 0.08, 0.05), uRed * 0.65); // red tint while you're talking
+        float a = (0.1 + veins * 0.3 + fres * 0.7) * (0.45 + uGlow * 0.55 + uLevel * 0.8) * (1.0 - uRed * 0.25);
         gl_FragColor = vec4(col * a, a);
       }`,
     transparent: true,
@@ -200,66 +211,94 @@ export function createScene(canvas, opts) {
     return { pivot, mesh, ...s };
   });
 
-  // ---- orbiting particles (animated entirely on the GPU) -----------------------
+  // ---- floating particles (animated entirely on the GPU) -----------------------
+  // They drift, swirl and wander through the whole scene on their own clock (uPTime).
+  // While you talk, that clock stops: every particle freezes where it is, turns deep red
+  // and trembles very slightly with your voice. When you stop, the clock eases back up.
   const particleMat = new THREE.ShaderMaterial({
     uniforms,
     vertexShader: /* glsl */ `
-      attribute vec4 aOrbit;   // radius, angle, inclination, speed
+      attribute vec4 aOrbit;   // radius, angle, inclination, swirl speed
+      attribute vec3 aWander;  // wander frequencies
       attribute vec3 aColor; attribute float aSize; attribute float aPhase;
-      uniform float uTime, uSwirl, uSpread, uLevel, uLean, uPixel, uMotion;
-      varying vec3 vColor; varying float vFade;
+      uniform float uTime, uPTime, uPSpread, uFlare, uTremble, uRed, uPixel;
+      varying vec3 vColor; varying float vAlpha;
       void main(){
-        float t = uTime * uMotion;
-        float ang = aOrbit.y + t * aOrbit.w * (0.4 + uSwirl);
-        float r = aOrbit.x * uSpread * (1.0 - uLean * 0.12) + sin(t * 0.7 + aPhase) * 0.12 + uLevel * 0.6 * sin(aPhase * 3.0 + t * 6.0);
-        vec3 p = vec3(cos(ang) * r, sin(ang * 0.5 + aPhase) * 0.25, sin(ang) * r);
+        float t = uPTime;
+        float r0 = aOrbit.x * uPSpread;
+        float ang = aOrbit.y + t * aOrbit.w;
+        // slow swirl around the being...
+        vec3 p = vec3(cos(ang) * r0, sin(ang * 0.5 + aPhase) * (0.25 + aOrbit.x * 0.06), sin(ang) * r0);
         float ci = cos(aOrbit.z), si = sin(aOrbit.z);
         p = vec3(p.x, p.y * ci - p.z * si, p.y * si + p.z * ci);
+        // ...plus a random wander, wider for the ones further out
+        float amp = 0.2 + aOrbit.x * 0.1;
+        p += vec3(sin(t * aWander.x + aPhase), sin(t * aWander.y + aPhase * 1.7), cos(t * aWander.z + aPhase * 0.6)) * amp;
+        p.y += sin(t * 0.045 + aPhase * 2.0) * 0.08 * aOrbit.x;          // the far ones rise and sink slowly
+        // speaking: the cloud breathes out with Jericho's voice
+        p *= 1.0 + uFlare * 0.1 * (0.6 + 0.4 * sin(aPhase * 3.0 + uTime * 7.0));
+        // listening: frozen, but trembling with your voice (real time, not the stopped clock)
+        p += vec3(sin(uTime * 37.0 + aPhase * 11.0), sin(uTime * 43.0 + aPhase * 7.0), sin(uTime * 31.0 + aPhase * 5.0)) * uTremble * 0.03;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = aSize * uPixel * (1.0 + uLevel * 1.5) * (18.0 / -mv.z);
+        float dist = -mv.z;
+        gl_PointSize = min(aSize * uPixel * (1.0 + uFlare * 1.4 + uRed * 0.15) * (18.0 / dist), 26.0 * uPixel);
         gl_Position = projectionMatrix * mv;
-        vColor = aColor; vFade = 0.55 + 0.45 * sin(t * 1.3 + aPhase * 5.0);
+        vec3 red = vec3(0.62, 0.025, 0.02) * (0.75 + 0.4 * fract(aPhase * 3.7)); // deep red
+        vColor = mix(aColor, red, uRed);
+        float twinkle = 0.55 + 0.45 * sin(t * 1.3 + aPhase * 5.0);
+        float shimmer = 1.0 + uTremble * 0.45 * sin(uTime * 23.0 + aPhase * 13.0);
+        vAlpha = twinkle * shimmer * smoothstep(0.5, 2.2, dist) * (1.0 + uFlare * 0.9);
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uGlow; varying vec3 vColor; varying float vFade;
+      uniform float uGlow, uRed; varying vec3 vColor; varying float vAlpha;
       void main(){
         float d = length(gl_PointCoord - 0.5);
-        float a = smoothstep(0.5, 0.0, d) * vFade * (0.38 + uGlow * 0.4);
+        float core = smoothstep(0.5, 0.0, d);
+        float glow = smoothstep(0.5, 0.1, d) * 0.3 * uRed;   // soft red glow around each point
+        float a = (core + glow) * vAlpha * (0.38 + uGlow * 0.4) * (1.0 + uRed * 0.15);
         gl_FragColor = vec4(vColor * a, a);
       }`,
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
+  // The particles live outside the turning being, so when they freeze they really stand still.
+  const cloud = new THREE.Group();
+  scene.add(cloud);
   let particles = null;
   function buildParticles() {
     if (particles) {
-      being.remove(particles);
+      cloud.remove(particles);
       particles.geometry.dispose();
     }
-    const count = Math.round((lowPower ? 1800 : 7000) * particleScale);
+    const count = Math.round((lowPower ? 2000 : 7000) * particleScale);
     const g = new THREE.BufferGeometry();
     const orbit = new Float32Array(count * 4);
+    const wander = new Float32Array(count * 3);
     const color = new Float32Array(count * 3);
     const size = new Float32Array(count);
     const phase = new Float32Array(count);
     for (let i = 0; i < count; i++) {
       const band = Math.random();
-      const r = band < 0.55 ? rand(1.2, 2.6) : band < 0.9 ? rand(2.6, 4.4) : rand(4.4, 6.5);
-      orbit.set([r, Math.random() * TAU, rand(-1.4, 1.4) * (Math.random() < 0.6 ? 0.35 : 1), rand(0.15, 0.6) * (Math.random() < 0.5 ? -1 : 1) / Math.sqrt(r)], i * 4);
+      // close around the being, a middle cloud, and a sparse haze through the whole scene
+      const r = band < 0.45 ? rand(1.2, 2.8) : band < 0.75 ? rand(2.8, 5) : rand(5, 13);
+      const incl = r > 5 ? rand(-Math.PI, Math.PI) : rand(-1.4, 1.4) * (Math.random() < 0.6 ? 0.35 : 1);
+      orbit.set([r, Math.random() * TAU, incl, (rand(0.12, 0.45) * (Math.random() < 0.5 ? -1 : 1)) / Math.sqrt(r)], i * 4);
+      wander.set([rand(0.05, 0.22), rand(0.04, 0.18), rand(0.05, 0.2)], i * 3);
       const c = Math.random() < 0.04 ? (Math.random() < 0.5 ? TEAL : VIOLET) : GOLD.clone().lerp(Math.random() < 0.5 ? AMBER : PALE, Math.random());
       color.set([c.r, c.g, c.b], i * 3);
-      size[i] = rand(0.9, 2.8) * (Math.random() < 0.03 ? 2.5 : 1);
+      size[i] = rand(0.9, 2.8) * (Math.random() < 0.03 ? 2.5 : 1) * (r > 5 ? 0.8 : 1);
       phase[i] = Math.random() * TAU;
     }
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3)); // computed in the shader
     g.setAttribute("aOrbit", new THREE.BufferAttribute(orbit, 4));
+    g.setAttribute("aWander", new THREE.BufferAttribute(wander, 3));
     g.setAttribute("aColor", new THREE.BufferAttribute(color, 3));
     g.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
     g.setAttribute("aPhase", new THREE.BufferAttribute(phase, 1));
-    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 8);
     particles = new THREE.Points(g, particleMat);
-    being.add(particles);
+    particles.frustumCulled = false;
+    cloud.add(particles);
   }
   buildParticles();
 
@@ -292,12 +331,13 @@ export function createScene(canvas, opts) {
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
-        uniform float uGlow, uLevel; varying float vT;
+        uniform float uGlow, uLevel, uRed; varying float vT;
         void main(){
           ${pointMode ? "if (length(gl_PointCoord - 0.5) > 0.5) discard;" : ""}
           vec3 col = mix(vec3(1.0, 0.86, 0.55), vec3(1.0, 0.45, 0.12), vT);
           col = mix(col, vec3(0.45, 0.4, 1.0), smoothstep(0.75, 1.0, vT) * 0.35); // violet tips
-          float a = pow(1.0 - vT, 0.9) * (0.3 + uGlow * 0.45 + uLevel * 0.5);
+          col = mix(col, vec3(0.9, 0.12, 0.08), uRed * 0.6);
+          float a = pow(1.0 - vT, 0.9) * (0.3 + uGlow * 0.45 + uLevel * 0.5) * (1.0 - uRed * 0.45);
           gl_FragColor = vec4(col * a, a);
         }`,
       transparent: true,
@@ -430,6 +470,14 @@ export function createScene(canvas, opts) {
 
   // ---- state ---------------------------------------------------------------------
   let mode = "off";
+  // particle freeze while you talk
+  // "You're speaking" = a clearly loud mic, or the level jumping up (each burst of speech
+  // does that). The level fades slowly afterwards, so a fading level means you've stopped.
+  const TALK_LOUD = 0.15;
+  const TALK_RISE = 0.015;
+  let talkHold = 0;
+  let prevMic = 0;
+  const fx = { freeze: 0, red: 0, tremble: 0, flare: 0, spread: 1 };
   let calling = false;
   let micLevel = 0;
   let speech = { analyser: null, fake: false };
@@ -464,6 +512,7 @@ export function createScene(canvas, opts) {
     requestAnimationFrame(frame);
     const raw = now - last; // real time since the last frame, in ms
     const dt = Math.min(0.05, raw / 1000);
+    const realDt = Math.min(0.25, raw / 1000);
     last = now;
     const t = now / 1000;
     const motion = reducedMotion ? 0.3 : 1;
@@ -503,12 +552,40 @@ export function createScene(canvas, opts) {
     uniforms.uSwirl.value = look.swirl;
     uniforms.uSpread.value = look.spread + look.calling * 0.08;
 
+    // Particles: freeze and turn red the moment you start talking while Jericho listens;
+    // thaw back to gold over about half a second after you stop.
+    const listening = mode === "active" || mode === "confirm";
+    const rising = micLevel - prevMic > TALK_RISE;
+    prevMic = micLevel;
+    if (listening && (micLevel > TALK_LOUD || rising)) talkHold = 0.4; // hold through the gaps between words (phones report speech in bursts)
+    else talkHold = Math.max(0, talkHold - realDt);
+    const talking = listening && talkHold > 0;
+    // real elapsed time, so the timings hold even on a slow device
+    const ease = (v, to, rate) => v + (to - v) * (1 - Math.exp(-realDt * rate));
+    fx.freeze = ease(fx.freeze, talking ? 1 : 0, talking ? 30 : 6); // ~0.1s to stop, ~0.5s to drift again
+    fx.red = ease(fx.red, talking ? 1 : 0, talking ? 14 : 6);
+    fx.tremble = ease(fx.tremble, talking ? Math.min(1, micLevel * 2.5) : 0, 20) * (reducedMotion ? 0.6 : 1);
+    fx.flare = ease(fx.flare, mode === "speaking" ? level : 0, mode === "speaking" ? 20 : 5);
+    // the drift clock: slower in reduced motion, faster while thinking, stopped while frozen
+    const drift = dt * motion * (0.6 + look.swirl * 0.6) * (1 - fx.freeze);
+    uniforms.uPTime.value += drift;
+    fx.spread = ease(fx.spread, look.spread + look.calling * 0.06, 2 * (1 - fx.freeze)); // no shrinking while frozen
+    uniforms.uPSpread.value = fx.spread;
+    uniforms.uRed.value = fx.red;
+    uniforms.uTremble.value = fx.tremble;
+    uniforms.uFlare.value = fx.flare;
+    cloud.rotation.y += drift * 0.05; // the whole cloud turns slowly too
+    cloud.rotation.x = Math.sin(uniforms.uPTime.value * 0.02) * 0.15;
+
     // core + halos
     const breathe = 0.5 + 0.5 * Math.sin(t * 1.1 * motion);
     // without bloom (low power) the halo does more of the glowing
     halo.material.opacity = (0.16 + 0.22 * look.glow + 0.12 * breathe * look.breath + level * 0.4) * (0.5 + 0.5 * glowScale) * (lowPower ? 1.5 : 0.75);
     halo.scale.setScalar(5 + breathe * 0.6 * look.breath + level * 2.5);
-    heart.material.opacity = Math.min(1, 0.55 + 0.45 * look.glow + level * 0.6);
+    halo.material.color.copy(HALO_GOLD).lerp(HALO_RED, fx.red * 0.6);
+    halo.material.opacity *= 1 - fx.red * 0.35; // a deeper, less hazy red
+    heart.material.color.copy(HEART_GOLD).lerp(HEART_RED, fx.red * 0.85);
+    heart.material.opacity = Math.min(1, 0.55 + 0.45 * look.glow + level * 0.6) * (1 - fx.red * 0.3);
     heart.scale.setScalar(1.9 + breathe * 0.25 * look.breath + level * 1.4);
     core.rotation.y += dt * 0.15 * motion;
 
@@ -558,7 +635,8 @@ export function createScene(canvas, opts) {
     camera.lookAt(0, camera.aspect < 1 ? -0.9 : -0.45, 0); // portrait: being sits a little higher, above the chat
 
     if (composer) {
-      bloom.strength = (0.3 + look.glow * 0.3 + level * 0.6 + look.calling * 0.15) * glowScale;
+      // a little less bloom while red, so the red stays red instead of washing out to white
+      bloom.strength = (0.3 + look.glow * 0.3 + level * 0.6 + look.calling * 0.15) * glowScale * (1 - fx.red * 0.35);
       composer.render();
     } else {
       renderer.render(scene, camera);
@@ -655,6 +733,10 @@ export function createScene(canvas, opts) {
     },
     onSlow(cb) {
       onSlow = cb;
+    },
+    /** Read-only numbers for checking the effects (open the page with ?debug). */
+    stats() {
+      return { particleClock: uniforms.uPTime.value, freeze: fx.freeze, red: fx.red, tremble: fx.tremble, flare: fx.flare, mic: micLevel };
     },
     dispose() {
       running = false;

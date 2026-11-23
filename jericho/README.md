@@ -79,10 +79,11 @@ ripple like a jellyfish, all floating in a starfield.
 
 | State | What it does |
 |---|---|
-| Waiting for "Jericho" | Dim, breathes slowly, particles drift |
-| Listening | Brighter; the tendrils draw in toward the core, which reacts to your voice |
-| Thinking | The rings spin faster and arcs of energy crackle between them |
-| Speaking | The whole structure pulses with Jericho's actual voice, read from the same analyser as before |
+| Always | Gold particles drift, swirl and wander through the whole scene |
+| Waiting for "Jericho" | Dim, breathes slowly |
+| Listening, while you talk | The moment you start speaking, every particle freezes in place, as if time stopped, and turns deep red with a soft glow, and the core takes a red tint. While you keep talking they tremble very slightly with your voice. When you stop, they ease back to gold and start drifting again within about half a second |
+| Thinking | The rings spin faster and arcs of energy crackle between them; the particles drift in gold |
+| Speaking | The whole structure pulses with Jericho's actual voice, and the gold particles flare with it |
 | On a phone call | Slow teal ripples spread outward, and the status word says "Calling" |
 
 Changes between states always ease in, never snap.
@@ -96,7 +97,7 @@ Changes between states always ease in, never snap.
   fewer particles and no bloom. A device that turns out to run below about 38 frames a second
   switches to it after a few seconds.
 - **Reduced motion:** with "reduce motion" on in your system settings, everything moves slower
-  and calmer.
+  and calmer. The red freeze still happens, with a gentler drift and tremble.
 - **No WebGL:** without it, the earlier 2D gold visualizer is used instead.
 
 ## Memory and learning how you talk
