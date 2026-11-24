@@ -61,6 +61,10 @@ export function createPresence({ onTap }) {
       document.body.dataset.state = s;
       power.setMuted(s === "muted"); // the idle hum rests while muted
     },
+    /** The 3D scene's current quality and frame rate (for the health line and Auto alarm performance). */
+    info() {
+      return impl?.info?.() || null;
+    },
     /** A ringing alarm: the orb pulses red and gold. */
     setAlarm(on) {
       pending.alarm = Boolean(on);
@@ -188,7 +192,7 @@ export function createPresence({ onTap }) {
   }
   // every few seconds one glyph changes, like a slow readout
   setInterval(() => {
-    if (reduced || document.hidden) return;
+    if (reduced || document.hidden || document.body.dataset.quality === "low") return; // skipped on Low
     const all = document.querySelectorAll(".hud-glyphs .g");
     const pick = all[Math.floor(Math.random() * all.length)];
     if (pick) pick.innerHTML = glyph(Math.floor(Math.random() * 1e9) + 1);

@@ -436,10 +436,21 @@ body[data-state="off"] .power-prompt { display: inline-flex; }
   padding: 16px;
   background: radial-gradient(circle at 50% 45%, rgb(60 10 4 / 35%), rgb(5 4 3 / 72%));
   cursor: pointer;
+}
+/* the flashing red: an opacity pulse on its own layer (the compositor does it; nothing repaints) */
+.alarm-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(120 20 8 / 22%);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
   animation: alarm-flash 1s ease-in-out infinite;
 }
+.alarm-card { position: relative; }
 .alarm-panel[hidden] { display: none; }
-@keyframes alarm-flash { 50% { background-color: rgb(120 20 8 / 18%); } }
+@keyframes alarm-flash { 50% { opacity: 1; } }
 .alarm-card {
   cursor: default;
   min-width: min(360px, 100%);
@@ -471,6 +482,24 @@ body.alarm-ringing .power-prompt { display: none !important; }
 .alarm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; }
 .alarm-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .alarm-list li span { color: var(--gold); }
-@media (prefers-reduced-motion: reduce) { .alarm-panel { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .alarm-panel::before { animation: none; opacity: 0.6; } }
 @media (max-width: 600px) { .alarm-time { font-size: 2rem; } .alarm-stop { padding: 14px 34px; } .r-alarm { display: none !important; } }
 .preview-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- lighter on Low and Medium quality (weak GPUs): no repaint-heavy effects ---- */
+body[data-quality="low"] .presence-page .top h1.wm-text,
+body[data-quality="low"].presence-page .top h1.wm-text,
+body[data-quality="medium"].presence-page .top h1.wm-text {
+  animation: none; /* the light sweep repaints the wordmark every frame */
+}
+body[data-quality="low"].presence-page .top h1.wm-text {
+  filter: drop-shadow(0 1px 0 rgb(38 20 3 / 95%)); /* one shadow instead of three */
+}
+body[data-quality="low"] .hud-glyphs .g,
+body[data-quality="medium"] .hud-glyphs .g,
+body[data-quality="low"] .hud-ring { animation: none; }
+body[data-quality="low"] .hg { text-shadow: none; }
+body[data-quality="low"] .readout { background: none; }
+/* while an alarm rings, keep the screen light: nothing animates but the alarm's own pulse */
+body.alarm-ringing .hud-glyphs .g, body.alarm-ringing .hud-ring, body.alarm-ringing.presence-page .top h1.wm-text { animation: none; }
+.health { font-variant-numeric: tabular-nums; font-size: 11px; }

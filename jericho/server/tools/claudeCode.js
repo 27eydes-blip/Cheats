@@ -98,7 +98,7 @@ function startJob(folder, task) {
   const viaCmd = claudeSpawnSpec(claude, []).viaCmd;
   const spec = claudeSpawnSpec(claude, viaCmd ? ["-p", ...fixed] : ["-p", prompt, ...fixed]);
   const isWin = process.platform === "win32";
-  const child = spawn(spec.command, spec.args, { ...spec.options, cwd, env: claudeEnv(), windowsHide: true, detached: !isWin, stdio: [viaCmd ? "pipe" : "ignore", "pipe", "pipe"] });
+  const child = spawn(spec.command, spec.args, { ...spec.options, cwd, env: claudeEnv(), windowsHide: true, detached: true, stdio: [viaCmd ? "pipe" : "ignore", "pipe", "pipe"] }); // own process group: it can't signal Jericho's console
   if (viaCmd) {
     child.stdin.on("error", () => {}); // it may exit before reading
     child.stdin.end(prompt);

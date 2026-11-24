@@ -1,0 +1,1 @@
+process.stdout.write(JSON.stringify({ claude: { status: "PASS", reason: "ok" }, elevenlabs: { status: "SKIP", reason: "no key" }, calendar: { status: "FAIL", reason: "not set" }, claudeCode: { status: "SKIP", reason: "not signed in" } }) + "\n");

@@ -7,13 +7,14 @@ import os from "node:os";
 import path from "node:path";
 import { Brain } from "./brain.js";
 import { publicConfig, ROOT, secrets, settings } from "./config.js";
-import { logAction, logPath } from "./logger.js";
+import { logAction, logPath, scrubEnvValues } from "./logger.js";
 import * as memory from "./memory.js";
 import { callAudio, handleTwilio, publicCalls, validTwilioSignature } from "./calls/manager.js";
 import { callSettings } from "./calls/policy.js";
 import { errorDetails, setWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
-import { selfTest } from "./selftest.js";
+import { formatResults, selfTestIsolated } from "./selftest.js";
+import { installCrashLog } from "./crashlog.js";
 import { getNextEvent } from "./briefing/calendar.js";
 import { checkApiRequest } from "./guard.js";
 import { alarms } from "./alarms/manager.js";
@@ -378,14 +379,11 @@ const server = useHttps
   : http.createServer(handler);
 
 const port = Number(process.env.PORT || settings.port || 3000);
-// A long-running assistant shouldn't die over one stray background error: log it and carry on.
-process.on("unhandledRejection", (err) => {
-  console.warn("Unhandled error (Jericho keeps running):", err?.message || err);
-  try {
-    logAction("error", { where: "background", error: String(err?.message || err).slice(0, 300) });
-  } catch {
-    /* logging itself failed */
-  }
+// Why Jericho stopped (if it ever does): every exit, error and stop signal goes to logs/crash.log,
+// and a stray background error is logged instead of crashing the server.
+installCrashLog({
+  file: path.join(path.dirname(logPath), "crash.log"),
+  scrub: (t) => scrubEnvValues(String(t)),
 });
 alarms.start(); // reload saved alarms and keep checking them
 server.listen(port, settings.host || "0.0.0.0", () => {
@@ -403,6 +401,10 @@ server.listen(port, settings.host || "0.0.0.0", () => {
   if (!secrets.accessToken) console.log("   Tip: set JERICHO_ACCESS_TOKEN in .env before opening Jericho from other devices.");
   console.log("");
   // One tiny request to Claude and one to ElevenLabs, so a broken connection or key shows up now.
-  // (runs in the background: the server is already answering while it checks)
-  if (process.env.JERICHO_SKIP_SELFTEST !== "1") selfTest(brain.client).then(() => console.log("")).catch((err) => console.warn("Self-test couldn't run:", err.message));
+  // In its own process: the server is already answering, and nothing the checks do can stop it.
+  if (process.env.JERICHO_SKIP_SELFTEST !== "1") {
+    selfTestIsolated()
+      .then((r) => console.log(`${formatResults(r)}\n`))
+      .catch((err) => console.warn("Self-test couldn't run:", err.message));
+  }
 });

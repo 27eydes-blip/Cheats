@@ -4,6 +4,7 @@
 import * as THREE from "three";
 import { createPipeline, pixelRatioFor, TIER_ORDER, TIERS } from "./postfx.js";
 import { BOOT_FLASH_AT } from "../power.js";
+import { gpuClass, gpuName, isWeakGpu } from "./gpu.js";
 
 const TAU = Math.PI * 2;
 const GOLD = new THREE.Color(0xf2b950);
@@ -109,6 +110,10 @@ export async function createScene(canvas, opts) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.95;
   renderer.setClearColor(0x050403, 1);
+  // Weak GPUs (integrated graphics, software rendering): Auto starts at Low and steps up only if
+  // the frame rate stays high.
+  const gpu = gpuName(renderer.getContext());
+  if (quality === "auto" && isWeakGpu(gpu)) tierIdx = 0;
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x050403, 0.04);
@@ -518,6 +523,7 @@ export async function createScene(canvas, opts) {
     buildGyroBeads();
     bg.lines.material.uniforms.uLines.value = d.bgLines;
     bg.lines.visible = d.bgLines > 0;
+    bg.grid.visible = TIER_ORDER[tierIdx] !== "low"; // the grid's full-screen shader is skipped on Low
     bg.rippleCount = d.ripples;
   }
 
@@ -790,6 +796,13 @@ export async function createScene(canvas, opts) {
   // the startup sequence: { start, delay, dur } in ms, null when not booting
   let boot = null;
   let alarmOn = false; // a ringing alarm: the orb pulses red and gold
+  let tierBeforeAlarm = null; // the quality to go back to when it stops
+  let alarmGap = 0; // average time between drawn frames while an alarm rings (ms)
+  let alarmFrames = 0;
+  let alarmSlow = false; // this GPU can't keep up while it rings: one frame a second
+  const renderParams = { bloom: 0, light: null, lightVisible: 0, rays: 0, flare: 0, time: 0 };
+  const lookKeys = new Map();
+  const easeBy = (realDt, v, to, rate) => v + (to - v) * (1 - Math.exp(-realDt * rate));
   const smooth = (a, b, x) => {
     const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
     return k * k * (3 - 2 * k);
@@ -807,6 +820,7 @@ export async function createScene(canvas, opts) {
     auto.frames = auto.time = auto.goodWindows = 0;
   }
   function measure(now, raw) {
+    if (alarmOn) return; // never change quality while an alarm rings
     if (document.hidden || raw > 3000) {
       auto.frames = auto.time = 0; // tab was hidden: don't count that gap
       return;
@@ -856,8 +870,17 @@ export async function createScene(canvas, opts) {
     const holding = Boolean(boot && boot.delay > 1e9); // waiting for the first tap
     const powering = Boolean(boot && !holding); // the power-up animation: full rate
     const restful = !alarmOn && !powering && (mode === "muted" || holding || ((mode === "idle" || mode === "off") && !document.hasFocus()));
-    if (restful && now - last < 1000 / 30 - 2) return;
-    if (restful) auto.frames = auto.time = 0; // a capped frame rate mustn't make Auto quality step down
+    const capped = restful || alarmOn; // while an alarm rings too: the sound comes first
+    if (capped && now - last < 1000 / 30 - 2) return;
+    // While an alarm rings: if this GPU can't even hold 30 fps at Low (frames over 70 ms apart on
+    // average), draw one frame a second, so Stop, Snooze and "Jericho, stop" always get through.
+    if (alarmOn) {
+      if (alarmSlow && now - last < 1000) return;
+      const gap = now - last;
+      alarmGap = alarmGap ? alarmGap * 0.7 + gap * 0.3 : gap;
+      if (!alarmSlow && alarmGap > 70 && ++alarmFrames > 6) alarmSlow = true;
+    }
+    if (capped) auto.frames = auto.time = 0; // a capped frame rate mustn't make Auto quality step down
     const raw = now - last; // real time since the last frame, in ms
     const dt = Math.min(0.05, raw / 1000);
     const realDt = Math.min(0.25, raw / 1000);
@@ -869,7 +892,8 @@ export async function createScene(canvas, opts) {
     // ease every look value toward the current state (never snaps)
     const target = LOOKS[mode] || LOOKS.idle;
     const k = 1 - Math.exp(-dt * 2.2);
-    for (const key of Object.keys(target)) look[key] += (target[key] - look[key]) * k;
+    const keys = lookKeys.get(target) || lookKeys.set(target, Object.keys(target)).get(target); // made once per look
+    for (let i = 0; i < keys.length; i++) look[keys[i]] += (target[keys[i]] - look[keys[i]]) * k;
     look.calling += ((calling ? 1 : 0) - look.calling) * (1 - Math.exp(-dt * 1.2));
     const rawLevel = mode === "speaking" ? voiceLevel(t) : mode === "active" || mode === "confirm" ? Math.min(1, micLevel * 2.5) * 0.7 : 0;
     const lk = rawLevel > look.level ? 1 - Math.exp(-dt * 18) : 1 - Math.exp(-dt * 6);
@@ -905,15 +929,14 @@ export async function createScene(canvas, opts) {
     else talkHold = Math.max(0, talkHold - realDt);
     const talking = listening && talkHold > 0;
     // real elapsed time, so the timings hold even on a slow device
-    const ease = (v, to, rate) => v + (to - v) * (1 - Math.exp(-realDt * rate));
-    fx.freeze = ease(fx.freeze, talking ? 1 : 0, talking ? 30 : 6); // ~0.1s to stop, ~0.5s to drift again
-    fx.red = ease(fx.red, talking ? 1 : 0, talking ? 14 : 6);
-    fx.tremble = ease(fx.tremble, talking ? Math.min(1, micLevel * 2.5) : 0, 20) * (reducedMotion ? 0.6 : 1);
-    fx.flare = ease(fx.flare, mode === "speaking" ? level : 0, mode === "speaking" ? 20 : 5);
+    fx.freeze = easeBy(realDt, fx.freeze, talking ? 1 : 0, talking ? 30 : 6); // ~0.1s to stop, ~0.5s to drift again
+    fx.red = easeBy(realDt, fx.red, talking ? 1 : 0, talking ? 14 : 6);
+    fx.tremble = easeBy(realDt, fx.tremble, talking ? Math.min(1, micLevel * 2.5) : 0, 20) * (reducedMotion ? 0.6 : 1);
+    fx.flare = easeBy(realDt, fx.flare, mode === "speaking" ? level : 0, mode === "speaking" ? 20 : 5);
     // the drift clock: slower in reduced motion, faster while thinking, stopped while frozen
     const drift = dt * motion * (0.6 + look.swirl * 0.6) * (1 - fx.freeze);
     uniforms.uPTime.value += drift;
-    fx.spread = ease(fx.spread, look.spread + look.calling * 0.06, 2 * (1 - fx.freeze)); // no shrinking while frozen
+    fx.spread = easeBy(realDt, fx.spread, look.spread + look.calling * 0.06, 2 * (1 - fx.freeze)); // no shrinking while frozen
     uniforms.uPSpread.value = fx.spread;
     uniforms.uRed.value = fx.red;
     uniforms.uTremble.value = fx.tremble;
@@ -1017,9 +1040,7 @@ export async function createScene(canvas, opts) {
     bg.lines.position.copy(camera.position).normalize().multiplyScalar(-13);
 
     // rings at their own speeds and depths
-    rings.forEach((ring, i) => {
-      if (boot) ring.mesh.scale.setScalar(smooth(0.2 + i * 0.07, 0.5 + i * 0.07, bootK));
-    });
+    if (boot) for (let i = 0; i < rings.length; i++) rings[i].mesh.scale.setScalar(smooth(0.2 + i * 0.07, 0.5 + i * 0.07, bootK));
     for (const ring of rings) {
       ring.mesh.rotation.z += dt * ring.speed * look.ringSpeed * (1 - fx.red * 0.75) * motion * spinUp;
       ring.pivot.rotation.y += dt * 0.03 * ring.speed * motion;
@@ -1071,15 +1092,15 @@ export async function createScene(canvas, opts) {
       coreScreen.set(0, 0, 0).project(camera);
       light.set(coreScreen.x * 0.5 + 0.5, coreScreen.y * 0.5 + 0.5);
       const onScreen = coreScreen.z < 1 && Math.abs(coreScreen.x) < 1.2 && Math.abs(coreScreen.y) < 1.2 ? 1 : 0;
-      pipeline.render({
-        // a little less bloom while red, so the red stays red instead of washing out to white
-        bloom: (0.55 + look.glow * 0.3 + level * 0.25 + look.calling * 0.15) * glowScale * (1 - fx.red * 0.35) * (1 + flash * 1.6),
-        light,
-        lightVisible: onScreen,
-        rays: (0.25 + look.glow * 0.15) * (1 - fx.red * 0.5) * glowScale, // the soft ray fan now does most of this
-        flare: (0.4 + look.glow * 0.4 + level * 0.3) * (1 - fx.red * 0.6),
-        time: t,
-      });
+      // (one object, reused every frame)
+      // a little less bloom while red, so the red stays red instead of washing out to white
+      renderParams.bloom = (0.55 + look.glow * 0.3 + level * 0.25 + look.calling * 0.15) * glowScale * (1 - fx.red * 0.35) * (1 + flash * 1.6);
+      renderParams.light = light;
+      renderParams.lightVisible = onScreen;
+      renderParams.rays = (0.25 + look.glow * 0.15) * (1 - fx.red * 0.5) * glowScale; // the soft ray fan now does most of this
+      renderParams.flare = (0.4 + look.glow * 0.4 + level * 0.3) * (1 - fx.red * 0.6);
+      renderParams.time = t;
+      pipeline.render(renderParams);
     } else {
       renderer.render(scene, camera); // first frames: plain render while the effects get built
     }
@@ -1182,8 +1203,21 @@ export async function createScene(canvas, opts) {
     },
     /** A ringing alarm: pulse red and gold (also wakes the orb if it's still waiting for the first tap). */
     setAlarm(on) {
+      const was = alarmOn;
       alarmOn = Boolean(on);
       if (alarmOn && boot && boot.delay > 1e9) boot = null;
+      alarmGap = 0;
+      alarmFrames = 0;
+      alarmSlow = false;
+      if (alarmOn && !was) {
+        // Low quality (no bloom, fewer particles) at 30 fps while it rings
+        tierBeforeAlarm = tierIdx;
+        if (tierIdx !== 0) setTier(0);
+      } else if (!alarmOn && was && tierBeforeAlarm !== null) {
+        const back = tierBeforeAlarm;
+        tierBeforeAlarm = null;
+        if (back !== tierIdx) setTier(back);
+      }
     },
     /** Before power-on: the orb waits as a single point of light. */
     hold() {
@@ -1224,6 +1258,9 @@ export async function createScene(canvas, opts) {
         width: Math.round(size.w * renderer.getPixelRatio()),
         height: Math.round(size.h * renderer.getPixelRatio()),
         msaa: pipeline?.samples ?? 0,
+        gpu,
+        gpuClass: gpuClass(gpu),
+        alarm: alarmOn,
       };
     },
     /** Read-only numbers for checking the effects (open the page with ?debug). */

@@ -152,6 +152,13 @@
         <option value="classic">Classic beeps (the old tone)</option>
       </select>
     </label>
+    <label>Alarm performance
+      <select id="alarm-perf">
+        <option value="auto">Auto (Smooth on a slow PC)</option>
+        <option value="smooth">Smooth (lighter, same timing)</option>
+        <option value="full">Full</option>
+      </select>
+    </label>
     <label class="check"><input id="alarm-max-loud" type="checkbox"> Max loud (a little louder, still limited)</label>
     <div class="preview-row">
       <button id="alarm-preview" class="del" type="button">Preview (one full cycle)</button>
@@ -183,6 +190,8 @@
     <p id="barge-debug" class="hint barge-debug" aria-live="off">Mic – · threshold – · echo ignored 0</p>
     <button id="barge-recal" class="del" type="button">Re-calibrate</button>
     <p id="look-note" class="hint">Saved in this browser.</p>
+    <p id="health" class="hint health" aria-live="off">Health: measuring…</p>
+    <button id="copy-diag" class="del" type="button">Copy diagnostics</button>
     <button id="look-reset" class="del" type="button">Reset</button>
   </aside>
 

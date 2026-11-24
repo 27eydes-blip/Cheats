@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node server/index.js",
+    "start:safe": "node scripts/start-safe.mjs",
     "dev": "node --watch server/index.js",
     "test": "node --test test/*.test.js",
     "selftest": "node server/selftest.js",

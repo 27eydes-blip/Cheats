@@ -50,6 +50,18 @@ function mockCtx() {
   };
   return { ctx, edges, nodes, destination };
 }
+/** An offline-render stand-in: a mock context whose render returns an empty buffer of the right size. */
+const offlines = [];
+function makeOffline(channels, length, rate) {
+  const m = mockCtx();
+  m.ctx.sampleRate = rate;
+  m.ctx.currentTime = 0;
+  m.ctx.startRendering = async () => m.ctx.createBuffer(channels, length, rate);
+  offlines.push(m);
+  return m.ctx;
+}
+const testCache = () => new A.AlarmBufferCache({ sampleRate: 48000, makeOffline });
+
 /** Every path from a sound source to the speakers, as lists of node kinds. */
 function pathsToSpeakers({ edges, nodes, destination }) {
   const out = new Map();
@@ -240,13 +252,17 @@ for (const cycle of [0, 1, 4]) {
   });
 }
 
-test("the preview follows the same rules", () => {
+test("the preview follows the same rules (it plays the pre-rendered cycle)", async () => {
   const m = mockCtx();
-  const pv = A.previewAlarm(m.ctx, { sound: "strike", volume: 0.8 });
-  const at = m.ctx.currentTime + 0.05;
+  offlines.length = 0;
+  const pv = A.previewAlarm(m.ctx, { sound: "strike", volume: 0.8 }, () => {}, { cache: testCache() });
+  const length = await pv.ready;
   const tl = A.strikeTimeline(1);
-  assert.equal(pv.length, tl.end);
-  for (const o of sirenOscsOf(m)) assert.ok(o.startAt >= at + tl.streaks[2].impact - 1e-9);
+  assert.ok(Math.abs(length - (tl.end + 0.02)) < 1e-9, "one whole cycle");
+  const rendered = offlines.at(-1);
+  for (const o of sirenOscsOf(rendered)) assert.ok(o.startAt >= 0.02 + tl.streaks[2].impact - 1e-9, "no siren before the 3rd impact in the render either");
+  assert.equal(m.nodes.filter((n) => n.kind === "osc").length, 0, "nothing is built live: one buffer plays");
+  assert.equal(m.nodes.filter((n) => n.kind === "buffer").length, 1);
   pv.stop();
 });
 
@@ -301,22 +317,31 @@ test("impacts: layered, heavier each time, echoing longer, never ducked; ringing
 
 test("ringing: starts at 60% and ramps to full over 20 s at the capped volume; the preview uses the same chain", async () => {
   const m = mockCtx();
-  const ringer = A.createAlarmRinger({ getCtx: () => m.ctx, ttsUrl: () => "" });
+  const cache = testCache();
+  const ringer = A.createAlarmRinger({ getCtx: () => m.ctx, ttsUrl: () => "", cache });
   const r = await ringer.start({ id: 1, time: "7:00 AM", label: "" }, { volume: 1, sound: "strike", maxLoud: false });
   assert.equal(r.audible, true);
   const ramp = m.nodes.find((n) => n.kind === "gain" && n.gain.calls.some(([fn]) => fn === "linearRampToValueAtTime"));
   assert.deepEqual(ramp.gain.calls.slice(0, 2), [["setValueAtTime", 0.6, 10], ["linearRampToValueAtTime", 1, 30]]);
   const master = m.nodes.filter((n) => n.kind === "gain").find((n) => n.gain.value === A.ALARM_SAFE_MAX);
   assert.ok(master, "volume 100% is held at the normal cap");
+  // once the first cycle is rendered it plays as a single buffer, through the limiter
+  await new Promise((res) => setTimeout(res, 30));
+  const played = m.nodes.filter((n) => n.kind === "buffer" && n.buffer?.length === Math.ceil(A.RENDER_SECONDS.strike * 48000));
+  assert.equal(played.length, 1, "the rendered cycle is playing");
+  assert.ok(pathsToSpeakers(m).every((p) => p.includes(m.nodes.find((n) => n.kind === "comp" && n.ratio.value === A.LIMITER.ratio))), "everything through the limiter");
+  // Stop: silent within a few milliseconds
   ringer.stop();
+  const stopCall = master.gain.calls.find(([fn, v]) => fn === "setTargetAtTime" && v === 0);
+  assert.ok(stopCall && stopCall[3] <= 0.03, "fades out in ~20 ms");
   const full = mockCtx();
   let ended = false;
-  const pv = A.previewAlarm(full.ctx, { sound: "strike", volume: 0.7 }, () => (ended = true));
-  assert.equal(pv.length, A.strikeTimeline(1).end, "the preview is one whole 5-missile cycle");
+  const pv = A.previewAlarm(full.ctx, { sound: "strike", volume: 0.7 }, () => (ended = true), { cache });
+  await pv.ready;
   pv.stop();
   assert.equal(ended, true, "Stop preview ends it");
   const p = mockCtx();
-  A.previewAlarm(p.ctx, { sound: "siren", volume: 1, maxLoud: true });
+  A.previewAlarm(p.ctx, { sound: "siren", volume: 1, maxLoud: true }, () => {}, { cache });
   assert.deepEqual(p.edges.filter(([, b]) => b === p.destination).length, 1, "preview: one way out, through the limiter");
   assert.ok(p.nodes.some((n) => n.kind === "gain" && n.gain.value === A.ALARM_MAX_LOUD_CAP));
 });

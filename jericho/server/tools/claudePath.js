@@ -131,13 +131,20 @@ export function claudeVersion(found, { timeoutMs = 15_000 } = {}) {
     let err = "";
     let child;
     try {
-      child = spawn(spec.command, spec.args, { ...spec.options, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+      // detached: its own process group, never sharing (or signalling) Jericho's console
+      child = spawn(spec.command, spec.args, { ...spec.options, windowsHide: true, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     } catch (e) {
       reject(e);
       return;
     }
     const timer = setTimeout(() => {
-      child.kill();
+      // end the whole tree (cmd.exe -> claude), not just the first process
+      try {
+        if (process.platform === "win32") spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore", detached: true });
+        else process.kill(-child.pid, "SIGKILL");
+      } catch {
+        child.kill();
+      }
       reject(new Error("it didn't answer within 15 seconds"));
     }, timeoutMs);
     child.stdout.on("data", (d) => (out += d));

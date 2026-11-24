@@ -41,9 +41,9 @@ test("self-test: a check that hangs is reported as FAIL in time, and one that th
   assert.deepEqual(await limit(Promise.resolve({ status: "PASS", reason: "ok" }), 200), { status: "PASS", reason: "ok" });
   // the server starts the self-test after it's listening and catches anything it throws
   const index = fs.readFileSync(new URL("../server/index.js", import.meta.url), "utf8");
-  assert.match(index, /selfTest\(brain\.client\)[^\n]*\.catch\(/);
-  assert.ok(index.indexOf("selfTest(brain.client)") > index.indexOf("server.listen("), "never before listening");
-  assert.match(index, /process\.on\("unhandledRejection"/);
+  assert.match(index, /selfTestIsolated\(\)[\s\S]{0,120}\.catch\(/);
+  assert.ok(index.indexOf("selfTestIsolated()") > index.indexOf("server.listen("), "never before listening");
+  assert.match(index, /installCrashLog\(/, "background errors are logged, not fatal");
 });
 
 test("calendar, weather and market requests always have a timeout (so the HUD and tools can't hang)", async () => {
@@ -90,6 +90,6 @@ test("the page: speech can't get stuck, events reconnect, the settings panel scr
   const css = fs.readFileSync(new URL("../public/presence.css", import.meta.url), "utf8");
   assert.match(css, /\.look-panel \{[^}]*overflow-y: auto/);
   const scene = fs.readFileSync(new URL("../public/presence/scene.js", import.meta.url), "utf8");
-  assert.match(scene, /if \(restful && now - last < 1000 \/ 30 - 2\) return;/, "30 fps when calm");
-  assert.match(scene, /const restful = !alarmOn && !powering/, "never while an alarm rings or it powers up");
+  assert.match(scene, /if \(capped && now - last < 1000 \/ 30 - 2\) return;/, "30 fps when calm (and while an alarm rings)");
+  assert.match(scene, /const restful = !alarmOn && !powering/, "calm never includes powering up");
 });

@@ -3,7 +3,7 @@
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
 import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, shouldDropAsEcho } from "./bargein.js";
-import { createAlarmRinger, DEFAULT_ALARM_SOUND, DEFAULT_ALARM_VOLUME, normalizeSound, previewAlarm } from "./alarm.js";
+import { ALARM_PERFORMANCE, chooseAlarmPerformance, createAlarmRinger, sharedAlarmCache, DEFAULT_ALARM_SOUND, DEFAULT_ALARM_VOLUME, normalizeSound, previewAlarm } from "./alarm.js";
 import { alarmCommand } from "./alarmrules.js";
 import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
@@ -677,7 +677,7 @@ function showBargeDebug(level, now) {
   if (now - debugAt < 200) return;
   debugAt = now;
   const el = $("barge-debug");
-  if (!el || el.offsetParent === null) return; // panel closed
+  if (!el || $("look-panel")?.hidden) return; // panel closed (checked without forcing a layout)
   const ears = replyPlaying() ? (earsDuringReply ? "listening for stop" : "ears paused") : now < tailUntil ? "echo tail" : "listening";
   const cal = barge.calibrating(now) ? " · calibrating" : "";
   el.textContent = micAnalyser
@@ -1258,7 +1258,9 @@ connectEvents();
 // ---- alarms: ringing, stop, snooze, and the list in the settings panel -------------------
 // A ringing alarm beats everything: mute, a conversation, barge-in rules. Stop it with
 // "Jericho, stop", Esc, tapping the light, or the big Stop button; snooze by voice or button.
-const ringer = createAlarmRinger({ getCtx: () => audioCtx, ttsUrl, lang: () => config.speechLang });
+// the page's frame rate (from the 3D scene), so Auto can pick the Smooth alarm sound on a weak PC
+const pageFps = () => viz.info?.()?.fps || 0;
+const ringer = createAlarmRinger({ getCtx: () => audioCtx, ttsUrl, lang: () => config.speechLang, getFps: pageFps });
 const ALARM_VOL_KEY = "jericho-alarm-volume";
 const SNOOZE_KEY = "jericho-snooze-minutes";
 const alarmVolume = () => Math.min(1, Math.max(0.2, Number(store.get(ALARM_VOL_KEY) ?? DEFAULT_ALARM_VOLUME * 100) / 100));
@@ -1266,7 +1268,20 @@ const ALARM_SOUND_KEY = "jericho-alarm-sound";
 const MAX_LOUD_KEY = "jericho-alarm-max-loud";
 const alarmSound = () => normalizeSound(store.get(ALARM_SOUND_KEY) || DEFAULT_ALARM_SOUND);
 const alarmMaxLoud = () => store.get(MAX_LOUD_KEY) === "1";
-const alarmSoundSettings = () => ({ volume: alarmVolume(), sound: alarmSound(), maxLoud: alarmMaxLoud() });
+const ALARM_PERF_KEY = "jericho-alarm-performance";
+const alarmPerformance = () => (ALARM_PERFORMANCE.includes(store.get(ALARM_PERF_KEY)) ? store.get(ALARM_PERF_KEY) : "auto");
+const alarmSoundSettings = () => ({ volume: alarmVolume(), sound: alarmSound(), maxLoud: alarmMaxLoud(), performance: alarmPerformance() });
+let alarmPrepared = ""; // which sound/performance has its first cycle rendered ahead of time
+/** Render the first alarm cycle ahead of time, in idle time, so a real alarm starts at once. */
+function prepareAlarmSound() {
+  const set = alarmSoundSettings();
+  const key = `${set.sound}|${set.performance}`;
+  if (alarmPrepared === key) return;
+  alarmPrepared = key;
+  const run = () => ringer.prepare({ ...set, sampleRate: audioCtx?.sampleRate }).catch(() => (alarmPrepared = ""));
+  if ("requestIdleCallback" in window) requestIdleCallback(run, { timeout: 8000 });
+  else setTimeout(run, 2000);
+}
 const defaultSnooze = () => Math.min(60, Math.max(1, Number(store.get(SNOOZE_KEY)) || serverSnooze || 9));
 let serverSnooze = 9;
 
@@ -1296,7 +1311,8 @@ function startAlarm(alarm) {
   silenceReply();
   document.body.classList.add("alarm-ringing");
   document.body.classList.remove("alarm-blocked");
-  viz.setAlarm?.(true);
+  // the 3D scene drops to Low at 30 fps while it rings: just after the sound starts, so it can't delay it
+  setTimeout(() => alarmRinging && viz.setAlarm?.(true), 150);
   $("alarm-label").textContent = alarm.label || "Alarm";
   $("alarm-time").textContent = alarm.time;
   $("alarm-panel").hidden = false;
@@ -1311,6 +1327,7 @@ function startAlarm(alarm) {
   }
   startMicMeter();
   ringer.start(alarm, alarmSoundSettings()).then(({ audible }) => {
+    alarmPrepared = ""; // (the cache may have changed while it rang)
     if (alarmRinging?.id !== alarm.id) return;
     if (audible) api("/api/alarm/ack", { id: alarm.id }).catch(() => {});
     else {
@@ -1388,27 +1405,111 @@ const soundSel = $("alarm-sound");
 const maxLoudBox = $("alarm-max-loud");
 if (soundSel) {
   soundSel.value = normalizeSound(alarmSound());
-  soundSel.addEventListener("change", () => store.set(ALARM_SOUND_KEY, soundSel.value));
+  soundSel.addEventListener("change", () => {
+    store.set(ALARM_SOUND_KEY, soundSel.value);
+    alarmPrepared = "";
+  });
 }
 if (maxLoudBox) {
   maxLoudBox.checked = alarmMaxLoud();
   maxLoudBox.addEventListener("change", () => store.set(MAX_LOUD_KEY, maxLoudBox.checked ? "1" : "0"));
 }
 let preview = null;
-$("alarm-preview")?.addEventListener("click", async () => {
+const previewBtn = $("alarm-preview");
+previewBtn?.addEventListener("click", async () => {
   if (alarmRinging) return; // the real thing is already playing
   // this click lets the browser play sound, even before the first "power on" tap
   audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
   await Promise.race([audioCtx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 300))]);
   preview?.stop();
   const stopBtn = $("alarm-preview-stop");
-  preview = previewAlarm(audioCtx, alarmSoundSettings(), () => {
+  const label = previewBtn.textContent;
+  const p = previewAlarm(audioCtx, alarmSoundSettings(), () => {
     if (stopBtn) stopBtn.hidden = true;
-    preview = null;
-  });
+    previewBtn.textContent = label;
+    if (preview === p) preview = null;
+  }, { getFps: pageFps });
+  preview = p;
   if (stopBtn) stopBtn.hidden = false;
+  previewBtn.textContent = "Preparing…"; // the first time, the sound is rendered before it plays
+  p.ready.then(() => (previewBtn.textContent = label));
 });
+const perfSel = $("alarm-perf");
+if (perfSel) {
+  perfSel.value = alarmPerformance();
+  perfSel.addEventListener("change", () => {
+    store.set(ALARM_PERF_KEY, perfSel.value);
+    alarmPrepared = "";
+  });
+}
 $("alarm-preview-stop")?.addEventListener("click", () => preview?.stop());
+
+// ---- health line and "Copy diagnostics" (settings panel) ------------------------------------------
+const pageErrors = [];
+window.addEventListener("error", (e) => pageErrors.push(String(e.message || e.error || "error").slice(0, 160)));
+window.addEventListener("unhandledrejection", (e) => pageErrors.push(String(e.reason?.message || e.reason || "rejection").slice(0, 160)));
+/** Which alarm performance is in effect (or would be if one rang now). */
+function alarmModeNow() {
+  if (alarmRinging) return ringer.mode;
+  const cache = sharedAlarmCache(audioCtx?.sampleRate || 48000);
+  return chooseAlarmPerformance({ setting: alarmPerformance(), fps: pageFps(), renderRatio: cache.lastRatio });
+}
+function healthText() {
+  const info = viz.info?.();
+  const fps = info?.fps ? `${Math.round(info.fps)} fps` : "fps measuring…";
+  const tier = info ? `${info.tier[0].toUpperCase()}${info.tier.slice(1)}${info.quality === "auto" ? " (Auto)" : ""}` : "2D";
+  const smooth = alarmModeNow() === "smooth";
+  return `${fps} · ${tier} quality · alarm sound ${smooth ? "Smooth" : "Full"}${smooth && alarmPerformance() === "auto" ? " (auto)" : ""}${alarmRinging ? " · ringing" : ""}`;
+}
+setInterval(() => {
+  const el = $("health");
+  if (el && !$("look-panel")?.hidden) el.textContent = healthText();
+}, 1000);
+/** A plain-text summary to paste into a chat. No token, keys, links, labels or anything you said. */
+function diagnostics() {
+  const info = viz.info?.() || {};
+  const cache = sharedAlarmCache(audioCtx?.sampleRate || 48000);
+  const nav = navigator;
+  const lines = [
+    `Jericho diagnostics ${new Date().toISOString()}`,
+    `Health: ${healthText()}`,
+    `Browser: ${nav.userAgent}`,
+    `Screen: ${screen.width}x${screen.height} @${devicePixelRatio}x · cores ${nav.hardwareConcurrency || "?"} · memory ${nav.deviceMemory || "?"} GB`,
+    `GPU: ${info.gpu || "unknown"} (${info.gpuClass || "unknown"})`,
+    `3D: quality setting ${info.quality || "2D"}, level ${info.tier || "-"}, ${Math.round(info.fps || 0)} fps, ${info.width || "?"}x${info.height || "?"}, ${info.msaa ? `${info.msaa}x MSAA` : "FXAA"}, alarm mode ${info.alarm ? "on" : "off"}`,
+    `Audio: ${audioCtx ? `${audioCtx.state}, ${audioCtx.sampleRate} Hz` : "not started"}, underruns ${Number(audioCtx?.playoutStats?.fallbackFramesEvents) || 0}`,
+    `Alarm sound: ${alarmSound()}, performance ${alarmPerformance()} -> ${alarmModeNow()}, volume ${Math.round(alarmVolume() * 100)}%${alarmMaxLoud() ? " (max loud)" : ""}, renders ${cache.renders}, last render took ${Math.round(cache.lastRatio * 100)}% of its length`,
+    `Listening: ${running ? "powered on" : "not powered on"}, ${muted ? "muted" : micLost ? "mic lost" : recActive ? "mic live" : "mic not live"}, wake sensitivity ${wakeSensitivity}, room mode ${room.on ? "on" : "off"}, interrupt ${bargeMode}`,
+    `Voice: ${config.elevenLabsEnabled ? "ElevenLabs" : "browser voice"}`,
+    `Page errors: ${pageErrors.length ? pageErrors.slice(-5).join(" | ") : "none"}`,
+  ];
+  return lines.join("\n");
+}
+$("copy-diag")?.addEventListener("click", async () => {
+  const text = diagnostics();
+  const btn = $("copy-diag");
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // older browsers or no permission: select it in a temporary box and copy
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.append(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } catch {
+      /* nothing more to try */
+    }
+    ta.remove();
+  }
+  const label = btn.textContent;
+  btn.textContent = "Copied";
+  setTimeout(() => (btn.textContent = label), 1500);
+});
 
 snoozeIn?.addEventListener("change", () => {
   const v = Math.min(60, Math.max(1, Math.round(Number(snoozeIn.value) || 9)));
@@ -1421,6 +1522,7 @@ async function refreshAlarmList() {
     serverSnooze = r.snoozeMinutes || 9;
     if (snoozeIn) snoozeIn.value = defaultSnooze();
     if (r.ringing?.length && !alarmRinging) startAlarm(r.ringing[0]);
+    if (r.alarms.length && !alarmRinging) prepareAlarmSound(); // ready before it rings
     const list = $("alarm-list");
     if (!list) return;
     list.textContent = "";
@@ -1446,7 +1548,7 @@ async function refreshAlarmList() {
     /* offline: try again later */
   }
 }
-refreshAlarmList();
+// (the first refresh happens when the event stream connects: see connectEvents)
 setInterval(refreshAlarmList, 60_000);
 
 setMode("off");

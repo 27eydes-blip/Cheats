@@ -127,11 +127,12 @@ export function buildOutput(ctx, gain, { maxLoud = false } = {}) {
 }
 
 // ---- the sound layers --------------------------------------------------------------------------
-let noiseCache = new WeakMap();
+// Noise and reverb buffers are made once per sample rate and shared by every render and the live
+// context (an AudioBuffer works in any context), so nothing is regenerated while an alarm rings.
+const noiseCache = new Map();
 function noiseBuffer(ctx, seconds = 2, brown = false) {
-  const key = `${seconds}:${brown}`;
-  const cache = noiseCache.get(ctx) || {};
-  if (cache[key]) return cache[key];
+  const key = `${ctx.sampleRate}:${seconds}:${brown}`;
+  if (noiseCache.has(key)) return noiseCache.get(key);
   const len = Math.ceil(ctx.sampleRate * seconds);
   const buf = ctx.createBuffer(2, len, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
@@ -145,8 +146,7 @@ function noiseBuffer(ctx, seconds = 2, brown = false) {
       } else d[i] = white;
     }
   }
-  cache[key] = buf;
-  noiseCache.set(ctx, cache);
+  noiseCache.set(key, buf);
   return buf;
 }
 
@@ -390,15 +390,14 @@ function releaseLater(ctx, at, nodes) {
   setTimeout(() => nodes.forEach((n) => n.disconnect()), Math.max(0, at - ctx.currentTime) * 1000);
 }
 
-const irCache = new WeakMap();
+const irCache = new Map();
 /**
  * A synthetic impulse response: a big open city. A few early reflections off buildings, then dense
  * stereo noise decaying to -60 dB over `seconds`, darker as it fades.
  */
 export function cityImpulse(ctx, seconds) {
-  const key = seconds.toFixed(2);
-  const cache = irCache.get(ctx) || {};
-  if (cache[key]) return cache[key];
+  const key = `${ctx.sampleRate}:${seconds.toFixed(2)}`;
+  if (irCache.has(key)) return irCache.get(key);
   const rate = ctx.sampleRate;
   const len = Math.ceil(rate * seconds);
   const buf = ctx.createBuffer(2, len, rate);
@@ -418,14 +417,36 @@ export function cityImpulse(ctx, seconds) {
       if (i < len) d[i] += 0.5 * Math.exp((-6.9 * ms) / 1000 / seconds) * (Math.random() < 0.5 ? -1 : 1);
     }
   }
-  cache[key] = buf;
-  irCache.set(ctx, cache);
+  irCache.set(key, buf);
   return buf;
 }
 
+/** How many impulse responses and noise buffers exist (for the tests: made once, then reused). */
+export const generatedBuffers = () => ({ impulses: irCache.size, noises: noiseCache.size });
+
+// Smooth mode: fewer simultaneous layers, a short delay echo instead of convolution, same timing.
+// Set only while one cycle is being scheduled (scheduling is synchronous).
+let LITE = false;
+
 /** A reverb send into `out`: returns the node to connect sounds to. */
 function reverb(ctx, out, seconds, returnLevel, until) {
-  if (!ctx.createConvolver) return out;
+  if (LITE || !ctx.createConvolver) {
+    // a short slap-back echo off the buildings: two delays, no convolution
+    const input = ctx.createGain();
+    const ret = ctx.createGain();
+    ret.gain.value = returnLevel * 0.6;
+    const tone = ctx.createBiquadFilter();
+    tone.type = "lowpass";
+    tone.frequency.value = 1800;
+    input.connect(tone);
+    for (const t of [0.13, 0.29]) {
+      const d = ctx.createDelay(1);
+      d.delayTime.value = t;
+      tone.connect(d).connect(ret);
+    }
+    ret.connect(out);
+    return input;
+  }
   const conv = ctx.createConvolver();
   conv.normalize = true;
   conv.buffer = cityImpulse(ctx, seconds);
@@ -483,13 +504,15 @@ function missile(ctx, world, wet, s, power) {
   o.frequency.setValueAtTime(pitch, at);
   o.frequency.setValueAtTime(pitch, at + len * 0.35);
   o.frequency.exponentialRampToValueAtTime(pitch * drop, end);
-  const vib = ctx.createOscillator();
-  const vibDepth = ctx.createGain();
-  vib.frequency.value = 9 + d * 4;
-  vibDepth.gain.value = pitch * 0.006;
-  vib.connect(vibDepth).connect(o.frequency);
-  vib.start(at);
-  vib.stop(end);
+  if (!LITE) {
+    const vib = ctx.createOscillator();
+    const vibDepth = ctx.createGain();
+    vib.frequency.value = 9 + d * 4;
+    vibDepth.gain.value = pitch * 0.006;
+    vib.connect(vibDepth).connect(o.frequency);
+    vib.start(at);
+    vib.stop(end);
+  }
   const og = ctx.createGain();
   og.gain.setValueAtTime(0.0001, at);
   og.gain.exponentialRampToValueAtTime(0.012, at + len * 0.4); // faint, far away
@@ -498,7 +521,8 @@ function missile(ctx, world, wet, s, power) {
   o.connect(og).connect(tone);
   o.start(at);
   o.stop(end + 0.01);
-  // a second, rougher partial for bite
+  // a second, rougher partial for bite (not in Smooth)
+  if (LITE) return missileAir(ctx, tone, at, end, len);
   const o2 = ctx.createOscillator();
   o2.type = "sawtooth";
   o2.frequency.setValueAtTime(pitch * 0.502, at);
@@ -511,7 +535,11 @@ function missile(ctx, world, wet, s, power) {
   o2.connect(o2g).connect(tone);
   o2.start(at);
   o2.stop(end + 0.01);
-  // the air: rushing noise rising with it
+  missileAir(ctx, tone, at, end, len);
+}
+
+/** The rushing air under a missile, rising with it. */
+function missileAir(ctx, tone, at, end, len) {
   const n = noiseSource(ctx, at, len, false);
   const bp = ctx.createBiquadFilter();
   bp.type = "bandpass";
@@ -604,7 +632,7 @@ function impact(ctx, { hit, drive, world }, s, weight) {
   wp.start(at);
   wp.stop(at + 0.27);
   // debris burst: short filtered noise pieces flying out to the sides
-  const pieces = 6 + Math.round(4 * (Math.max(1, weight) - 1));
+  const pieces = LITE ? 3 : 6 + Math.round(4 * (Math.max(1, weight) - 1));
   const rnd = seeded(Math.round(at * 1000) + pieces);
   for (let i = 0; i < pieces; i++) {
     const t = at + 0.03 + rnd() * 0.65; // done before the next silence begins
@@ -627,7 +655,7 @@ function impact(ctx, { hit, drive, world }, s, weight) {
   const tg = env(ctx, at, 0.65 * w, 0.1, tailLen);
   tail.connect(tlp).connect(tg).connect(panner(ctx, -pan * 0.3, hit));
   // distant secondary rumbles, out in the city
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < (LITE ? 1 : 2); i++) {
     const t = at + 0.6 + rnd() * 1.6;
     const r = noiseSource(ctx, t, 1.6, true);
     const rl = ctx.createBiquadFilter();
@@ -639,7 +667,7 @@ function impact(ctx, { hit, drive, world }, s, weight) {
     rg.connect(echo);
   }
   // falling debris: sparse crackle thinning out over a couple of seconds
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < (LITE ? 5 : 14); i++) {
     const t = at + 0.3 + Math.pow(rnd(), 1.7) * 2.4;
     const k = noiseSource(ctx, t, 0.02);
     const hp = ctx.createBiquadFilter();
@@ -714,7 +742,7 @@ function rotarySiren(ctx, out, wet, tl) {
   far.connect(send).connect(wet);
   // an uneven wobble from the rotor: two slow, unrelated wobbles
   const wobble = [];
-  for (const [rate, depth] of [[5.7, 7], [0.83, 11]]) {
+  for (const [rate, depth] of LITE ? [[5.7, 7]] : [[5.7, 7], [0.83, 11]]) {
     const l = ctx.createOscillator();
     l.frequency.value = rate;
     const lg = ctx.createGain();
@@ -724,7 +752,8 @@ function rotarySiren(ctx, out, wet, tl) {
     l.stop(end + 0.5);
     wobble.push(lg);
   }
-  for (const [type, detune, pan, level] of [["sawtooth", -6, -0.45, 0.55], ["square", 7, 0.45, 0.32], ["sawtooth", 1203, 0, 0.18], ["sawtooth", 3, 0, 0.4]]) {
+  const voices = [["sawtooth", -6, -0.45, 0.55], ["square", 7, 0.45, 0.32], ["sawtooth", 1203, 0, 0.18], ["sawtooth", 3, 0, 0.4]];
+  for (const [type, detune, pan, level] of LITE ? voices.slice(0, 2) : voices) {
     const o = ctx.createOscillator();
     o.type = type;
     o.detune.value = detune;
@@ -737,7 +766,8 @@ function rotarySiren(ctx, out, wet, tl) {
     o.start(first);
     o.stop(end + 0.5);
   }
-  // motor noise: a low mechanical whirr under the tone
+  // motor noise: a low mechanical whirr under the tone (not in Smooth)
+  if (LITE) return points;
   const m = noiseSource(ctx, first, end + 0.4 - first, true);
   const mb = ctx.createBiquadFilter();
   mb.type = "bandpass";
@@ -750,7 +780,16 @@ function rotarySiren(ctx, out, wet, tl) {
 }
 
 /** One "Missile strike" cycle. Returns its length (including the silence after it). */
-export function scheduleStrike(ctx, bus, at, cycle = 0) {
+export function scheduleStrike(ctx, bus, at, cycle = 0, { lite = false } = {}) {
+  LITE = lite;
+  try {
+    return scheduleStrikeNow(ctx, bus, at, cycle);
+  } finally {
+    LITE = false;
+  }
+}
+
+function scheduleStrikeNow(ctx, bus, at, cycle) {
   const { input: clean, drive } = bus;
   const tl = strikeTimeline(cycle);
   const T = (t) => at + t;
@@ -813,7 +852,7 @@ export function scheduleStrike(ctx, bus, at, cycle = 0) {
  * One cycle of a sound, starting at `at`. `heat` (0..1) is how long it has rung: beeps get
  * faster, pings closer, the siren quicker and the missile more frequent. Returns the cycle's length (s).
  */
-export function scheduleCycle(ctx, bus, sound, at, { n = 0, heat = 0 } = {}) {
+export function scheduleCycle(ctx, bus, sound, at, { n = 0, heat = 0, lite = false } = {}) {
   const { input: clean, drive } = bus;
   if (sound === "classic") return classicBurst(ctx, clean, at, Math.min(1, 0.5 + n * 0.17)) - at;
   if (sound === "sonar") {
@@ -831,22 +870,122 @@ export function scheduleCycle(ctx, bus, sound, at, { n = 0, heat = 0 } = {}) {
     return end - at;
   }
   // missile strike
-  return scheduleStrike(ctx, bus, at, n);
+  return scheduleStrike(ctx, bus, at, n, { lite });
 }
 
+// ---- pre-rendered cycles ----------------------------------------------------------------------
+// Building the Missile strike live means thousands of audio nodes at once, which makes a weak
+// laptop glitch. Instead each cycle is rendered once into an AudioBuffer with an
+// OfflineAudioContext (off the page's main thread), cached, and played as a single buffer through
+// the live output chain (volume, escalation, ducking, compressor, limiter, ceiling).
+
+export const ALARM_PERFORMANCE = ["auto", "smooth", "full"];
+/** How long each sound's render is (a cycle plus room for its echo to fade). */
+export const RENDER_SECONDS = { strike: 19.5, siren: 8.5, sonar: 6.5, classic: 3 };
+/** Cycles 1-4 sound different (later ones hit harder); from the 4th on the last one repeats. */
+export const VARIANTS = 4;
+export const variantFor = (n) => Math.min(VARIANTS - 1, Math.max(0, n));
+
+/**
+ * Auto picks Smooth when the page is struggling: under ~20 fps, audio underruns, or a render that
+ * took more than 60% of the audio's own length (a weak machine). Smooth and Full are fixed choices.
+ */
+export function chooseAlarmPerformance({ setting = "auto", fps = 0, underruns = 0, renderRatio = 0 } = {}) {
+  if (setting === "smooth" || setting === "full") return setting;
+  if (underruns > 0) return "smooth";
+  if (fps > 0 && fps < 20) return "smooth";
+  if (renderRatio > 0.6) return "smooth";
+  return "full";
+}
+
+const defaultOffline = (channels, length, rate) => new OfflineAudioContext(channels, length, rate);
+
+export class AlarmBufferCache {
+  constructor({ sampleRate = 48000, makeOffline = defaultOffline, now = () => performance.now() } = {}) {
+    this.sampleRate = sampleRate;
+    this.makeOffline = makeOffline;
+    this.now = now;
+    this.items = new Map(); // key -> { promise, value }
+    this.lastRatio = 0; // render time / audio time of the latest render
+    this.renders = 0;
+  }
+  key(sound, mode, variant) {
+    return `${normalizeSound(sound)}|${mode === "smooth" ? "smooth" : "full"}|${variantFor(variant)}`;
+  }
+  /** The rendered cycle if it's ready (no waiting), else null. */
+  peek(sound, mode, variant) {
+    return this.items.get(this.key(sound, mode, variant))?.value || null;
+  }
+  /** The rendered cycle: { buffer, length }. Each one is rendered only once. */
+  get(sound, mode, variant) {
+    const key = this.key(sound, mode, variant);
+    const have = this.items.get(key);
+    if (have) return have.promise;
+    const item = { value: null, promise: null };
+    item.promise = this.render(normalizeSound(sound), mode === "smooth", variantFor(variant)).then(
+      (v) => (item.value = v),
+      (err) => {
+        this.items.delete(key); // try again next time
+        throw err;
+      },
+    );
+    this.items.set(key, item);
+    return item.promise;
+  }
+  /** Forget other sounds (a changed setting), so memory stays small. */
+  keepOnly(sound) {
+    const s = normalizeSound(sound);
+    for (const k of [...this.items.keys()]) if (!k.startsWith(`${s}|`)) this.items.delete(k);
+  }
+  async render(sound, lite, variant) {
+    const seconds = RENDER_SECONDS[sound] || 10;
+    const rate = this.sampleRate;
+    const off = this.makeOffline(2, Math.ceil(seconds * rate), rate);
+    // the same "clean" and "driven" inputs as the live chain, mixed into one stereo buffer
+    const input = off.createGain();
+    input.connect(off.destination);
+    const drive = off.createGain();
+    const shaper = off.createWaveShaper();
+    shaper.curve = softClipCurve(2.2);
+    shaper.oversample = "4x";
+    const trim = off.createGain();
+    trim.gain.value = 0.7;
+    drive.connect(shaper).connect(trim).connect(off.destination);
+    const length = scheduleCycle(off, { input, drive }, sound, 0.02, { n: variant, heat: Math.min(1, variant / (VARIANTS - 1)), lite }) + 0.02;
+    const t0 = this.now();
+    const buffer = await off.startRendering();
+    this.lastRatio = (this.now() - t0) / (seconds * 1000);
+    this.renders++;
+    return { buffer, length: Math.min(length, seconds) };
+  }
+}
+
+const caches = new Map();
+/** One cache per sample rate, shared by the ringer and the preview. */
+export function sharedAlarmCache(sampleRate = 48000) {
+  if (!caches.has(sampleRate)) caches.set(sampleRate, new AlarmBufferCache({ sampleRate }));
+  return caches.get(sampleRate);
+}
+
+/** Audio underruns so far (Chromium reports them as "fallback frames"); 0 where unknown. */
+const underrunsOf = (ctx) => Number(ctx?.playoutStats?.fallbackFramesEvents) || 0;
+
 // ---- the ringer ----------------------------------------------------------------------------------
-export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
+export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US", getFps = () => 0, cache: givenCache = null }) {
   let ringing = false;
   let ctx = null;
   let out = null; // the output chain
   let target = DEFAULT_ALARM_VOLUME;
-  let startedAt = 0;
   let voice = null;
   let spoken = [];
   let calib = null; // { until, levels }
   let echo = 0;
   let duckUntil = 0;
+  let current = null; // the buffer playing now
+  let underrunsAtStart = 0;
+  let mode = "full"; // what's playing: "full" or "smooth"
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const cacheFor = (c) => givenCache || sharedAlarmCache(c?.sampleRate || 48000);
 
   async function audible() {
     ctx = getCtx?.() || null;
@@ -882,12 +1021,39 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
     });
   }
 
-  async function loop(alarm, sound) {
+  /** Play one pre-rendered cycle; resolves when it has played. */
+  function play(item) {
+    const src = ctx.createBufferSource();
+    src.buffer = item.buffer;
+    src.connect(out.input);
+    src.start(ctx.currentTime + 0.05);
+    current = src;
+    return wait(item.length * 1000 + 80);
+  }
+
+  async function loop(alarm, sound, setting) {
     const line = `Alarm${alarm.label ? `: ${alarm.label}` : ""}. It's ${alarm.time}.`;
+    const cache = cacheFor(ctx);
     for (let n = 0; ringing; n++) {
-      const elapsed = (performance.now() - startedAt) / 1000;
-      const len = scheduleCycle(ctx, out, sound, ctx.currentTime + 0.05, { n, heat: intensity(elapsed) });
-      await wait(len * 1000 + 80);
+      mode = chooseAlarmPerformance({ setting, fps: getFps(), underruns: underrunsOf(ctx) - underrunsAtStart, renderRatio: cache.lastRatio });
+      let item = cache.peek(sound, mode, n);
+      if (!item) {
+        // not rendered yet: the light classic beeps (cheap, live) until it is, so it's never silent
+        const pending = cache.get(sound, mode, n).catch(() => null);
+        while (ringing && !(item = cache.peek(sound, mode, n))) {
+          const len = scheduleCycle(ctx, out, "classic", ctx.currentTime + 0.05, { n });
+          const r = await Promise.race([pending, wait(len * 1000 + 100).then(() => undefined)]);
+          if (r === null) break; // the render failed: keep the classic beeps for this cycle
+          if (r === undefined) continue;
+        }
+        if (!item) {
+          if (!ringing) break;
+          continue;
+        }
+      }
+      if (!ringing) break;
+      cache.get(sound, mode, n + 1).catch(() => {}); // render the next one while this plays
+      await play(item);
       if (!ringing) break;
       // the label between rings (every cycle for the long missile strike, every other one otherwise)
       if (sound === "strike" || n % 2 === 1) await say(line);
@@ -899,8 +1065,25 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
     get ringing() {
       return ringing;
     },
+    /** "full" or "smooth": what's playing now. */
+    get mode() {
+      return mode;
+    },
+    /**
+     * Render the first cycle ahead of time (e.g. when an alarm is set), so ringing starts at once.
+     * In Auto, if that render was slow, the Smooth version is rendered too.
+     */
+    async prepare({ sound = DEFAULT_ALARM_SOUND, performance: setting = "auto", sampleRate } = {}) {
+      const cache = givenCache || sharedAlarmCache(sampleRate || getCtx?.()?.sampleRate || 48000);
+      cache.keepOnly(sound);
+      const first = chooseAlarmPerformance({ setting, fps: getFps(), renderRatio: cache.lastRatio });
+      await cache.get(sound, first, 0);
+      const after = chooseAlarmPerformance({ setting, fps: getFps(), renderRatio: cache.lastRatio });
+      if (after !== first) await cache.get(sound, after, 0);
+      return { mode: after, renderRatio: cache.lastRatio };
+    },
     /** Start ringing. Resolves { audible }: false if the browser is blocking sound. */
-    async start(alarm, { volume = DEFAULT_ALARM_VOLUME, sound = DEFAULT_ALARM_SOUND, maxLoud = false } = {}) {
+    async start(alarm, { volume = DEFAULT_ALARM_VOLUME, sound = DEFAULT_ALARM_SOUND, maxLoud = false, performance: setting = "auto" } = {}) {
       if (ringing) return { audible: Boolean(out) };
       ringing = true;
       spoken = [];
@@ -913,10 +1096,10 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
       const now = ctx.currentTime;
       out.ramp.gain.setValueAtTime(RAMP_START, now);
       out.ramp.gain.linearRampToValueAtTime(1, now + RAMP_SECONDS);
-      startedAt = performance.now();
       calib = { until: performance.now() + 1200, levels: [] };
       echo = 0;
-      loop(alarm, normalizeSound(sound));
+      underrunsAtStart = underrunsOf(ctx);
+      loop(alarm, normalizeSound(sound), setting);
       return { audible: true };
     },
     stop() {
@@ -925,11 +1108,20 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
       if (out && ctx) {
         const g = out.master.gain;
         g.cancelScheduledValues(ctx.currentTime);
-        g.setTargetAtTime(0, ctx.currentTime, 0.02);
+        g.setTargetAtTime(0, ctx.currentTime, 0.02); // silent within a few ms
         const o = out;
-        setTimeout(() => o.duck.disconnect(), 300);
+        const src = current;
+        setTimeout(() => {
+          try {
+            src?.stop();
+          } catch {
+            /* already stopped */
+          }
+          o.duck.disconnect();
+        }, 120);
       }
       out = null;
+      current = null;
       if (voice) {
         voice.pause();
         voice = null;
@@ -965,14 +1157,16 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US" }) {
 }
 
 /**
- * Preview for the settings panel: one full cycle of the sound (a whole 5-streak strike), at the
- * given volume, through the same limiter. Returns { stop(), length } and calls onEnd when done.
+ * Preview for the settings panel: one full cycle of the sound (a whole 5-missile strike) at the
+ * given volume, through the same limiter, from the same pre-rendered cache. Returns
+ * { stop(), ready } at once; `ready` resolves to the cycle's length when it starts playing
+ * (the first time, after it has been rendered). Calls onEnd when it's done or stopped.
  */
-export function previewAlarm(ctx, { sound = DEFAULT_ALARM_SOUND, volume = DEFAULT_ALARM_VOLUME, maxLoud = false } = {}, onEnd = () => {}) {
+export function previewAlarm(ctx, { sound = DEFAULT_ALARM_SOUND, volume = DEFAULT_ALARM_VOLUME, maxLoud = false, performance: setting = "auto" } = {}, onEnd = () => {}, { cache = sharedAlarmCache(ctx.sampleRate), getFps = () => 0 } = {}) {
   const chain = buildOutput(ctx, alarmGain({ volume, maxLoud }), { maxLoud });
-  const at = ctx.currentTime + 0.05;
-  const len = scheduleCycle(ctx, chain, normalizeSound(sound), at, { n: 1, heat: 0.3 });
   let stopped = false;
+  let timer = null;
+  let src = null;
   const stop = () => {
     if (stopped) return;
     stopped = true;
@@ -980,9 +1174,31 @@ export function previewAlarm(ctx, { sound = DEFAULT_ALARM_SOUND, volume = DEFAUL
     const g = chain.duck.gain;
     g.cancelScheduledValues(ctx.currentTime);
     g.setTargetAtTime(0, ctx.currentTime, 0.03); // a quick fade, never a click
-    setTimeout(() => chain.duck.disconnect(), 250);
+    setTimeout(() => {
+      try {
+        src?.stop();
+      } catch {
+        /* not started */
+      }
+      chain.duck.disconnect();
+    }, 250);
     onEnd();
   };
-  const timer = setTimeout(stop, len * 1000 + 300);
-  return { stop, length: len };
+  const mode = chooseAlarmPerformance({ setting, fps: getFps(), renderRatio: cache.lastRatio });
+  const ready = cache.get(normalizeSound(sound), mode, 1).then(
+    (item) => {
+      if (stopped) return 0;
+      src = ctx.createBufferSource();
+      src.buffer = item.buffer;
+      src.connect(chain.input);
+      src.start(ctx.currentTime + 0.05);
+      timer = setTimeout(stop, item.length * 1000 + 300);
+      return item.length;
+    },
+    () => {
+      stop();
+      return 0;
+    },
+  );
+  return { stop, ready, mode };
 }
