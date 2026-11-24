@@ -1,27 +1,35 @@
 // Phone call tools. make_call is risky: rules are checked first, then Jericho reads back
 // the number, the goal and what it will say, and only dials after a spoken yes.
-import { describeOwnerPlan, describePlan, listCalls, precheck, precheckOwner, startCall, startOwnerCall } from "../calls/manager.js";
-import { normalizeNumber, PURPOSES, callSettings } from "../calls/policy.js";
+import { describeOwnerPlan, describePlan, listCalls, precheck, precheckOwner, resolveTarget, startCall, startOwnerCall } from "../calls/manager.js";
+import { normalizeNumber, PURPOSES, last4 } from "../calls/policy.js";
+import { deleteContact, listContacts, saveContact } from "../contacts.js";
 
 export const makeCallTool = {
   risky: true,
   /** Runs before the confirmation question, so blocked calls are refused straight away. */
   precheck: (input, ctx) => precheck(input, ctx.client),
-  confirmPrompt: (input) => describePlan(input, normalizeNumber(input.phoneNumber, callSettings().defaultCountryCode) || input.phoneNumber),
+  // the read-back: the number digit by digit (from the contact if one was named), who, and what
+  confirmPrompt: (input) => {
+    const t = resolveTarget(input);
+    return describePlan(input, (t.ok && normalizeNumber(t.raw, "1")) || input.phoneNumber);
+  },
   describe: (input) => `call ${input.businessName}`,
   definition: {
     name: "make_call",
     description:
-      "Phone a business for the user: a restaurant reservation, checking opening hours, booking an appointment, " +
-      "or one simple question. Before calling you must know the business name and its phone number (look it up " +
-      "with web_search or ask; never guess), and for bookings the date, time, party size and the name to book under. " +
-      "Ask for anything missing first. The system reads the plan back to the user and only dials after a yes. " +
-      "The call runs in the background and the user hears the outcome when it ends.",
+      "Phone a business or a person for the user, one call at a time. Businesses: a reservation, opening hours, an appointment or one " +
+      "simple question (find the number with web_search or ask; never guess). People: pass on a message, ask a question, invite or remind " +
+      "them (purpose personal), using the number the user said or a saved contact (contact). Ask for anything missing first. " +
+      "The call always opens by saying it's an AI assistant calling for the user, and it never pretends to be anyone. " +
+      "Set record true only if the user explicitly asked to record the call. The system reads the plan and the number back " +
+      "and only dials after a spoken yes. The call runs in the background and the user hears the outcome when it ends.",
     input_schema: {
       type: "object",
       properties: {
-        businessName: { type: "string" },
-        phoneNumber: { type: "string", description: "The business's number, as found or given" },
+        businessName: { type: "string", description: "Who you're calling: the business, or the person's name" },
+        phoneNumber: { type: "string", description: "The number as found or said. Leave out when calling a saved contact" },
+        contact: { type: "string", description: "A saved contact's name, instead of a number" },
+        record: { type: "boolean", description: "Only if the user explicitly asked to record this call" },
         purpose: { type: "string", enum: PURPOSES },
         goal: { type: "string", description: "One sentence, e.g. 'Book a table for four this Friday at seven PM'" },
         details: {
@@ -38,7 +46,7 @@ export const makeCallTool = {
         },
         plan: { type: "string", description: "What you'll ask for after introducing yourself, in one sentence" },
       },
-      required: ["businessName", "phoneNumber", "purpose", "goal", "plan"],
+      required: ["businessName", "purpose", "goal", "plan"],
       additionalProperties: false,
     },
   },
@@ -78,6 +86,51 @@ export const callOwnerTool = {
   },
 };
 
+// ---- contacts (data/contacts.json, local only) ----------------------------------------------
+export const saveContactTool = {
+  risky: false,
+  definition: {
+    name: "save_contact",
+    description: "Save or update a contact's phone number (\"save Luke's number as 248 555 0123\"). Read the number back digit by digit afterwards.",
+    input_schema: {
+      type: "object",
+      properties: { name: { type: "string" }, phoneNumber: { type: "string" } },
+      required: ["name", "phoneNumber"],
+      additionalProperties: false,
+    },
+  },
+  async run({ name, phoneNumber }) {
+    return saveContact(name, phoneNumber);
+  },
+};
+
+export const listContactsTool = {
+  risky: false,
+  definition: {
+    name: "list_contacts",
+    description: "Who's in the user's contacts: names, with only the last 4 digits of each number.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  async run() {
+    const contacts = listContacts().map((c) => ({ name: c.name, endsIn: last4(c.number).replace("...", "") }));
+    return { count: contacts.length, contacts };
+  },
+};
+
+export const deleteContactTool = {
+  risky: true, // asks first
+  confirmPrompt: (input) => `Should I delete ${String(input.name).slice(0, 60)} from your contacts?`,
+  describe: (input) => `delete ${input.name} from your contacts`,
+  definition: {
+    name: "delete_contact",
+    description: "Delete a saved contact (\"delete Luke from contacts\"). The system asks the user to confirm first.",
+    input_schema: { type: "object", properties: { name: { type: "string" } }, required: ["name"], additionalProperties: false },
+  },
+  async run({ name }) {
+    return deleteContact(name);
+  },
+};
+
 export const recentCallsTool = {
   risky: false,
   definition: {
@@ -89,7 +142,7 @@ export const recentCallsTool = {
     return {
       calls: listCalls()
         .slice(-5)
-        .map((c) => ({ business: c.businessName, when: c.createdAt, test: c.test, status: c.status, outcome: c.outcome, summary: c.summary })),
+        .map((c) => ({ who: c.businessName, when: c.createdAt, test: c.test, status: c.status, outcome: c.outcome, summary: c.summary })),
     };
   },
 };

@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ROOT, secrets, settings } from "./config.js";
-import { isSensitive } from "./secrets.js";
+import { isSensitive, maskPhones } from "./secrets.js";
 
 const logPath = path.resolve(ROOT, settings.logFile || "logs/actions.log");
 fs.mkdirSync(path.dirname(logPath), { recursive: true });
@@ -26,7 +26,8 @@ export function scrubEnvValues(text) {
 
 /** Replace any string that looks like a password, key, card or ID number. */
 function redact(value) {
-  if (typeof value === "string") return isSensitive(value) ? "[redacted: looked like a secret]" : scrubEnvValues(value);
+  // full phone numbers never reach the log: only their last 4 digits
+  if (typeof value === "string") return isSensitive(value) ? "[redacted: looked like a secret]" : maskPhones(scrubEnvValues(value));
   if (Array.isArray(value)) return value.map(redact);
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, redact(v)]));
   return value;

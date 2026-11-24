@@ -99,7 +99,7 @@
     "testScenario": "random",
     "ownerName": "Sammy",
     "publicUrl": "",
-    "maxCallsPerDay": 3,
+    "maxCallsPerDay": 10,
     "maxCallsPerNumberPerDay": 2,
     "maxMinutes": 5,
     "webhookRequestsPerMinute": 120,

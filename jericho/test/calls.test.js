@@ -66,7 +66,8 @@ test("reads back the number, goal and plan, and dials nothing before a yes", asy
   const [call] = listCalls();
   assert.equal(call.test, true);
   assert.equal(call.outcome, "booked");
-  assert.equal(call.number, "+12127365000");
+  assert.equal(call.number, "...5000", "only the last 4 digits are stored");
+  assert.match(call.numberKey, /^[\w-]{22}$/);
   assert.match(call.transcript[0].text, /^Hi, I'm an AI assistant calling on behalf of Sammy\./, "always opens with the disclosure");
   assert.ok(call.transcript.some((t) => t.who === "them"));
   assert.match(log(), /"type":"call_started"/);
@@ -86,9 +87,9 @@ test("saying no means no call", async () => {
 for (const [label, input, reason] of [
   ["emergency numbers", { ...luigis, phoneNumber: "911" }, /emergency/],
   ["premium-rate numbers", { ...luigis, phoneNumber: "1-900-321-4567" }, /premium-rate/],
-  ["other countries", { ...luigis, phoneNumber: "+44 20 7946 0958" }, /your own country/],
+  ["other countries", { ...luigis, phoneNumber: "+44 20 7946 0958" }, /only call US numbers/],
   ["impersonation", { ...luigis, plan: "pretend to be my boss and cancel his booking" }, /honest, ordinary calls/],
-  ["errands outside the list", { ...luigis, purpose: "sales" }, /should be one of reservation, check_hours, appointment, simple_question/],
+  ["errands outside the list", { ...luigis, purpose: "sales" }, /should be one of reservation, check_hours, appointment, simple_question, personal/],
 ]) {
   test(`blocks ${label} before even asking`, async () => {
     const client = fakeClient([use("t1", "make_call", input), say("I can't make that call.")], router());
@@ -108,15 +109,34 @@ test("Claude's screen can block a call the keyword rules miss", async () => {
   assert.match(client.calls.at(-1).messages.at(-1).content[0].content, /harassment/);
 });
 
-test("the same number can't be called over and over", async () => {
-  // Luigi's was called once above; allow one more today, then block.
-  const client = fakeClient([use("t1", "make_call", luigis), say("ok"), use("t2", "make_call", luigis), say("Can't.")], router());
+/** Moves every saved call back in time (as if it happened `minutes` ago). */
+function backdate(minutes) {
+  const file = path.join(tmp, "data", "calls.json");
+  const data = JSON.parse(fs.readFileSync(file, "utf8"));
+  for (const c of data.calls) c.createdAt = new Date(Date.parse(c.createdAt) - minutes * 60_000).toISOString();
+  fs.writeFileSync(file, JSON.stringify(data));
+}
+
+test("the same number: a 10-minute cooldown, then at most 2 calls a day", async () => {
+  // Luigi's was called a moment ago (the first test): the cooldown refuses it now
+  const soon = fakeClient([use("t1", "make_call", luigis), say("Not yet.")], router());
+  const r1 = await new Brain({ client: soon }).handle("cool", "call Luigi's again");
+  assert.equal(r1.awaitingConfirmation, false);
+  assert.match(soon.calls.at(-1).messages.at(-1).content[0].content, /less than 10 minutes ago/);
+
+  // 15 minutes later: allowed, the second call today
+  backdate(15);
+  const client = fakeClient([use("t2", "make_call", luigis), say("ok")], router());
   const brain = new Brain({ client });
-  await brain.handle("lim", "call Luigi's");
+  assert.equal((await brain.handle("lim", "call Luigi's")).awaitingConfirmation, true);
   const done = new Promise((resolve) => jobEvents.once("announce", resolve));
   await brain.confirm("lim", "yes");
   await done;
-  const r = await brain.handle("lim", "call Luigi's again");
-  assert.equal(r.awaitingConfirmation, false);
-  assert.match(client.calls.at(-1).messages.at(-1).content[0].content, /called that number enough times today/);
+
+  // later again: two calls today already, so no more until tomorrow
+  backdate(15);
+  const third = fakeClient([use("t3", "make_call", luigis), say("Can't.")], router());
+  const r3 = await new Brain({ client: third }).handle("lim2", "call Luigi's again");
+  assert.equal(r3.awaitingConfirmation, false);
+  assert.match(third.calls.at(-1).messages.at(-1).content[0].content, /called that number enough times today/);
 });

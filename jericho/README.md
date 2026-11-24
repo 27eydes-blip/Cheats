@@ -332,35 +332,50 @@ what was said. Older `timing` lines still go to `logs/actions.log`.
 
 ## Phone calls
 
-"Jericho, call Luigi's and book a table for four at seven" works like this:
+Jericho can phone any US number for you, one call at a time: a business ("call Luigi's and book
+a table for four at seven"), a number you say ("call 248 736 0123 and ask if they're coming
+tonight"), or a saved contact ("call Luke"). It works like this:
 
-1. Jericho fills in anything missing. It looks up the number, or asks you, and never guesses one.
-   For bookings it needs the date, time, party size and name.
-2. It checks the call against the rules below. A blocked call is refused straight away, without
-   asking you anything.
-3. It reads back the number digit by digit, the goal, and what it will say, then asks "Should I
-   dial?". Nothing is dialed without your yes.
-4. On the call it always opens with "Hi, I'm an AI assistant calling on behalf of Sammy". The
-   opening is written into the code, and it never claims to be human. It speaks with your
-   ElevenLabs voice and listens with Twilio's speech recognition. A Claude agent handles the
-   conversation.
-5. When the call ends, Jericho tells you the outcome out loud: booked, no answer, busy, they need
-   a callback, or voicemail. The call is saved to `data/calls.json` and shown on the **Calls**
-   page (`/calls`), with a transcript.
+1. Jericho fills in anything missing. For a business it looks up the number or asks you, and
+   never guesses one. For bookings it needs the date, time, party size and name.
+2. It checks the call against the rules below. A blocked call is refused straight away, with the
+   reason, without asking you anything.
+3. It reads the number back digit by digit, says who it'll call and what it'll say, then asks
+   "Should I dial?". Nothing is ever dialed without your spoken yes. A no, silence, or a yes said
+   over the read-back means no call.
+4. Every call to someone who isn't you opens with "Hi, I'm an AI assistant calling on behalf of
+   Sammy" (your `calls.ownerName`). That line is written into the code. Jericho never claims to
+   be human, never pretends to be you, and never impersonates any other person or business.
+   Calls aren't recorded. If you explicitly ask ("call Luke and record it"), the read-back says
+   so, and the call opens with "This call is being recorded."
+5. If the person says stop, don't call again, or asks to be taken off a list, Jericho apologises,
+   says goodbye and hangs up at once. The number goes on the do-not-call list, `data/dnc.json`,
+   which is checked before every call. That's caught in code from their words, and by the call
+   agent as well.
+6. It speaks with your ElevenLabs voice and listens with Twilio's speech recognition; a Claude
+   agent handles the conversation. When the call ends, Jericho tells you how it went (booked,
+   "Luke said he's coming around eight", no answer, busy, voicemail, asked not to be called). The
+   call is saved to `data/calls.json` and shown on the **Calls** page (`/calls`).
+
+### Contacts
+
+Say "save Luke's number as 248 736 0123" (Jericho reads it back digit by digit), "who's in my
+contacts" (names, and only the last 4 digits of each number), or "delete Luke from contacts"
+(asks first). Contacts live in `data/contacts.json`: git-ignored, on your PC only. "Call Luke"
+then uses the saved number, and still reads it back in full before asking for your yes.
 
 ### Owner calls ("Jericho, call me")
 
-Jericho doesn't call people, with one exception: you. Say "call me", "call my phone" or "give
-me a call and say hi", and it rings your own cell. That's `MY_PHONE_NUMBER` in `.env`; you never
+Say "call me", "call my phone" or "give me a call and say hi", and Jericho rings your own cell. That's `MY_PHONE_NUMBER` in `.env`; you never
 have to say the number.
 
 - **Only your number.** The owner call tool has no number field. The server dials
   `MY_PHONE_NUMBER` itself, after normalizing it to +1 and 10 digits; it must be a US number.
-  Business calls aimed at a person ("say hi to my mom", "call my friend") are refused in code
-  before you're even asked, and the Claude screen still blocks private individuals.
+  Calls to anyone else go through the normal rules above, with the AI disclosure.
 - **Still your yes.** Jericho reads the plan back without saying the number, then asks "Should I
   dial?". The daily cap, the per-number cap, `maxMinutes`, US only and the signed-webhook checks
-  all apply as usual.
+  all apply as usual. The 10-minute cooldown and the 4-an-hour limit don't apply to your own phone, and saying "stop"
+  on an owner call just ends it (your number never goes on the do-not-call list).
 - **On the call** it opens with "Hey Sammy, it's Jericho," using `calls.ownerName`, then does
   what you asked: reads a message, gives a reminder, or has a short back-and-forth. If it gets
   your voicemail, it leaves the message there. Afterwards it tells you how it went, for example
@@ -371,23 +386,44 @@ have to say the number.
 - In test mode nothing rings: Claude plays you picking up.
 
 **Rules (checked in code, in `server/calls/policy.js`):**
-- **What it calls for:** only reservations, checking hours, appointments or one simple question.
-  No emergency or short numbers (911, 988, the x11 numbers), no premium-rate numbers (900, 976),
-  and only countries listed in `allowedCountryCodes`.
-- **What it refuses:** anything that looks like impersonation, harassment, pranks, scams, sales,
-  or paying money. This is checked by keyword and then by a quick Claude review. If that review
-  can't run, the call doesn't happen.
-- **Limits:** `maxCallsPerDay` (3), `maxCallsPerNumberPerDay` (2), and `maxMinutes` (5). Twilio
-  enforces the time limit itself, and the agent starts wrapping up 30 seconds before it.
-- **What it won't do on a call:** give card details or agree to a deposit. If the place needs
-  that, the outcome is "needs callback".
+- **Numbers:** US only (+1), whatever the settings say. Refused:
+  - 911, 988, the other x11 numbers and short codes;
+  - premium-rate and toll numbers (900, 976, and the 5xx and 700 service codes);
+  - numbers that start with +1 but aren't in the US (Canada, and the Caribbean and Atlantic
+    islands, which are billed as international and used by "one ring" scams);
+  - in live mode, the fictional 555-01xx numbers.
+
+  Toll-free 800 numbers are fine.
+- **What it refuses:** threatening, harassing, scaring or pranking someone; scams, gift cards,
+  one-time codes, or anything about money or bank details; deceiving someone about who's
+  calling; and impersonating anyone (you, another person, or a business). This is checked by
+  keyword in code, then by a quick Claude review, and if that review can't run, the call
+  doesn't happen. A refusal is explained out loud.
+- **Limits:**
+  - `maxCallsPerDay` (10) in total.
+  - At most 2 calls a day to the same number (settings can lower this, never raise it).
+  - 10 minutes before calling the same number again.
+  - At most 4 calls in any hour.
+  - One call at a time: several numbers in one request are refused, and there's no bulk or
+    scheduled calling.
+  - `maxMinutes` (5) per call. Twilio enforces it itself, and the agent starts wrapping up 30
+    seconds before.
+- **What it won't do on a call:** give card details or agree to a deposit or payment. If a place
+  needs that, the outcome is "needs callback".
 - **Privacy:** Twilio keys and your number stay in `.env`. They never reach the browser and are
-  blanked out of the log. Every webhook from Twilio must carry Twilio's signature (see "Security
-  through the tunnel" below).
+  blanked out of the log. Call records and the do-not-call list keep only the last 4 digits of a
+  number, plus a keyed hash (the key is `data/call-key`) so the limits and the list can still
+  recognise it. Any phone number in the log or in a saved transcript, however it's written,
+  becomes "[phone ...0123]". Full numbers exist only in `data/contacts.json` and, during a call,
+  in memory. Every webhook from Twilio must carry Twilio's signature (see "Security through the
+  tunnel" below).
+- **Trial accounts:** if Twilio refuses because the number isn't verified on a trial account,
+  Jericho says "Twilio won't dial unverified numbers on a trial account" instead of a generic
+  error.
 
 **Test mode** (`calls.testMode: true`, the default) runs the whole flow without dialing: rules,
 read-back, yes, then a pretend restaurant played by Claude. `testScenario` can be `random`,
-`booked`, `alternative`, `callback`, `hours` or `no_answer`. Test calls cost a few cents in
+`booked`, `alternative`, `callback`, `hours`, `no_answer` or `stop` (they ask not to be called again). Calls to people are played by a friendly pretend contact. Test calls cost a few cents in
 Claude usage and no Twilio money.
 
 ### Setting up Twilio (real calls)
@@ -707,7 +743,9 @@ scripts/bench-latency.mjs measures real Claude latency for a few typical turns
 server/calls/policy.js    what may be called: numbers, purposes, limits, safety screen
 server/calls/agent.js     the Claude agent on the phone, and the pretend business for test mode
 server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json, announcements
-server/tools/calls.js     make_call, call_owner ("call me") and recent_calls tools
+server/tools/calls.js     make_call, call_owner ("call me"), contacts and recent_calls tools
+server/contacts.js        data/contacts.json: save, find, delete contacts
+server/calls/dnc.js       the do-not-call list (data/dnc.json) and the "stop calling" phrases
 server/tools/deepThink.js sends hard questions, plans and decisions to the stronger model
 server/tools/learning.js  save_lesson + what_ive_learned tools
 server/tools/pc.js        PC control tools (apps, links, volume, media, timers, clipboard, files, commands)

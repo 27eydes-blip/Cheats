@@ -30,3 +30,16 @@ export function isSensitive(text) {
   return false;
 }
 
+
+// Phone numbers (10 or 11 digits, however they're written: 248-555-0123, (248) 555 0123,
+// +1 248 555 0123, "2 4 8, 5 5 5, 0 1 2 3") become "[phone ...0123]" in logs and call records.
+const PHONE_RUN = /(?<![\w+(])\+?\(?(?:\d[\s().,-]{0,3}){9,10}\d(?![\w])/g;
+export function maskPhones(text) {
+  return String(text).replace(PHONE_RUN, (m) => {
+    const d = m.replace(/\D/g, "");
+    const ok = d.length === 10 || (d.length === 11 && d.startsWith("1"));
+    if (!ok) return m;
+    const lead = /^[\s,]/.test(m) ? m[0] : "";
+    return `${lead}[phone ...${d.slice(-4)}]`;
+  });
+}

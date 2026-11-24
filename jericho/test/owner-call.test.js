@@ -134,21 +134,18 @@ test("saying no means no call", async () => {
   assert.equal(dials().length, before);
 });
 
-test("any other personal number is refused; owner calls can't be aimed anywhere else", async () => {
-  // a business-call tool aimed at a person: refused in code, before anyone is asked
-  for (const goal of ["Say hi to my mom", "Call my friend to catch up", "Tell my sister I'm running late"]) {
-    assert.equal(checkIntentKeywords({ purpose: "simple_question", goal, plan: goal, businessName: "Mom" }).ok, false, goal);
-  }
-  const client = fakeClient([use("p1", "make_call", { businessName: "Mom", phoneNumber: "312-736-9988", purpose: "simple_question", goal: "Say hi to my mom", plan: "say hi" }), say("I can't call people.")], agent);
-  const r = await new Brain({ client }).handle("mom", "call my mom and say hi");
-  assert.equal(r.awaitingConfirmation, false, "never even asked");
-  assert.match(client.calls.at(-1).messages.at(-1).content[0].content, /only call businesses, or your own phone/);
-
-  // and an owner call with a number slipped in is invalid input: nothing runs
+test("owner calls can't be aimed anywhere else; other people go through the normal call rules", async () => {
+  // an owner call with a number slipped in is invalid input: nothing runs
   const sneaky = fakeClient([use("p2", "call_owner", { ...ownerAsk, phoneNumber: "+13127369988" }), say("Okay.")], agent);
   const r2 = await new Brain({ client: sneaky }).handle("sneak", "call me");
   assert.equal(r2.awaitingConfirmation, false);
   assert.match(JSON.stringify(sneaky.calls.at(-1).messages.at(-1)), /INVALID_INPUT/);
+  // a different personal number is a normal call: read back digit by digit, AI disclosure, a yes
+  const client = fakeClient([use("p1", "make_call", { businessName: "Luke", phoneNumber: "312-736-9988", purpose: "personal", goal: "Ask Luke if he's coming tonight", plan: "ask if he's coming tonight" })], agent);
+  const r = await new Brain({ client }).handle("luke", "call 312 736 9988 and ask Luke if he's coming tonight");
+  assert.equal(r.awaitingConfirmation, true);
+  assert.match(r.reply, /I'll call Luke at 3 1 2, 7 3 6, 9 9 8 8\. .*I'm an AI assistant calling for Sammy/);
+  assert.doesNotMatch(r.reply, /Hey Sammy, it's Jericho/, "only your own phone gets the owner greeting");
 });
 
 test("the daily limits apply to owner calls too", async () => {
@@ -165,6 +162,8 @@ test("the daily limits apply to owner calls too", async () => {
 });
 
 test("business calls still work as before", async () => {
+  // one call at a time: end the owner calls still "on the line" from the tests above
+  for (const c of listCalls().filter((x) => x.status !== "ended")) await handleTwilio("status", c.id, { CallStatus: "completed" });
   const before = dials().length;
   const client = fakeClient(
     [use("b1", "make_call", { businessName: "Luigi's", phoneNumber: "212-736-5000", purpose: "reservation", goal: "Book a table for two at eight tonight", details: { partySize: 2, name: "Sammy", time: "eight PM", date: "tonight" }, plan: "ask for a table for two at eight" }), say("Dialing.")],

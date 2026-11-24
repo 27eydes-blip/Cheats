@@ -9,17 +9,49 @@ const TURN_SCHEMA = {
     end_call: { type: "boolean", description: "True once you've said goodbye or the call can't go anywhere." },
     outcome: {
       type: "string",
-      enum: ["in_progress", "booked", "not_available", "info_obtained", "needs_callback", "voicemail", "delivered", "failed"],
+      enum: ["in_progress", "booked", "not_available", "info_obtained", "needs_callback", "voicemail", "delivered", "do_not_call", "failed"],
     },
     summary: { type: "string", description: "One or two sentences for the owner: what was agreed or learned. Empty while in progress." },
+    do_not_call: { type: "boolean", description: "True if they said stop, asked not to be called again, or asked to be removed. Then end the call at once." },
   },
-  required: ["say", "end_call", "outcome", "summary"],
+  required: ["say", "end_call", "outcome", "summary", "do_not_call"],
   additionalProperties: false,
 };
 
-/** The opening line is fixed in code, so the call always starts by saying it's an AI. */
-export function disclosure() {
-  return `Hi, I'm an AI assistant calling on behalf of ${callSettings().ownerName}.`;
+/**
+ * The opening line is fixed in code, so every call to someone who isn't you starts by saying
+ * it's an AI calling for you. A call you asked to record says so straight after.
+ */
+export function disclosure(call = {}) {
+  return `Hi, I'm an AI assistant calling on behalf of ${callSettings().ownerName}.${call.record ? " This call is being recorded." : ""}`;
+}
+
+/** The same honesty rules on every call to someone else. */
+function honestyRules(call) {
+  const cfg = callSettings();
+  return `- You already said: "${disclosure(call)}" You are an AI. Never claim or imply you're human. Never pretend to be ${cfg.ownerName}, and never pretend to be any other person or business. If asked, say plainly you're an AI assistant calling for ${cfg.ownerName}.
+- If they say stop, ask not to be called again, or ask to be taken off a list: apologise in one short sentence, say you won't call again, say goodbye, and set do_not_call and end_call true.
+- ${call.record ? "This call is being recorded; you said so at the start." : "The call is not recorded. Never say it is."}`;
+}
+
+/** A call to a person (not a business): pass on a message, ask a question, invite or remind them. */
+function personSystem(call) {
+  const cfg = callSettings();
+  const d = call.details || {};
+  return `You are an AI assistant on a live phone call with ${call.businessName}, calling on behalf of ${cfg.ownerName}. You are speaking, not writing.
+
+What ${cfg.ownerName} asked you to do: ${call.goal}
+Planned opening: ${call.plan}
+${d.notes ? `Notes: ${d.notes}
+` : ""}
+Rules:
+${honestyRules(call)}
+- Do only what was asked: pass on the message, ask the question and listen to the answer, or give the reminder. Don't add requests of your own.
+- Be warm and brief: one or two short spoken sentences per turn, contractions, numbers as they're spoken. No lists or symbols.
+- Don't share anything about ${cfg.ownerName} beyond what the task needs. Never give out passwords, card or ID numbers, or agree to send money.
+- If it's voicemail, leave one or two sentences: who you're calling for and the message, then end (outcome voicemail).
+- If they seem confused, upset or ask who you are, explain once, kindly, then offer to end the call.
+- When it's done, say thanks and goodbye in "say" and set end_call true. outcome: info_obtained (you got an answer), delivered (you passed on the message), voicemail, failed, do_not_call, or in_progress while the call continues. summary: one or two sentences for ${cfg.ownerName}, e.g. "Luke said he's coming tonight around eight."`;
 }
 
 /** How an owner call opens: "Hey Sammy, it's Jericho." (calls.ownerName). */
@@ -48,6 +80,7 @@ Rules:
 
 function agentSystem(call) {
   if (call.owner) return ownerSystem(call);
+  if (call.purpose === "personal") return personSystem(call);
   const cfg = callSettings();
   const d = call.details || {};
   const callback = secrets.myPhoneNumber ? `If they need a callback number, give ${secrets.myPhoneNumber}, read digit by digit.` : "You have no callback number to give; say the owner will call back.";
@@ -58,7 +91,7 @@ Details: ${JSON.stringify({ date: d.date, time: d.time, partySize: d.partySize, 
 Planned opening request: ${call.plan}
 
 Rules:
-- You already said: "${disclosure()}" Never claim or imply you are human. If asked, say plainly you're an AI assistant calling for ${cfg.ownerName}.
+${honestyRules(call)}
 - Stick to the goal. Share only what it needs: the name for the booking, party size, date and time. ${callback}
 - Never give or agree to payment details, deposits, cancellation fees or anything that costs money. If they require that, say ${cfg.ownerName} will call back to finish, and end politely (outcome needs_callback).
 - Only accept an alternative if it fits the flexibility given. Otherwise thank them, say ${cfg.ownerName} will decide, and end (outcome not_available or needs_callback).
@@ -94,7 +127,7 @@ export async function agentTurn(client, call, { wrapUp = false, opening = false 
 
 /** The first thing to say after the disclosure, worked out before dialing so there's no pause. */
 export async function openingRequest(client, call) {
-  const turn = await agentTurn(client, { ...call, transcript: [{ who: "agent", text: call.owner ? ownerGreeting() : disclosure() }] }, { opening: true });
+  const turn = await agentTurn(client, { ...call, transcript: [{ who: "agent", text: call.owner ? ownerGreeting() : disclosure(call) }] }, { opening: true });
   // It follows straight on from "Hi, I'm an AI assistant...", so no second greeting.
   return turn.say.replace(/^(?:hi|hello|hey|good (?:morning|afternoon|evening))(?: there)?[,!.]?\s*/i, "");
 }
@@ -106,12 +139,16 @@ const SCENARIOS = {
   alternative: "The exact time is taken, but you can offer something 30 to 45 minutes later. Go along with whatever the caller decides.",
   callback: "You can't confirm anything right now and ask that the person call back themselves later, or you need a card to hold it.",
   hours: "Answer questions about opening hours plainly: open 11 AM to 10 PM, closed Mondays.",
+  person: "You know the owner well and are happy to hear from them, even through their assistant. Answer naturally and briefly, then say goodbye.",
+  stop: "You don't want calls like this. Say clearly: please don't call this number again.",
   owner: "You are the owner of this assistant, answering your own phone. React briefly and naturally to what it tells you, maybe ask one small question, then say thanks and goodbye.",
 };
 
 export function pickScenario(purpose) {
   const want = callSettings().testScenario;
   if (purpose === "owner") return want === "no_answer" ? "no_answer" : "owner";
+  if (want === "stop") return "stop";
+  if (purpose === "personal") return want === "no_answer" ? "no_answer" : "person";
   if (want !== "random") return want;
   const options = purpose === "check_hours" || purpose === "simple_question" ? ["hours", "hours", "no_answer"] : ["booked", "booked", "alternative", "callback", "no_answer"];
   return options[Math.floor(Math.random() * options.length)];
@@ -123,7 +160,7 @@ export async function simulatedReply(client, call, scenario) {
     model: callSettings().agentModel,
     max_tokens: 1500,
     output_config: { effort: "low" },
-    system: `${scenario === "owner" ? `You play ${callSettings().ownerName}, picking up a call from your AI assistant, for a test.` : `You play a busy but friendly staff member answering the phone at ${call.businessName}, for a test of an AI calling assistant.`} ${SCENARIOS[scenario] || SCENARIOS.booked}
+    system: `${scenario === "owner" ? `You play ${callSettings().ownerName}, picking up a call from your AI assistant, for a test.` : scenario === "person" || call.purpose === "personal" ? `You play ${call.businessName}, a person picking up a call from someone's AI assistant, for a test.` : `You play a busy but friendly staff member answering the phone at ${call.businessName}, for a test of an AI calling assistant.`} ${SCENARIOS[scenario] || SCENARIOS.booked}
 Reply with only what you say out loud: one or two short sentences, like real phone speech. If the caller says goodbye, say a quick goodbye.`,
     messages: [{ role: "user", content: `Call so far:\n${lines}\n\nYour reply:` }],
   });

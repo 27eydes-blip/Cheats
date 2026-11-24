@@ -1,6 +1,9 @@
 // What Jericho is allowed to call, checked in code before you're even asked to confirm,
 // and again right before dialing.
-import { secrets, settings } from "../config.js";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { ROOT, secrets, settings } from "../config.js";
 import { isSensitive } from "../secrets.js";
 
 export function callSettings() {
@@ -10,18 +13,69 @@ export function callSettings() {
     testScenario: c.testScenario || "random",
     ownerName: c.ownerName || "the owner",
     publicUrl: (c.publicUrl || "").replace(/\/+$/, ""),
-    maxCallsPerDay: c.maxCallsPerDay ?? 3,
-    maxCallsPerNumberPerDay: c.maxCallsPerNumberPerDay ?? 2,
+    maxCallsPerDay: Number(c.maxCallsPerDay) > 0 ? Number(c.maxCallsPerDay) : 10,
+    // at most 2 calls a day to any one number, whatever the settings say
+    maxCallsPerNumberPerDay: Math.min(MAX_PER_NUMBER, Number(c.maxCallsPerNumberPerDay) > 0 ? Number(c.maxCallsPerNumberPerDay) : MAX_PER_NUMBER),
     maxMinutes: c.maxMinutes ?? 5,
-    allowedCountryCodes: (c.allowedCountryCodes || ["1"]).map(String),
-    defaultCountryCode: String(c.defaultCountryCode || "1"),
+    // US numbers only (+1), whatever the settings say
+    allowedCountryCodes: ["1"],
+    defaultCountryCode: "1",
     agentModel: c.agentModel || settings.claude?.model || "claude-opus-5-5",
     agentEffort: c.agentEffort || "low",
     language: c.language || settings.speechLang || "en-US",
   };
 }
 
-export const PURPOSES = ["reservation", "check_hours", "appointment", "simple_question"];
+export const PURPOSES = ["reservation", "check_hours", "appointment", "simple_question", "personal"];
+export const MAX_PER_NUMBER = 2;
+export const COOLDOWN_MS = 10 * 60_000; // before the same number can be called again
+export const MAX_PER_HOUR = 4; // no blasting: a handful of calls an hour at most
+
+// ---- phone numbers in records and logs -----------------------------------------------------
+// Call records and the do-not-call list keep only the last 4 digits, plus a keyed hash so the
+// limits and the do-not-call list can still recognise a number. The key lives in data/.
+
+/** "...0123" */
+export function last4(number) {
+  const d = String(number || "").replace(/\D/g, "");
+  return d.length >= 4 ? `...${d.slice(-4)}` : "...";
+}
+
+let hashKey = null;
+function numberHashKey() {
+  if (hashKey) return hashKey;
+  const file = path.join(process.env.JERICHO_DATA_DIR || path.join(ROOT, "data"), "call-key");
+  try {
+    hashKey = fs.readFileSync(file);
+  } catch {
+    hashKey = crypto.randomBytes(32);
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, hashKey, { mode: 0o600 });
+    } catch {
+      /* in memory only for this run */
+    }
+  }
+  return hashKey;
+}
+
+/** A keyed hash of the +1 number: matches the same number later without storing it. */
+export function numberKey(number) {
+  const n = normalizeNumber(number, "1");
+  if (!n || n.startsWith("short:")) return null;
+  return crypto.createHmac("sha256", numberHashKey()).update(n).digest("base64url").slice(0, 22);
+}
+
+// Country code 1 outside the US: Canada, and the Caribbean and Atlantic islands (charged as
+// international calls, and the usual "one ring" scam numbers).
+const NON_US_AREA_CODES = new Set(
+  (
+    "204 226 236 249 250 257 263 289 306 343 354 365 367 368 382 387 403 416 418 428 431 437 438 450 460 468 474 506 514 519 548 579 581 584 587 604 613 639 647 672 683 705 709 742 753 778 780 782 807 819 825 867 873 879 902 905 942 " +
+    "242 246 264 268 284 345 441 473 649 658 664 721 758 767 784 809 829 849 868 869 876"
+  ).split(" "),
+);
+// Pay-per-call, carrier and personal-service codes: can cost money to call.
+const PREMIUM_AREA_CODES = new Set(["900", "976", "500", "521", "522", "523", "524", "525", "526", "527", "528", "529", "533", "544", "566", "577", "588", "700"]);
 
 /** "+1 (555) 123-4567", "555.123.4567", "15551234567" -> "+15551234567" (or null). */
 export function normalizeNumber(raw, defaultCountryCode = "1") {
@@ -68,19 +122,15 @@ export function checkNumber(raw) {
   if (EMERGENCY_AND_SPECIAL.has(digits) || /^1?[2-9]11$/.test(digits)) {
     return { ok: false, reason: "I can't call emergency or special service numbers." };
   }
-  const country = cfg.allowedCountryCodes.find((cc) => digits.startsWith(cc));
-  if (!country) return { ok: false, reason: "I can only call numbers in your own country." };
-  if (country === "1") {
-    if (digits.length !== 11) return { ok: false, reason: "That US or Canadian number has the wrong number of digits." };
-    const area = digits.slice(1, 4);
-    const exchange = digits.slice(4, 7);
-    if (["900", "976"].includes(area) || exchange === "976") return { ok: false, reason: "I won't call premium-rate numbers." };
-    if (/^[01]/.test(area) || /^[01]/.test(exchange)) return { ok: false, reason: "That isn't a valid North American number." };
-    const fictional = exchange === "555" && /^01/.test(digits.slice(7));
-    if (fictional && !cfg.testMode) return { ok: false, reason: "That's a fictional 555 number." };
-  } else if (country === "44" && /^44(9|87|70)/.test(digits)) {
-    return { ok: false, reason: "I won't call premium-rate numbers." };
-  }
+  if (!digits.startsWith("1")) return { ok: false, reason: "I can only call US numbers, starting with plus one." };
+  if (digits.length !== 11) return { ok: false, reason: "That US number has the wrong number of digits." };
+  const area = digits.slice(1, 4);
+  const exchange = digits.slice(4, 7);
+  if (PREMIUM_AREA_CODES.has(area) || exchange === "976") return { ok: false, reason: "I won't call premium-rate or toll numbers." };
+  if (/^[01]/.test(area) || /^[01]/.test(exchange) || /^\d11$/.test(area)) return { ok: false, reason: "That isn't a valid US number." };
+  if (NON_US_AREA_CODES.has(area)) return { ok: false, reason: "I can only call US numbers. That one is outside the US, even though it starts with plus one." };
+  const fictional = exchange === "555" && /^01/.test(digits.slice(7));
+  if (fictional && !cfg.testMode) return { ok: false, reason: "That's a fictional 555 number." };
   return { ok: true, number: n };
 }
 
@@ -111,41 +161,54 @@ export function checkOwnerNumber(raw = secrets.myPhoneNumber) {
   return { ok: true, number: owner };
 }
 
-// Business calls never go to people. Code-level, before the Claude screen.
-const PERSONAL =
-  /\b(my (?:mom|mum|mother|dad|father|parents?|wife|husband|partner|girlfriend|boyfriend|son|daughter|kids?|brother|sister|sibling|cousin|aunt|uncle|grandma|grandpa|grandmother|grandfather|friend|buddy|ex|neighbou?r|boss|coworker|colleague)|say hi to|say hello to|catch up with|check (?:in|up) on (?:him|her|them)|chat with (?:him|her|them))\b/i;
 
+// Threats, harassment, scams, deception, and impersonating anyone (Sammy, another person or a business).
 const BAD_INTENT =
-  /\b(pretend|impersonat|pose as|posing as|say (?:you are|you're|i am|i'm) (?!an? (?:ai|assistant))|threat|threaten|harass|scare|insult|prank|revenge|stalk|keep calling|spam|scam|gift ?cards?|wire (?:money|transfer)|bitcoin|crypto|irs|social security|warrant|arrest|lawsuit|fake|lie to|trick|refund (?:scam|fraud)|verify (?:their|your) account|bank details|one[- ]time code|otp|two[- ]factor)\b/i;
+  /\b(pretend|impersonat|pose as|posing as|as if (?:you were|you're|it's) (?!an? (?:ai|assistant))|say (?:you are|you're|i am|i'm|it's|this is) (?!an? (?:ai|assistant))|say (?:you're|you are) (?:calling )?from|act like|threat|threaten|intimidat|blackmail|extort|harass|scare|insult|prank|revenge|stalk|keep calling|call (?:them|him|her) (?:again and again|over and over|every)|spam|scam|deceiv|decept|mislead|gift ?cards?|wire (?:money|transfer)|bitcoin|crypto|irs|social security|warrant|arrest|lawsuit|fake|lie to|trick|refund (?:scam|fraud)|verify (?:their|your) account|bank details|one[- ]time code|otp|two[- ]factor)\b/i;
 
 /** Fast keyword screen on the goal and script. A Claude screen runs after this. */
 export function checkIntentKeywords(input) {
   const text = [input.goal, input.plan, input.details?.notes, input.businessName].filter(Boolean).join(" ");
   if (!PURPOSES.includes(input.purpose)) {
-    return { ok: false, reason: "I only make calls for reservations, checking hours, appointments or a simple question." };
+    return { ok: false, reason: "I make calls for reservations, checking hours, appointments, a simple question, or a personal message." };
   }
   if (BAD_INTENT.test(text)) {
-    return { ok: false, reason: "I can't make that call. I only make honest, ordinary calls like bookings, hours and appointments." };
+    return { ok: false, reason: "I can't make that call. I only make honest, ordinary calls, always as an AI assistant calling for you: no threats, harassment, scams, tricks or pretending to be anyone." };
   }
   if (isSensitive(text)) {
     return { ok: false, reason: "I won't share passwords, card numbers or ID numbers on a call." };
   }
-  if (PERSONAL.test(text)) {
-    return { ok: false, reason: "I only call businesses, or your own phone. I can't call other people." };
-  }
+
   return { ok: true };
 }
 
-/** Daily limits: total calls, and calls to the same number (so it can't be used to pester anyone). */
-export function checkLimits(calls, number, testMode) {
+/**
+ * Limits, so Jericho can't be used to pester anyone or blast numbers:
+ *   - calls.maxCallsPerDay in total (default 10; real calls)
+ *   - at most 2 calls a day to the same number
+ *   - 10 minutes before the same number again
+ *   - at most 4 real calls in any hour
+ * `key` is the number's keyed hash (numberKey) or "owner".
+ */
+export function checkLimits(calls, key, testMode, now = Date.now()) {
   const cfg = callSettings();
-  const dayAgo = Date.now() - 24 * 3600_000;
-  const recent = calls.filter((c) => !c.blocked && Boolean(c.test) === Boolean(testMode) && Date.parse(c.createdAt) > dayAgo);
+  const mine = calls.filter((c) => !c.blocked && Boolean(c.test) === Boolean(testMode));
+  const recent = mine.filter((c) => Date.parse(c.createdAt) > now - 24 * 3600_000);
   if (!testMode && recent.length >= cfg.maxCallsPerDay) {
     return { ok: false, reason: `I've already made ${recent.length} calls in the last day, which is the limit. Change calls.maxCallsPerDay in settings to allow more.` };
   }
-  if (recent.filter((c) => c.number === number).length >= cfg.maxCallsPerNumberPerDay) {
+  if (!testMode && key !== "owner" && recent.filter((c) => Date.parse(c.createdAt) > now - 3600_000).length >= MAX_PER_HOUR) {
+    return { ok: false, reason: "I've made several calls in the last hour already. I don't make calls in bulk; try again later." };
+  }
+  const same = recent.filter((c) => (c.numberKey || c.number) === key);
+  if (same.length >= cfg.maxCallsPerNumberPerDay) {
     return { ok: false, reason: "I've already called that number enough times today." };
+  }
+  const last = Math.max(0, ...same.map((c) => Date.parse(c.createdAt)));
+  // owner calls ("call me") keep working as before: no cooldown on your own phone
+  if (key !== "owner" && last && now - last < COOLDOWN_MS) {
+    const mins = Math.ceil((COOLDOWN_MS - (now - last)) / 60_000);
+    return { ok: false, reason: `I called that number less than 10 minutes ago. Wait about ${mins} more minute${mins === 1 ? "" : "s"}.` };
   }
   return { ok: true };
 }
@@ -166,11 +229,12 @@ export async function screenWithClaude(client, input) {
       max_tokens: 2000,
       output_config: { effort: "low", format: { type: "json_schema", schema: SCREEN_SCHEMA } },
       system:
-        "You screen outbound phone calls an AI assistant will place on its owner's behalf. Allow only ordinary, honest errands with a business: " +
-        "restaurant reservations, checking opening hours, booking or moving an appointment, or one simple factual question. " +
-        "Block anything involving harassment, threats, pranks, impersonating someone (the assistant must say it is an AI calling for its owner), " +
-        "deception, scams, debt collection, sales or marketing, political calls, collecting personal data, payments or money transfers, " +
-        "calling private individuals, or emergencies. Reason is one short sentence the assistant can say aloud.",
+        "You screen outbound phone calls an AI assistant will place on its owner's behalf. It always says up front that it's an AI assistant calling for its owner. " +
+        "Allow ordinary, honest calls: errands with a business (reservations, opening hours, appointments, a simple question), and calls to a person the owner knows " +
+        "to pass on a message, ask a question, invite them, remind them or check in. " +
+        "Block anything involving harassment, threats, intimidation, pranks, impersonating anyone (the owner, another person or a business), " +
+        "deception or lying about who is calling, scams, debt collection, sales or marketing, political calls, calling many people (bulk), " +
+        "collecting personal data, payments or money transfers, someone who asked not to be called, or emergencies. Reason is one short sentence the assistant can say aloud.",
       messages: [{ role: "user", content: JSON.stringify(input) }],
     });
     if (response.stop_reason === "refusal") return { ok: false, reason: "I can't make that call." };

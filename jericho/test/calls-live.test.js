@@ -104,7 +104,10 @@ test("a real call: dial, speak, listen, hang up, announce, never leak", async ()
   assert.equal(saved.durationSec, 48);
 
   // Privacy: your number is hidden on the /calls page; keys never reach the log.
-  assert.match(JSON.stringify(saved.transcript), /\+12127364567/, "kept in the private file");
+  // only the last 4 digits of any number are kept in the call record, even in what was said
+  assert.match(JSON.stringify(saved.transcript), /\[phone \.\.\.4567\]/);
+  assert.doesNotMatch(fs.readFileSync(path.join(tmp, "data", "calls.json"), "utf8"), /2127364567|2127365000/);
+  assert.equal(saved.number, "...5000");
   assert.doesNotMatch(JSON.stringify(publicCalls()), /2127364567/);
   const log = fs.readFileSync(path.join(tmp, "actions.log"), "utf8");
   for (const secret of [TOKEN, SID, MINE, "2127364567", "el-test-key", "local-secret"]) assert.ok(!log.includes(secret), `log leaks ${secret}`);

@@ -83,9 +83,10 @@ const SYSTEM = `You are ${name}, a personal voice assistant running on ${owner}'
 - Never store passwords, API keys, card numbers, ID numbers or similar secrets, even if they insist: say briefly that you can't store those.
 
 # Phone calls
-- You can phone businesses for ordinary errands: reservations, checking hours, appointments, or one simple question. Nothing else: no calling people, no emergencies, nothing deceptive.
-- The one exception is ${owner} themselves: "call me", "call my phone", "give me a call and say hi" mean call_owner. You already have their number; never ask for it or say it.
-- Before calling, you need the business name and its number (search for it or ask, never guess), and for bookings the date, time, party size and the name to book under (default ${owner} unless told otherwise). Ask for what's missing in one short question, then call make_call. The system reads the plan back and waits for a yes. The call runs in the background and they hear the result when it ends.
+- You can phone businesses for ordinary errands (reservations, checking hours, appointments, one simple question) and people ${owner} knows, to pass on a message, ask a question, invite or remind them (purpose personal). Use the number they said, or a saved contact's name ("call Luke": contact). One call at a time, never in bulk, no emergencies, nothing deceptive: every call opens by saying you're an AI assistant calling for ${owner}, and you never pretend to be them or anyone else.
+- ${owner} themselves: "call me", "call my phone", "give me a call and say hi" mean call_owner. You already have their number; never ask for it or say it.
+- For a business you need its name and number (search for it or ask, never guess), and for bookings the date, time, party size and the name to book under (default ${owner} unless told otherwise). Ask for what's missing in one short question, then call make_call. The system reads the plan and the number back and waits for a yes. The call runs in the background and they hear the result when it ends.
+- Contacts: save_contact ("save Luke's number as..."), list_contacts ("who's in my contacts"), delete_contact. Only record a call if they explicitly ask (record true).
 
 # The PC
 - You can control this PC: open apps and web pages, volume, media keys, timers, the clipboard, and list, read and search files in the allowed folders (Desktop, Documents, Downloads and the Cheats folder unless set otherwise). Paths start with the folder name, e.g. "Documents/notes.txt".
@@ -202,6 +203,8 @@ function recapOf(transcript, pairs = 3) {
   const lines = transcript.slice(-pairs * 2).map((t) => `${t.who === "user" ? "They said" : "You said"}: ${String(t.text).slice(0, 200)}`);
   return lines.length ? `Earlier in this conversation (recap, the full history was trimmed to stay fast):\n${lines.join("\n")}` : "";
 }
+
+const CALL_TOOLS = new Set(["make_call", "call_owner"]);
 
 // When the small model fails (unknown model, overloaded), the strong one takes over for a while.
 let fastBrokenUntil = 0;
@@ -681,6 +684,9 @@ export class Brain {
           logAction("action_blocked", { sessionId, tool: t.name, reason: check.reason });
         }
       }
+      // One call at a time: never several numbers in one go.
+      const callUses = toolUses.filter((t) => CALL_TOOLS.has(t.name) && !prefailed[t.id]);
+      for (const t of callUses.slice(1)) prefailed[t.id] = "One call at a time. I don't call several numbers at once.";
       const needYes = risky.filter((t) => !prefailed[t.id]);
       if (needYes.length > 0) {
         s.pending = { toolUses, prefailed, expiresAt: Date.now() + CONFIRM_TIMEOUT_MS };

@@ -10,8 +10,10 @@ import { track } from "../cancel.js";
 import { jobEvents } from "../tools/claudeCode.js";
 import { synthesize } from "../tts.js";
 import { agentTurn, disclosure, openingRequest, ownerGreeting, pickScenario, simulatedReply } from "./agent.js";
-import { callSettings, checkIntentKeywords, checkLimits, checkNumber, checkOwnerNumber, isOwnerNumber, normalizeNumber, screenWithClaude, speakNumber } from "./policy.js";
-import { isSensitive } from "../secrets.js";
+import { callSettings, checkIntentKeywords, checkLimits, checkNumber, checkOwnerNumber, isOwnerNumber, last4, normalizeNumber, numberKey, screenWithClaude, speakNumber } from "./policy.js";
+import { addDoNotCall, isDoNotCall, wantsNoCalls } from "./dnc.js";
+import { findContact } from "../contacts.js";
+import { isSensitive, maskPhones } from "../secrets.js";
 
 const DATA_DIR = process.env.JERICHO_DATA_DIR || path.join(ROOT, "data");
 const CALLS_FILE = path.join(DATA_DIR, "calls.json");
@@ -36,10 +38,31 @@ const audio = new Map(); // audioId -> Promise<Buffer | null>
 
 // ---- storage ---------------------------------------------------------------------
 
+/**
+ * A call as it's written to data/calls.json: only the last 4 digits of any number, in the
+ * record itself and in what was said. Older records with a full number are converted too.
+ */
+function storable(call) {
+  const { client: _c, ...rest } = call;
+  const out = JSON.parse(maskPhones(JSON.stringify(rest)));
+  if (out.number && out.number !== OWNER && /\d{5,}/.test(String(out.number).replace(/\D/g, "")) ) {
+    out.numberKey ||= isOwnerNumber(out.number) ? OWNER : numberKey(out.number);
+    out.number = isOwnerNumber(call.number) ? OWNER : last4(out.number);
+  }
+  return out;
+}
+
 export function listCalls() {
   try {
     const data = JSON.parse(fs.readFileSync(CALLS_FILE, "utf8"));
-    return Array.isArray(data.calls) ? data.calls : [];
+    if (!Array.isArray(data.calls)) return [];
+    // records from before only the last 4 digits were kept: convert them once
+    if (data.calls.some((c) => c.number && c.number !== OWNER && String(c.number).replace(/\D/g, "").length > 4)) {
+      const fixed = data.calls.map(storable);
+      fs.writeFileSync(CALLS_FILE, `${JSON.stringify({ calls: fixed }, null, 2)}\n`);
+      return fixed;
+    }
+    return data.calls;
   } catch {
     return [];
   }
@@ -47,8 +70,7 @@ export function listCalls() {
 
 function saveCall(call) {
   const calls = listCalls().filter((c) => c.id !== call.id);
-  const { client: _c, ...stored } = call;
-  calls.push(stored);
+  calls.push(storable(call));
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const tmp = `${CALLS_FILE}.tmp`;
   fs.writeFileSync(tmp, `${JSON.stringify({ calls: calls.slice(-200) }, null, 2)}\n`);
@@ -81,33 +103,53 @@ function inputHash(input) {
 }
 
 /** Every rule except the dial itself. Runs before you're asked to confirm, and again before dialing. */
+/** Who to call: the number said, or a saved contact's. { ok, number, via } or { ok: false, reason }. */
+export function resolveTarget(input) {
+  if (input.contact && !input.phoneNumber) {
+    const c = findContact(input.contact);
+    if (!c) return { ok: false, reason: `I don't have a contact called ${String(input.contact).slice(0, 40)}. Tell me their number, or say "save ${String(input.contact).slice(0, 40)}'s number as" and the number.` };
+    return { ok: true, raw: c.number, via: "contact" };
+  }
+  if (!input.phoneNumber) return { ok: false, reason: "What number should I call? Say it, or the name of a saved contact." };
+  return { ok: true, raw: input.phoneNumber, via: "number" };
+}
+
+/** Every rule except the dial itself. Runs before you're asked to confirm, and again before dialing. */
 export async function precheck(input, client, { screen = true } = {}) {
   const cfg = callSettings();
   const kw = checkIntentKeywords(input);
   if (!kw.ok) return kw;
-  const num = checkNumber(input.phoneNumber);
+  const target = resolveTarget(input);
+  if (!target.ok) return target;
+  const num = checkNumber(target.raw);
   if (!num.ok) return num;
-  const limits = checkLimits(listCalls(), isOwnerNumber(num.number) ? OWNER : num.number, cfg.testMode);
+  const own = isOwnerNumber(num.number);
+  // the do-not-call list: checked on every call
+  if (!own && isDoNotCall(num.number)) return { ok: false, reason: "That number is on the do-not-call list: they asked not to be called again, so I won't." };
+  const key = own ? OWNER : numberKey(num.number);
+  const limits = checkLimits(listCalls(), key, cfg.testMode);
   if (!limits.ok) return limits;
   if (!cfg.testMode) {
     const notReady = liveReady();
     if (notReady) return { ok: false, reason: notReady };
+    if (realCallInProgress()) return { ok: false, reason: "I'm already on a call. One call at a time." };
   }
   // Calling your own phone (MY_PHONE_NUMBER) is a rehearsal: you play the business.
-  const own = isOwnerNumber(num.number);
   if (screen && !own) {
-    const key = inputHash(input);
-    if (!screened.has(key)) {
+    const keyHash = inputHash(input);
+    if (!screened.has(keyHash)) {
       const verdict = await screenWithClaude(client, input);
       if (!verdict.ok) return verdict;
-      screened.set(key, Date.now());
+      screened.set(keyHash, Date.now());
     }
   }
-  return { ok: true, number: num.number, testMode: cfg.testMode };
+  return { ok: true, number: num.number, key, own, testMode: cfg.testMode };
 }
 
+const realCallInProgress = () => [...live.values()].some((st) => st.call && !st.call.test && st.call.status !== "ended");
+
 function blocked(input, reason) {
-  logAction("call_blocked", { business: input.businessName, number: isOwnerNumber(input.phoneNumber) ? "owner" : input.phoneNumber, purpose: input.purpose, reason });
+  logAction("call_blocked", { business: input.businessName, number: input.contact && !input.phoneNumber ? "contact" : isOwnerNumber(input.phoneNumber) ? "owner" : last4(input.phoneNumber), purpose: input.purpose, reason });
 }
 
 // ---- owner calls ("call me") ------------------------------------------------------------
@@ -177,8 +219,8 @@ export async function startOwnerCall(input, client) {
     simulate(call, client).catch((err) => finish(call, "failed", `The test call hit an error: ${err.message}`));
   } else {
     dialTwilio(call, client).catch((err) => {
-      logAction("call_error", { id: call.id, error: err.message, cause: errorDetails(err) });
-      finish(call, "failed", "Twilio couldn't place the call.");
+      logAction("call_error", { id: call.id, error: err.message, code: err.twilioCode, cause: errorDetails(err) });
+      finish(call, "failed", err.friendly || "Twilio couldn't place the call.");
     });
   }
   return { ok: true, started: true, callId: call.id, testMode: call.test };
@@ -198,8 +240,11 @@ export async function startCall(input, client) {
     createdAt: new Date().toISOString(),
     test: cfg.testMode,
     businessName: input.businessName,
-    number: isOwnerNumber(check.number) ? OWNER : check.number, // your own number is never stored
+    // only the last 4 digits are stored (plus a keyed hash for the limits); never the full number
+    number: check.own ? OWNER : last4(check.number),
+    numberKey: check.key,
     purpose: input.purpose,
+    ...(input.record ? { record: true } : {}),
     goal: input.goal,
     details: input.details || {},
     plan: input.plan,
@@ -212,14 +257,14 @@ export async function startCall(input, client) {
   saveCall(call);
   // the kill switch ("Jericho, stop") ends the call: a test call stops, a real one is hung up
   untrackers.set(call.id, track("call", call.businessName, () => cancelCall(call)));
-  logAction("call_started", { id: call.id, test: call.test, business: call.businessName, number: call.number, purpose: call.purpose, goal: call.goal });
+  logAction("call_started", { id: call.id, test: call.test, business: call.businessName, number: call.number, purpose: call.purpose, goal: call.goal, record: Boolean(call.record) });
 
   if (call.test) {
-    simulate(call, client).catch((err) => finish(call, "failed", `The test call hit an error: ${err.message}`));
+    simulate(call, client, check.number).catch((err) => finish(call, "failed", `The test call hit an error: ${err.message}`));
   } else {
-    dialTwilio(call, client).catch((err) => {
-      logAction("call_error", { id: call.id, error: err.message, cause: errorDetails(err) });
-      finish(call, "failed", "Twilio couldn't place the call.");
+    dialTwilio(call, client, check.number).catch((err) => {
+      logAction("call_error", { id: call.id, error: err.message, code: err.twilioCode, cause: errorDetails(err) });
+      finish(call, "failed", err.friendly || "Twilio couldn't place the call.");
     });
   }
   return { ok: true, started: true, callId: call.id, testMode: call.test };
@@ -228,6 +273,8 @@ export async function startCall(input, client) {
 // ---- finishing -------------------------------------------------------------------------
 
 const SPOKEN = {
+  delivered: (c) => `I called ${c.businessName}. ${c.summary}`,
+  do_not_call: (c) => `${c.businessName} asked not to be called again, so I ended the call and put the number on the do-not-call list.`,
   booked: (c) => `Good news from ${c.businessName}. ${c.summary}`,
   info_obtained: (c) => `I called ${c.businessName}. ${c.summary}`,
   not_available: (c) => `${c.businessName} couldn't do it. ${c.summary}`,
@@ -267,11 +314,11 @@ function finish(call, outcome, summary) {
 
 // ---- test mode -------------------------------------------------------------------------
 
-async function simulate(call, client) {
+async function simulate(call, client, to = null) {
   const cfg = callSettings();
   const scenario = pickScenario(call.purpose);
   call.scenario = scenario;
-  live.set(call.id, { answeredAt: null });
+  live.set(call.id, { answeredAt: null, to });
   if (scenario === "no_answer") {
     await new Promise((r) => setTimeout(r, 2500));
     if (call.status === "ended") return;
@@ -280,7 +327,7 @@ async function simulate(call, client) {
   live.get(call.id).answeredAt = Date.now();
   call.status = "in-progress";
   const opening = await openingRequest(client, call);
-  call.transcript.push({ who: "agent", text: `${call.owner ? ownerGreeting() : disclosure()} ${opening}` });
+  call.transcript.push({ who: "agent", text: `${call.owner ? ownerGreeting() : disclosure(call)} ${opening}` });
   saveCall(call);
   let simulatedSeconds = 8;
   for (let turn = 0; turn < MAX_TURNS; turn++) {
@@ -289,8 +336,18 @@ async function simulate(call, client) {
     if (call.status === "ended") return;
     call.transcript.push({ who: "them", text: reply });
     simulatedSeconds += 8 + reply.split(/\s+/).length / 2.5;
+    if (wantsNoCalls(reply)) {
+      call.transcript.push({ who: "agent", text: stopLine(call) });
+      call.durationSec = Math.round(simulatedSeconds);
+      return finish(call, ...noMoreCalls(call, to));
+    }
     const wrapUp = simulatedSeconds > cfg.maxMinutes * 60 - 20;
     const next = await agentTurn(client, call, { wrapUp });
+    if (next.do_not_call && !call.owner) {
+      call.transcript.push({ who: "agent", text: next.say || stopLine(call) });
+      call.durationSec = Math.round(simulatedSeconds);
+      return finish(call, ...noMoreCalls(call, to));
+    }
     if (next.say) call.transcript.push({ who: "agent", text: next.say });
     simulatedSeconds += 3 + next.say.split(/\s+/).length / 2.5;
     saveCall(call);
@@ -318,19 +375,37 @@ function newAudio(text) {
   return id;
 }
 
-async function dialTwilio(call, client) {
+/** Twilio's errors, in plain words. 21219: an unverified number on a trial account. */
+export function twilioProblem(status, body = {}) {
+  const code = Number(body.code) || null;
+  const msg = String(body.message || "");
+  let friendly = "Twilio couldn't place the call.";
+  if (code === 21219 || /unverified|trial account/i.test(msg)) friendly = "Twilio won't dial unverified numbers on a trial account. Verify the number in the Twilio console, or upgrade the account.";
+  else if (code === 21215 || code === 13227 || /geo.?permission|international permission/i.test(msg)) friendly = "Twilio's calling permissions for that area are turned off in your account.";
+  else if (code === 21210 || code === 21212) friendly = "Twilio says the calling number in TWILIO_PHONE_NUMBER isn't one of your Twilio numbers.";
+  else if (status === 401 || code === 20003) friendly = "Twilio didn't accept the account SID and auth token in the dot env file.";
+  else if (code === 21211 || code === 21214) friendly = "Twilio says that number isn't a valid phone number.";
+  const err = new Error(`Twilio ${status}${code ? ` (${code})` : ""}: ${msg.replace(/\+?\d[\d\s().-]{6,}\d/g, "[number]") || "error"}`);
+  err.friendly = friendly;
+  err.twilioCode = code;
+  return err;
+}
+
+async function dialTwilio(call, client, dialTo = null) {
   const cfg = callSettings();
   // An owner call is checked again and its number looked up only now, from .env.
-  let to = call.number;
+  let to = dialTo;
   if (call.owner || call.number === OWNER) {
     const own = checkOwnerNumber();
     if (!own.ok) throw new Error("the owner number isn't set up");
     to = own.number;
   }
   const opening = await openingRequest(client, call);
-  const text = `${call.owner ? ownerGreeting() : disclosure()} ${opening}`;
+  if (!to) throw new Error("no number to dial");
+  const text = `${call.owner ? ownerGreeting() : disclosure(call)} ${opening}`;
   // One shared copy of the call for every webhook, so their saves can't overwrite each other.
-  live.set(call.id, { call, client, opening: text, audioId: newAudio(text), silences: 0, turns: 0, answeredAt: null });
+  // The full number lives only here, in memory, for the length of the call.
+  live.set(call.id, { call, client, to, opening: text, audioId: newAudio(text), silences: 0, turns: 0, answeredAt: null });
 
   const base = cfg.publicUrl;
   const form = new URLSearchParams({
@@ -344,6 +419,7 @@ async function dialTwilio(call, client) {
     Timeout: "30", // seconds to let it ring
   });
   for (const ev of ["initiated", "ringing", "answered", "completed"]) form.append("StatusCallbackEvent", ev);
+  if (call.record) form.set("Record", "true"); // only when you asked, and the opening line says so
   const auth = Buffer.from(`${secrets.twilioSid}:${secrets.twilioToken}`).toString("base64");
   const res = await keepAliveFetch(`https://api.twilio.com/2010-04-01/Accounts/${secrets.twilioSid}/Calls.json`, {
     method: "POST",
@@ -351,7 +427,7 @@ async function dialTwilio(call, client) {
     body: form,
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`Twilio ${res.status}: ${body.message || "error"}`);
+  if (!res.ok) throw twilioProblem(res.status, body);
   call.twilioSid = body.sid;
   if (call.status === "dialing") call.status = "ringing";
   saveCall(call);
@@ -431,6 +507,8 @@ export async function handleTwilio(kind, callId, params) {
     state.silences = 0;
     state.turns++;
     call.transcript.push({ who: "them", text: heard });
+    // "Stop", "don't call again", "take me off your list": end politely at once, never call again.
+    if (wantsNoCalls(heard)) return endNoMoreCalls(state, call);
     const elapsed = (Date.now() - state.answeredAt) / 1000;
     const wrapUp = elapsed > cfg.maxMinutes * 60 - 30 || state.turns >= MAX_TURNS;
     let next;
@@ -440,6 +518,7 @@ export async function handleTwilio(kind, callId, params) {
       logAction("call_error", { id: call.id, error: err.message, cause: errorDetails(err) });
       next = { say: `Sorry, I'm having trouble on my end. ${cfg.ownerName} will call you back. Goodbye.`, end_call: true, outcome: "needs_callback", summary: "The assistant had a technical problem mid-call." };
     }
+    if (next.do_not_call && !call.owner) return endNoMoreCalls(state, call, next.say);
     if (next.say) call.transcript.push({ who: "agent", text: next.say });
     saveCall(call);
     const speak = next.say ? speakTwiml(state, newAudio(next.say), next.say) : "";
@@ -454,6 +533,26 @@ export async function handleTwilio(kind, callId, params) {
     return twiml(gatherTwiml(call, speak));
   }
   return twiml("<Hangup/>");
+}
+
+// ---- do not call ----------------------------------------------------------------------------
+const stopLine = (call) => (call.owner ? "Okay, I'll stop. Bye!" : "Understood. I won't call this number again. Sorry to bother you. Goodbye.");
+
+/** They asked not to be called: the number goes on the do-not-call list (except your own). */
+function noMoreCalls(call, to) {
+  if (call.owner) return ["delivered", "You asked me to stop, so I hung up."];
+  if (to) addDoNotCall(to, "asked during a call");
+  return ["do_not_call", "They asked not to be called again, so the number is on the do-not-call list."];
+}
+
+function endNoMoreCalls(state, call, said) {
+  const line = said || stopLine(call);
+  call.transcript.push({ who: "agent", text: line });
+  const [outcome, summary] = noMoreCalls(call, state.to);
+  Object.assign(state, { outcome, summary });
+  Object.assign(call, { outcome, summary });
+  saveCall(call);
+  return twiml(`<Say>${xml(line)}</Say><Hangup/>`);
 }
 
 /** The audio Twilio plays. Waits for ElevenLabs if it's still generating. */
@@ -471,6 +570,7 @@ export function describePlan(input, number) {
   bits.push(`The goal: ${String(input.goal).replace(/[.!?]+$/, "")}.`);
   if (d.name && !String(input.goal).includes(d.name)) bits.push(`The booking name is ${d.name}.`);
   bits.push(`I'll start by saying I'm an AI assistant calling for ${cfg.ownerName}, then: ${String(input.plan).replace(/[.!?]+$/, "")}.`);
+  if (input.record) bits.push("You asked me to record it, so I'll say at the start that the call is being recorded.");
   if (cfg.testMode) bits.push("This is a test call, so nobody will actually be dialed.");
   bits.push("Should I dial?");
   return bits.join(" ");
