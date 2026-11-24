@@ -39,7 +39,7 @@ export function cleanLatency(entry = {}) {
     if (entry[s] != null && entry[s] !== "" && Number.isFinite(v) && v >= 0 && v <= MAX_MS) out[s] = Math.round(v);
   }
   if (ROUTES.includes(entry.route)) out.route = entry.route;
-  if (["elevenlabs", "browser", "mixed"].includes(entry.voice)) out.voice = entry.voice;
+  if (["elevenlabs", "openai", "browser", "mixed"].includes(entry.voice)) out.voice = entry.voice;
   if (Array.isArray(entry.models)) {
     const models = entry.models.map(String).filter((m) => /^claude-[a-z0-9.-]{1,40}$/.test(m)).slice(0, 4);
     if (models.length) out.models = models;

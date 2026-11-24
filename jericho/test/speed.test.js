@@ -307,7 +307,7 @@ test("latency entries keep only numbers and labels: nothing you said can reach l
   assert.deepEqual(clean, { sentence: 812, playing: 1020, route: "fast", voice: "elevenlabs", models: ["claude-haiku-5-5"], early: true, fallback: "browser-voice" });
   assert.deepEqual(cleanLatency({ route: "weird", voice: "x", sentence: null }), {});
   const server = fs.readFileSync(new URL("../server/index.js", import.meta.url), "utf8");
-  assert.match(server, /cleanLatency\(await readJson\(req\)\)/);
+  assert.match(server, /const entry = cleanLatency\(body\);/);
   assert.match(server, /latency\.log/);
 });
 

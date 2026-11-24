@@ -6,6 +6,7 @@ import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, s
 import { ALARM_PERFORMANCE, chooseAlarmPerformance, createAlarmRinger, sharedAlarmCache, DEFAULT_ALARM_SOUND, DEFAULT_ALARM_VOLUME, normalizeSound, previewAlarm } from "./alarm.js";
 import { alarmCommand } from "./alarmrules.js";
 import { formatReadout, LatencyTracker, turnLatency } from "./latency.js";
+import { isEnglish, pickVoice, sortVoices, tuneSpeech } from "./voices.js";
 import { compareEarly, earlyCommitDelay } from "./endpoint.js";
 import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
@@ -113,11 +114,15 @@ let config = {
   conversationTimeoutSeconds: 30,
   speechLang: "en-US",
   elevenLabsEnabled: false,
+  voice: { provider: "browser", configured: "browser", cost: "free (your browser's own voice)", browserVoice: "", browserRate: 0.92, browserPitch: 0.85, calls: "twilio" },
 };
+/** Does a server voice (OpenAI or ElevenLabs) speak? With the default browser voice, nothing is fetched. */
+const serverVoice = () => ["openai", "elevenlabs"].includes(config.voice?.provider);
 api("/api/config")
   .then((c) => {
     config = { ...config, ...c };
     applyBargeSettings();
+    showVoiceSettings();
     $("name").textContent = c.assistantName;
     if (mode === "off" || mode === "idle") setMode(mode);
     document.title = c.assistantName;
@@ -215,13 +220,49 @@ function preload(text) {
   assignPlayer(text, currentPlayer);
 }
 
+// ---- the browser's own voice (free) ---------------------------------------------------------
+// Voice, rate and pitch: the sun panel's choice, else settings.json voice.*, else the best
+// installed English male voice (Edge's "Online (Natural)" ones first).
+const BROWSER_VOICE_KEY = "jericho-browser-voice";
+const VOICE_RATE_KEY = "jericho-voice-rate";
+const VOICE_PITCH_KEY = "jericho-voice-pitch";
+let installedVoices = [];
+function loadVoices() {
+  if (!("speechSynthesis" in window)) return [];
+  installedVoices = speechSynthesis.getVoices() || [];
+  return installedVoices;
+}
+if ("speechSynthesis" in window) {
+  loadVoices();
+  speechSynthesis.addEventListener?.("voiceschanged", () => {
+    loadVoices();
+    showVoiceSettings();
+  });
+}
+const chosenVoice = () => pickVoice(installedVoices.length ? installedVoices : loadVoices(), store.get(BROWSER_VOICE_KEY) || config.voice?.browserVoice || "", config.speechLang);
+const speechTuning = () => tuneSpeech({ rate: store.get(VOICE_RATE_KEY) ?? config.voice?.browserRate, pitch: store.get(VOICE_PITCH_KEY) ?? config.voice?.browserPitch });
+
+/** An utterance in the chosen voice, at the calm rate and pitch. */
+function makeUtterance(text, volume = voiceVolume()) {
+  const u = new SpeechSynthesisUtterance(text);
+  const v = chosenVoice();
+  if (v) u.voice = v;
+  u.lang = v?.lang || config.speechLang;
+  const { rate, pitch } = speechTuning();
+  u.rate = rate;
+  u.pitch = pitch;
+  u.volume = volume;
+  return u;
+}
+
+// characters spoken this session, per provider (counts only; also logged per turn on the server)
+const sessionChars = { browser: 0, openai: 0, elevenlabs: 0 };
+
 function browserVoice(text, stats) {
   viz.setSpeechSource(null, true); // no audio to analyse: smooth fake pulse
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window)) return resolve();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = config.speechLang;
-    u.volume = voiceVolume();
+    const u = makeUtterance(text);
     u.onstart = () => {
       stats.firstAudio ??= performance.now();
       if (stats.lat) stats.lat.audioByte ??= performance.now(); // no bytes to wait for: same moment
@@ -298,9 +339,9 @@ function createTurn() {
     cancelled: false,
     queue: [],
     done: false,
-    useBrowser: !config.elevenLabsEnabled,
+    useBrowser: !serverVoice(),
     playing: false,
-    stats: { voices: new Set(), lat: {} },
+    stats: { voices: new Set(), lat: {}, chars: {} },
     ack: null, // a quick "On it." playing: the answer waits for it to end, so they never overlap
     push(sentence) {
       turn.queue.push(sentence);
@@ -350,15 +391,19 @@ async function playTurn(turn) {
     if (!turn.useBrowser) {
       try {
         await elevenLabsVoice(sentence, turn.stats, turn.queue[0]);
-        turn.stats.voices.add("elevenlabs");
+        const provider = config.voice.provider;
+        turn.stats.voices.add(provider);
+        turn.stats.chars[provider] = (turn.stats.chars[provider] || 0) + sentence.length;
         continue;
       } catch {
         turn.useBrowser = true; // ElevenLabs failed or stalled: browser voice for the rest of this reply
         turn.stats.lat.fallback = "browser-voice";
       }
     }
+    // the browser voice: the chosen one, or the fallback when a server voice failed (never silent)
     await browserVoice(sentence, turn.stats);
     turn.stats.voices.add("browser");
+    turn.stats.chars.browser = (turn.stats.chars.browser || 0) + sentence.length;
   }
   turn.playing = false;
   liveTurns.delete(turn);
@@ -573,7 +618,7 @@ function orbHeard() {
 
 /** Loads the acknowledgment clips once, so one can play with no delay. */
 function preloadAcks() {
-  if (!config.elevenLabsEnabled || ackMode() !== "words") return;
+  if (!serverVoice() || ackMode() !== "words") return;
   for (const phrase of ACK_PHRASES) {
     if (ackAudio.has(phrase)) continue;
     const a = new Audio();
@@ -619,7 +664,7 @@ function playAck(turn) {
   recentSentences.push(phrase);
   if (recentSentences.length > 3) recentSentences.shift();
   lastSpoken = `${lastSpoken} ${normalize(phrase)}`;
-  const audio = config.elevenLabsEnabled ? ackAudio.get(phrase) : null;
+  const audio = serverVoice() ? ackAudio.get(phrase) : null;
   turn.ack = new Promise((resolve) => {
     const done = () => {
       clearTimeout(guard);
@@ -633,9 +678,7 @@ function playAck(turn) {
       audio.onended = audio.onerror = done;
       audio.play().catch(done);
     } else if ("speechSynthesis" in window) {
-      const u = new SpeechSynthesisUtterance(phrase);
-      u.lang = config.speechLang;
-      u.volume = voiceVolume();
+      const u = makeUtterance(phrase);
       u.onend = u.onerror = done;
       speechSynthesis.speak(u);
     } else done();
@@ -676,7 +719,10 @@ function reportLatency(turn, server) {
   });
   store.set(LATENCY_KEY, JSON.stringify(latency.entries));
   showLatency();
-  api("/api/latency", entry).catch(() => {});
+  for (const [p, n] of Object.entries(st.chars || {})) sessionChars[p] = (sessionChars[p] || 0) + n;
+  showVoiceCost();
+  // characters spoken per provider: counts only, never the text
+  api("/api/latency", { ...entry, voiceChars: st.chars }).catch(() => {});
 }
 
 // ---- chat panel extras: web links and the Briefing card (built from elements, never HTML text) ----
@@ -865,6 +911,65 @@ function cutOff(how, heard = null) {
 }
 
 // "Interrupt while talking" in the settings panel (the sun icon). Saved in this browser.
+// ---- voice settings (sun panel) ----------------------------------------------------------------
+const VOICE_NAMES = { browser: "Browser voice", openai: "OpenAI voice", elevenlabs: "ElevenLabs voice" };
+function currentVoiceName() {
+  const p = config.voice?.provider || "browser";
+  if (p === "browser") return `${VOICE_NAMES.browser}${chosenVoice() ? ` (${chosenVoice().name})` : ""}`;
+  return p === "elevenlabs" ? `${VOICE_NAMES.elevenlabs} (model ${voiceModel()})` : VOICE_NAMES[p];
+}
+/** The cost line: which voice is active, what it costs, and how much it has spoken this session. */
+function showVoiceCost() {
+  const el = $("voice-cost");
+  if (!el) return;
+  const p = config.voice?.provider || "browser";
+  const used = Object.entries(sessionChars).filter(([, n]) => n).map(([k, n]) => `${VOICE_NAMES[k].replace(" voice", "")} ${n.toLocaleString()}`).join(", ");
+  el.textContent = `Voice: ${VOICE_NAMES[p]}, ${config.voice?.cost || "free"}${config.voice?.note ? `. ${config.voice.note}` : ""}. Spoken this session: ${used ? `${used} characters` : "nothing yet"}.`;
+}
+function showVoiceSettings() {
+  showVoiceCost();
+  const sel = $("browser-voice");
+  if (sel) {
+    const current = chosenVoice();
+    const list = sortVoices(installedVoices, config.speechLang);
+    sel.replaceChildren(
+      ...list.map((v) => {
+        const o = document.createElement("option");
+        o.value = v.name;
+        o.textContent = `${v.name} (${v.lang})${isEnglish(v) ? "" : " ·"}`;
+        return o;
+      }),
+    );
+    if (!list.length) sel.append(new Option("No voices found in this browser", ""));
+    if (current) sel.value = current.name;
+  }
+  const { rate, pitch } = speechTuning();
+  if ($("voice-rate")) $("voice-rate").value = String(rate);
+  if ($("voice-pitch")) $("voice-pitch").value = String(pitch);
+  if ($("voice-rate-val")) $("voice-rate-val").textContent = rate.toFixed(2);
+  if ($("voice-pitch-val")) $("voice-pitch-val").textContent = pitch.toFixed(2);
+  const browserRows = $("browser-voice-rows");
+  if (browserRows) browserRows.hidden = serverVoice() && !installedVoices.length; // still the fallback voice
+  const modelRow = $("voice-model")?.closest("label");
+  if (modelRow) modelRow.hidden = config.voice?.provider !== "elevenlabs";
+}
+$("browser-voice")?.addEventListener("change", (e) => {
+  store.set(BROWSER_VOICE_KEY, e.target.value);
+  showVoiceSettings();
+});
+for (const [id, key] of [["voice-rate", VOICE_RATE_KEY], ["voice-pitch", VOICE_PITCH_KEY]]) {
+  $(id)?.addEventListener("input", (e) => {
+    store.set(key, e.target.value);
+    showVoiceSettings();
+  });
+}
+$("voice-preview")?.addEventListener("click", () => {
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = makeUtterance(`Hello, I'm ${config.assistantName}. This is how I'll sound.`, 1);
+  speechSynthesis.speak(u);
+});
+
 // Speed settings (sun panel), saved in this browser.
 for (const [id, key, get, after] of [
   ["brain-routing", BRAIN_KEY, brainRouting],
@@ -1581,7 +1686,8 @@ connectEvents();
 // "Jericho, stop", Esc, tapping the light, or the big Stop button; snooze by voice or button.
 // the page's frame rate (from the 3D scene), so Auto can pick the Smooth alarm sound on a weak PC
 const pageFps = () => viz.info?.()?.fps || 0;
-const ringer = createAlarmRinger({ getCtx: () => audioCtx, ttsUrl, lang: () => config.speechLang, getFps: pageFps });
+// the alarm's spoken lines: the server voice if one is selected, else the browser voice
+const ringer = createAlarmRinger({ getCtx: () => audioCtx, ttsUrl: (t) => (serverVoice() ? ttsUrl(t) : null), lang: () => config.speechLang, getFps: pageFps, makeUtterance: (t) => makeUtterance(t, 1) });
 const ALARM_VOL_KEY = "jericho-alarm-volume";
 const SNOOZE_KEY = "jericho-snooze-minutes";
 const alarmVolume = () => Math.min(1, Math.max(0.2, Number(store.get(ALARM_VOL_KEY) ?? DEFAULT_ALARM_VOLUME * 100) / 100));
@@ -1801,7 +1907,7 @@ function diagnostics() {
     `Audio: ${audioCtx ? `${audioCtx.state}, ${audioCtx.sampleRate} Hz` : "not started"}, underruns ${Number(audioCtx?.playoutStats?.fallbackFramesEvents) || 0}`,
     `Alarm sound: ${alarmSound()}, performance ${alarmPerformance()} -> ${alarmModeNow()}, volume ${Math.round(alarmVolume() * 100)}%${alarmMaxLoud() ? " (max loud)" : ""}, renders ${cache.renders}, last render took ${Math.round(cache.lastRatio * 100)}% of its length`,
     `Listening: ${running ? "powered on" : "not powered on"}, ${muted ? "muted" : micLost ? "mic lost" : recActive ? "mic live" : "mic not live"}, wake sensitivity ${wakeSensitivity}, room mode ${room.on ? "on" : "off"}, interrupt ${bargeMode}`,
-    `Voice: ${config.elevenLabsEnabled ? `ElevenLabs (model ${voiceModel()})` : "browser voice"} · brain ${brainRouting()} · acknowledgment ${ackMode()} · send early ${earlySendOn() ? "on" : "off"}`,
+    `Voice: ${currentVoiceName()}${config.voice?.note ? ` (${config.voice.note})` : ""} · calls ${config.voice?.calls || "?"} · this session ${Object.entries(sessionChars).filter(([, n]) => n).map(([p, n]) => `${p} ${n} chars`).join(", ") || "nothing spoken yet"} · brain ${brainRouting()} · acknowledgment ${ackMode()} · send early ${earlySendOn() ? "on" : "off"}`,
     `Speed: ${formatReadout(latency).headline}`,
     `Last turn: ${formatReadout(latency).detail || "-"}`,
     `Speed, last ${latency.entries.length} turns (ms after you stopped talking): ${latency.entries.map((e) => `${e.route || "?"} ${e.sentence ?? "-"}/${e.playing ?? "-"}`).join(", ") || "none"}`,

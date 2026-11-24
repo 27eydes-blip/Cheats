@@ -94,6 +94,8 @@ export function cleanCalendarLink(raw) {
 export const secrets = {
   anthropicKey: process.env.ANTHROPIC_API_KEY || "",
   elevenLabsKey: process.env.ELEVENLABS_API_KEY || "",
+  // OpenAI text-to-speech (voice.provider "openai", and phone calls). Only ever read by the server.
+  openaiKey: process.env.OPENAI_API_KEY || "",
   // The pre-rename variable is still honoured so an existing .env doesn't silently
   // turn the access token off.
   accessToken: process.env.JERICHO_ACCESS_TOKEN || process.env.JARVIS_ACCESS_TOKEN || "",
@@ -123,7 +125,8 @@ export function publicConfig() {
     endPhrases: settings.endPhrases || [],
     conversationTimeoutSeconds: settings.conversationTimeoutSeconds ?? 30,
     speechLang: settings.speechLang,
-    elevenLabsEnabled: Boolean(secrets.elevenLabsKey),
+    // filled in by the server from voice.js (which voice the page speaks with)
+    elevenLabsEnabled: false,
     bargeIn: {
       enabled: settings.bargeIn?.enabled !== false,
       minLevel: Number(settings.bargeIn?.minLevel) > 0 ? Number(settings.bargeIn.minLevel) : 0.15,

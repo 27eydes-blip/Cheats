@@ -971,7 +971,7 @@ export function sharedAlarmCache(sampleRate = 48000) {
 const underrunsOf = (ctx) => Number(ctx?.playoutStats?.fallbackFramesEvents) || 0;
 
 // ---- the ringer ----------------------------------------------------------------------------------
-export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US", getFps = () => 0, cache: givenCache = null }) {
+export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US", getFps = () => 0, cache: givenCache = null, makeUtterance = null }) {
   let ringing = false;
   let ctx = null;
   let out = null; // the output chain
@@ -1002,21 +1002,28 @@ export function createAlarmRinger({ getCtx, ttsUrl, lang = () => "en-US", getFps
         resolve();
       };
       const timer = setTimeout(done, 7000);
+      // the browser voice: when no server voice is selected, or the server voice failed (never silent)
+      let spokeLocally = false;
+      const speakLocally = () => {
+        if (spokeLocally) return;
+        spokeLocally = true;
+        if (!("speechSynthesis" in window)) return done();
+        const u = makeUtterance ? makeUtterance(text) : new SpeechSynthesisUtterance(text);
+        if (!makeUtterance) u.lang = lang();
+        u.volume = 1;
+        u.onend = u.onerror = done;
+        speechSynthesis.speak(u);
+      };
       try {
-        voice = new Audio(ttsUrl(text));
+        const url = ttsUrl ? ttsUrl(text) : null;
+        if (!url) return speakLocally();
+        voice = new Audio(url);
         voice.volume = 1; // above his normal (ducked) speaking volume
-        voice.onended = voice.onerror = done;
-        voice.play().catch(() => {
-          // ElevenLabs unavailable or blocked: the browser voice
-          if (!("speechSynthesis" in window)) return done();
-          const u = new SpeechSynthesisUtterance(text);
-          u.lang = lang();
-          u.volume = 1;
-          u.onend = u.onerror = done;
-          speechSynthesis.speak(u);
-        });
+        voice.onended = done;
+        voice.onerror = speakLocally;
+        voice.play().catch(speakLocally);
       } catch {
-        done();
+        speakLocally();
       }
     });
   }

@@ -8,9 +8,9 @@ A personal voice assistant that runs on your laptop. Open the page, tap **Start*
  ┌──────────────────────────┐            ┌─────────────────────────────────────┐
  │ Ears: Web Speech API     │  /api/ask  │ Brain: Claude API + tool loop       │
  │  wake word "Jericho"      ├───────────►│ Safety: risky tools wait for "yes"  │
- │ Mouth: <audio> stream    │◄───────────┤ Hands: lights, Claude Code,         │
- │  fallback: browser voice │  /api/tts  │        calendar*, music* (*stubs)   │
- └──────────────────────────┘            │ Voice: ElevenLabs (key stays here)  │
+ │ Mouth: browser voice     │◄───────────┤ Hands: lights, Claude Code,         │
+ │  (or OpenAI/ElevenLabs)  │  /api/tts  │        calendar*, music* (*stubs)   │
+ └──────────────────────────┘            │ Voice: browser, OpenAI or ElevenLabs│
                                          │ Log:   logs/actions.log             │
                                          └─────────────────────────────────────┘
 ```
@@ -22,7 +22,7 @@ Needs Node 20.18 or newer (tested on Node 22 and Node 26).
 ```bash
 cd jericho
 npm install
-cp .env.example .env      # then paste your ANTHROPIC_API_KEY and ELEVENLABS_API_KEY
+cp .env.example .env      # then paste your ANTHROPIC_API_KEY (the default voice needs no key)
 npm start
 ```
 
@@ -55,14 +55,15 @@ When it starts, Jericho checks its connections and prints the result:
 ```
    Self-test (Node v26.13.1, connections: keep-alive pool):
      Claude      ✅ PASS  191 ms
-     ElevenLabs  ✅ PASS  420 ms, voice Qy7xBgqsDA40HK0hK0SY
+     Voice       ✅ PASS  browser voice (free, no key needed)
 ```
 
 A FAIL line says why: the key was rejected, the voice ID wasn't found, or the connection itself
 failed and what lay behind it (for example `ENOTFOUND` means the name couldn't be looked up, and
 `ECONNREFUSED` or `ETIMEDOUT` usually mean a firewall or proxy). Run the same check on its own
-any time with `npm run selftest`. The Claude check is free; the ElevenLabs check speaks three
-characters.
+any time with `npm run selftest`. The Claude check is free. The voice check pings only the
+selected provider: nothing for the browser voice, a free request for OpenAI, and three spoken
+characters for ElevenLabs.
 
 - **Error details:** every failed request logs its real cause in `logs/actions.log`, never just
   "fetch failed". Keys are never written there.
@@ -301,14 +302,15 @@ your API key, the strong model answers (and keeps answering for 10 minutes).
 logs as when Claude calls them, and stay in the conversation history so Claude knows about
 them. "Stop", "go to sleep" and "mute" work as before: they're handled on the page.
 
-### Voice model
+### Voice model (ElevenLabs)
 
-The sun panel's **Voice model** setting overrides `elevenlabs.modelId`. Flash is the fastest and
+When ElevenLabs is the voice, the sun panel's **Voice model** setting overrides `elevenlabs.modelId`. Flash is the fastest and
 still sounds natural. Turbo is a little richer; Multilingual is the richest, with the most delay.
 
 ### Safety net (it never hangs)
 
-- If ElevenLabs hasn't started a sentence within 3.5 seconds, the browser voice takes over for
+- If the server voice (OpenAI or ElevenLabs) hasn't started a sentence within 3.5 seconds, or
+  fails, the browser voice takes over for
   the rest of that reply.
 - If Claude goes quiet for 12 seconds, Jericho says a short sorry. After 40 seconds it gives
   up with "Sorry, Claude isn't answering right now", and the conversation carries on.
@@ -329,6 +331,36 @@ Every turn is measured from the end of your speech to each stage:
 The sun panel's Speed readout shows the last turn and the average of the last 10. Copy
 diagnostics includes them too. Each turn is added to `logs/latency.log`, numbers only, never
 what was said. Older `timing` lines still go to `logs/actions.log`.
+
+## The voice (free by default)
+
+`voice.provider` in `settings.json` picks who speaks:
+
+| Provider | Cost | Key | Notes |
+|---|---|---|---|
+| `browser` (default) | free | none | The page's own Web Speech voice. Best in Edge, whose "Online (Natural)" voices sound close to a paid voice. |
+| `openai` | roughly 1.5 cents a minute of speech | `OPENAI_API_KEY` | `gpt-4o-mini-tts`, calm and reserved style, audio streamed so the first words start fast. |
+| `elevenlabs` | your ElevenLabs plan | `ELEVENLABS_API_KEY` | As before. Never called unless it's selected. |
+
+- **Picking the browser voice:** in the sun panel's Speed section, choose any installed voice,
+  set its speed and pitch (lower is calmer and deeper), and press **Preview voice**. By default
+  it picks the best Microsoft "Online (Natural)" English male voice in Edge, then any English
+  male voice, then any English voice.
+- **Everything else works the same with it:** barge-in, the orb pulsing while he speaks, the
+  speaking and listening states, the "On it" for slow answers, and the alarm's spoken lines.
+  Barge-in depends on your mic's echo cancellation hearing the browser voice as Jericho. If he
+  cuts himself off on speakers, choose "Speakers (stricter)" or re-calibrate.
+- **Never silent:** if the OpenAI or ElevenLabs voice fails or stalls, he finishes the reply in
+  the browser voice.
+- **Costs at a glance:** the sun panel's cost line shows which voice is active, what it costs,
+  and how many characters each voice has spoken this session. Each turn's counts (numbers only,
+  never the text) go to `logs/actions.log` as `voice_usage` and to `logs/latency.log`.
+- **No ElevenLabs needed:** with the default, Jericho never needs `ELEVENLABS_API_KEY`. The
+  startup self-test doesn't ping ElevenLabs, and neither do the warm-ups.
+- **Phone calls** use OpenAI's voice when `OPENAI_API_KEY` is set. Otherwise they use Twilio's
+  own neural voice, so calls still work with no extra key. ElevenLabs is used on calls only if
+  it's the selected provider and there's no OpenAI key. If a clip isn't ready or fails,
+  Twilio's voice says the line instead. The opener and every call rule stay as they are.
 
 ## Phone calls
 
@@ -363,7 +395,8 @@ tonight"), or a saved contact ("call Luke"). It works like this:
    says goodbye and hangs up at once. The number goes on the do-not-call list, `data/dnc.json`,
    which is checked before every call. That's caught in code from their words, and by the call
    agent as well.
-6. It speaks with your ElevenLabs voice and listens with Twilio's speech recognition; a Claude
+6. It speaks with OpenAI's voice (if `OPENAI_API_KEY` is set) or else Twilio's own neural voice
+   (`calls.twilioVoice`, no extra key), and listens with Twilio's speech recognition; a Claude
    agent handles the conversation. When the call ends, Jericho tells you how it went (booked,
    "Luke said he's coming around eight", no answer, busy, voicemail, asked not to be called). The
    call is saved to `data/calls.json` and shown on the **Calls** page (`/calls`).
@@ -560,7 +593,7 @@ this PC or your home network.
 | Outbound call | about $0.014 a minute, billed per started minute |
 | Twilio speech recognition | roughly 2 cents per reply it transcribes |
 | Claude (agent and safety review) | roughly 10 to 20 cents for a typical 2 to 3 minute call |
-| ElevenLabs | a few hundred characters per call, from your plan |
+| The voice | Twilio's own voice: included. OpenAI: roughly 1.5 cents a minute of speech |
 
 A typical booking call comes to roughly 25 to 50 cents in total. The trial credit covers a lot of
 practice. Test mode costs only the Claude part.
@@ -694,9 +727,9 @@ So Jericho never hears himself through the speakers:
 - **Alarm performance** (settings panel): the alarm sound is pre-rendered once per cycle (off the page's main thread) and played as a single buffer, so ringing costs very little. **Full** has every layer and the city reverb; **Smooth** has fewer layers, a short echo instead of the reverb, and the same timing; **Auto** picks Smooth when the page runs under about 20 frames a second, the audio has underruns, or rendering the sound was slow. When an alarm is set, the first cycle is prepared ahead of time so it starts at once.
 - **Health line** (settings panel): the frame rate, the quality level, and whether the alarm sound is Smooth. **Copy diagnostics** copies a short text summary (browser, graphics, quality, audio, alarm settings, recent page errors; no token, keys, links, labels or anything you said) to paste into a chat.
 
-- **The startup self-test** prints one line each for Claude, ElevenLabs, Calendar and Claude Code. It runs in the background after the server is already answering, all checks side by side, and any check that takes longer than 15 seconds (20 for Claude Code) is reported as FAIL instead of holding things up. It never stops Jericho from starting.
+- **The startup self-test** prints one line each for Claude, the voice, Calendar and Claude Code. It runs in the background after the server is already answering, all checks side by side, and any check that takes longer than 15 seconds (20 for Claude Code) is reported as FAIL instead of holding things up. It never stops Jericho from starting.
 - **Jericho seems stuck "Thinking"**: say "Jericho, stop" or press Esc. That stops the request and anything it started; the next request starts clean.
-- **He stopped talking mid-sentence**: if the ElevenLabs voice stalls for 8 seconds, he finishes the reply in the browser voice instead of waiting forever.
+- **He stopped talking mid-sentence**: if the OpenAI or ElevenLabs voice stalls for 8 seconds, he finishes the reply in the browser voice instead of waiting forever.
 - **The page lost its connection** (Wi-Fi drop, server restart): it reconnects by itself, and checks for a ringing alarm the moment it's back.
 - **The mic indicator says "Mic reconnecting…" for a long time**: another app or tab may be using the microphone; close it, or tap the light.
 - **Battery and fan**: while muted, before the first tap, or idle in a window you're not using, the 3D scene draws 30 frames a second instead of 60; it pauses completely when the tab is hidden. Quality "Low" in the settings panel saves the most.
@@ -708,6 +741,10 @@ None of these are secret. Keys live only in `.env`.
 
 | Setting | What it does |
 |---|---|
+| `voice.provider` | `browser` (default, free, no key), `openai` (needs `OPENAI_API_KEY`) or `elevenlabs` (needs `ELEVENLABS_API_KEY`). A provider whose key is missing falls back to the browser voice. Reload the page after changing it. |
+| `voice.browserVoice` / `browserRate` / `browserPitch` | The browser voice's name (empty = the best English male voice installed), speed (0.92) and pitch (0.85). The sun panel's picker overrides them in that browser. |
+| `voice.openaiVoice` / `openaiModel` / `openaiInstructions` | OpenAI's voice (`onyx`), model (`gpt-4o-mini-tts`) and speaking style (calm and reserved by default). |
+| `calls.twilioVoice` | The phone voice when there's no `OPENAI_API_KEY`: Twilio's `Polly.Matthew-Neural`. |
 | `elevenlabs.voiceId` | The ElevenLabs voice. Copy any voice ID from your ElevenLabs Voices page. Changes apply on the next reply, no restart needed. |
 | `elevenlabs.modelId` | `eleven_flash_v2_5` (default) is the lowest-latency natural voice. `eleven_turbo_v2_5` is a bit richer, `eleven_multilingual_v2` richer still, with more delay. |
 | `elevenlabs.stability` / `similarityBoost` / `style` / `speed` / `useSpeakerBoost` | Voice settings. Lower stability is more expressive, higher is steadier. `speed` runs from 0.7 to 1.2. All of these apply on the next sentence, no restart needed. |
@@ -763,7 +800,9 @@ messages, set `risky: true`.
 server/index.js           HTTP(S) server, access token, API routes
 server/brain.js           Claude conversation + tool loop + confirmation holding
 server/safety.js          yes/no detection
-server/tts.js             ElevenLabs streaming proxy
+server/tts.js             speech proxy for OpenAI and ElevenLabs (streaming, cache)
+server/voice.js           which voice: browser, OpenAI or ElevenLabs; the call voice; character counts
+public/voices.js          picking the browser voice (natural English male first)
 server/logger.js          logs/actions.log
 server/tools/index.js     tool registry (add new tools here)
 server/tools/lights.js    lights tool → lights/mock.js | hue.js | kasa.js

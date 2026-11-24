@@ -1,4 +1,5 @@
-// Startup self-test: one tiny request to Claude and one to ElevenLabs, with a clear
+// Startup self-test: one tiny request to Claude and one to the selected voice service (none for
+// the browser voice), with a clear
 // PASS or FAIL and the real reason. Runs when the server starts, or on its own with:
 //   npm run selftest
 import Anthropic from "@anthropic-ai/sdk";
@@ -11,6 +12,7 @@ import { loadSettings, secrets } from "./config.js";
 import { logAction } from "./logger.js";
 import { connectionMode, errorDetails, errorSummary, keepAliveFetch } from "./net.js";
 import { checkCalendar } from "./briefing/calendar.js";
+import { activeVoice, voiceSettings } from "./voice.js";
 import { CLAUDE_FIX, claudeVersion, findClaude } from "./tools/claudePath.js";
 
 function claudeReason(err) {
@@ -30,6 +32,28 @@ async function testClaude(client) {
     return { status: "PASS", reason: `${Date.now() - t0} ms` };
   } catch (err) {
     return { status: "FAIL", reason: claudeReason(err), cause: errorDetails(err) };
+  }
+}
+
+/** The voice check: nothing to ping for the browser voice; a free request for OpenAI; ElevenLabs as before. */
+async function testVoice() {
+  const v = voiceSettings();
+  const a = activeVoice(v);
+  if (a.reason) return { status: "SKIP", reason: `voice.provider is "${v.provider}" but ${a.reason}` };
+  if (a.provider === "browser") return { status: "PASS", reason: "browser voice (free, no key needed)" };
+  if (a.provider === "openai") return testOpenAi();
+  return testElevenLabs();
+}
+
+async function testOpenAi() {
+  const t0 = Date.now();
+  try {
+    const res = await keepAliveFetch("https://api.openai.com/v1/models", { headers: { authorization: `Bearer ${secrets.openaiKey}` }, signal: AbortSignal.timeout(10_000) });
+    await res.arrayBuffer().catch(() => {});
+    if (res.ok) return { status: "PASS", reason: `OpenAI voice, ${Date.now() - t0} ms` };
+    return { status: "FAIL", reason: res.status === 401 ? "OpenAI rejected OPENAI_API_KEY (401). Check it in .env" : `OpenAI answered HTTP ${res.status}` };
+  } catch (err) {
+    return { status: "FAIL", reason: `couldn't reach OpenAI: ${errorSummary(err)}`, cause: errorDetails(err) };
   }
 }
 
@@ -116,8 +140,8 @@ export function limit(promise, ms = 15_000) {
 
 /** Runs the checks side by side (each with a time limit). */
 export async function runChecks(client = new Anthropic({ fetch: (url, init) => keepAliveFetch(url, init) })) {
-  const [claude, eleven, calendar, claudeCode] = await Promise.all([limit(testClaude(client)), limit(testElevenLabs()), limit(testCalendar()), limit(testClaudeCode(), 20_000)]);
-  return { node: process.version, connections: connectionMode(), claude, elevenlabs: eleven, calendar, claudeCode };
+  const [claude, voice, calendar, claudeCode] = await Promise.all([limit(testClaude(client)), limit(testVoice()), limit(testCalendar()), limit(testClaudeCode(), 20_000)]);
+  return { node: process.version, connections: connectionMode(), claude, voice, calendar, claudeCode };
 }
 
 const MARK = { PASS: "✅ PASS", FAIL: "❌ FAIL", SKIP: "➖ SKIP" };
@@ -127,7 +151,7 @@ export function formatResults(r) {
   return [
     `   Self-test (Node ${r.node || process.version}, connections: ${r.connections || connectionMode()}):`,
     `     Claude      ${line(r.claude)}`,
-    `     ElevenLabs  ${line(r.elevenlabs)}`,
+    `     Voice       ${line(r.voice ?? r.elevenlabs)}`,
     `     Calendar    ${line(r.calendar)}`,
     `     Claude Code ${line(r.claudeCode)}`,
   ].join("\n");
@@ -138,7 +162,7 @@ export async function selfTest(client) {
   const r = await runChecks(client);
   console.log(formatResults(r));
   logAction("selftest", r);
-  return r.claude.status !== "FAIL" && r.elevenlabs.status !== "FAIL";
+  return r.claude.status !== "FAIL" && (r.voice ?? r.elevenlabs)?.status !== "FAIL";
 }
 
 const SELF = fileURLToPath(import.meta.url);
@@ -162,7 +186,7 @@ export function selfTestIsolated({ timeoutMs = 40_000, spawnFn = spawn, script =
     };
     const failAll = (reason) => {
       const f = { status: "FAIL", reason };
-      return { isolatedError: reason, claude: f, elevenlabs: f, calendar: f, claudeCode: f };
+      return { isolatedError: reason, claude: f, voice: f, calendar: f, claudeCode: f };
     };
     let child;
     try {

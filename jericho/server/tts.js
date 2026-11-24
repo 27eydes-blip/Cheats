@@ -8,6 +8,7 @@ import { Readable } from "node:stream";
 import { loadSettings, ROOT, secrets } from "./config.js";
 import { logAction } from "./logger.js";
 import { addWarmer, errorDetails, keepAliveFetch } from "./net.js";
+import { activeVoice, callVoiceProvider, CALM_INSTRUCTIONS, voiceSettings } from "./voice.js";
 
 const MAX_CHARS = 1000;
 const CACHE_DIR = path.join(process.env.JERICHO_DATA_DIR || path.join(ROOT, "data"), "audio-cache");
@@ -49,7 +50,8 @@ function cacheKey(text, v) {
   const norm = String(text).trim().toLowerCase().replace(/\s+/g, " ");
   return crypto
     .createHash("sha256")
-    .update(JSON.stringify([norm, v.voiceId, v.modelId, v.outputFormat, v.voiceSettings]))
+    // OpenAI clips are keyed by their own voice and style, so the two never mix
+    .update(JSON.stringify(v.provider === "openai" ? [norm, "openai", v.model, v.voice, v.instructions] : [norm, v.voiceId, v.modelId, v.outputFormat, v.voiceSettings]))
     .digest("hex")
     .slice(0, 32);
 }
@@ -65,6 +67,29 @@ function pruneCache(maxFiles) {
   } catch {
     /* nothing to prune */
   }
+}
+
+/** OpenAI's speech API (gpt-4o-mini-tts): returns the streaming Response (or throws). Audio arrives as it's made. */
+async function requestOpenAiSpeech(text, o) {
+  if (!secrets.openaiKey) throw new Error("OpenAI key not set");
+  const upstream = await keepAliveFetch("https://api.openai.com/v1/audio/speech", {
+    method: "POST",
+    headers: { authorization: `Bearer ${secrets.openaiKey}`, "content-type": "application/json", accept: "audio/mpeg" },
+    body: JSON.stringify({ model: o.model, voice: o.voice, input: String(text).slice(0, MAX_CHARS), instructions: o.instructions, response_format: "mp3" }),
+  });
+  if (!upstream.ok || !upstream.body) {
+    const detail = (await upstream.text().catch(() => "")).slice(0, 300);
+    const err = new Error(`OpenAI speech error ${upstream.status}`);
+    err.detail = detail;
+    err.status = upstream.status;
+    throw err;
+  }
+  return upstream;
+}
+
+function openAiConfig(overrides = {}) {
+  const v = voiceSettings();
+  return { model: v.openaiModel, voice: overrides.voice || v.openaiVoice, instructions: overrides.instructions || v.openaiInstructions };
 }
 
 /** Calls ElevenLabs and returns the streaming Response (or throws). */
@@ -87,10 +112,18 @@ async function requestSpeech(text, v) {
   return upstream;
 }
 
-/** Streams speech for `text` into an HTTP response, from the cache when possible. */
-export async function streamSpeech(text, res, { model } = {}) {
+/**
+ * Streams speech for `text` into an HTTP response, from the cache when possible. Uses the voice
+ * provider from settings.json (OpenAI or ElevenLabs); with the browser voice there's nothing to
+ * fetch here, and neither service is ever called unless it's the one selected.
+ */
+export async function streamSpeech(text, res, { model, provider = activeVoice().provider } = {}) {
+  if (provider !== "openai" && provider !== "elevenlabs") {
+    res.writeHead(409, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify({ error: "The browser voice is selected: speech is made in the page.", provider: "browser" }));
+    return;
+  }
   const modelId = voiceModelFor(model);
-  const v = voiceConfig(modelId ? { modelId } : {});
+  const v = provider === "openai" ? { provider, ...openAiConfig() } : voiceConfig(modelId ? { modelId } : {});
   const cache = cacheSettings();
   const words = String(text).trim().split(/\s+/).length;
   const cacheable = cache.enabled && words <= cache.maxWords;
@@ -108,13 +141,14 @@ export async function streamSpeech(text, res, { model } = {}) {
 
   let upstream;
   try {
-    upstream = await requestSpeech(text, v);
+    upstream = provider === "openai" ? await requestOpenAiSpeech(text, v) : await requestSpeech(text, v);
   } catch (err) {
-    logAction("tts_error", { status: err.status, error: err.message, detail: err.detail, cause: err.status ? undefined : errorDetails(err) });
+    logAction("tts_error", { provider, status: err.status, error: err.message, detail: err.detail, cause: err.status ? undefined : errorDetails(err) });
+    // the page drops to the browser voice and keeps talking
     res.writeHead(err.status ? 502 : 503, { "content-type": "text/plain" }).end(err.message);
     return;
   }
-  res.writeHead(200, { "content-type": "audio/mpeg", "cache-control": "no-store", "x-tts-source": "elevenlabs" });
+  res.writeHead(200, { "content-type": "audio/mpeg", "cache-control": "no-store", "x-tts-source": provider });
   const body = Readable.fromWeb(upstream.body);
   const count = (seen.get(key) || 0) + 1;
   seen.delete(key); // re-insert so the Map stays in least-recently-used order
@@ -142,16 +176,28 @@ export async function streamSpeech(text, res, { model } = {}) {
   body.pipe(res);
 }
 
-/** Whole audio file as a Buffer (used for phone calls, where Twilio fetches a file). */
+/** Whole audio file as a Buffer, from ElevenLabs (used for phone calls, where Twilio fetches a file). */
 export async function synthesize(text, overrides = {}) {
   const v = voiceConfig(overrides);
   const upstream = await requestSpeech(text, v);
   return Buffer.from(await upstream.arrayBuffer());
 }
 
-// Keep the ElevenLabs connection open while a page is connected (free endpoint, no credits).
+/** Whole audio file from OpenAI (phone calls): the calm, reserved call style. */
+export async function synthesizeOpenAi(text, { instructions = CALM_INSTRUCTIONS, voice } = {}) {
+  const upstream = await requestOpenAiSpeech(text, openAiConfig({ instructions, voice }));
+  return Buffer.from(await upstream.arrayBuffer());
+}
+
+// Keep the connection to the selected voice service open while a page is connected (free
+// endpoints, no credits). A service that isn't selected is never touched.
+addWarmer("openai", async () => {
+  if (!secrets.openaiKey || (activeVoice().provider !== "openai" && callVoiceProvider() !== "openai")) return;
+  const r = await keepAliveFetch("https://api.openai.com/v1/models", { headers: { authorization: `Bearer ${secrets.openaiKey}` }, signal: AbortSignal.timeout(5000) });
+  await r.arrayBuffer();
+});
 addWarmer("elevenlabs", async () => {
-  if (!secrets.elevenLabsKey) return;
+  if (!secrets.elevenLabsKey || (activeVoice().provider !== "elevenlabs" && callVoiceProvider() !== "elevenlabs")) return;
   const r = await keepAliveFetch("https://api.elevenlabs.io/v1/models", { headers: { "xi-api-key": secrets.elevenLabsKey }, signal: AbortSignal.timeout(5000) });
   await r.arrayBuffer();
 });

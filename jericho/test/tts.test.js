@@ -8,7 +8,7 @@ import { test } from "node:test";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-tts-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
-fs.writeFileSync(path.join(tmp, "settings.json"), JSON.stringify({ ...base, logFile: path.join(tmp, "actions.log") }));
+fs.writeFileSync(path.join(tmp, "settings.json"), JSON.stringify({ ...base, voice: { ...base.voice, provider: "elevenlabs" }, logFile: path.join(tmp, "actions.log") }));
 Object.assign(process.env, { JERICHO_SETTINGS: path.join(tmp, "settings.json"), JERICHO_DATA_DIR: path.join(tmp, "data"), ELEVENLABS_API_KEY: "test" });
 
 const sent = [];

@@ -12,7 +12,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-manner-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
 fs.writeFileSync(
   path.join(tmp, "settings.json"),
-  JSON.stringify({ ...base, logFile: path.join(tmp, "actions.log"), calls: { ...base.calls, testMode: false, publicUrl: "https://jericho-manner.example.com" } }),
+  JSON.stringify({ ...base, voice: { ...base.voice, provider: "elevenlabs" }, logFile: path.join(tmp, "actions.log"), calls: { ...base.calls, testMode: false, publicUrl: "https://jericho-manner.example.com" } }),
 );
 Object.assign(process.env, {
   JERICHO_SETTINGS: path.join(tmp, "settings.json"),

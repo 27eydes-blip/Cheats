@@ -171,7 +171,7 @@ test("'don't call again': ends politely at once, joins the do-not-call list, and
   const call = listCalls().find((c) => c.businessName === "Carl");
   await handleTwilio("voice", call.id, {});
   const bye = await handleTwilio("gather", call.id, { SpeechResult: "Who is this? Please don't call this number again." });
-  assert.match(bye, /<Say>Understood\. I won&apos;t call this number again\. Sorry to bother you\. Goodbye\.<\/Say><Hangup\/>/);
+  assert.match(bye, /<Say voice="Polly\.Matthew-Neural" language="en-US"><prosody rate="95%">Understood\. I won&apos;t call this number again\. Sorry to bother you\. Goodbye\.<\/prosody><\/Say><Hangup\/>/);
   assert.ok(isDoNotCall("+13137362200"));
   const dnc = fs.readFileSync(path.join(tmp, "data", "dnc.json"), "utf8");
   assert.ok(!dnc.includes("3137362200") && !dnc.includes("736-2200"), "only the last 4 digits and a hash are kept");

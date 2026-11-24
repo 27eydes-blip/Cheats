@@ -13,7 +13,7 @@ const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.
 const PUBLIC = "https://jericho.example.ts.net";
 fs.writeFileSync(
   path.join(tmp, "settings.json"),
-  JSON.stringify({ ...base, logFile: path.join(tmp, "actions.log"), calls: { ...base.calls, testMode: false, publicUrl: PUBLIC } }),
+  JSON.stringify({ ...base, voice: { ...base.voice, provider: "elevenlabs" }, logFile: path.join(tmp, "actions.log"), calls: { ...base.calls, testMode: false, publicUrl: PUBLIC } }),
 );
 const SID = `AC${"1".repeat(32)}`;
 const TOKEN = "f".repeat(32);

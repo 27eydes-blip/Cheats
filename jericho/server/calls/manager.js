@@ -8,7 +8,8 @@ import { logAction, scrubEnvValues } from "../logger.js";
 import { errorDetails, keepAliveFetch } from "../net.js";
 import { track } from "../cancel.js";
 import { jobEvents } from "../tools/claudeCode.js";
-import { synthesize } from "../tts.js";
+import { synthesize, synthesizeOpenAi } from "../tts.js";
+import { CALM_INSTRUCTIONS, callVoiceProvider, countVoice } from "../voice.js";
 import { agentTurn, disclosure, openingRequest, ownerGreeting, pickScenario, simulatedReply } from "./agent.js";
 import { callSettings, checkIntentKeywords, checkLimits, checkNumber, checkOwnerNumber, isOwnerNumber, last4, normalizeNumber, numberKey, screenWithClaude, speakNumber } from "./policy.js";
 import { addDoNotCall, isDoNotCall, wantsNoCalls } from "./dnc.js";
@@ -380,17 +381,33 @@ export function callVoice() {
   return { outputFormat: "mp3_22050_32", stability: cfg.voiceStability, style: cfg.voiceStyle, speed: cfg.speakingRate };
 }
 
+// The call voice: OpenAI if OPENAI_API_KEY is set (calm, reserved style), ElevenLabs if that's
+// the selected provider and set up, otherwise Twilio's own neural voice (no extra key).
+const CALL_INSTRUCTIONS = `${CALM_INSTRUCTIONS} This is a phone call: clear and easy to follow.`;
+
+/** Starts making the audio for one line; returns its id, or null when Twilio's own voice speaks it. */
 function newAudio(text) {
+  const provider = callVoiceProvider();
+  countVoice({ [provider]: String(text).length }, "call"); // counts only
+  if (provider === "twilio") return null;
   const id = crypto.randomBytes(16).toString("hex"); // unguessable: Twilio fetches it without a signature
+  const make = provider === "openai" ? synthesizeOpenAi(text, { instructions: CALL_INSTRUCTIONS }) : synthesize(text, callVoice());
   audio.set(
     id,
-    synthesize(text, callVoice()).catch((err) => {
-      logAction("call_tts_error", { error: err.message, cause: errorDetails(err) });
-      return null;
+    make.catch((err) => {
+      logAction("call_tts_error", { provider, error: err.message, cause: errorDetails(err) });
+      return null; // Twilio's own voice says it instead: never silent
     }),
   );
   setTimeout(() => audio.delete(id), 15 * 60_000).unref();
   return id;
+}
+
+/** Twilio's built-in neural voice (calls.twilioVoice), a touch slower for a calm delivery. */
+function twilioSay(text) {
+  const voice = String(callSettings().twilioVoice || "Polly.Matthew-Neural").replace(/[^\w.-]/g, "");
+  const polly = /^Polly\./.test(voice);
+  return `<Say voice="${voice}" language="${xml(callSettings().language)}">${polly ? `<prosody rate="95%">${xml(text)}</prosody>` : xml(text)}</Say>`;
 }
 
 /** Twilio's errors, in plain words. 21219: an unverified number on a trial account. */
@@ -453,9 +470,15 @@ async function dialTwilio(call, client, dialTo = null) {
 
 const xml = (s) => String(s).replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]);
 
-function speakTwiml(state, audioId, text) {
-  // ElevenLabs audio when it's ready; Twilio's own voice if ElevenLabs failed.
-  return audioId ? `<Play>${callSettings().publicUrl}/twilio/audio/${audioId}</Play>` : `<Say>${xml(text)}</Say>`;
+/**
+ * The audio when it's ready (OpenAI or ElevenLabs); Twilio's own voice if there's none, it
+ * failed, or it takes too long. Waits for it first, so a failed clip is never silence.
+ */
+async function speakTwiml(state, audioId, text, waitMs = 6000) {
+  if (!audioId) return twilioSay(text);
+  let timer;
+  const ready = await Promise.race([audio.get(audioId) || null, new Promise((r) => (timer = setTimeout(() => r(null), waitMs)))]).finally(() => clearTimeout(timer));
+  return ready ? `<Play>${callSettings().publicUrl}/twilio/audio/${audioId}</Play>` : twilioSay(text);
 }
 
 function gatherTwiml(call, inner) {
@@ -508,7 +531,7 @@ export async function handleTwilio(kind, callId, params) {
     call.status = "in-progress";
     call.transcript.push({ who: "agent", text: state.opening });
     saveCall(call);
-    return twiml(gatherTwiml(call, speakTwiml(state, state.audioId, state.opening)));
+    return twiml(gatherTwiml(call, await speakTwiml(state, state.audioId, state.opening)));
   }
 
   if (kind === "gather") {
@@ -518,9 +541,9 @@ export async function handleTwilio(kind, callId, params) {
       if (state.silences >= 2) {
         state.outcome = "failed";
         state.summary = "No one responded on the line.";
-        return twiml(`<Say>Sorry, I can't hear anyone. Goodbye.</Say><Hangup/>`);
+        return twiml(`${twilioSay("Sorry, I can't hear anyone. Goodbye.")}<Hangup/>`);
       }
-      return twiml(gatherTwiml(call, `<Say>Hello? Are you still there?</Say>`));
+      return twiml(gatherTwiml(call, twilioSay("Hello? Are you still there?")));
     }
     state.silences = 0;
     state.turns++;
@@ -539,7 +562,7 @@ export async function handleTwilio(kind, callId, params) {
     if (next.do_not_call && !call.owner) return endNoMoreCalls(state, call, next.say);
     if (next.say) call.transcript.push({ who: "agent", text: next.say });
     saveCall(call);
-    const speak = next.say ? speakTwiml(state, newAudio(next.say), next.say) : "";
+    const speak = next.say ? await speakTwiml(state, newAudio(next.say), next.say) : "";
     if (next.end_call || wrapUp) {
       state.outcome = next.outcome === "in_progress" ? "failed" : next.outcome;
       state.summary = next.summary;
@@ -570,7 +593,7 @@ function endNoMoreCalls(state, call, said) {
   Object.assign(state, { outcome, summary });
   Object.assign(call, { outcome, summary });
   saveCall(call);
-  return twiml(`<Say>${xml(line)}</Say><Hangup/>`);
+  return twiml(`${twilioSay(line)}<Hangup/>`);
 }
 
 /** The audio Twilio plays. Waits for ElevenLabs if it's still generating. */

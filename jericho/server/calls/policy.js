@@ -21,6 +21,8 @@ export function callSettings() {
     voiceStability: clamp(c.voiceStability, 0, 1, 0.8),
     voiceStyle: clamp(c.voiceStyle, 0, 1, 0),
     speakingRate: clamp(c.speakingRate, 0.7, 1.2, 0.92),
+    // the voice on calls with no OPENAI_API_KEY: Twilio's own neural voice
+    twilioVoice: String(c.twilioVoice || "Polly.Matthew-Neural"),
     publicUrl: (c.publicUrl || "").replace(/\/+$/, ""),
     maxCallsPerDay: Number(c.maxCallsPerDay) > 0 ? Number(c.maxCallsPerDay) : 10,
     // at most 2 calls a day to any one number, whatever the settings say

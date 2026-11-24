@@ -24,12 +24,17 @@ import { getForecast, getWeather } from "./briefing/weather.js";
 import { cleanLatency } from "../public/latency.js";
 import { controlInfo } from "./tools/pc.js";
 import { streamSpeech } from "./tts.js";
+import { activeVoice, COST, countVoice, publicVoice } from "./voice.js";
 import { acceptsGzip, sendStatic } from "./static.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
 if (!secrets.anthropicKey) console.warn("⚠️  ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add it.");
-if (!secrets.elevenLabsKey) console.warn("⚠️  ELEVENLABS_API_KEY is not set. Jericho will use the browser's built-in voice.");
+{
+  // the voice: never needs ELEVENLABS_API_KEY unless ElevenLabs is the one selected
+  const a = activeVoice();
+  if (a.reason) console.warn(`⚠️  voice.provider is "${a.configured}", but ${a.reason}.`);
+}
 
 const brain = new Brain();
 const listeners = new Set(); // open /api/events streams
@@ -290,7 +295,10 @@ async function route(req, res) {
   if (!authorized(req, url)) return sendJson(res, 401, { error: "Wrong or missing access token" });
 
   try {
-    if (req.method === "GET" && url.pathname === "/api/config") return sendJson(res, 200, publicConfig());
+    if (req.method === "GET" && url.pathname === "/api/config") {
+      const voice = publicVoice();
+      return sendJson(res, 200, { ...publicConfig(), voice, elevenLabsEnabled: voice.provider !== "browser" });
+    }
 
     if (req.method === "POST" && (url.pathname === "/api/ask" || url.pathname === "/api/confirm")) {
       return await streamTurn(req, res, url);
@@ -360,7 +368,7 @@ async function route(req, res) {
         firstAudioMs: num(b.firstAudioMs),
         stoppedTalkingToAudioMs: num(b.stoppedTalkingToAudioMs),
         totalMs: num(b.totalMs),
-        voice: ["elevenlabs", "browser", "mixed"].includes(b.voice) ? b.voice : undefined,
+        voice: ["elevenlabs", "openai", "browser", "mixed"].includes(b.voice) ? b.voice : undefined,
         server: b.server && {
           firstTokenMs: num(b.server.firstTokenMs),
           firstSentenceMs: num(b.server.firstSentenceMs),
@@ -423,8 +431,10 @@ async function route(req, res) {
 
     // One turn's latency (numbers only: see public/latency.js), appended to logs/latency.log.
     if (req.method === "POST" && url.pathname === "/api/latency") {
-      const entry = cleanLatency(await readJson(req));
-      fs.promises.appendFile(latencyLog, `${JSON.stringify({ time: new Date().toISOString(), ...entry })}\n`).catch(() => {});
+      const body = await readJson(req);
+      const entry = cleanLatency(body);
+      const chars = countVoice(body.voiceChars); // characters spoken per voice provider (counts only)
+      fs.promises.appendFile(latencyLog, `${JSON.stringify({ time: new Date().toISOString(), ...entry, ...(chars ? { voiceChars: chars } : {}) })}\n`).catch(() => {});
       return sendJson(res, 200, { ok: true });
     }
 
@@ -499,6 +509,10 @@ server.listen(port, settings.host || "0.0.0.0", () => {
     }
   }
   console.log(`   Actions are logged to ${logPath}`);
+  {
+    const a = activeVoice();
+    console.log(`   Voice:   ${a.provider}, ${COST[a.provider]}`);
+  }
   const calls = callSettings();
   console.log(`   Phone calls: ${calls.testMode ? "TEST MODE (simulated, nothing is dialed)" : `LIVE via Twilio, webhooks at ${calls.publicUrl || "(calls.publicUrl not set!)"}`}`);
   if (!secrets.accessToken) console.log("   Tip: set JERICHO_ACCESS_TOKEN in .env before opening Jericho from other devices.");

@@ -48,6 +48,14 @@
     "maxToolRounds": 8,
     "conversationIdleMinutes": 10
   },
+  "voice": {
+    "provider": "browser",
+    "browserVoice": "",
+    "browserRate": 0.92,
+    "browserPitch": 0.85,
+    "openaiVoice": "onyx",
+    "openaiModel": "gpt-4o-mini-tts"
+  },
   "elevenlabs": {
     "voiceId": "Qy7xBgqsDA40HK0hK0SY",
     "modelId": "eleven_flash_v2_5",
@@ -103,6 +111,7 @@
     "voiceStability": 0.8,
     "voiceStyle": 0,
     "speakingRate": 0.92,
+    "twilioVoice": "Polly.Matthew-Neural",
     "publicUrl": "",
     "maxCallsPerDay": 10,
     "maxCallsPerNumberPerDay": 2,
