@@ -234,19 +234,101 @@ Jericho can work with your PC, Windows first.
 
 ## Speed
 
-- Claude's reply is streamed. Each sentence is sent to ElevenLabs as soon as it's complete, and
-  the next sentence starts downloading while the current one plays.
-- The thinking animation starts about 0.6 seconds after you stop talking, before the browser has
-  finished writing down what you said.
-- While a page is open, the server keeps its connections to Claude and ElevenLabs open. When it
-  hears the wake word, it gets Claude's prompt cache ready for the request that's coming.
-- Every reply adds a `timing` line to `logs/actions.log`:
-  - `listeningMs`: how long you talked.
-  - `stoppedTalkingToFinalMs`: how long the browser took to finish the transcript.
-  - `thinkingMs`: from your words to Jericho's first sentence.
-  - `firstAudioMs`: from your words to the first sound.
-  - `stoppedTalkingToAudioMs`: the delay you actually feel.
-  - `server`: Claude's own timings and which models answered.
+### How fast it is (measured)
+
+Measured with `node scripts/bench-latency.mjs` against the real Claude API. The old code (the
+previous commit) and the new code were run three times each, taking turns, with five typical
+turns per run. The numbers are the time from the request reaching the server to Jericho's first
+full sentence (the median, in seconds). ElevenLabs and your microphone come on top of these, and
+those can only be measured on your PC: the sun panel's Speed readout shows them for every turn.
+
+| Request | Before | After | Why |
+|---|---|---|---|
+| "What time is it", "volume up", "snooze" | about 0.5 to 2 (a Claude call) | **0.002** | answered locally, no Claude call |
+| Simple: greetings, quick sums, weather | 1.28 | **0.52** | the fast model (Claude Haiku 5.5) |
+| Complex: explanations, facts, plans | 1.04 | 1.0 to 1.5 | the strong model, as before (within the API's normal ups and downs) |
+
+Other changes you'll feel but that don't show in that table:
+
+- **Sending as soon as you stop talking.** The browser's final transcript can lag a second or
+  more. When the words on screen stop changing (450 ms for a short command, up to a second for
+  a long sentence, longer if you trail off on "and" or "the"), the request goes at once. If the
+  browser's final words turn out longer ("…in the kitchen"), the full sentence replaces the
+  early one before anything is said. Not used for yes/no confirmations. Turn it off in the sun
+  panel ("Send as soon as I stop talking").
+- **Instant feedback.** The orb flashes a gold ring the moment you stop talking (on a PC, from
+  the mic level, within about 100 ms). If an answer takes more than 1.5 seconds, Jericho says a
+  quick "On it." (or plays a soft sound, or nothing: sun panel, "Slow answers"). The answer
+  always waits for it to finish, so they never overlap.
+- **The first sentence starts sooner.** Replies are streamed. Each sentence goes to ElevenLabs
+  as soon as it's complete, and the next one downloads while the current one plays. A long
+  first sentence is spoken from its first comma.
+- **Warm connections.** At startup and every 4 minutes (every 25 seconds while a page is open),
+  the server touches Claude and ElevenLabs. That covers the DNS lookup, the TLS handshake and
+  the keep-alive sockets. DNS answers are kept for 5 minutes. Hearing the wake word warms
+  Claude's prompt cache for both models.
+- **Weather and calendar are pre-fetched** in the background while a page is open, so those
+  tools answer from memory.
+- **Smaller requests.** Only the saved memories that match a request are sent with it, not all
+  of them (Claude can still look up the rest with `recall`). After 40 messages the
+  conversation starts fresh, with a short recap of the last few exchanges.
+- **Page loading.** Files are gzipped (app.js is 24 KB instead of about 80 KB) and sent with an
+  ETag, so a reload is a tiny "not changed" reply. Fonts are kept for a year and the 3D
+  library for a week. The server is answering about 0.2 seconds after it starts; the self-test
+  runs afterwards, in its own process.
+
+### Which model answers
+
+The sun panel's **Brain** setting (or `claude.routing` in settings.json) picks it:
+
+- **Auto** (the default): simple everyday requests go to the fastest model, Claude Haiku 5.5.
+  That covers greetings, the time, volume, the TV, alarms, the weather, lights and short
+  questions. Everything else goes to the strong model, Claude Opus 5.5: anything complex,
+  long, vague ("do it"), a search, or anything that might need a risky action.
+- **Always strong**: every request goes to the strong model.
+
+Risky actions never reach the small model, through two locks. First, the words: anything about
+files, commands, Claude Code, calls, messages, invites, forgetting, cancelling or system
+settings goes to the strong model. Second, if the small model asks for a risky tool anyway, its
+answer is thrown away, never run or read back, and the strong model redoes that step. The yes
+always goes through the strong model. If the small model refuses, errors or isn't available on
+your API key, the strong model answers (and keeps answering for 10 minutes).
+
+### Instant local commands (no Claude call)
+
+"What time is it", "what's the date", "volume up" / "volume down" / "mute the volume", and
+"snooze" (while an alarm rings) are answered on the spot. They use the same safe-tier tools and
+logs as when Claude calls them, and stay in the conversation history so Claude knows about
+them. "Stop", "go to sleep" and "mute" work as before: they're handled on the page.
+
+### Voice model
+
+The sun panel's **Voice model** setting overrides `elevenlabs.modelId`. Flash is the fastest and
+still sounds natural. Turbo is a little richer; Multilingual is the richest, with the most delay.
+
+### Safety net (it never hangs)
+
+- If ElevenLabs hasn't started a sentence within 3.5 seconds, the browser voice takes over for
+  the rest of that reply.
+- If Claude goes quiet for 12 seconds, Jericho says a short sorry. After 40 seconds it gives
+  up with "Sorry, Claude isn't answering right now", and the conversation carries on.
+- If the server sends nothing at all for 30 seconds (it sends a heartbeat every 10 seconds
+  while tools run), the page stops waiting and says so.
+
+### The latency readout and logs
+
+Every turn is measured from the end of your speech to each stage:
+
+1. The final transcript.
+2. The request sent.
+3. Claude's first token.
+4. The first full sentence.
+5. The first audio byte.
+6. Audio playing.
+
+The sun panel's Speed readout shows the last turn and the average of the last 10. Copy
+diagnostics includes them too. Each turn is added to `logs/latency.log`, numbers only, never
+what was said. Older `timing` lines still go to `logs/actions.log`.
 
 ## Phone calls
 
@@ -482,7 +564,11 @@ None of these are secret. Keys live only in `.env`.
 | `conversationTimeoutSeconds` | How long Jericho keeps listening without the wake word after you or it last spoke. Default 30. A pending yes/no question waits its own 60 seconds. |
 | `endPhrases` | Phrases that end the conversation right away. Add your own. |
 | `wakeWords` | Words that wake the assistant: "jericho", "jer" and common mishearings ("jerico", "jerry co", "jerr"…). Add more to the array any time; a space also matches a hyphen or no gap, so "jerry co" covers "jerry-co" and "jerryco". Whole words only: "Jerry", "Jeremy" and "jersey" don't trigger it. Reload the page after editing. |
-| `claude.model` / `claude.effort` | The model for normal requests: `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. |
+| `claude.model` / `claude.effort` | The strong model: `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. |
+| `claude.routing` | `auto` (default): simple requests go to `claude.fastModel`. `always-strong`: everything goes to the strong model. The sun panel's Brain setting overrides it per browser. |
+| `claude.fastModel` / `claude.fastEffort` | The fast model for simple requests: `claude-haiku-5-5` at `low` effort. It never handles risky actions. |
+| `claude.maxHistoryMessages` | After this many messages (default 40), the conversation starts fresh with a short recap. |
+| `claude.stallApologySeconds` / `claude.stallAbortSeconds` | If Claude goes quiet: a short sorry after 12 seconds, and giving up after 40. |
 | `claude.hardModel` / `claude.hardEffort` | The stronger model for hard questions: `claude-fable-5-2` at `high` effort. Jericho decides when to use it (a `deep_think` tool) and says "Let me think that through" first. |
 | `claude.webSearch` | Lets Jericho look things up, such as a restaurant's number or hours. About 1 cent per search. |
 | `claude.fallbacks` | On by default. If the main model declines a request on safety grounds, the API retries it on a fallback model inside the same call. Set to `false` to turn it off. |
@@ -537,7 +623,13 @@ server/memory.js          data/memory.json + data/style.json (read, save, delete
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
 server/secrets.js         detects passwords, keys, card and ID numbers
 server/speech.js          sentence splitter + clean-up for natural speech
-server/net.js             keep-alive connections and warm-up pings
+server/net.js             keep-alive connections, DNS caching and warm-up pings
+server/router.js          which model answers (fast for simple requests, strong otherwise)
+server/quick.js           instant local commands: time, date, volume, snooze
+server/static.js          static files: gzip, ETag, cache headers
+public/latency.js         the per-turn latency stages, the 10-turn average, the readout
+public/endpoint.js        when you've finished talking (sending early)
+scripts/bench-latency.mjs measures real Claude latency for a few typical turns
 server/calls/policy.js    what may be called: numbers, purposes, limits, safety screen
 server/calls/agent.js     the Claude agent on the phone, and the pretend business for test mode
 server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json, announcements

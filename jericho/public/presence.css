@@ -262,3 +262,23 @@ body.presence-page { -webkit-font-smoothing: antialiased; text-rendering: optimi
 .card .quote.down { color: #e39a7a; }
 .card-note { color: var(--muted); font-size: 0.68rem; font-style: italic; margin-top: 6px !important; }
 .look-panel .barge-debug { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+
+/* ---- "heard you": a quick gold ring the moment you stop talking (instant feedback) ---- */
+.orb::after {
+  content: "";
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 196, 104, 0.9);
+  box-shadow: 0 0 24px rgba(232, 196, 104, 0.55);
+  opacity: 0;
+  pointer-events: none;
+}
+.orb.heard::after { animation: orb-heard 420ms ease-out; }
+@keyframes orb-heard {
+  0% { opacity: 0.95; transform: scale(0.82); }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orb.heard::after { animation-duration: 1ms; }
+}

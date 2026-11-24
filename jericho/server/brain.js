@@ -15,13 +15,23 @@ import { CONFIRM_TIMEOUT_MS, isYes } from "./safety.js";
 import { SentenceSplitter, speakable } from "./speech.js";
 import { updateStyle } from "./style.js";
 import { describeAction, isRisky, toolDefinitions, tools, validateInput } from "./tools/index.js";
+import { routeFor, routingMode } from "./router.js";
+import { matchQuick, runQuick } from "./quick.js";
+import { alarms } from "./alarms/manager.js";
 
 const claudeCfg = settings.claude || {};
 const MODEL = claudeCfg.model || "claude-opus-5-5";
+// The fastest small model, for simple requests (see router.js). Never used for risky actions.
+const FAST_MODEL = claudeCfg.fastModel || "claude-haiku-5-5";
 const MAX_ROUNDS = claudeCfg.maxToolRounds ?? 8;
 const IDLE_MS = (claudeCfg.conversationIdleMinutes ?? 10) * 60_000;
-const MAX_MESSAGES = 60;
+// History cap: past this many messages a fresh conversation starts, carrying a short recap of
+// the last few exchanges (append-only, so earlier reasoning and the cache stay valid until then).
+const MAX_MESSAGES = Math.max(10, Number(claudeCfg.maxHistoryMessages) || 40);
 const WARM_TTL_MS = 4 * 60_000; // the prompt cache lasts 5 minutes
+// Safety net: if Claude goes quiet this long mid-reply, say sorry; this long, give up cleanly.
+const STALL_APOLOGY_MS = Number(claudeCfg.stallApologySeconds) > 0 ? claudeCfg.stallApologySeconds * 1000 : 12_000;
+const STALL_ABORT_MS = Number(claudeCfg.stallAbortSeconds) > 0 ? claudeCfg.stallAbortSeconds * 1000 : 40_000;
 
 const name = settings.assistantName || "Jericho";
 const owner = settings.calls?.ownerName || "the user";
@@ -92,6 +102,8 @@ const SAYINGS = {
   nothingPending: ["There's nothing waiting for a yes right now.", "Nothing's waiting on a yes at the moment.", "There's nothing to confirm right now."],
   done: ["Done.", "All set.", "That's done.", "Sorted."],
   stopped: ["Stopped.", "Okay, stopping everything.", "All stopped.", "Stopped. Nothing's running now."],
+  slow: ["Sorry, this is taking a moment.", "Sorry, still working on it.", "Sorry, bear with me a second."],
+  stalled: ["Sorry, Claude isn't answering right now. Try again in a moment.", "Sorry, I lost Claude for a second there. Please ask again."],
 };
 
 /** A wording from the list, never the same one as last time in this conversation. */
@@ -175,13 +187,23 @@ export function shouldOfferBriefing(now = new Date()) {
   return true;
 }
 
-/** Tool list sent to Claude: the same every request, so the prompt cache stays warm. */
-function requestTools() {
+/** Tool list sent to Claude: the same every request (per model), so the prompt cache stays warm. */
+function requestTools({ web = true } = {}) {
   // Streaming requests: tool inputs stream as they're generated; we validate them ourselves.
   const list = toolDefinitions.map((d) => ({ ...d, eager_input_streaming: true }));
-  if (claudeCfg.webSearch !== false && !webSearchUnavailable) list.push(WEB_SEARCH);
+  // Web search only on the strong model (searches are routed there).
+  if (web && claudeCfg.webSearch !== false && !webSearchUnavailable) list.push(WEB_SEARCH);
   return list;
 }
+
+/** A short recap of the last few exchanges, carried into a fresh conversation. */
+function recapOf(transcript, pairs = 3) {
+  const lines = transcript.slice(-pairs * 2).map((t) => `${t.who === "user" ? "They said" : "You said"}: ${String(t.text).slice(0, 200)}`);
+  return lines.length ? `Earlier in this conversation (recap, the full history was trimmed to stay fast):\n${lines.join("\n")}` : "";
+}
+
+// When the small model fails (unknown model, overloaded), the strong one takes over for a while.
+let fastBrokenUntil = 0;
 
 /** Applies the learned "mic hears X, user meant Y" list from style.json. */
 export function applyMishearings(text) {
@@ -212,8 +234,11 @@ export class Brain {
   session(id) {
     let s = this.sessions.get(id);
     const now = Date.now();
-    const stale = s && !s.pending && (now - s.lastActive > IDLE_MS || s.messages.length > MAX_MESSAGES);
+    const idle = s && now - s.lastActive > IDLE_MS;
+    const tooLong = s && s.messages.length > MAX_MESSAGES;
+    const stale = s && !s.pending && (idle || tooLong);
     if (!s || stale) {
+      const carry = s && tooLong && !idle ? recapOf(s.transcript) : "";
       // The instructions are frozen for the whole conversation (changing them mid-way
       // would invalidate Claude's earlier reasoning). Later memory changes are added
       // as appended system messages instead, see handle().
@@ -221,11 +246,14 @@ export class Brain {
         messages: [],
         pending: null,
         lastActive: now,
-        context: memory.renderForPrompt(),
+        // Stable notes only (style, lessons, profile): matching memories come with each request.
+        context: memory.renderStableForPrompt(),
         seenVersion: memory.version,
         transcript: [],
         warmAt: 0,
+        carry,
       };
+      if (carry) logAction("history_trimmed", { sessionId: id, messages: this.sessions.get(id)?.messages.length });
       this.sessions.set(id, s);
     }
     s.lastActive = now;
@@ -289,11 +317,28 @@ export class Brain {
     const s = this.session(sessionId);
     const { text: corrected, fixes } = applyMishearings(text);
     logAction("request", { sessionId, text, ...(fixes.length ? { corrected, fixes } : {}) });
+    // The obvious commands (time, date, volume, snooze) are answered here, with no Claude call.
+    if (!s.pending) {
+      const quick = await this.#quick(s, turn, corrected, text);
+      if (quick) return this.#finishTurn(turn, quick);
+    }
+    const hard = looksHard(corrected) || isBriefingRequest(corrected);
+    const routed = Date.now() < fastBrokenUntil ? { route: "strong", reason: "fast model unavailable" } : routeFor(corrected, { mode: routingMode(meta.route, claudeCfg.routing), pending: Boolean(s.pending), hard });
+    turn.route = routed.route;
+    turn.hooks.onMark?.("route", turn.route);
+    logAction("route", { sessionId, route: routed.route, reason: routed.reason });
     const content = [];
     if (s.pending) {
       // You moved on instead of answering yes/no: treat it as a no.
       content.push(...this.#declineAll(s, "The user moved on without confirming. Not done."));
     }
+    if (s.carry) {
+      content.push({ type: "text", text: s.carry });
+      s.carry = "";
+    }
+    // Only the saved memories that match this request, not all of them.
+    const relevant = memory.renderRelevantMemories(corrected);
+    if (relevant) content.push({ type: "text", text: relevant });
     const note = fixes.length ? ` (speech-to-text heard "${text}"; auto-corrected ${fixes.join(", ")})` : "";
     content.push({ type: "text", text: `[${new Date().toString()}] ${corrected}${note} (delivery: ${deliveryNote(text, meta)})` });
     s.messages.push({ role: "user", content });
@@ -302,7 +347,7 @@ export class Brain {
     const notes = [];
     if (s.seenVersion !== memory.version) {
       // Memories, lessons, profile or style notes changed since this conversation started.
-      notes.push(`Your memory and notes were updated. Current version:\n${memory.renderForPrompt()}`);
+      notes.push(`Your memory and notes were updated. Current version:\n${memory.renderStableForPrompt()}`);
       s.seenVersion = memory.version;
     }
     if (isBriefingRequest(corrected)) notes.push("They want the morning briefing: call morning_briefing now and follow its howToSpeak.");
@@ -326,6 +371,7 @@ export class Brain {
 
   async #confirmNow(sessionId, utterance, hooks, meta) {
     const turn = this.#newTurn(hooks, sessionId);
+    turn.route = "strong"; // everything after a yes runs on the strong model
     const s = this.session(sessionId);
     if (!s.pending) return this.#finishTurn(turn, this.#say(turn, pick(s, "nothingPending")));
     const expired = Date.now() > s.pending.expiresAt;
@@ -359,7 +405,11 @@ export class Brain {
     s.warmAt = Date.now();
     try {
       // max_tokens 0: the API only reads the prompt into its cache and answers nothing.
-      await this.client.beta.messages.create({ ...this.#params(s, [{ role: "user", content: "warmup" }]), max_tokens: 0 });
+      // Caches are per model, so the small model gets its own warm-up when routing is on.
+      const warm = [{ role: "user", content: "warmup" }];
+      const jobs = [this.client.beta.messages.create({ ...this.#params(s, warm, "strong"), max_tokens: 0 })];
+      if (claudeCfg.routing !== "always-strong") jobs.push(this.client.beta.messages.create({ ...this.#params(s, warm, "fast"), max_tokens: 0 }).catch(() => {}));
+      await Promise.all(jobs);
       return true;
     } catch (err) {
       logAction("prewarm_error", { sessionId, error: err.message, cause: errorDetails(err) });
@@ -378,13 +428,43 @@ export class Brain {
 
   // ---- internals -------------------------------------------------------------------
 
+  /** Time, date, volume, snooze: answered locally. Returns the turn result, or null for Claude. */
+  async #quick(s, turn, corrected, heard) {
+    const match = matchQuick(corrected);
+    if (!match) return null;
+    let r = null;
+    try {
+      r = await runQuick(match, {
+        tools,
+        alarms,
+        signal: turn.signal,
+        lang: settings.speechLang || "en-US",
+        timeZone: settings.alarms?.timezone || undefined,
+      });
+    } catch (err) {
+      logAction("quick_error", { sessionId: turn.sessionId, kind: match.kind, error: err.message });
+      return null; // let Claude have it
+    }
+    if (!r) return null;
+    turn.route = "local";
+    turn.hooks.onMark?.("route", "local");
+    logAction("quick_command", { sessionId: turn.sessionId, kind: match.kind, ...(r.tool ? { tool: r.tool, input: r.input, ok: r.ok } : {}) });
+    // Keep the exchange in the history (appended, so nothing earlier changes), so Claude knows later.
+    s.messages.push({ role: "user", content: [{ type: "text", text: `[${new Date().toString()}] ${corrected}` }] });
+    s.messages.push({ role: "assistant", content: [{ type: "text", text: r.say }] });
+    s.transcript.push({ who: "user", text: heard }, { who: "assistant", text: r.say });
+    this.#say(turn, r.say);
+    logAction("reply", { sessionId: turn.sessionId, reply: r.say });
+    return { awaitingConfirmation: false };
+  }
+
   #newTurn(hooks, sessionId) {
     const controller = new AbortController();
     const untrack = track("reply", sessionId, () => controller.abort());
     // Barge-in stops only the reply stream (replySignal); tools get `signal`, which only the kill switch trips.
     const reply = new AbortController();
     const turn = {
-      hooks, spoken: [], sources: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set(),
+      hooks, spoken: [], sources: [], t0: Date.now(), firstToken: null, firstSentence: null, rounds: 0, models: new Set(), route: "strong", escalated: false,
       signal: controller.signal,
       replySignal: AbortSignal.any([controller.signal, reply.signal]),
       interrupted: false,
@@ -443,6 +523,8 @@ export class Brain {
       totalMs: Date.now() - turn.t0,
       rounds: turn.rounds,
       models: [...turn.models],
+      route: turn.route,
+      ...(turn.escalated ? { escalated: true } : {}),
     };
     return { reply, awaitingConfirmation: Boolean(result.awaitingConfirmation), ...(result.interrupted ? { interrupted: true } : {}), timings, ...(turn.sources.length ? { sources: turn.sources } : {}) };
   }
@@ -508,6 +590,19 @@ export class Brain {
       } catch (err) {
         if (turn.signal?.aborted) return { awaitingConfirmation: false, stopped: true }; // the kill switch: stop quietly
         if (turn.interrupted) return this.#wasInterrupted(s, turn);
+        if (turn.stalled) {
+          // Claude went quiet: never hang. Keep the conversation; the next request carries on.
+          logAction("claude_stalled", { sessionId, route: turn.route, quietMs: STALL_ABORT_MS });
+          return this.#say(turn, pick(s, "stalled"));
+        }
+        if (turn.route === "fast") {
+          // The small model failed: the strong one answers instead (and keeps doing so for a while).
+          fastBrokenUntil = Date.now() + 10 * 60_000;
+          logAction("route_fallback", { sessionId, error: err.message, cause: errorDetails(err) });
+          this.#escalate(turn, "fast model failed");
+          round--;
+          continue;
+        }
         if (isWebSearchUnavailable(err) && !webSearchUnavailable) {
           webSearchUnavailable = true;
           logAction("web_search_unavailable", { sessionId, error: err.message });
@@ -518,6 +613,17 @@ export class Brain {
         // Drop the half-finished conversation so the next request starts clean.
         this.sessions.delete(sessionId);
         return this.#say(turn, friendlyApiError(err));
+      }
+
+      if (turn.route === "fast") {
+        // Second lock: the small model never runs, or asks a yes for, a risky action. Its answer
+        // is dropped (not added to the history) and the strong model redoes this step.
+        const riskyAsk = response.content.some((b) => b.type === "tool_use" && isRisky(b.name, b.input));
+        if (riskyAsk || response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
+          this.#escalate(turn, riskyAsk ? "risky action" : response.stop_reason);
+          round--;
+          continue;
+        }
       }
 
       if (response.stop_reason === "refusal") {
@@ -591,7 +697,29 @@ export class Brain {
     return this.#say(turn, "Sorry, that took too many steps. Try asking a simpler way.");
   }
 
-  #params(s, messages) {
+  #escalate(turn, reason) {
+    turn.route = "strong";
+    turn.escalated = true;
+    turn.hooks.onMark?.("route", "strong");
+    logAction("route_escalated", { sessionId: turn.sessionId, reason });
+  }
+
+  #params(s, messages, route = "strong") {
+    if (route === "fast") {
+      return {
+        model: FAST_MODEL,
+        max_tokens: 8000,
+        output_config: { effort: claudeCfg.fastEffort || "low" },
+        system: [
+          { type: "text", text: SYSTEM },
+          { type: "text", text: s.context, cache_control: { type: "ephemeral" } },
+        ],
+        // Same tools (so it can recognise a risky request and hand it over), minus web search.
+        tools: requestTools({ web: false }),
+        messages,
+        // No server-side fallback on the small model: a refusal hands the step to the strong model.
+      };
+    }
     const useFallbacks = claudeCfg.fallbacks !== false;
     return {
       model: MODEL,
@@ -623,14 +751,33 @@ export class Brain {
     }
     s.warmAt = Date.now();
 
-    const splitter = new SentenceSplitter();
+    // The first sentence goes out as soon as it's complete (or at a comma, if it runs long).
+    const splitter = new SentenceSplitter(12, { firstClauseAt: turn.spoken.length ? 0 : 60 });
     let announcedSearch = false;
-    const stream = this.client.beta.messages.stream(this.#params(s, messages), { signal: turn.replySignal });
+    // Safety net: any event from Claude resets the clock. Quiet too long: sorry, then give up.
+    const stall = new AbortController();
+    let lastEvent = Date.now();
+    const watchdog = setInterval(() => {
+      const quiet = Date.now() - lastEvent;
+      if (quiet > STALL_APOLOGY_MS && !turn.apologized && turn.spoken.length === 0) {
+        turn.apologized = true;
+        this.#emit(turn, pick(s, "slow"));
+      }
+      if (quiet > STALL_ABORT_MS) {
+        turn.stalled = true;
+        stall.abort();
+      }
+    }, 250);
+    const stream = this.client.beta.messages.stream(this.#params(s, messages, turn.route), { signal: AbortSignal.any([turn.replySignal, stall.signal]) });
     stream.on("text", (delta) => {
-      if (turn.firstToken === null) turn.firstToken = Date.now() - turn.t0;
+      if (turn.firstToken === null) {
+        turn.firstToken = Date.now() - turn.t0;
+        turn.hooks.onMark?.("token");
+      }
       for (const sentence of splitter.push(delta)) this.#emit(turn, sentence);
     });
     stream.on("streamEvent", (event) => {
+      lastEvent = Date.now();
       const block = event.type === "content_block_start" ? event.content_block : null;
       if (block?.type === "server_tool_use" && block.name === "web_search" && !announcedSearch) {
         announcedSearch = true;
@@ -638,7 +785,12 @@ export class Brain {
       }
       if (event.type === "content_block_stop") for (const sentence of splitter.flush()) this.#emit(turn, sentence);
     });
-    const response = await stream.finalMessage();
+    let response;
+    try {
+      response = await stream.finalMessage();
+    } finally {
+      clearInterval(watchdog);
+    }
     for (const sentence of splitter.flush()) this.#emit(turn, sentence);
     turn.models.add(response.model);
     for (const src of sourcesFrom(response.content)) if (!turn.sources.some((x) => x.url === src.url)) turn.sources.push(src);
@@ -668,4 +820,9 @@ function friendlyApiError(err) {
   if (err instanceof Anthropic.APIError) return `Claude returned an error, status ${err.status}.`;
   if (!process.env.ANTHROPIC_API_KEY) return "My Claude API key isn't set. Add it to the dot env file.";
   return "Something went wrong talking to Claude.";
+}
+
+/** Tests only: forget that the small model failed earlier in this process. */
+export function _resetFastModelForTests() {
+  fastBrokenUntil = 0;
 }

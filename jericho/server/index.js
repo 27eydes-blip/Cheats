@@ -1,5 +1,6 @@
 // Jericho server: serves the web page and the small JSON API it talks to.
 import crypto from "node:crypto";
+import zlib from "node:zlib";
 import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
@@ -11,19 +12,20 @@ import { logAction, logPath, scrubEnvValues } from "./logger.js";
 import * as memory from "./memory.js";
 import { callAudio, handleTwilio, publicCalls, validTwilioSignature } from "./calls/manager.js";
 import { callSettings } from "./calls/policy.js";
-import { errorDetails, setWarm } from "./net.js";
+import { errorDetails, setWarm, startIdleWarm } from "./net.js";
 import { jobEvents } from "./tools/claudeCode.js";
 import { formatResults, selfTestIsolated } from "./selftest.js";
 import { installCrashLog } from "./crashlog.js";
-import { getNextEvent } from "./briefing/calendar.js";
+import { getCalendar, getNextEvent } from "./briefing/calendar.js";
 import { checkApiRequest } from "./guard.js";
 import { alarms } from "./alarms/manager.js";
-import { getWeather } from "./briefing/weather.js";
+import { getForecast, getWeather } from "./briefing/weather.js";
+import { cleanLatency } from "../public/latency.js";
 import { controlInfo } from "./tools/pc.js";
 import { streamSpeech } from "./tts.js";
+import { acceptsGzip, sendStatic } from "./static.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8" };
 
 if (!secrets.anthropicKey) console.warn("⚠️  ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add it.");
 if (!secrets.elevenLabsKey) console.warn("⚠️  ELEVENLABS_API_KEY is not set. Jericho will use the browser's built-in voice.");
@@ -49,9 +51,16 @@ function authorized(req, url) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+// Responses are gzipped when the browser accepts it and they're big enough to be worth it.
+let currentReq = null; // set by handler() for sendJson's accept-encoding check
 function sendJson(res, status, data) {
+  const body = JSON.stringify(data);
+  if (body.length > 1400 && acceptsGzip(res.req || currentReq)) {
+    res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store", "content-encoding": "gzip", vary: "accept-encoding" });
+    return res.end(zlib.gzipSync(body, { level: 5 }));
+  }
   res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" });
-  res.end(JSON.stringify(data));
+  res.end(body);
 }
 
 async function readBody(req, limit = 20_000) {
@@ -94,16 +103,28 @@ async function twilioRoute(req, res, url) {
 
 /** /api/ask and /api/confirm stream one JSON line per sentence, so speaking can start early. */
 async function streamTurn(req, res, url) {
-  const { sessionId, text, speechMs, typed, interrupted } = await readJson(req);
+  const { sessionId, text, speechMs, typed, interrupted, route } = await readJson(req);
   // how it was said (speaking time from the page), so Jericho can read pace
-  const meta = { speechMs: Number.isFinite(Number(speechMs)) ? Math.max(0, Math.min(120_000, Number(speechMs))) : undefined, typed: Boolean(typed), interrupted: Boolean(interrupted) };
+  const meta = {
+    speechMs: Number.isFinite(Number(speechMs)) ? Math.max(0, Math.min(120_000, Number(speechMs))) : undefined,
+    typed: Boolean(typed),
+    interrupted: Boolean(interrupted),
+    route: ["auto", "always-strong"].includes(route) ? route : undefined, // the sun panel's Brain setting
+  };
   if (!sessionId || typeof text !== "string" || !text.trim()) return sendJson(res, 400, { error: "sessionId and text are required" });
   res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
-  const send = (obj) => res.write(`${JSON.stringify(obj)}\n`);
+  res.flushHeaders?.();
+  let closed = false;
+  res.on("close", () => (closed = true));
+  const send = (obj) => !closed && res.write(`${JSON.stringify(obj)}\n`);
   const hooks = {
     onSentence: (sentence) => send({ type: "sentence", text: sentence }),
     onCard: (card) => send({ type: "card", card }), // e.g. the Briefing card
+    // progress marks for the latency readout: the first Claude token, and which brain answered
+    onMark: (stage, value) => send({ type: "mark", stage, ...(value ? { value } : {}) }),
   };
+  // A heartbeat while tools run, so the page can tell "slow" from "gone" and never hangs.
+  const beat = setInterval(() => send({ type: "tick" }), 10_000);
   try {
     const result =
       url.pathname === "/api/ask"
@@ -114,6 +135,8 @@ async function streamTurn(req, res, url) {
     logAction("error", { where: url.pathname, error: err.message, cause: errorDetails(err) });
     send({ type: "sentence", text: "Sorry, something went wrong on my end." });
     send({ type: "done", reply: "", awaitingConfirmation: false });
+  } finally {
+    clearInterval(beat);
   }
   res.end();
 }
@@ -162,7 +185,7 @@ function safeDecode(s) {
   }
 }
 
-function serveVendor(url, res) {
+function serveVendor(url, res, req) {
   const rel = safeDecode(url.pathname.slice("/vendor/three/".length));
   if (rel === null) return res.writeHead(400).end("Bad request");
   const file = path.resolve(THREE_DIR, rel);
@@ -171,12 +194,12 @@ function serveVendor(url, res) {
     res.writeHead(404).end("Not found");
     return;
   }
-  res.writeHead(200, { "content-type": MIME[".js"], "cache-control": "public, max-age=86400" });
-  fs.createReadStream(file).pipe(res);
+  // a library build: changes only when Jericho's packages are updated
+  sendStatic(req, res, file, { cacheControl: "public, max-age=604800, stale-while-revalidate=86400" });
 }
 
-function serveStatic(url, res) {
-  if (url.pathname.startsWith("/vendor/three/")) return serveVendor(url, res);
+function serveStatic(url, res, req) {
+  if (url.pathname.startsWith("/vendor/three/")) return serveVendor(url, res, req);
   const pages = { "/": "index.html", "/memory": "memory.html", "/calls": "calls.html" };
   const decoded = pages[url.pathname] ? null : safeDecode(url.pathname);
   if (!pages[url.pathname] && decoded === null) return res.writeHead(400).end("Bad request");
@@ -187,13 +210,15 @@ function serveStatic(url, res) {
     return;
   }
   const ext = path.extname(file);
-  // Fonts never change: let the browser keep them (they're also why the page works offline).
-  const cache = ext === ".woff2" ? { "cache-control": "public, max-age=31536000, immutable" } : {};
-  res.writeHead(200, { "content-type": MIME[ext] || "application/octet-stream", ...cache });
-  fs.createReadStream(file).pipe(res);
+  // Fonts never change: the browser keeps them for a year (they're also why the page works
+  // offline). The page's own files are kept too, but checked with the ETag on each load, so an
+  // update to Jericho shows up at once (a 304 "not changed" answer is tiny and instant).
+  const cacheControl = ext === ".woff2" ? "public, max-age=31536000, immutable" : "no-cache";
+  sendStatic(req, res, file, { cacheControl });
 }
 
 async function handler(req, res) {
+  currentReq = req;
   try {
     await route(req, res);
   } catch (err) {
@@ -212,7 +237,7 @@ async function route(req, res) {
     return res.writeHead(400).end("Bad request");
   }
   if (url.pathname.startsWith("/twilio/")) return twilioRoute(req, res, url);
-  if (!url.pathname.startsWith("/api/")) return serveStatic(url, res);
+  if (!url.pathname.startsWith("/api/")) return serveStatic(url, res, req);
   // other websites, DNS tricks, and (without a token) other devices are refused first
   const refused = checkApiRequest({ headers: req.headers, remoteAddress: req.socket?.remoteAddress, hasToken: Boolean(secrets.accessToken), extraHosts: settings.allowedHosts || [] });
   if (refused) return sendJson(res, refused.status, { error: refused.error });
@@ -347,7 +372,14 @@ async function route(req, res) {
     if (req.method === "GET" && url.pathname === "/api/tts") {
       const text = url.searchParams.get("text") || "";
       if (!text.trim()) return sendJson(res, 400, { error: "text is required" });
-      return streamSpeech(text, res);
+      return streamSpeech(text, res, { model: url.searchParams.get("model") || undefined });
+    }
+
+    // One turn's latency (numbers only: see public/latency.js), appended to logs/latency.log.
+    if (req.method === "POST" && url.pathname === "/api/latency") {
+      const entry = cleanLatency(await readJson(req));
+      fs.promises.appendFile(latencyLog, `${JSON.stringify({ time: new Date().toISOString(), ...entry })}\n`).catch(() => {});
+      return sendJson(res, 200, { ok: true });
     }
 
     if (req.method === "GET" && url.pathname === "/api/events") {
@@ -355,6 +387,7 @@ async function route(req, res) {
       res.write(": connected\n\n");
       listeners.add(res);
       setWarm(true); // keep connections to Claude and ElevenLabs open while a page is open
+      startPrefetch();
       const ping = setInterval(() => res.write(": ping\n\n"), 25_000);
       req.on("close", () => {
         clearInterval(ping);
@@ -369,6 +402,29 @@ async function route(req, res) {
     logAction("error", { where: url.pathname, error: err.message, cause: errorDetails(err) });
     sendJson(res, 500, { error: "Server error" });
   }
+}
+
+const latencyLog = path.join(path.dirname(logPath), "latency.log");
+
+// Cheap data that's often asked for (weather, calendar) is fetched in the background while a
+// page is open, so those tools answer from memory instantly. The caches last 5 minutes; this
+// refreshes them every 4, before they run out.
+let prefetchTimer = null;
+function prefetchNow() {
+  Promise.allSettled([getWeather(), getForecast(), getCalendar()]).catch(() => {});
+}
+function startPrefetch() {
+  if (prefetchTimer) return;
+  prefetchNow();
+  prefetchTimer = setInterval(() => {
+    if (listeners.size === 0) {
+      clearInterval(prefetchTimer);
+      prefetchTimer = null;
+      return;
+    }
+    prefetchNow();
+  }, 4 * 60_000);
+  prefetchTimer.unref();
 }
 
 const keyFile = path.join(ROOT, "certs/key.pem");
@@ -386,6 +442,7 @@ installCrashLog({
   scrub: (t) => scrubEnvValues(String(t)),
 });
 alarms.start(); // reload saved alarms and keep checking them
+startIdleWarm(); // DNS + TLS to Claude and ElevenLabs ready before the first request
 server.listen(port, settings.host || "0.0.0.0", () => {
   const scheme = useHttps ? "https" : "http";
   console.log(`\n🤖 ${settings.assistantName || "Jericho"} is running.`);

@@ -336,13 +336,68 @@ export function deleteLesson(id, source = "memory-page") {
 
 // ---- what goes into Jericho's instructions -------------------------------------------
 
-export function renderForPrompt() {
+// ---- what goes to Claude each turn -------------------------------------------------------
+// The stable part (style notes, lessons, profile) sits in the cached instructions. Saved
+// memories are not all sent every time: each request carries only the few that match it
+// (relevantMemories), and Claude can call recall for anything else.
+const STOP = new Set("the a an and or but to of in on at for with my me i you your is are was were be it its this that what whats when where who how do does did can could would should will about from have has had just like please jericho tell".split(" "));
+const stem = (w) => w.replace(/'s$/, "").replace(/(ing|ed|es|s)$/, "");
+function keywords(text) {
+  return new Set(
+    String(text || "")
+      .toLowerCase()
+      .replace(/[’‘]/g, "'")
+      .split(/[^a-z0-9']+/)
+      .filter((w) => w.length > 2 && !STOP.has(w))
+      .map(stem)
+      .filter((w) => w.length > 1),
+  );
+}
+
+/** The saved memories that match this request best (most matching words first, newest on ties). */
+export function relevantMemories(text, limit = 6) {
+  const want = keywords(text);
+  if (want.size === 0) return [];
+  const scored = [];
+  listMemories().forEach((m, i) => {
+    const have = keywords(`${m.text} ${m.topic}`);
+    let score = 0;
+    for (const w of want) if (have.has(w)) score++;
+    if (score > 0) scored.push({ m, score, i });
+  });
+  return scored
+    .sort((a, b) => b.score - a.score || b.i - a.i)
+    .slice(0, limit)
+    .map((x) => x.m);
+}
+
+/** The per-turn line: "Memories that may help: ...", or "" when none match. */
+export function renderRelevantMemories(text, limit = 6) {
+  const hits = relevantMemories(text, limit);
+  if (!hits.length) return "";
+  return `Saved memories that may help with this request:\n${hits.map((m) => `- [${m.id}] ${m.date} (${m.topic}) ${m.text}`).join("\n")}`;
+}
+
+/** Everything as before, minus the list of memories (they come per turn, see above). */
+export function renderStableForPrompt() {
+  return renderForPrompt({ memories: false });
+}
+
+export function renderForPrompt({ memories: withMemories = true } = {}) {
   const memories = listMemories().slice(-MAX_MEMORIES_IN_PROMPT);
   const style = getStyle();
   const lines = [];
   lines.push("## What you remember about the user");
-  if (memories.length === 0) lines.push("(nothing yet)");
-  for (const m of memories) lines.push(`- [${m.id}] ${m.date} (${m.topic}) ${m.text}`);
+  if (!withMemories) {
+    lines.push(
+      memories.length === 0
+        ? "(nothing saved yet)"
+        : `${memories.length} saved ${memories.length === 1 ? "memory" : "memories"}. The ones that match a request are attached to it; call recall to look up any others.`,
+    );
+  } else {
+    if (memories.length === 0) lines.push("(nothing yet)");
+    for (const m of memories) lines.push(`- [${m.id}] ${m.date} (${m.topic}) ${m.text}`);
+  }
   lines.push("", "## How the user talks (use this to understand them and shape replies)");
   if (style.phrases.length) lines.push(`Phrases and slang they use: ${style.phrases.join("; ")}`);
   if (style.requestLength) lines.push(`Their requests: ${style.requestLength}`);

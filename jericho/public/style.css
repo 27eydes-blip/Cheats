@@ -75,6 +75,7 @@ a { color: var(--gold); }
   gap: 6px;
 }
 .orb {
+  position: relative;
   width: min(78vw, 46dvh, 360px);
   aspect-ratio: 1;
   padding: 0;

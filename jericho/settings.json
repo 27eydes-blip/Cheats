@@ -35,6 +35,12 @@
   "claude": {
     "model": "claude-opus-5-5",
     "effort": "low",
+    "routing": "auto",
+    "fastModel": "claude-haiku-5-5",
+    "fastEffort": "low",
+    "maxHistoryMessages": 40,
+    "stallApologySeconds": 12,
+    "stallAbortSeconds": 40,
     "hardModel": "claude-fable-5-2",
     "hardEffort": "high",
     "webSearch": true,

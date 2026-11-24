@@ -189,6 +189,31 @@
     <p id="barge-note" class="hint">Talk over me and I'll stop and listen. “Jericho, stop”, Stop and Esc still stop everything.</p>
     <p id="barge-debug" class="hint barge-debug" aria-live="off">Mic – · threshold – · echo ignored 0</p>
     <button id="barge-recal" class="del" type="button">Re-calibrate</button>
+    <h3 class="panel-sub">Speed</h3>
+    <label>Brain
+      <select id="brain-routing">
+        <option value="auto">Auto (fast model for simple requests)</option>
+        <option value="always-strong">Always strong</option>
+      </select>
+    </label>
+    <label>Voice model
+      <select id="voice-model">
+        <option value="default">From settings.json</option>
+        <option value="flash">Flash (fastest)</option>
+        <option value="turbo">Turbo</option>
+        <option value="multilingual">Multilingual (slowest, richest)</option>
+      </select>
+    </label>
+    <label>Slow answers
+      <select id="ack-mode">
+        <option value="words">Say “On it”</option>
+        <option value="sound">Soft thinking sound</option>
+        <option value="off">Nothing</option>
+      </select>
+    </label>
+    <label class="check"><input id="early-send" type="checkbox" checked> Send as soon as I stop talking</label>
+    <p id="latency" class="hint health" aria-live="off">Speed: no turns measured yet.</p>
+    <p id="latency-detail" class="hint barge-debug" aria-live="off"></p>
     <p id="look-note" class="hint">Saved in this browser.</p>
     <p id="health" class="hint health" aria-live="off">Health: measuring…</p>
     <button id="copy-diag" class="del" type="button">Copy diagnostics</button>

@@ -17,7 +17,7 @@ const { Brain } = await import("../server/brain.js");
 const log = () => fs.readFileSync(path.join(tmp, "actions.log"), "utf8");
 
 
-test("remember saves to data/memory.json and logs it; memories reach the instructions", async () => {
+test("remember saves to data/memory.json and logs it; matching memories come with the request", async () => {
   const client = fakeClient([use("t1", "remember", { text: "Takes coffee black", topic: "food" }), say("Got it."), say("Black, no sugar.")]);
   const brain = new Brain({ client });
   assert.equal((await brain.handle("a", "remember that I take my coffee black")).reply, "Got it.");
@@ -27,17 +27,26 @@ test("remember saves to data/memory.json and logs it; memories reach the instruc
   assert.match(saved.at(-1).date, /^\d{4}-\d{2}-\d{2}$/);
   assert.match(log(), /"type":"memory_saved"/);
 
-  // Same conversation: the frozen instructions are untouched; the update arrives as an appended system message.
+  // Same conversation: the frozen instructions are untouched; the update arrives as an appended
+  // system message, and the matching memory rides along with the request itself.
   await brain.handle("a", "how do I take my coffee?");
   const req = client.calls[2];
   assert.deepEqual(req.system, client.calls[0].system, "system prompt stays frozen within a conversation");
   assert.equal(req.messages.at(-1).role, "system");
-  assert.match(req.messages.at(-1).content, /Takes coffee black/);
+  assert.match(req.messages.at(-1).content, /memory and notes were updated/);
+  const asked = req.messages.at(-2).content.map((b) => b.text).join("\n");
+  assert.match(asked, /Saved memories that may help[\s\S]*Takes coffee black/);
 
-  // A new conversation has it in the instructions directly.
-  const fresh = fakeClient([say("hi")]);
-  await new Brain({ client: fresh }).handle("b", "hello");
-  assert.match(fresh.calls[0].system[1].text, /Takes coffee black/);
+  // A new conversation: the instructions say how many memories there are, not all of them...
+  const fresh = fakeClient([say("hi"), say("Black.")]);
+  const b = new Brain({ client: fresh });
+  await b.handle("b", "hello");
+  assert.doesNotMatch(fresh.calls[0].system[1].text, /Takes coffee black/);
+  assert.match(fresh.calls[0].system[1].text, /\d+ saved memor(y|ies)\. The ones that match a request are attached/);
+  assert.doesNotMatch(JSON.stringify(fresh.calls[0].messages), /Takes coffee black/, "an unrelated request carries no memories");
+  // ...and a request about coffee carries the coffee memory.
+  await b.handle("b", "remind me how I like my coffee");
+  assert.match(JSON.stringify(fresh.calls[1].messages.at(-1)), /Takes coffee black/);
 });
 
 test("secrets are never stored, even when Claude tries", async () => {

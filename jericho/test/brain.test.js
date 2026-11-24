@@ -34,8 +34,16 @@ test("safe tool runs straight away (mock lights)", async () => {
   const toolResult = client.calls[1].messages.at(-1).content[0];
   assert.equal(toolResult.type, "tool_result");
   assert.match(toolResult.content, /"on":true/);
-  assert.equal(client.calls[0].model, "claude-opus-5-5");
-  assert.equal(client.calls[0].fallbacks, "default");
+  // a simple request: the fastest model, which has no server-side fallback
+  assert.equal(client.calls[0].model, "claude-haiku-5-5");
+  assert.equal(client.calls[0].fallbacks, undefined);
+  assert.equal(r.timings.route, "fast");
+
+  // "Always strong" (the sun panel's Brain setting) sends the same request to the strong model
+  const strong = fakeClient([use("t1", "lights", { action: "on", room: "kitchen" }), say("Kitchen lights are on.")]);
+  await new Brain({ client: strong }).handle("s1b", "turn on the kitchen lights", {}, { route: "always-strong" });
+  assert.equal(strong.calls[0].model, "claude-opus-5-5");
+  assert.equal(strong.calls[0].fallbacks, "default");
 });
 
 test("risky tool waits for a spoken yes, then runs", async () => {

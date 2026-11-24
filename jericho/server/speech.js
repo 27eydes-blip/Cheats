@@ -3,11 +3,17 @@
 
 const ABBREV = /\b(mr|mrs|ms|dr|st|vs|etc|e\.g|i\.e|approx|no|jr|sr|mt|ft|inc|ltd)\.$/i;
 
-/** Feed it text deltas; it hands back each sentence as soon as it's complete. */
+/**
+ * Feed it text deltas; it hands back each sentence as soon as it's complete.
+ * firstClauseAt: if the very first sentence runs past this many characters, it's split at the
+ * first comma, semicolon, colon or dash instead, so speaking can start sooner (0 = off).
+ */
 export class SentenceSplitter {
-  constructor(minLength = 12) {
+  constructor(minLength = 12, { firstClauseAt = 0 } = {}) {
     this.buf = "";
     this.minLength = minLength;
+    this.firstClauseAt = firstClauseAt;
+    this.emitted = 0;
   }
 
   push(delta) {
@@ -26,12 +32,26 @@ export class SentenceSplitter {
       start = re.lastIndex;
     }
     this.buf = this.buf.slice(start);
+    if (out.length === 0 && this.emitted === 0 && this.firstClauseAt > 0 && this.buf.length >= this.firstClauseAt) {
+      // a long first sentence: speak its first clause now ("Sure, here's the plan: ...")
+      const clause = /[,;:–—](\s+)/g;
+      let c;
+      while ((c = clause.exec(this.buf))) {
+        if (c.index < 25) continue; // too short to sound natural on its own
+        if (/\d$/.test(this.buf.slice(0, c.index)) && /^\d/.test(this.buf.slice(clause.lastIndex))) continue; // 1,000
+        out.push(this.buf.slice(0, c.index + 1).trim());
+        this.buf = this.buf.slice(clause.lastIndex);
+        break;
+      }
+    }
+    this.emitted += out.length;
     return out;
   }
 
   flush() {
     const rest = this.buf.trim();
     this.buf = "";
+    if (rest) this.emitted++;
     return rest ? [rest] : [];
   }
 }

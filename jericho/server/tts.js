@@ -13,6 +13,16 @@ const MAX_CHARS = 1000;
 const CACHE_DIR = path.join(process.env.JERICHO_DATA_DIR || path.join(ROOT, "data"), "audio-cache");
 const seen = new Map(); // phrase key -> times requested this run
 
+// Voice models, fastest first. "flash" has the lowest latency and still sounds natural.
+export const VOICE_MODELS = { flash: "eleven_flash_v2_5", turbo: "eleven_turbo_v2_5", multilingual: "eleven_multilingual_v2" };
+/** The ElevenLabs model id for a choice from the page ("flash", ...); anything else: settings.json. */
+export function voiceModelFor(choice) {
+  return Object.hasOwn(VOICE_MODELS, choice) ? VOICE_MODELS[choice] : undefined;
+}
+// The page's quick acknowledgments ("On it.") are saved to disk the first time, so they play instantly.
+export const ACK_PHRASES = ["On it.", "One sec.", "Okay, one moment."];
+const ackKeys = new Set(ACK_PHRASES.map((p) => p.trim().toLowerCase()));
+
 function voiceConfig(overrides = {}) {
   // Re-read settings each time so you can swap voices without restarting.
   const el = { ...(loadSettings().elevenlabs || {}), ...overrides };
@@ -78,8 +88,9 @@ async function requestSpeech(text, v) {
 }
 
 /** Streams speech for `text` into an HTTP response, from the cache when possible. */
-export async function streamSpeech(text, res) {
-  const v = voiceConfig();
+export async function streamSpeech(text, res, { model } = {}) {
+  const modelId = voiceModelFor(model);
+  const v = voiceConfig(modelId ? { modelId } : {});
   const cache = cacheSettings();
   const words = String(text).trim().split(/\s+/).length;
   const cacheable = cache.enabled && words <= cache.maxWords;
@@ -87,7 +98,8 @@ export async function streamSpeech(text, res) {
   const file = path.join(CACHE_DIR, `${key}.mp3`);
 
   if (cacheable && fs.existsSync(file)) {
-    res.writeHead(200, { "content-type": "audio/mpeg", "cache-control": "no-store", "x-tts-source": "cache" });
+    // the same words in the same voice never change: the browser may keep them too
+    res.writeHead(200, { "content-type": "audio/mpeg", "cache-control": "private, max-age=86400", "x-tts-source": "cache" });
     fs.createReadStream(file).pipe(res);
     const now = new Date();
     fs.utimes(file, now, now, () => {});
@@ -109,7 +121,8 @@ export async function streamSpeech(text, res) {
   seen.set(key, count);
   // Jericho runs for weeks: forget the oldest short phrases so this can't grow forever
   if (seen.size > 2000) for (const old of [...seen.keys()].slice(0, 500)) seen.delete(old);
-  const keep = cacheable && count >= cache.minRepeats; // short and repeated: save a copy
+  const isAck = ackKeys.has(String(text).trim().toLowerCase());
+  const keep = cacheable && (count >= cache.minRepeats || isAck); // short and repeated: save a copy
   const chunks = [];
   body.on("data", (c) => {
     if (keep) chunks.push(c);

@@ -31,7 +31,7 @@ test("spoken text has no markdown, bullets, symbols or links", () => {
 test("replies stream to the speaker a sentence at a time", async () => {
   const client = fakeClient([say("The kitchen lights are on now. Anything else you need tonight?")]);
   const heard = [];
-  const r = await new Brain({ client }).handle("a", "kitchen lights", { onSentence: (t) => heard.push(t) });
+  const r = await new Brain({ client }).handle("a", "kitchen lights", { onSentence: (t) => heard.push(t) }, { route: "always-strong" });
   assert.deepEqual(heard, ["The kitchen lights are on now.", "Anything else you need tonight?"]);
   assert.equal(r.reply, heard.join(" "));
   assert.ok(r.timings.firstSentenceMs !== null && r.timings.totalMs >= 0);

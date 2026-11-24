@@ -163,23 +163,28 @@ export const setVolumeTool = {
   risky: false,
   definition: {
     name: "set_volume",
-    description: "Set the PC's volume to a percentage, or mute/unmute.",
-    input_schema: obj({ percent: { type: "integer", minimum: 0, maximum: 100 }, mute: { type: "boolean" } }, []),
+    description: "Set the PC's volume to a percentage, turn it up or down a step (step), or mute/unmute.",
+    input_schema: obj({ percent: { type: "integer", minimum: 0, maximum: 100 }, mute: { type: "boolean" }, step: { type: "string", enum: ["up", "down"] } }, []),
   },
-  async run({ percent, mute }, ctx = {}) {
+  async run({ percent, mute, step }, ctx = {}) {
     if (!isWin) return { ok: false, error: "Volume control is only set up for Windows so far." };
     // Volume keys move in 2% steps: go to zero, then up to the level asked for.
+    // A step up or down is five key presses (about 10%).
     const script = [
       "$w = New-Object -ComObject WScript.Shell",
       "if ($env:JERICHO_ARG1 -eq 'mute') { $w.SendKeys([char]173); exit 0 }",
+      "if ($env:JERICHO_ARG2 -eq 'up') { 1..5 | ForEach-Object { $w.SendKeys([char]175) }; exit 0 }",
+      "if ($env:JERICHO_ARG2 -eq 'down') { 1..5 | ForEach-Object { $w.SendKeys([char]174) }; exit 0 }",
       "1..50 | ForEach-Object { $w.SendKeys([char]174) }",
       "$n = [int]([int]$env:JERICHO_ARG0 / 2)",
       "if ($n -gt 0) { 1..$n | ForEach-Object { $w.SendKeys([char]175) } }",
     ].join("; ");
     const level = Math.max(0, Math.min(100, Math.round(Number(percent ?? 50))));
-    const r = await powershell(script, [level, mute ? "mute" : ""], { signal: ctx.signal, label: "volume" });
-    pcLog("set_volume", "safe", { level: mute ? "mute toggle" : level, ok: r.code === 0 });
-    return r.code === 0 ? { ok: true, volume: mute ? "mute toggled" : level } : failed(r, "Changing the volume");
+    const dir = !mute && (step === "up" || step === "down") ? step : "";
+    const r = await powershell(script, [level, mute ? "mute" : "", dir], { signal: ctx.signal, label: "volume" });
+    const what = mute ? "mute toggled" : dir ? `turned ${dir}` : level;
+    pcLog("set_volume", "safe", { level: what, ok: r.code === 0 });
+    return r.code === 0 ? { ok: true, volume: what } : failed(r, "Changing the volume");
   },
 };
 

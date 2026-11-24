@@ -17,14 +17,18 @@ let reason = usePool ? null : "turned off with JERICHO_NO_KEEPALIVE=1";
 try {
   if (usePool) {
     const undici = await import("undici");
-    pool = {
-      fetch: undici.fetch,
-      agent: new undici.Agent({
-        keepAliveTimeout: 60_000, // keep idle sockets for a minute...
-        keepAliveMaxTimeout: 10 * 60_000,
-        connections: 16,
-      }),
-    };
+    let agent = new undici.Agent({
+      keepAliveTimeout: 60_000, // keep idle sockets for a minute...
+      keepAliveMaxTimeout: 10 * 60_000,
+      connections: 16,
+    });
+    // Remember DNS answers for a few minutes, so a new socket doesn't wait on a lookup.
+    try {
+      if (undici.interceptors?.dns) agent = agent.compose(undici.interceptors.dns({ maxTTL: 5 * 60_000 }));
+    } catch {
+      /* older undici: plain lookups */
+    }
+    pool = { fetch: undici.fetch, agent };
   }
 } catch (err) {
   usePool = false;
@@ -96,21 +100,36 @@ export function _setPoolForTests(p) {
 
 const warmers = [];
 let timer = null;
+let idleTimer = null;
+export const WARM_ACTIVE_MS = 25_000; // a page is open: keep the sockets open
+export const WARM_IDLE_MS = 4 * 60_000; // nobody connected: still refresh DNS + TLS now and then
 
 /** Register a cheap request (no credits used) that keeps a host's connection warm. */
 export function addWarmer(name, fn) {
   warmers.push({ name, fn });
 }
 
-/** ...and while a page is open, touch each service every 25s so the sockets stay open. */
+/** Touch every service once (DNS lookup, TLS handshake, a free request). Never throws. */
+export function warmAll() {
+  return Promise.all(warmers.map((w) => Promise.resolve().then(w.fn).catch(() => {})));
+}
+
+/** While a page is open, touch each service every 25s so the sockets stay open. */
 export function setWarm(on) {
   if (on && !timer) {
-    const tick = () => warmers.forEach((w) => w.fn().catch(() => {}));
-    tick();
-    timer = setInterval(tick, 25_000);
+    warmAll();
+    timer = setInterval(warmAll, WARM_ACTIVE_MS);
     timer.unref();
   } else if (!on && timer) {
     clearInterval(timer);
     timer = null;
   }
+}
+
+/** At startup: warm everything now, then every few minutes even with no page open. */
+export function startIdleWarm({ delayMs = 1500, everyMs = WARM_IDLE_MS } = {}) {
+  if (idleTimer) return;
+  setTimeout(() => !timer && warmAll(), delayMs).unref?.();
+  idleTimer = setInterval(() => !timer && warmAll(), everyMs);
+  idleTimer.unref();
 }
