@@ -1,7 +1,7 @@
 // Tool registry. To add a tool: write { definition, risky, describe?, run } and list it here.
 // Optional extras: precheck(input, ctx) runs before the yes/no question and can refuse;
 // confirmPrompt(input) replaces the "Should I ...?" wording; announce is said before a slow tool runs.
-import { makeCallTool, recentCallsTool } from "./calls.js";
+import { callOwnerTool, makeCallTool, recentCallsTool } from "./calls.js";
 import { claudeCodeResultTool, claudeCodeStatusTool, claudeCodeTool } from "./claudeCode.js";
 import { deepThinkTool } from "./deepThink.js";
 import { morningBriefingTool } from "./briefing.js";
@@ -27,6 +27,7 @@ const all = [
   forgetTool,
   deepThinkTool,
   makeCallTool,
+  callOwnerTool,
   recentCallsTool,
   saveLessonTool,
   whatIveLearnedTool,

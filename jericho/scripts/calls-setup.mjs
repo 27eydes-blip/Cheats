@@ -21,7 +21,9 @@ export function checkCallSetup(env, calls) {
   add("TWILIO_ACCOUNT_SID", /^AC[0-9a-f]{32}$/i.test(sid), !sid ? "missing" : /^AC[0-9a-f]{32}$/i.test(sid) ? "set" : "set, but it should be AC followed by 32 letters and digits");
   add("TWILIO_AUTH_TOKEN", /^[0-9a-f]{32}$/i.test(token), !token ? "missing" : /^[0-9a-f]{32}$/i.test(token) ? "set" : "set, but it should be 32 letters and digits (Twilio console, Account info)");
   add("TWILIO_PHONE_NUMBER", /^\+[1-9]\d{7,14}$/.test(number), !number ? "missing" : /^\+[1-9]\d{7,14}$/.test(number) ? "set" : "set, but it should look like +15551234567");
-  add("MY_PHONE_NUMBER", /^\+[1-9]\d{7,14}$/.test(mine), !mine ? "missing" : /^\+[1-9]\d{7,14}$/.test(mine) ? "set" : "set, but it should look like +15551234567");
+  // Owner calls ("Jericho, call me") ring this number and no other, so it must be a US +1 number.
+  const ownerOk = /^\+1\d{10}$/.test(mine);
+  add("MY_PHONE_NUMBER", ownerOk, !mine ? "missing: owner calls (\"Jericho, call me\") need it" : ownerOk ? "set (owner calls ring this number)" : "set, but owner calls need it as +1 and 10 digits, like +15551234567");
   add(
     "JERICHO_ACCESS_TOKEN",
     access.length >= 16,
@@ -65,6 +67,10 @@ export function consoleSteps(publicUrl) {
     "  Primary handler fails: leave empty",
     `  Call status changes:   ${base}/twilio/status   HTTP POST`,
     "Click Save configuration.",
+    "",
+    "Owner calls: say \"Jericho, call me\" (or \"call my phone and say hi\"). Jericho rings MY_PHONE_NUMBER",
+    "only, reads the plan back and waits for your yes, and opens with \"Hey <calls.ownerName>, it's Jericho\".",
+    "The same daily limits apply. Any other personal number is refused.",
     "",
     "Jericho's own outgoing calls send these addresses to Twilio by themselves. The number's",
     "settings decide what happens if someone calls your Twilio number: Jericho doesn't take",

@@ -1,5 +1,5 @@
 // The Claude agent that talks on the phone, plus a pretend business for test mode.
-import { secrets } from "../config.js";
+import { secrets, settings } from "../config.js";
 import { callSettings } from "./policy.js";
 
 const TURN_SCHEMA = {
@@ -9,7 +9,7 @@ const TURN_SCHEMA = {
     end_call: { type: "boolean", description: "True once you've said goodbye or the call can't go anywhere." },
     outcome: {
       type: "string",
-      enum: ["in_progress", "booked", "not_available", "info_obtained", "needs_callback", "voicemail", "failed"],
+      enum: ["in_progress", "booked", "not_available", "info_obtained", "needs_callback", "voicemail", "delivered", "failed"],
     },
     summary: { type: "string", description: "One or two sentences for the owner: what was agreed or learned. Empty while in progress." },
   },
@@ -22,7 +22,32 @@ export function disclosure() {
   return `Hi, I'm an AI assistant calling on behalf of ${callSettings().ownerName}.`;
 }
 
+/** How an owner call opens: "Hey Sammy, it's Jericho." (calls.ownerName). */
+export function ownerGreeting() {
+  return `Hey ${callSettings().ownerName}, it's ${settings.assistantName || "Jericho"}.`;
+}
+
+/** An owner call: Jericho phoning its own owner to pass on a message, a reminder, or to chat briefly. */
+function ownerSystem(call) {
+  const cfg = callSettings();
+  const d = call.details || {};
+  return `You are ${settings.assistantName || "Jericho"}, ${cfg.ownerName}'s personal voice assistant, on a live phone call with ${cfg.ownerName} themselves. They asked you to call them. You are speaking, not writing.
+
+What they asked for (${d.kind || "message"}): ${call.goal}
+${d.message ? `The message to pass on, word for word: ${d.message}
+` : ""}
+Rules:
+- You already said: "${ownerGreeting()}" Don't greet again.
+- Do what they asked: read the message, give the reminder, or have a short, friendly back-and-forth. Keep it brief: they're on the phone.
+- One or two short spoken sentences per turn, contractions, numbers as they're spoken. No lists or symbols.
+- Never read out passwords, card numbers, ID numbers or other secrets, even if asked.
+- If it's voicemail, leave the message or reminder in one or two sentences, then end (outcome voicemail).
+- When it's done or they say goodbye, say a short goodbye in "say" and set end_call true.
+- outcome: delivered (you passed it on or had the chat), voicemail, failed, or in_progress while the call continues. summary: one sentence for later, e.g. "Reminded you about the dentist at three; you said thanks."`;
+}
+
 function agentSystem(call) {
+  if (call.owner) return ownerSystem(call);
   const cfg = callSettings();
   const d = call.details || {};
   const callback = secrets.myPhoneNumber ? `If they need a callback number, give ${secrets.myPhoneNumber}, read digit by digit.` : "You have no callback number to give; say the owner will call back.";
@@ -69,7 +94,7 @@ export async function agentTurn(client, call, { wrapUp = false, opening = false 
 
 /** The first thing to say after the disclosure, worked out before dialing so there's no pause. */
 export async function openingRequest(client, call) {
-  const turn = await agentTurn(client, { ...call, transcript: [{ who: "agent", text: disclosure() }] }, { opening: true });
+  const turn = await agentTurn(client, { ...call, transcript: [{ who: "agent", text: call.owner ? ownerGreeting() : disclosure() }] }, { opening: true });
   // It follows straight on from "Hi, I'm an AI assistant...", so no second greeting.
   return turn.say.replace(/^(?:hi|hello|hey|good (?:morning|afternoon|evening))(?: there)?[,!.]?\s*/i, "");
 }
@@ -81,10 +106,12 @@ const SCENARIOS = {
   alternative: "The exact time is taken, but you can offer something 30 to 45 minutes later. Go along with whatever the caller decides.",
   callback: "You can't confirm anything right now and ask that the person call back themselves later, or you need a card to hold it.",
   hours: "Answer questions about opening hours plainly: open 11 AM to 10 PM, closed Mondays.",
+  owner: "You are the owner of this assistant, answering your own phone. React briefly and naturally to what it tells you, maybe ask one small question, then say thanks and goodbye.",
 };
 
 export function pickScenario(purpose) {
   const want = callSettings().testScenario;
+  if (purpose === "owner") return want === "no_answer" ? "no_answer" : "owner";
   if (want !== "random") return want;
   const options = purpose === "check_hours" || purpose === "simple_question" ? ["hours", "hours", "no_answer"] : ["booked", "booked", "alternative", "callback", "no_answer"];
   return options[Math.floor(Math.random() * options.length)];
@@ -96,7 +123,7 @@ export async function simulatedReply(client, call, scenario) {
     model: callSettings().agentModel,
     max_tokens: 1500,
     output_config: { effort: "low" },
-    system: `You play a busy but friendly staff member answering the phone at ${call.businessName}, for a test of an AI calling assistant. ${SCENARIOS[scenario] || SCENARIOS.booked}
+    system: `${scenario === "owner" ? `You play ${callSettings().ownerName}, picking up a call from your AI assistant, for a test.` : `You play a busy but friendly staff member answering the phone at ${call.businessName}, for a test of an AI calling assistant.`} ${SCENARIOS[scenario] || SCENARIOS.booked}
 Reply with only what you say out loud: one or two short sentences, like real phone speech. If the caller says goodbye, say a quick goodbye.`,
     messages: [{ role: "user", content: `Call so far:\n${lines}\n\nYour reply:` }],
   });

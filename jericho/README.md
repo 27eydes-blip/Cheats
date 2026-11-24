@@ -348,6 +348,28 @@ what was said. Older `timing` lines still go to `logs/actions.log`.
    a callback, or voicemail. The call is saved to `data/calls.json` and shown on the **Calls**
    page (`/calls`), with a transcript.
 
+### Owner calls ("Jericho, call me")
+
+Jericho doesn't call people, with one exception: you. Say "call me", "call my phone" or "give
+me a call and say hi", and it rings your own cell. That's `MY_PHONE_NUMBER` in `.env`; you never
+have to say the number.
+
+- **Only your number.** The owner call tool has no number field. The server dials
+  `MY_PHONE_NUMBER` itself, after normalizing it to +1 and 10 digits; it must be a US number.
+  Business calls aimed at a person ("say hi to my mom", "call my friend") are refused in code
+  before you're even asked, and the Claude screen still blocks private individuals.
+- **Still your yes.** Jericho reads the plan back without saying the number, then asks "Should I
+  dial?". The daily cap, the per-number cap, `maxMinutes`, US only and the signed-webhook checks
+  all apply as usual.
+- **On the call** it opens with "Hey Sammy, it's Jericho," using `calls.ownerName`, then does
+  what you asked: reads a message, gives a reminder, or has a short back-and-forth. If it gets
+  your voicemail, it leaves the message there. Afterwards it tells you how it went, for example
+  "I called your phone. Reminded you about the dentist at three."
+- **Your number stays in `.env`.** It isn't stored with the call (the call records "owner"),
+  it's blanked out of the log in every way it might be written, and it's hidden on the Calls
+  page.
+- In test mode nothing rings: Claude plays you picking up.
+
 **Rules (checked in code, in `server/calls/policy.js`):**
 - **What it calls for:** only reservations, checking hours, appointments or one simple question.
   No emergency or short numbers (911, 988, the x11 numbers), no premium-rate numbers (900, 976),
@@ -398,7 +420,8 @@ Claude usage and no Twilio money.
    says `Phone calls: LIVE via Twilio`.
 7. **Run the setup check:** `npm run calls:setup`, with Jericho and the tunnel running. It checks:
    - the four Twilio values and the access token in `.env` (only whether each is set and looks
-     right: it never prints a key, token or phone number);
+     right: it never prints a key, token or phone number). `MY_PHONE_NUMBER` must be +1 and 10
+     digits, because owner calls ring it;
    - `calls.publicUrl` and `calls.testMode`;
    - that the tunnel refuses a stranger: the page without a token, and an unsigned webhook.
      Add `--no-network` to skip this check.
@@ -684,7 +707,7 @@ scripts/bench-latency.mjs measures real Claude latency for a few typical turns
 server/calls/policy.js    what may be called: numbers, purposes, limits, safety screen
 server/calls/agent.js     the Claude agent on the phone, and the pretend business for test mode
 server/calls/manager.js   test calls, Twilio calls and webhooks, data/calls.json, announcements
-server/tools/calls.js     make_call + recent_calls tools
+server/tools/calls.js     make_call, call_owner ("call me") and recent_calls tools
 server/tools/deepThink.js sends hard questions, plans and decisions to the stronger model
 server/tools/learning.js  save_lesson + what_ive_learned tools
 server/tools/pc.js        PC control tools (apps, links, volume, media, timers, clipboard, files, commands)

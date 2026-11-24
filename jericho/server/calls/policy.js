@@ -1,6 +1,6 @@
 // What Jericho is allowed to call, checked in code before you're even asked to confirm,
 // and again right before dialing.
-import { settings } from "../config.js";
+import { secrets, settings } from "../config.js";
 import { isSensitive } from "../secrets.js";
 
 export function callSettings() {
@@ -84,6 +84,37 @@ export function checkNumber(raw) {
   return { ok: true, number: n };
 }
 
+// ---- owner calls: the one person Jericho may call is you, at MY_PHONE_NUMBER ----------------
+// The number lives only in .env. It's never taken from what Claude or anyone says: the owner
+// call tool has no number field, and the server dials this one.
+
+/** MY_PHONE_NUMBER as +1XXXXXXXXXX, or null if it isn't set or isn't a US number. */
+export function ownerNumber(raw = secrets.myPhoneNumber) {
+  const n = normalizeNumber(raw, "1");
+  return n && /^\+1\d{10}$/.test(n) ? n : null;
+}
+
+/** Is `raw` exactly the owner's number (after normalizing)? Every other number is someone else. */
+export function isOwnerNumber(raw) {
+  const owner = ownerNumber();
+  const n = normalizeNumber(raw, "1");
+  return Boolean(owner && n && n === owner);
+}
+
+/** The owner call's number rules: MY_PHONE_NUMBER set, US (+1), and a normal dialable number. */
+export function checkOwnerNumber(raw = secrets.myPhoneNumber) {
+  if (!String(raw || "").trim()) return { ok: false, reason: "I don't have your number. Add MY_PHONE_NUMBER to the dot env file." };
+  const owner = ownerNumber(raw);
+  if (!owner || !isOwnerNumber(raw)) return { ok: false, reason: "Owner calls only go to your own US number, MY_PHONE_NUMBER in the dot env file, written as plus one and ten digits." };
+  const num = checkNumber(owner);
+  if (!num.ok) return num;
+  return { ok: true, number: owner };
+}
+
+// Business calls never go to people. Code-level, before the Claude screen.
+const PERSONAL =
+  /\b(my (?:mom|mum|mother|dad|father|parents?|wife|husband|partner|girlfriend|boyfriend|son|daughter|kids?|brother|sister|sibling|cousin|aunt|uncle|grandma|grandpa|grandmother|grandfather|friend|buddy|ex|neighbou?r|boss|coworker|colleague)|say hi to|say hello to|catch up with|check (?:in|up) on (?:him|her|them)|chat with (?:him|her|them))\b/i;
+
 const BAD_INTENT =
   /\b(pretend|impersonat|pose as|posing as|say (?:you are|you're|i am|i'm) (?!an? (?:ai|assistant))|threat|threaten|harass|scare|insult|prank|revenge|stalk|keep calling|spam|scam|gift ?cards?|wire (?:money|transfer)|bitcoin|crypto|irs|social security|warrant|arrest|lawsuit|fake|lie to|trick|refund (?:scam|fraud)|verify (?:their|your) account|bank details|one[- ]time code|otp|two[- ]factor)\b/i;
 
@@ -98,6 +129,9 @@ export function checkIntentKeywords(input) {
   }
   if (isSensitive(text)) {
     return { ok: false, reason: "I won't share passwords, card numbers or ID numbers on a call." };
+  }
+  if (PERSONAL.test(text)) {
+    return { ok: false, reason: "I only call businesses, or your own phone. I can't call other people." };
   }
   return { ok: true };
 }

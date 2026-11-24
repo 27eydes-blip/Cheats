@@ -288,7 +288,7 @@ test("the setup helper checks the four Twilio values, the token and the public a
   const bad = checkCallSetup({ ...GOOD_ENV, TWILIO_AUTH_TOKEN: "", MY_PHONE_NUMBER: "555-0187", JERICHO_ACCESS_TOKEN: "short" }, { publicUrl: "http://localhost:3000", testMode: true });
   const failed = Object.fromEntries(bad.filter((r) => !r.ok).map((r) => [r.name, r.note]));
   assert.match(failed.TWILIO_AUTH_TOKEN, /missing/);
-  assert.match(failed.MY_PHONE_NUMBER, /should look like/);
+  assert.match(failed.MY_PHONE_NUMBER, /owner calls need it as \+1 and 10 digits/);
   assert.match(failed.JERICHO_ACCESS_TOKEN, /too short/);
   assert.match(failed["calls.publicUrl"], /https/);
   assert.match(failed["calls.testMode"], /simulated/);

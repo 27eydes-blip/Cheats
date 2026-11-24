@@ -9,8 +9,9 @@ import { errorDetails, keepAliveFetch } from "../net.js";
 import { track } from "../cancel.js";
 import { jobEvents } from "../tools/claudeCode.js";
 import { synthesize } from "../tts.js";
-import { agentTurn, disclosure, openingRequest, pickScenario, simulatedReply } from "./agent.js";
-import { callSettings, checkIntentKeywords, checkLimits, checkNumber, normalizeNumber, screenWithClaude, speakNumber } from "./policy.js";
+import { agentTurn, disclosure, openingRequest, ownerGreeting, pickScenario, simulatedReply } from "./agent.js";
+import { callSettings, checkIntentKeywords, checkLimits, checkNumber, checkOwnerNumber, isOwnerNumber, normalizeNumber, screenWithClaude, speakNumber } from "./policy.js";
+import { isSensitive } from "../secrets.js";
 
 const DATA_DIR = process.env.JERICHO_DATA_DIR || path.join(ROOT, "data");
 const CALLS_FILE = path.join(DATA_DIR, "calls.json");
@@ -86,14 +87,14 @@ export async function precheck(input, client, { screen = true } = {}) {
   if (!kw.ok) return kw;
   const num = checkNumber(input.phoneNumber);
   if (!num.ok) return num;
-  const limits = checkLimits(listCalls(), num.number, cfg.testMode);
+  const limits = checkLimits(listCalls(), isOwnerNumber(num.number) ? OWNER : num.number, cfg.testMode);
   if (!limits.ok) return limits;
   if (!cfg.testMode) {
     const notReady = liveReady();
     if (notReady) return { ok: false, reason: notReady };
   }
   // Calling your own phone (MY_PHONE_NUMBER) is a rehearsal: you play the business.
-  const own = secrets.myPhoneNumber && normalizeNumber(secrets.myPhoneNumber, cfg.defaultCountryCode) === num.number;
+  const own = isOwnerNumber(num.number);
   if (screen && !own) {
     const key = inputHash(input);
     if (!screened.has(key)) {
@@ -106,7 +107,81 @@ export async function precheck(input, client, { screen = true } = {}) {
 }
 
 function blocked(input, reason) {
-  logAction("call_blocked", { business: input.businessName, number: input.phoneNumber, purpose: input.purpose, reason });
+  logAction("call_blocked", { business: input.businessName, number: isOwnerNumber(input.phoneNumber) ? "owner" : input.phoneNumber, purpose: input.purpose, reason });
+}
+
+// ---- owner calls ("call me") ------------------------------------------------------------
+// The one exception to "businesses only": your own phone, MY_PHONE_NUMBER. The number is never
+// stored with the call or logged ("owner" instead) and is looked up again when dialing.
+export const OWNER = "owner";
+const MAX_OWNER_TEXT = 600;
+
+/** The owner call's rules. Runs before you're asked, and again right before dialing. */
+export function precheckOwner(input) {
+  const cfg = callSettings();
+  const text = [input.task, input.message].filter(Boolean).join(" ");
+  if (!String(input.task || "").trim()) return { ok: false, reason: "What should I say or do on the call?" };
+  if (text.length > MAX_OWNER_TEXT) return { ok: false, reason: "That's too long for a phone call. Keep it to a short message." };
+  if (isSensitive(text)) return { ok: false, reason: "I won't read passwords, card numbers or ID numbers over the phone." };
+  const num = checkOwnerNumber();
+  if (!num.ok) return num;
+  const limits = checkLimits(listCalls(), OWNER, cfg.testMode);
+  if (!limits.ok) return limits;
+  if (!cfg.testMode) {
+    const notReady = liveReady();
+    if (notReady) return { ok: false, reason: notReady };
+  }
+  return { ok: true, testMode: cfg.testMode };
+}
+
+/** Read-back for an owner call. It never says the number. */
+export function describeOwnerPlan(input) {
+  const cfg = callSettings();
+  const bits = [`Here's the plan. I'll call your phone and start with "${ownerGreeting()}"`];
+  bits.push(`Then: ${String(input.task).replace(/[.!?]+$/, "")}.`);
+  if (input.message) bits.push(`The message: ${String(input.message).replace(/[.!?]+$/, "")}.`);
+  if (cfg.testMode) bits.push("This is a test call, so your phone won't actually ring.");
+  bits.push("Should I dial?");
+  return bits.join(" ");
+}
+
+
+export async function startOwnerCall(input, client) {
+  const check = precheckOwner(input);
+  if (!check.ok) {
+    logAction("call_blocked", { business: "owner", number: OWNER, purpose: "owner", reason: check.reason });
+    return { ok: false, error: check.reason };
+  }
+  const cfg = callSettings();
+  const call = {
+    id: `c${crypto.randomBytes(4).toString("hex")}`,
+    createdAt: new Date().toISOString(),
+    test: cfg.testMode,
+    owner: true,
+    businessName: "your phone",
+    number: OWNER,
+    purpose: "owner",
+    goal: String(input.task).slice(0, MAX_OWNER_TEXT),
+    details: { kind: input.kind || "message", ...(input.message ? { message: String(input.message).slice(0, MAX_OWNER_TEXT) } : {}) },
+    plan: String(input.task).slice(0, MAX_OWNER_TEXT),
+    status: "dialing",
+    outcome: null,
+    summary: "",
+    durationSec: 0,
+    transcript: [],
+  };
+  saveCall(call);
+  untrackers.set(call.id, track("call", "your phone", () => cancelCall(call)));
+  logAction("call_started", { id: call.id, test: call.test, owner: true, number: OWNER, purpose: "owner", kind: call.details.kind });
+  if (call.test) {
+    simulate(call, client).catch((err) => finish(call, "failed", `The test call hit an error: ${err.message}`));
+  } else {
+    dialTwilio(call, client).catch((err) => {
+      logAction("call_error", { id: call.id, error: err.message, cause: errorDetails(err) });
+      finish(call, "failed", "Twilio couldn't place the call.");
+    });
+  }
+  return { ok: true, started: true, callId: call.id, testMode: call.test };
 }
 
 // ---- starting a call -----------------------------------------------------------------
@@ -123,7 +198,7 @@ export async function startCall(input, client) {
     createdAt: new Date().toISOString(),
     test: cfg.testMode,
     businessName: input.businessName,
-    number: check.number,
+    number: isOwnerNumber(check.number) ? OWNER : check.number, // your own number is never stored
     purpose: input.purpose,
     goal: input.goal,
     details: input.details || {},
@@ -163,6 +238,14 @@ const SPOKEN = {
   failed: (c) => `The call to ${c.businessName} didn't work out. ${c.summary}`,
 };
 
+const OWNER_SPOKEN = {
+  delivered: (c) => `I called your phone. ${c.summary}`,
+  voicemail: () => "I called your phone and left a voicemail.",
+  no_answer: () => "I called your phone, but you didn't pick up.",
+  busy: () => "I called your phone, but it was busy.",
+  failed: (c) => `The call to your phone didn't work out. ${c.summary}`,
+};
+
 function finish(call, outcome, summary) {
   untrackers.get(call.id)?.();
   untrackers.delete(call.id);
@@ -177,7 +260,8 @@ function finish(call, outcome, summary) {
   call.endedAt = new Date().toISOString();
   saveCall(call);
   logAction("call_ended", { id: call.id, test: call.test, business: call.businessName, outcome, summary: call.summary, durationSec: call.durationSec });
-  const spoken = (call.test ? "Test call. " : "") + (SPOKEN[outcome] || SPOKEN.failed)(call);
+  const said = call.owner ? (OWNER_SPOKEN[outcome] || OWNER_SPOKEN.failed)(call) : (SPOKEN[outcome] || SPOKEN.failed)(call);
+  const spoken = (call.test ? "Test call. " : "") + said;
   jobEvents.emit("announce", spoken.trim());
 }
 
@@ -196,7 +280,7 @@ async function simulate(call, client) {
   live.get(call.id).answeredAt = Date.now();
   call.status = "in-progress";
   const opening = await openingRequest(client, call);
-  call.transcript.push({ who: "agent", text: `${disclosure()} ${opening}` });
+  call.transcript.push({ who: "agent", text: `${call.owner ? ownerGreeting() : disclosure()} ${opening}` });
   saveCall(call);
   let simulatedSeconds = 8;
   for (let turn = 0; turn < MAX_TURNS; turn++) {
@@ -236,14 +320,21 @@ function newAudio(text) {
 
 async function dialTwilio(call, client) {
   const cfg = callSettings();
+  // An owner call is checked again and its number looked up only now, from .env.
+  let to = call.number;
+  if (call.owner || call.number === OWNER) {
+    const own = checkOwnerNumber();
+    if (!own.ok) throw new Error("the owner number isn't set up");
+    to = own.number;
+  }
   const opening = await openingRequest(client, call);
-  const text = `${disclosure()} ${opening}`;
+  const text = `${call.owner ? ownerGreeting() : disclosure()} ${opening}`;
   // One shared copy of the call for every webhook, so their saves can't overwrite each other.
   live.set(call.id, { call, client, opening: text, audioId: newAudio(text), silences: 0, turns: 0, answeredAt: null });
 
   const base = cfg.publicUrl;
   const form = new URLSearchParams({
-    To: call.number,
+    To: to,
     From: secrets.twilioNumber,
     Url: `${base}/twilio/voice?call=${call.id}`,
     Method: "POST",
@@ -376,7 +467,7 @@ export function describePlan(input, number) {
   const d = input.details || {};
   const cfg = callSettings();
   const bits = [];
-  bits.push(`Here's the plan. I'll call ${input.businessName} at ${speakNumber(number)}.`);
+  bits.push(isOwnerNumber(number) ? `Here's the plan. I'll call your own phone as practice, and you play ${input.businessName}.` : `Here's the plan. I'll call ${input.businessName} at ${speakNumber(number)}.`);
   bits.push(`The goal: ${String(input.goal).replace(/[.!?]+$/, "")}.`);
   if (d.name && !String(input.goal).includes(d.name)) bits.push(`The booking name is ${d.name}.`);
   bits.push(`I'll start by saying I'm an AI assistant calling for ${cfg.ownerName}, then: ${String(input.plan).replace(/[.!?]+$/, "")}.`);

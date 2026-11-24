@@ -1,6 +1,6 @@
 // Phone call tools. make_call is risky: rules are checked first, then Jericho reads back
 // the number, the goal and what it will say, and only dials after a spoken yes.
-import { describePlan, listCalls, precheck, startCall } from "../calls/manager.js";
+import { describeOwnerPlan, describePlan, listCalls, precheck, precheckOwner, startCall, startOwnerCall } from "../calls/manager.js";
 import { normalizeNumber, PURPOSES, callSettings } from "../calls/policy.js";
 
 export const makeCallTool = {
@@ -44,6 +44,37 @@ export const makeCallTool = {
   },
   async run(input, ctx) {
     return startCall(input, ctx.client);
+  },
+};
+
+// The one person Jericho may phone: you, at MY_PHONE_NUMBER in .env. There's no number field on
+// purpose: the server dials that number and nothing else, so no one (not even Claude) can point
+// an owner call somewhere else. Same yes, limits and webhook checks as every call.
+export const callOwnerTool = {
+  risky: true,
+  precheck: (input) => precheckOwner(input),
+  confirmPrompt: (input) => describeOwnerPlan(input),
+  describe: () => "call your phone",
+  definition: {
+    name: "call_owner",
+    description:
+      "Phone the user's own cell (their number is set up already; never ask for it or say it). Use it when they say " +
+      "\"call me\", \"call my phone\", \"give me a call and say hi\", or ask you to ring them with a message or reminder later in a " +
+      "conversation. The call opens with \"Hey <their name>, it's Jericho\", then does what they asked. The system reads the plan back " +
+      "and only dials after a yes. This is the only person you can call; other people are never allowed.",
+    input_schema: {
+      type: "object",
+      properties: {
+        task: { type: "string", description: "What to do on the call, in one sentence, e.g. 'Say hi and ask how their day is going'" },
+        kind: { type: "string", enum: ["message", "reminder", "chat"] },
+        message: { type: "string", description: "Exact words to pass on, if they gave any" },
+      },
+      required: ["task", "kind"],
+      additionalProperties: false,
+    },
+  },
+  async run(input, ctx) {
+    return startOwnerCall(input, ctx.client);
   },
 };
 
