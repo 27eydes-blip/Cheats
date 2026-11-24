@@ -85,7 +85,7 @@ const agent = (req) => {
   }
   return null;
 };
-const askLuke = { businessName: "Luke", phoneNumber: LUKE, purpose: "personal", goal: "Ask Luke if he's coming tonight", plan: "ask if he's coming tonight" };
+const askLuke = { businessName: "Luke", personName: "Luke", phoneNumber: LUKE, purpose: "personal", goal: "Ask Luke if he's coming tonight", plan: "ask if he's coming tonight" };
 
 // ---- confirmation, disclosure, records ------------------------------------------------------------
 
@@ -96,7 +96,7 @@ test("a spoken number: read back digit by digit, who and what, and nothing is di
   assert.equal(r.awaitingConfirmation, true, "confirmation required");
   assert.match(r.reply, /^Here's the plan\. I'll call Luke at 2 4 8, 7 3 6, 0 1 2 3\./);
   assert.match(r.reply, /The goal: Ask Luke if he's coming tonight\./);
-  assert.match(r.reply, /I'll start by saying I'm an AI assistant calling for Sammy, then: ask if he's coming tonight\./);
+  assert.match(r.reply, /I'll start with "Hey Luke, I'm Jericho, Sammy Eyde's personal assistant\." Then: ask if he's coming tonight\./);
   assert.match(r.reply, /Should I dial\? Say yes to confirm\.$/);
   assert.equal(dials().length, 0, "nothing dialed before the yes");
 
@@ -111,7 +111,7 @@ test("a spoken number: read back digit by digit, who and what, and nothing is di
   const call = listCalls().find((c) => c.businessName === "Luke");
   await handleTwilio("voice", call.id, {});
   const opening = listCalls().find((c) => c.id === call.id).transcript[0].text;
-  assert.match(opening, /^Hi, I'm an AI assistant calling on behalf of Sammy\. Sammy wanted to know/);
+  assert.match(opening, /^Hey Luke, I'm Jericho, Sammy Eyde's personal assistant\. Sammy wanted to know/);
   assert.doesNotMatch(opening, /recorded/);
   await handleTwilio("gather", call.id, { SpeechResult: "Yeah, I'll be there around eight." });
   const announced = new Promise((resolve) => jobEvents.once("announce", resolve));
@@ -324,7 +324,7 @@ test("calling a saved contact reads its number back in full", async () => {
 
 test("recording only when asked, and announced at the start", async () => {
   await hangUpAll();
-  const client = fakeClient([use("r1", "make_call", { ...askLuke, businessName: "Eve", phoneNumber: "313-736-5500", record: true }), say("Calling.")], agent);
+  const client = fakeClient([use("r1", "make_call", { ...askLuke, businessName: "Eve", personName: "Eve", phoneNumber: "313-736-5500", record: true }), say("Calling.")], agent);
   const brain = new Brain({ client });
   const r = await brain.handle("rec", "call Eve and record the call");
   assert.match(r.reply, /You asked me to record it, so I'll say at the start that the call is being recorded\./);
@@ -333,7 +333,7 @@ test("recording only when asked, and announced at the start", async () => {
   assert.equal(new URLSearchParams(dial.init.body).get("Record"), "true");
   const call = listCalls().find((c) => c.businessName === "Eve");
   await handleTwilio("voice", call.id, {});
-  assert.match(listCalls().find((c) => c.id === call.id).transcript[0].text, /^Hi, I'm an AI assistant calling on behalf of Sammy\. This call is being recorded\./);
+  assert.match(listCalls().find((c) => c.id === call.id).transcript[0].text, /^Hey Eve, I'm Jericho, Sammy Eyde's personal assistant\. This call is being recorded\./);
 });
 
 test("a trial account's 'unverified number' refusal is said in plain words", async () => {

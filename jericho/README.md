@@ -343,11 +343,22 @@ tonight"), or a saved contact ("call Luke"). It works like this:
 3. It reads the number back digit by digit, says who it'll call and what it'll say, then asks
    "Should I dial?". Nothing is ever dialed without your spoken yes. A no, silence, or a yes said
    over the read-back means no call.
-4. Every call to someone who isn't you opens with "Hi, I'm an AI assistant calling on behalf of
-   Sammy" (your `calls.ownerName`). That line is written into the code. Jericho never claims to
-   be human, never pretends to be you, and never impersonates any other person or business.
+4. Every call to someone who isn't you opens with a fixed line, then says what you want in one
+   or two short sentences:
+   - "Hey Luke, I'm Jericho, Sammy Eyde's personal assistant." when you named the person or
+     they're a saved contact;
+   - "Hello, I'm Jericho, Sammy Eyde's personal assistant." for a business or an unknown number.
+     Jericho never guesses a name.
+
+   The name is `calls.ownerFullName`. Calls to you keep "Hey Sammy, it's Jericho." If anyone
+   asks whether he's a person, a bot or an AI, Jericho answers calmly and honestly that he's an
+   AI assistant. That's checked in code on every reply: a dodge gets "I'm an AI assistant."
+   added, and a claim to be human is replaced. He never pretends to be you or anyone else.
    Calls aren't recorded. If you explicitly ask ("call Luke and record it"), the read-back says
    so, and the call opens with "This call is being recorded."
+
+   Some places require an AI voice to say it's an AI at the start of a call. To put that in the
+   opener ("Sammy Eyde's AI personal assistant"), set `calls.discloseAiUpfront` to `true`.
 5. If the person says stop, don't call again, or asks to be taken off a list, Jericho apologises,
    says goodbye and hangs up at once. The number goes on the do-not-call list, `data/dnc.json`,
    which is checked before every call. That's caught in code from their words, and by the call
@@ -356,6 +367,36 @@ tonight"), or a saved contact ("call Luke"). It works like this:
    agent handles the conversation. When the call ends, Jericho tells you how it went (booked,
    "Luke said he's coming around eight", no answer, busy, voicemail, asked not to be called). The
    call is saved to `data/calls.json` and shown on the **Calls** page (`/calls`).
+
+### How Jericho sounds on a call
+
+Calm, reserved, polite and assertive:
+- **How he talks:** he says what's needed plainly, asks one thing at a time, and waits for the
+  answer. If he's interrupted, he stops and listens.
+- **If they push back or stall:** he restates the request once in different words and holds his
+  position politely. If they still say no, or say stop, he thanks them once and ends the call.
+  He never argues or pressures.
+- **If he didn't understand,** he asks once for a repeat.
+- **At the end,** he confirms the key detail back ("So that's Thursday at seven, for two."),
+  says a brief thanks, and hangs up.
+- **Voicemail:** one short, calm message with who he is, what it's about, and that you can be
+  reached back.
+- **Private details:** none about you (address, school, family, schedule) beyond what the task
+  needs.
+
+Code tidies every line he speaks: no "um" or "so basically", no exclamation marks, one thanks
+and one sorry at most.
+
+The call voice is steadier and a little slower than the everyday voice. You can tune it in
+`settings.json`; the everyday voice is unchanged.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `calls.voiceStability` | 0.8 | Higher is steadier and calmer (0 to 1) |
+| `calls.voiceStyle` | 0 | Lower is less exaggerated (0 to 1) |
+| `calls.speakingRate` | 0.92 | Below 1 is slower (0.7 to 1.2) |
+| `calls.ownerFullName` | "Sammy Eyde" | The name in the opener |
+| `calls.discloseAiUpfront` | false | `true` adds "AI" to the opener |
 
 ### Contacts
 

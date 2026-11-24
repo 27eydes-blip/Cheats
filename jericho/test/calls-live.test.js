@@ -90,7 +90,7 @@ test("a real call: dial, speak, listen, hang up, announce, never leak", async ()
   const audioId = voice.match(/twilio\/audio\/([0-9a-f]{32})/)[1];
   assert.match(voice, /<Gather input="speech" action="https:\/\/jericho\.example\.ts\.net\/twilio\/gather\?call=/);
   assert.equal((await callAudio(audioId)).toString(), "ID3-fake-mp3");
-  assert.match(listCalls()[0].transcript[0].text, /^Hi, I'm an AI assistant calling on behalf of Sammy\./);
+  assert.match(listCalls()[0].transcript[0].text, /^Hello, I'm Jericho, Sammy Eyde's personal assistant\. I'd like a table/);
 
   // They answer; the agent wraps up and hangs up.
   const gather = await handleTwilio("gather", call.id, { SpeechResult: "Sure, four at seven Friday works. What name?" });

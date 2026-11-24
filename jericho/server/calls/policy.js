@@ -6,12 +6,21 @@ import path from "node:path";
 import { ROOT, secrets, settings } from "../config.js";
 import { isSensitive } from "../secrets.js";
 
+const clamp = (v, lo, hi, dflt) => (v === undefined || v === null || v === "" || !Number.isFinite(Number(v)) ? dflt : Math.min(hi, Math.max(lo, Number(v))));
+
 export function callSettings() {
   const c = settings.calls || {};
   return {
     testMode: c.testMode !== false,
     testScenario: c.testScenario || "random",
     ownerName: c.ownerName || "the owner",
+    // the opener: "Hey Luke, I'm Jericho, Sammy Eyde's personal assistant."
+    ownerFullName: String(c.ownerFullName || c.ownerName || "the owner").trim(),
+    discloseAiUpfront: c.discloseAiUpfront === true,
+    // a calmer, steadier ElevenLabs voice on calls (the normal voice is unchanged)
+    voiceStability: clamp(c.voiceStability, 0, 1, 0.8),
+    voiceStyle: clamp(c.voiceStyle, 0, 1, 0),
+    speakingRate: clamp(c.speakingRate, 0.7, 1.2, 0.92),
     publicUrl: (c.publicUrl || "").replace(/\/+$/, ""),
     maxCallsPerDay: Number(c.maxCallsPerDay) > 0 ? Number(c.maxCallsPerDay) : 10,
     // at most 2 calls a day to any one number, whatever the settings say
@@ -173,7 +182,7 @@ export function checkIntentKeywords(input) {
     return { ok: false, reason: "I make calls for reservations, checking hours, appointments, a simple question, or a personal message." };
   }
   if (BAD_INTENT.test(text)) {
-    return { ok: false, reason: "I can't make that call. I only make honest, ordinary calls, always as an AI assistant calling for you: no threats, harassment, scams, tricks or pretending to be anyone." };
+    return { ok: false, reason: "I can't make that call. I only make honest, ordinary calls as your assistant: no threats, harassment, scams, tricks or pretending to be anyone." };
   }
   if (isSensitive(text)) {
     return { ok: false, reason: "I won't share passwords, card numbers or ID numbers on a call." };
@@ -229,7 +238,7 @@ export async function screenWithClaude(client, input) {
       max_tokens: 2000,
       output_config: { effort: "low", format: { type: "json_schema", schema: SCREEN_SCHEMA } },
       system:
-        "You screen outbound phone calls an AI assistant will place on its owner's behalf. It always says up front that it's an AI assistant calling for its owner. " +
+        "You screen outbound phone calls an AI assistant will place on its owner's behalf. It introduces itself by name as the owner's personal assistant, and always says it's an AI when asked. " +
         "Allow ordinary, honest calls: errands with a business (reservations, opening hours, appointments, a simple question), and calls to a person the owner knows " +
         "to pass on a message, ask a question, invite them, remind them or check in. " +
         "Block anything involving harassment, threats, intimidation, pranks, impersonating anyone (the owner, another person or a business), " +

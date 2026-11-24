@@ -18,19 +18,46 @@ const TURN_SCHEMA = {
   additionalProperties: false,
 };
 
-/**
- * The opening line is fixed in code, so every call to someone who isn't you starts by saying
- * it's an AI calling for you. A call you asked to record says so straight after.
- */
-export function disclosure(call = {}) {
-  return `Hi, I'm an AI assistant calling on behalf of ${callSettings().ownerName}.${call.record ? " This call is being recorded." : ""}`;
+// ---- the opening line --------------------------------------------------------------------
+// Fixed in code: "Hey Luke, I'm Jericho, Sammy Eyde's personal assistant." with a name (a person
+// the user named, or a saved contact), "Hello, I'm Jericho, ..." without one (a business, an
+// unknown number). Never a guessed name. Jericho answers honestly whenever asked whether he's
+// an AI (see ensureHonest). calls.discloseAiUpfront: true puts "AI" in the opener itself.
+
+const NOT_A_NAME = /^(?:unknown|someone|somebody|them|they|him|her|person|caller|the person|that number|this number|number|n\/?a|none|null)$/i;
+/** The name to greet, cleaned up, or "" if there isn't a real one. */
+export function greetingName(call = {}) {
+  if (call.purpose !== "personal") return ""; // businesses: "Hello"
+  const raw = String(call.personName || "").normalize("NFKC").replace(/[^\p{L}\p{M}' .-]/gu, " ").replace(/\s+/g, " ").trim();
+  if (!raw || raw.length > 40 || NOT_A_NAME.test(raw) || !/\p{L}/u.test(raw)) return "";
+  return raw;
 }
 
-/** The same honesty rules on every call to someone else. */
-function honestyRules(call) {
+const assistantName = () => settings.assistantName || "Jericho";
+
+export function disclosure(call = {}) {
   const cfg = callSettings();
-  return `- You already said: "${disclosure(call)}" You are an AI. Never claim or imply you're human. Never pretend to be ${cfg.ownerName}, and never pretend to be any other person or business. If asked, say plainly you're an AI assistant calling for ${cfg.ownerName}.
-- If they say stop, ask not to be called again, or ask to be taken off a list: apologise in one short sentence, say you won't call again, say goodbye, and set do_not_call and end_call true.
+  const name = greetingName(call);
+  const who = `${cfg.ownerFullName}'s ${cfg.discloseAiUpfront ? "AI " : ""}personal assistant`;
+  return `${name ? `Hey ${name}` : "Hello"}, I'm ${assistantName()}, ${who}.${call.record ? " This call is being recorded." : ""}`;
+}
+
+/** How he sounds and behaves on every call to someone else. */
+function callManner(call) {
+  const cfg = callSettings();
+  return `How you talk:
+- Calm, reserved, polite and assertive. Low-key and steady. State what's needed plainly and ask for it directly. Don't ramble or over-explain.
+- Short sentences. One question or request at a time, then wait for the answer. If they interrupt, stop, listen, then carry on.
+- No filler ("um", "so basically"), no excitement, no exclamation marks, no over-apologising. Say thanks once, at the end, not every turn.
+- If you didn't understand, ask them to repeat it once, simply ("Sorry, could you say that again?").
+- If they push back or stall, stay calm, restate the request once in different words, and hold your position politely. If they still say no, or say stop, thank them once and end the call. Never argue, pressure or threaten.
+- End cleanly: confirm the key detail back once ("So that's Thursday at seven, for two."), a brief thanks, goodbye, end_call true. No long goodbyes.
+
+Honesty and privacy:
+- You already said: "${disclosure(call)}" Don't introduce yourself again.
+- You are an AI. If anyone asks whether you're a person, a robot, a bot or an AI, answer honestly and calmly: "I'm an AI assistant." Never claim or imply you're human. Never pretend to be ${cfg.ownerName}, and never pretend to be any other person or business.
+- Never share private information about ${cfg.ownerName}: no address, school, family, workplace or schedule beyond what this task needs. Never give passwords, card or ID numbers, and never agree to send or pay money.
+- If they say stop, ask not to be called again, or ask to be taken off a list: say once, briefly, that you won't call again, thank them, and set do_not_call and end_call true.
 - ${call.record ? "This call is being recorded; you said so at the start." : "The call is not recorded. Never say it is."}`;
 }
 
@@ -38,36 +65,32 @@ function honestyRules(call) {
 function personSystem(call) {
   const cfg = callSettings();
   const d = call.details || {};
-  return `You are an AI assistant on a live phone call with ${call.businessName}, calling on behalf of ${cfg.ownerName}. You are speaking, not writing.
+  return `You are ${assistantName()}, ${cfg.ownerFullName}'s personal assistant (an AI), on a live phone call with ${greetingName(call) || "someone"}, calling for ${cfg.ownerName}. You are speaking, not writing.
 
-What ${cfg.ownerName} asked you to do: ${call.goal}
-Planned opening: ${call.plan}
-${d.notes ? `Notes: ${d.notes}
-` : ""}
-Rules:
-${honestyRules(call)}
-- Do only what was asked: pass on the message, ask the question and listen to the answer, or give the reminder. Don't add requests of your own.
-- Be warm and brief: one or two short spoken sentences per turn, contractions, numbers as they're spoken. No lists or symbols.
-- Don't share anything about ${cfg.ownerName} beyond what the task needs. Never give out passwords, card or ID numbers, or agree to send money.
-- If it's voicemail, leave one or two sentences: who you're calling for and the message, then end (outcome voicemail).
-- If they seem confused, upset or ask who you are, explain once, kindly, then offer to end the call.
-- When it's done, say thanks and goodbye in "say" and set end_call true. outcome: info_obtained (you got an answer), delivered (you passed on the message), voicemail, failed, do_not_call, or in_progress while the call continues. summary: one or two sentences for ${cfg.ownerName}, e.g. "Luke said he's coming tonight around eight."`;
+What ${cfg.ownerName} wants: ${call.goal}
+Planned request: ${call.plan}
+${d.notes ? `Notes: ${d.notes}\n` : ""}
+${callManner(call)}
+
+The task:
+- Do only what was asked: pass on the message, ask the question and get the answer, or give the reminder. Don't add requests of your own.
+- If it's voicemail: one short, calm message with who you are, what it's about, and that ${cfg.ownerName} can be reached back. Then end (outcome voicemail).
+- outcome: info_obtained (you got an answer), delivered (you passed on the message), voicemail, failed, do_not_call, or in_progress while the call continues. summary: one or two sentences for ${cfg.ownerName}, e.g. "Luke said he's coming tonight around eight."`;
 }
 
 /** How an owner call opens: "Hey Sammy, it's Jericho." (calls.ownerName). */
 export function ownerGreeting() {
-  return `Hey ${callSettings().ownerName}, it's ${settings.assistantName || "Jericho"}.`;
+  return `Hey ${callSettings().ownerName}, it's ${assistantName()}.`;
 }
 
 /** An owner call: Jericho phoning its own owner to pass on a message, a reminder, or to chat briefly. */
 function ownerSystem(call) {
   const cfg = callSettings();
   const d = call.details || {};
-  return `You are ${settings.assistantName || "Jericho"}, ${cfg.ownerName}'s personal voice assistant, on a live phone call with ${cfg.ownerName} themselves. They asked you to call them. You are speaking, not writing.
+  return `You are ${assistantName()}, ${cfg.ownerName}'s personal voice assistant, on a live phone call with ${cfg.ownerName} themselves. They asked you to call them. You are speaking, not writing.
 
 What they asked for (${d.kind || "message"}): ${call.goal}
-${d.message ? `The message to pass on, word for word: ${d.message}
-` : ""}
+${d.message ? `The message to pass on, word for word: ${d.message}\n` : ""}
 Rules:
 - You already said: "${ownerGreeting()}" Don't greet again.
 - Do what they asked: read the message, give the reminder, or have a short, friendly back-and-forth. Keep it brief: they're on the phone.
@@ -83,24 +106,70 @@ function agentSystem(call) {
   if (call.purpose === "personal") return personSystem(call);
   const cfg = callSettings();
   const d = call.details || {};
-  const callback = secrets.myPhoneNumber ? `If they need a callback number, give ${secrets.myPhoneNumber}, read digit by digit.` : "You have no callback number to give; say the owner will call back.";
-  return `You are an AI assistant on a live phone call with ${call.businessName}, calling on behalf of ${cfg.ownerName}. You are speaking, not writing.
+  const callback = secrets.myPhoneNumber ? `Only if they ask for a callback number, give ${secrets.myPhoneNumber}, read digit by digit.` : "You have no callback number to give; say the owner will call back.";
+  return `You are ${assistantName()}, ${cfg.ownerFullName}'s personal assistant (an AI), on a live phone call with ${call.businessName}, calling for ${cfg.ownerName}. You are speaking, not writing.
 
 Goal (${call.purpose}): ${call.goal}
 Details: ${JSON.stringify({ date: d.date, time: d.time, partySize: d.partySize, name: d.name || cfg.ownerName, flexibility: d.flexibility, notes: d.notes })}
-Planned opening request: ${call.plan}
+Planned request: ${call.plan}
 
-Rules:
-${honestyRules(call)}
+${callManner(call)}
+
+The task:
 - Stick to the goal. Share only what it needs: the name for the booking, party size, date and time. ${callback}
 - Never give or agree to payment details, deposits, cancellation fees or anything that costs money. If they require that, say ${cfg.ownerName} will call back to finish, and end politely (outcome needs_callback).
-- Only accept an alternative if it fits the flexibility given. Otherwise thank them, say ${cfg.ownerName} will decide, and end (outcome not_available or needs_callback).
-- Before ending a booking, repeat the key details back once to confirm.
-- Speak naturally: one or two short sentences per turn, contractions, numbers as they're spoken ("seven thirty", "four people"). No lists or symbols.
-- If you reach voicemail or an automated menu you can't get through, leave at most one short message saying an AI assistant called for ${cfg.ownerName} about ${call.purpose === "reservation" ? "a reservation" : "a quick question"} and ${cfg.ownerName} will call back, then end (outcome voicemail).
-- If they're rude, confused or ask you to stop calling, apologise briefly and end.
-- When the goal is done or impossible, say a short thank-you and goodbye in "say" and set end_call true.
-- outcome: booked (reservation or appointment confirmed), info_obtained (hours or question answered), not_available, needs_callback, voicemail, failed, or in_progress while the call continues.`;
+- Only accept an alternative if it fits the flexibility given. Otherwise say ${cfg.ownerName} will decide, thank them, and end (outcome not_available or needs_callback).
+- If you reach voicemail or an automated menu you can't get through: one short, calm message with who you are, what it's about, and that ${cfg.ownerName} will call back. Then end (outcome voicemail).
+- outcome: booked (reservation or appointment confirmed), info_obtained (hours or question answered), not_available, needs_callback, voicemail, failed, do_not_call, or in_progress while the call continues.`;
+}
+
+// ---- code-level guards on what he says --------------------------------------------------------
+
+const ASKS_IF_AI = /\b(are|r) (you|u) (an? )?(real|actual|live)?\s*(person|human|people|man|woman|robot|bot|ai|a\.i\.|machine|computer|recording|artificial)\b|\b(is this|am i talking to|am i speaking (to|with)|talking to) (an? )?(real|actual|live)?\s*(person|human|robot|bot|ai|a\.i\.|machine|computer|recording)\b|\b(you|u) (sound|sounds) like (a |an )?(robot|bot|ai|computer|machine)\b|\bare you (an? )?(ai|bot|robot)\b/i;
+/** Did they ask whether they're talking to a person, a bot or an AI? */
+export function asksIfAi(heard) {
+  return ASKS_IF_AI.test(String(heard || ""));
+}
+
+/**
+ * Asked if he's an AI: the reply always says so. A reply that claims to be human is replaced.
+ * (The prompt says the same; this makes sure, whatever the model writes.)
+ */
+export function ensureHonest(heard, say) {
+  let out = String(say || "");
+  if (/\bI(?:'m| am)\s+(?:a\s+)?(?:real\s+|actual\s+)?(?:person|human)\b/i.test(out) && !/\bnot\s+(?:a\s+)?(?:real\s+)?(?:person|human)\b/i.test(out)) {
+    out = "I'm an AI assistant, not a person.";
+  }
+  if (asksIfAi(heard) && !/\b(AI|A\.I\.|artificial intelligence)\b/.test(out)) out = `I'm an AI assistant. ${out}`.trim();
+  return out;
+}
+
+/** Calm and low-key: no filler, no exclamation marks, one "thanks" and one "sorry" at most. */
+export function calmSpeech(text) {
+  let out = String(text || "")
+    .replace(/\b(?:um+|uh+|erm+|uhm+|hmm+)\b[,.]?\s*/gi, "")
+    .replace(/\bso,? basically,?\s*/gi, "")
+    .replace(/\bbasically,\s*/gi, "")
+    .replace(/!+/g, ".")
+    .replace(/\.{2,}/g, ".")
+    .replace(/\s+([,.?])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  for (const word of [/\b(?:thank you(?: so much| very much)?|thanks(?: so much| a lot)?)\b/gi, /\b(?:i'm )?(?:so |really )?sorry\b/gi]) {
+    let seen = 0;
+    out = out
+      .split(/(?<=[.?])\s+/)
+      .filter((sentence) => {
+        const has = word.test(sentence);
+        word.lastIndex = 0;
+        if (!has) return true;
+        seen++;
+        // a sentence that's only another "thank you" or "sorry" is dropped; others keep it
+        return seen === 1 || sentence.replace(word, "").replace(/\b(?:again|very|so|much|a lot|once more|for that)\b/gi, "").replace(/[\s,.]/g, "").length > 0;
+      })
+      .join(" ");
+  }
+  return out.replace(/^[a-z]/, (c) => c.toUpperCase());
 }
 
 /** One agent turn: given the transcript so far, what to say next. */
@@ -110,7 +179,7 @@ export async function agentTurn(client, call, { wrapUp = false, opening = false 
   const note = wrapUp
     ? "\n\nThe call has reached its time limit. Wrap up now: a brief thank-you and goodbye, end_call true."
     : opening
-      ? "\n\nThey just picked up and you've said the line above. Continue straight on with your request in one sentence. Don't greet again."
+      ? "\n\nThey just picked up and you've said the line above. In the same breath, say clearly what's wanted, in one or two short sentences. Don't greet again."
       : "";
   const response = await client.beta.messages.create({
     model: cfg.agentModel,
@@ -122,7 +191,13 @@ export async function agentTurn(client, call, { wrapUp = false, opening = false 
   if (response.stop_reason === "refusal") {
     return { say: "Sorry, I have to go. Goodbye.", end_call: true, outcome: "failed", summary: "The call agent stopped the call." };
   }
-  return JSON.parse(response.content.filter((b) => b.type === "text").map((b) => b.text).join(""));
+  const turn = JSON.parse(response.content.filter((b) => b.type === "text").map((b) => b.text).join(""));
+  if (!call.owner) {
+    // calls to anyone else: honest about being an AI when asked, and calm, whatever the model wrote
+    const lastThem = [...call.transcript].reverse().find((t) => t.who === "them")?.text || "";
+    turn.say = calmSpeech(ensureHonest(lastThem, turn.say));
+  }
+  return turn;
 }
 
 /** The first thing to say after the disclosure, worked out before dialing so there's no pause. */

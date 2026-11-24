@@ -108,10 +108,20 @@ export function resolveTarget(input) {
   if (input.contact && !input.phoneNumber) {
     const c = findContact(input.contact);
     if (!c) return { ok: false, reason: `I don't have a contact called ${String(input.contact).slice(0, 40)}. Tell me their number, or say "save ${String(input.contact).slice(0, 40)}'s number as" and the number.` };
-    return { ok: true, raw: c.number, via: "contact" };
+    return { ok: true, raw: c.number, via: "contact", name: c.name };
   }
   if (!input.phoneNumber) return { ok: false, reason: "What number should I call? Say it, or the name of a saved contact." };
   return { ok: true, raw: input.phoneNumber, via: "number" };
+}
+
+/**
+ * The name to greet: the one the user gave (personName), or the saved contact's. Never a guess:
+ * without one, the call opens with "Hello".
+ */
+export function withGreetingName(input) {
+  if (input.purpose !== "personal" || input.personName) return input;
+  const t = resolveTarget(input);
+  return t.ok && t.name ? { ...input, personName: t.name } : input;
 }
 
 /** Every rule except the dial itself. Runs before you're asked to confirm, and again before dialing. */
@@ -228,7 +238,8 @@ export async function startOwnerCall(input, client) {
 
 // ---- starting a call -----------------------------------------------------------------
 
-export async function startCall(input, client) {
+export async function startCall(rawInput, client) {
+  const input = withGreetingName(rawInput);
   const check = await precheck(input, client); // checked again right before dialing
   if (!check.ok) {
     blocked(input, check.reason);
@@ -245,6 +256,7 @@ export async function startCall(input, client) {
     numberKey: check.key,
     purpose: input.purpose,
     ...(input.record ? { record: true } : {}),
+    ...(input.personName ? { personName: String(input.personName).slice(0, 40) } : {}),
     goal: input.goal,
     details: input.details || {},
     plan: input.plan,
@@ -362,11 +374,17 @@ async function simulate(call, client, to = null) {
 
 // ---- real calls (Twilio) ------------------------------------------------------------------
 
+/** The calmer call voice (calls.voiceStability / voiceStyle / speakingRate); the normal voice is untouched. */
+export function callVoice() {
+  const cfg = callSettings();
+  return { outputFormat: "mp3_22050_32", stability: cfg.voiceStability, style: cfg.voiceStyle, speed: cfg.speakingRate };
+}
+
 function newAudio(text) {
   const id = crypto.randomBytes(16).toString("hex"); // unguessable: Twilio fetches it without a signature
   audio.set(
     id,
-    synthesize(text, { outputFormat: "mp3_22050_32" }).catch((err) => {
+    synthesize(text, callVoice()).catch((err) => {
       logAction("call_tts_error", { error: err.message, cause: errorDetails(err) });
       return null;
     }),
@@ -569,7 +587,7 @@ export function describePlan(input, number) {
   bits.push(isOwnerNumber(number) ? `Here's the plan. I'll call your own phone as practice, and you play ${input.businessName}.` : `Here's the plan. I'll call ${input.businessName} at ${speakNumber(number)}.`);
   bits.push(`The goal: ${String(input.goal).replace(/[.!?]+$/, "")}.`);
   if (d.name && !String(input.goal).includes(d.name)) bits.push(`The booking name is ${d.name}.`);
-  bits.push(`I'll start by saying I'm an AI assistant calling for ${cfg.ownerName}, then: ${String(input.plan).replace(/[.!?]+$/, "")}.`);
+  bits.push(`I'll start with "${disclosure({ purpose: input.purpose, personName: input.personName, record: input.record })}" Then: ${String(input.plan).replace(/[.!?]+$/, "")}.`);
   if (input.record) bits.push("You asked me to record it, so I'll say at the start that the call is being recorded.");
   if (cfg.testMode) bits.push("This is a test call, so nobody will actually be dialed.");
   bits.push("Should I dial?");

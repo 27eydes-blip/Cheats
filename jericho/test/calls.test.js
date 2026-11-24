@@ -52,7 +52,7 @@ test("reads back the number, goal and plan, and dials nothing before a yes", asy
   assert.equal(r.awaitingConfirmation, true);
   assert.match(r.reply, /Here's the plan\. I'll call Luigi's at 2 1 2, 7 3 6, 5 0 0 0\./);
   assert.match(r.reply, /The goal: Book a table for four this Friday at seven PM\./);
-  assert.match(r.reply, /I'm an AI assistant calling for Sammy/);
+  assert.match(r.reply, /I'll start with "Hello, I'm Jericho, Sammy Eyde's personal assistant\." Then: ask for a table/);
   assert.match(r.reply, /test call/);
   assert.match(r.reply, /Should I dial\? Say yes to confirm\.$/);
   assert.equal(listCalls().length, 0, "nothing dialed yet");
@@ -68,7 +68,7 @@ test("reads back the number, goal and plan, and dials nothing before a yes", asy
   assert.equal(call.outcome, "booked");
   assert.equal(call.number, "...5000", "only the last 4 digits are stored");
   assert.match(call.numberKey, /^[\w-]{22}$/);
-  assert.match(call.transcript[0].text, /^Hi, I'm an AI assistant calling on behalf of Sammy\./, "always opens with the disclosure");
+  assert.match(call.transcript[0].text, /^Hello, I'm Jericho, Sammy Eyde's personal assistant\./, "always opens with the fixed line");
   assert.ok(call.transcript.some((t) => t.who === "them"));
   assert.match(log(), /"type":"call_started"/);
   assert.match(log(), /"type":"call_ended"/);

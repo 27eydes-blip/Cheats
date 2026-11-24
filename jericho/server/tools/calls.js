@@ -1,6 +1,6 @@
 // Phone call tools. make_call is risky: rules are checked first, then Jericho reads back
 // the number, the goal and what it will say, and only dials after a spoken yes.
-import { describeOwnerPlan, describePlan, listCalls, precheck, precheckOwner, resolveTarget, startCall, startOwnerCall } from "../calls/manager.js";
+import { describeOwnerPlan, describePlan, listCalls, precheck, precheckOwner, resolveTarget, startCall, startOwnerCall, withGreetingName } from "../calls/manager.js";
 import { normalizeNumber, PURPOSES, last4 } from "../calls/policy.js";
 import { deleteContact, listContacts, saveContact } from "../contacts.js";
 
@@ -11,7 +11,7 @@ export const makeCallTool = {
   // the read-back: the number digit by digit (from the contact if one was named), who, and what
   confirmPrompt: (input) => {
     const t = resolveTarget(input);
-    return describePlan(input, (t.ok && normalizeNumber(t.raw, "1")) || input.phoneNumber);
+    return describePlan(withGreetingName(input), (t.ok && normalizeNumber(t.raw, "1")) || input.phoneNumber);
   },
   describe: (input) => `call ${input.businessName}`,
   definition: {
@@ -20,7 +20,7 @@ export const makeCallTool = {
       "Phone a business or a person for the user, one call at a time. Businesses: a reservation, opening hours, an appointment or one " +
       "simple question (find the number with web_search or ask; never guess). People: pass on a message, ask a question, invite or remind " +
       "them (purpose personal), using the number the user said or a saved contact (contact). Ask for anything missing first. " +
-      "The call always opens by saying it's an AI assistant calling for the user, and it never pretends to be anyone. " +
+      "The call opens with \"Hey <name>, I'm Jericho, <user>'s personal assistant\" (\"Hello, ...\" when there's no name), says it's an AI whenever asked, and never pretends to be anyone. " +
       "Set record true only if the user explicitly asked to record the call. The system reads the plan and the number back " +
       "and only dials after a spoken yes. The call runs in the background and the user hears the outcome when it ends.",
     input_schema: {
@@ -29,6 +29,7 @@ export const makeCallTool = {
         businessName: { type: "string", description: "Who you're calling: the business, or the person's name" },
         phoneNumber: { type: "string", description: "The number as found or said. Leave out when calling a saved contact" },
         contact: { type: "string", description: "A saved contact's name, instead of a number" },
+        personName: { type: "string", description: "The person's name to greet, only if the user said it. Never guess one; leave out for businesses and unknown numbers (saved contacts fill it in)" },
         record: { type: "boolean", description: "Only if the user explicitly asked to record this call" },
         purpose: { type: "string", enum: PURPOSES },
         goal: { type: "string", description: "One sentence, e.g. 'Book a table for four this Friday at seven PM'" },

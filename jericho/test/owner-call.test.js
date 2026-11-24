@@ -144,7 +144,7 @@ test("owner calls can't be aimed anywhere else; other people go through the norm
   const client = fakeClient([use("p1", "make_call", { businessName: "Luke", phoneNumber: "312-736-9988", purpose: "personal", goal: "Ask Luke if he's coming tonight", plan: "ask if he's coming tonight" })], agent);
   const r = await new Brain({ client }).handle("luke", "call 312 736 9988 and ask Luke if he's coming tonight");
   assert.equal(r.awaitingConfirmation, true);
-  assert.match(r.reply, /I'll call Luke at 3 1 2, 7 3 6, 9 9 8 8\. .*I'm an AI assistant calling for Sammy/);
+  assert.match(r.reply, /I'll call Luke at 3 1 2, 7 3 6, 9 9 8 8\. .*I'll start with "Hello, I'm Jericho, Sammy Eyde's personal assistant\."/);
   assert.doesNotMatch(r.reply, /Hey Sammy, it's Jericho/, "only your own phone gets the owner greeting");
 });
 
@@ -173,12 +173,12 @@ test("business calls still work as before", async () => {
   const r = await brain.handle("biz", "call Luigi's and book a table for two at eight");
   assert.equal(r.awaitingConfirmation, true);
   assert.match(r.reply, /I'll call Luigi's at 2 1 2, 7 3 6, 5 0 0 0\./);
-  assert.match(r.reply, /I'm an AI assistant calling for Sammy/);
+  assert.match(r.reply, /I'll start with "Hello, I'm Jericho, Sammy Eyde's personal assistant\."/);
   await brain.confirm("biz", "yes");
   const dial = await waitFor(() => dials()[before]);
   assert.equal(new URLSearchParams(dial.init.body).get("To"), "+12127365000");
   const call = listCalls().find((c) => c.businessName === "Luigi's");
   assert.equal(call.owner, undefined);
   await handleTwilio("voice", call.id, {});
-  assert.match(listCalls().find((c) => c.id === call.id).transcript[0].text, /^Hi, I'm an AI assistant calling on behalf of Sammy\./);
+  assert.match(listCalls().find((c) => c.id === call.id).transcript[0].text, /^Hello, I'm Jericho, Sammy Eyde's personal assistant\./);
 });
