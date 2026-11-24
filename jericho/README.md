@@ -412,7 +412,7 @@ have to say the number.
 
 - **Only your number.** The owner call tool has no number field. The server dials
   `MY_PHONE_NUMBER` itself, after normalizing it to +1 and 10 digits; it must be a US number.
-  Calls to anyone else go through the normal rules above, with the AI disclosure.
+  Calls to anyone else go through the normal rules above, with the fixed opening line.
 - **Still your yes.** Jericho reads the plan back without saying the number, then asks "Should I
   dial?". The daily cap, the per-number cap, `maxMinutes`, US only and the signed-webhook checks
   all apply as usual. The 10-minute cooldown and the 4-an-hour limit don't apply to your own phone, and saying "stop"
