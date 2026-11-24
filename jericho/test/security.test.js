@@ -72,7 +72,7 @@ test("the real server: a cross-site request is refused and a broken URL gets 400
   const port = 3900 + Math.floor(Math.random() * 90);
   const server = spawn(process.execPath, ["server/index.js"], {
     cwd: new URL("..", import.meta.url).pathname,
-    env: { ...process.env, PORT: String(port), JERICHO_SKIP_SELFTEST: "1", JERICHO_ACCESS_TOKEN: "" },
+    env: { ...process.env, PORT: String(port), JERICHO_SKIP_SELFTEST: "1", JERICHO_ACCESS_TOKEN: "", JERICHO_NO_ENV_FILE: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   try {

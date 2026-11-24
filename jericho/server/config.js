@@ -7,8 +7,10 @@ import { fileURLToPath } from "node:url";
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // Load .env without a dependency (Node >= 20.12). Real env vars win.
+// JERICHO_NO_ENV_FILE=1 (tests only): ignore .env completely, so a test server never picks up your real keys.
+const NO_ENV_FILE = process.env.JERICHO_NO_ENV_FILE === "1";
 try {
-  process.loadEnvFile(path.join(ROOT, ".env"));
+  if (!NO_ENV_FILE) process.loadEnvFile(path.join(ROOT, ".env"));
 } catch {
   /* no .env file: rely on the real environment */
 }
@@ -42,6 +44,7 @@ export function parseEnvText(text) {
   return out;
 }
 function fillFromEnvFile() {
+  if (NO_ENV_FILE) return;
   const main = path.join(ROOT, ".env");
   const candidates = [main, path.join(ROOT, ".env.txt"), path.join(ROOT, ".env.env")];
   for (const file of candidates) {

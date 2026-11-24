@@ -360,7 +360,8 @@ what was said. Older `timing` lines still go to `logs/actions.log`.
 - **What it won't do on a call:** give card details or agree to a deposit. If the place needs
   that, the outcome is "needs callback".
 - **Privacy:** Twilio keys and your number stay in `.env`. They never reach the browser and are
-  blanked out of the log. Every webhook from Twilio must carry Twilio's signature.
+  blanked out of the log. Every webhook from Twilio must carry Twilio's signature (see "Security
+  through the tunnel" below).
 
 **Test mode** (`calls.testMode: true`, the default) runs the whole flow without dialing: rules,
 read-back, yes, then a pretend restaurant played by Claude. `testScenario` can be `random`,
@@ -391,15 +392,65 @@ Claude usage and no Twilio money.
      `ngrok http --url=<your-name>.ngrok-free.app 3000`.
 
    Put the address in `settings.json` as `calls.publicUrl`, with no trailing slash. Also set
-   `JERICHO_ACCESS_TOKEN` in `.env`. Jericho refuses real calls without it, because the page is
-   now reachable from the internet.
+   `JERICHO_ACCESS_TOKEN` in `.env` to a long random value (at least 16 characters). Jericho
+   refuses real calls without it, because the page is now reachable from the internet.
 6. **Switch on real calls:** set `calls.testMode` to `false` and restart. The startup message
    says `Phone calls: LIVE via Twilio`.
-7. **First real test:** say "Jericho, call my phone to book a table for two at eight". Calling
+7. **Run the setup check:** `npm run calls:setup`, with Jericho and the tunnel running. It checks:
+   - the four Twilio values and the access token in `.env` (only whether each is set and looks
+     right: it never prints a key, token or phone number);
+   - `calls.publicUrl` and `calls.testMode`;
+   - that the tunnel refuses a stranger: the page without a token, and an unsigned webhook.
+     Add `--no-network` to skip this check.
+
+   Then it prints exactly what to enter in the Twilio console for your number. That's under
+   Phone Numbers, Manage, Active numbers, your number, Voice configuration:
+   - **A call comes in:** Webhook, `https://<your address>/twilio/voice`, HTTP POST.
+   - **Call status changes:** `https://<your address>/twilio/status`, HTTP POST.
+
+   Jericho's own outgoing calls send these addresses to Twilio by themselves. The number's
+   settings only matter when someone calls your Twilio number. Jericho doesn't take incoming
+   calls, so it answers those with a hang-up (after checking the signature).
+8. **First real test:** say "Jericho, call my phone to book a table for two at eight". Calling
    your own `MY_PHONE_NUMBER` is allowed as a rehearsal, and you play the restaurant. On a trial
    account, Twilio first plays a short trial notice and asks you to press a key.
-8. **Calling real businesses:** you need to upgrade the account (Console, Upgrade, add a card),
+9. **Calling real businesses:** you need to upgrade the account (Console, Upgrade, add a card),
    since a trial can only reach verified numbers. Upgrading also removes the trial notice.
+
+### Security through the tunnel
+
+A public tunnel means anyone on the internet can reach Jericho's address, so requests that come
+through it are treated as strangers. A request counts as "through the tunnel" if it uses the
+`calls.publicUrl` host name, carries a tunnel's forwarding headers, or names a host that isn't
+this PC or your home network.
+
+- **Only Twilio's call routes are open without the access token.** That means the voice answer
+  (`/twilio/voice` and its follow-up `/twilio/gather`), the status callback (`/twilio/status`),
+  and the call audio Twilio plays (`/twilio/audio/<id>`). Everything else needs
+  `JERICHO_ACCESS_TOKEN`: the page, the API, memory, PC control and the settings. If no token
+  is set, all of it is refused through the tunnel. Requests from this PC and your home network
+  work as before.
+- **Opening the page through the tunnel:** use `https://<your address>/?token=<your token>`
+  once. The page remembers the token and gets a cookie (HttpOnly, Strict, Secure, 30 days) so
+  its scripts and styles load. The cookie isn't the token itself. After 10 wrong tokens in 10
+  minutes, that address is refused for the rest of the 10 minutes. A visit with no token at all
+  doesn't count, so your phone can't lock itself out.
+- **Every webhook must carry a valid Twilio signature** (`X-Twilio-Signature`, checked with
+  `TWILIO_AUTH_TOKEN`). Unsigned requests are refused before the body is read; wrong
+  signatures, changed parameters or a different URL are refused too (403). The call audio's
+  address is an unguessable id that exists only during a call. If Twilio signs that fetch, the
+  signature must be right too.
+- **Rate limits on Twilio's routes:** `calls.webhookRequestsPerMinute` per address (default
+  120, far more than a call needs). After 5 bad signatures in 10 minutes, an address is
+  refused for 10 minutes (429). The call limits still apply: `maxCallsPerDay`,
+  `maxCallsPerNumberPerDay`, `maxMinutes` (enforced by Twilio itself), plus the read-back and
+  your yes before every call.
+- **Jericho has no media-stream route.** Calls use Twilio's own speech recognition (`<Gather>`),
+  not a live audio stream, so there's no WebSocket for anyone to reach.
+- **Tailscale Funnel:** once your `*.ts.net` name is `calls.publicUrl`, it counts as the
+  tunnel, even from your own devices. Use the token there too.
+- Refusals are logged as `tunnel_refused`, `twilio_rejected` and `twilio_rate_limited`, without
+  any token or key.
 
 **What it costs** (US prices; check twilio.com/en-us/voice/pricing/us before relying on them):
 
@@ -577,7 +628,7 @@ None of these are secret. Keys live only in `.env`.
 | `claudeCode.projectsDir` | Claude Code only runs in folders inside this directory. |
 | `claudeCode.permissionMode` | Passed to `claude --permission-mode`. `acceptEdits` lets it write files but not run arbitrary shell commands. Add `"extraArgs": ["--allowedTools", "Bash(npm *)"]` to allow specific commands. |
 | `confirmation.yesWords` / `timeoutSeconds` | What counts as yes, and how long a risky action waits. |
-| `calls.*` | Phone calls, see below. `testMode` is on by default. |
+| `calls.*` | Phone calls, see below. `testMode` is on by default. `webhookRequestsPerMinute` (120) limits Twilio's routes per address. |
 
 Most settings are read at startup, so restart the server after changing them. The voice settings
 are the exception.
@@ -639,6 +690,9 @@ server/tools/learning.js  save_lesson + what_ive_learned tools
 server/tools/pc.js        PC control tools (apps, links, volume, media, timers, clipboard, files, commands)
 server/pc/policy.js       what may be touched: allowed folders, secret files, blocked commands and apps
 server/cancel.js          the kill switch: everything running registers here
+server/tunnel.js          the public-tunnel gate: access token for everything but Twilio's routes
+server/ratelimit.js       sliding-window rate limits (webhooks, wrong tokens)
+scripts/calls-setup.mjs   `npm run calls:setup`: checks the call setup, prints the Twilio console settings
 public/                   the web page (index.html, app.js, style.css)
 public/presence/          the 3D presence: scene.js (Three.js scene), postfx.js (quality levels and effects),
                           index.js (loading, fallback, HUD, settings)

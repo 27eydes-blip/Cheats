@@ -102,6 +102,7 @@
     "maxCallsPerDay": 3,
     "maxCallsPerNumberPerDay": 2,
     "maxMinutes": 5,
+    "webhookRequestsPerMinute": 120,
     "allowedCountryCodes": [
       "1"
     ],

@@ -18,6 +18,7 @@ import { formatResults, selfTestIsolated } from "./selftest.js";
 import { installCrashLog } from "./crashlog.js";
 import { getCalendar, getNextEvent } from "./briefing/calendar.js";
 import { checkApiRequest } from "./guard.js";
+import { clientAddress, createTunnelGate, createWebhookLimiter, publicHost } from "./tunnel.js";
 import { alarms } from "./alarms/manager.js";
 import { getForecast, getWeather } from "./briefing/weather.js";
 import { cleanLatency } from "../public/latency.js";
@@ -76,23 +77,46 @@ async function readJson(req) {
   return JSON.parse((await readBody(req)) || "{}");
 }
 
+// Twilio's routes are reachable from the internet, so they're rate limited per address
+// (calls.webhookRequestsPerMinute, default 120), and an address that keeps sending bad
+// signatures is shut out for 10 minutes. The call limits (per day, per number, minutes) still apply.
+const webhookLimiter = createWebhookLimiter({ perMinute: Number(settings.calls?.webhookRequestsPerMinute) > 0 ? Number(settings.calls.webhookRequestsPerMinute) : 120 });
+// Wrong access tokens through the tunnel: 10 in 10 minutes and that address waits.
+const tunnelGate = createTunnelGate();
+
 /** Twilio webhooks: no access token (Twilio can't send one), but every request must carry Twilio's signature. */
 async function twilioRoute(req, res, url) {
+  const who = clientAddress(req.headers, req.socket?.remoteAddress);
+  const limited = webhookLimiter.admit(who);
+  if (limited) {
+    logAction("twilio_rate_limited", { path: url.pathname });
+    return res.writeHead(429, { "retry-after": String(limited.retryAfterSeconds), "content-type": "text/plain" }).end("Too many requests");
+  }
+  const reject = (reason) => {
+    webhookLimiter.badSignature(who);
+    logAction("twilio_rejected", { path: url.pathname, reason });
+    return res.writeHead(403, { "content-type": "text/plain" }).end("Forbidden");
+  };
   try {
-    if (req.method === "GET" && url.pathname.startsWith("/twilio/audio/")) {
+    if (url.pathname.startsWith("/twilio/audio/")) {
+      // The call audio Twilio plays (<Play>). Its address is an unguessable id that exists only
+      // during a call, for 15 minutes. If Twilio signs the fetch, the signature must be right.
+      if (req.method !== "GET") return res.writeHead(405).end();
+      const sig = req.headers["x-twilio-signature"];
+      if (sig !== undefined && !validTwilioSignature(sig, callSettings().publicUrl + req.url, {})) return reject("bad signature");
       const id = url.pathname.split("/").pop();
       const buf = /^[0-9a-f]{32}$/.test(id) ? await callAudio(id) : null;
       if (!buf) return res.writeHead(404).end();
-      return res.writeHead(200, { "content-type": "audio/mpeg", "content-length": buf.length }).end(buf);
-    }
-    const params = Object.fromEntries(new URLSearchParams(await readBody(req, 50_000)));
-    const fullUrl = callSettings().publicUrl + req.url;
-    if (!validTwilioSignature(req.headers["x-twilio-signature"], fullUrl, params)) {
-      logAction("twilio_rejected", { path: url.pathname, reason: "bad signature" });
-      return res.writeHead(403).end("Forbidden");
+      return res.writeHead(200, { "content-type": "audio/mpeg", "content-length": buf.length, "cache-control": "no-store" }).end(buf);
     }
     const kind = { "/twilio/voice": "voice", "/twilio/gather": "gather", "/twilio/status": "status" }[url.pathname];
     if (!kind) return res.writeHead(404).end();
+    if (req.method !== "POST") return reject("not a POST");
+    // Unsigned: refused before the body is even read.
+    if (!req.headers["x-twilio-signature"]) return reject("unsigned");
+    const params = Object.fromEntries(new URLSearchParams(await readBody(req, 50_000)));
+    const fullUrl = callSettings().publicUrl + req.url;
+    if (!callSettings().publicUrl || !validTwilioSignature(req.headers["x-twilio-signature"], fullUrl, params)) return reject("bad signature");
     const xml = await handleTwilio(kind, url.searchParams.get("call"), params);
     res.writeHead(200, { "content-type": xml ? "text/xml" : "text/plain" }).end(xml);
   } catch (err) {
@@ -237,9 +261,31 @@ async function route(req, res) {
     return res.writeHead(400).end("Bad request");
   }
   if (url.pathname.startsWith("/twilio/")) return twilioRoute(req, res, url);
+  // Through the public tunnel, everything else needs the access token (see tunnel.js).
+  const publicUrl = callSettings().publicUrl;
+  const extraHosts = settings.allowedHosts || [];
+  const gate = tunnelGate.check({
+    headers: req.headers,
+    remoteAddress: req.socket?.remoteAddress,
+    pathname: url.pathname,
+    searchParams: url.searchParams,
+    accessToken: secrets.accessToken,
+    publicUrl,
+    extraHosts,
+    secure: useHttps || /^https:/i.test(publicUrl),
+  });
+  if (gate?.status) {
+    logAction("tunnel_refused", { path: url.pathname.slice(0, 80), status: gate.status });
+    res.setHeader("cache-control", "no-store");
+    if (gate.retryAfterSeconds) res.setHeader("retry-after", String(gate.retryAfterSeconds));
+    if (!url.pathname.startsWith("/api/")) return res.writeHead(gate.status, { "content-type": "text/plain; charset=utf-8" }).end(gate.error);
+    return sendJson(res, gate.status, { error: gate.error });
+  }
+  if (gate?.setCookie) res.setHeader("set-cookie", gate.setCookie);
   if (!url.pathname.startsWith("/api/")) return serveStatic(url, res, req);
   // other websites, DNS tricks, and (without a token) other devices are refused first
-  const refused = checkApiRequest({ headers: req.headers, remoteAddress: req.socket?.remoteAddress, hasToken: Boolean(secrets.accessToken), extraHosts: settings.allowedHosts || [] });
+  const tunnelHost = publicHost(publicUrl);
+  const refused = checkApiRequest({ headers: req.headers, remoteAddress: req.socket?.remoteAddress, hasToken: Boolean(secrets.accessToken), extraHosts: tunnelHost ? [...extraHosts, tunnelHost] : extraHosts });
   if (refused) return sendJson(res, refused.status, { error: refused.error });
   if (!authorized(req, url)) return sendJson(res, 401, { error: "Wrong or missing access token" });
 
