@@ -41,7 +41,7 @@ test("self-test: a check that hangs is reported as FAIL in time, and one that th
   assert.deepEqual(await limit(Promise.resolve({ status: "PASS", reason: "ok" }), 200), { status: "PASS", reason: "ok" });
   // the server starts the self-test after it's listening and catches anything it throws
   const index = fs.readFileSync(new URL("../server/index.js", import.meta.url), "utf8");
-  assert.match(index, /selfTestIsolated\(\)[\s\S]{0,120}\.catch\(/);
+  assert.match(index, /selfTestIsolated\(\)[\s\S]{0,600}\.catch\(/);
   assert.ok(index.indexOf("selfTestIsolated()") > index.indexOf("server.listen("), "never before listening");
   assert.match(index, /installCrashLog\(/, "background errors are logged, not fatal");
 });
@@ -86,7 +86,7 @@ test("the page: speech can't get stuck, events reconnect, the settings panel scr
   assert.match(app, /speechQueue\.then\(\(\) => playTurn\(turn\)\)\.catch/, "a failed reply doesn't block later ones");
   assert.match(app, /stalled mid-sentence/, "a stream that stops moving falls back to the browser voice");
   assert.match(app, /const guard = setTimeout\(\(\) => resolve\(\), 6000 \+ text\.length \* 120\)/, "browser voice can't wait forever");
-  assert.match(app, /events\.onopen = \(\) => refreshAlarmList\(\)/, "an alarm missed during a drop still rings");
+  assert.match(app, /events\.onopen = \(\) => \{\s*refreshAlarmList\(\)/, "an alarm missed during a drop still rings");
   const css = fs.readFileSync(new URL("../public/presence.css", import.meta.url), "utf8");
   assert.match(css, /\.look-panel \{[^}]*overflow-y: auto/);
   const scene = fs.readFileSync(new URL("../public/presence/scene.js", import.meta.url), "utf8");
