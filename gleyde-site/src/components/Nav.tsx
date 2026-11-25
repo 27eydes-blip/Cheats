@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, m } from "framer-motion";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { navLinks } from "@/lib/site";
 import { GleydeMark } from "./GleydeMark";
@@ -12,6 +14,11 @@ import { easeDeco } from "./Reveal";
  * On phones the links collapse into a full-screen overlay menu.
  */
 export function Nav() {
+  const pathname = usePathname();
+  const onHome = pathname === "/";
+  /** Section anchors point at the home page when we're on another page. */
+  const resolve = (href: string) => (href.startsWith("#") && !onHome ? `/${href}` : href);
+  const isCurrent = (href: string) => href === pathname;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -61,7 +68,7 @@ export function Nav() {
         className="relative mx-auto flex h-16 max-w-[calc(88rem+8rem)] items-center justify-between px-6 sm:h-18 sm:px-10 lg:px-16"
       >
         <a
-          href="#top"
+          href={onHome ? "#top" : "/"}
           className="group flex items-center gap-3"
           aria-label="Gleyde Technologies, back to top"
           onClick={() => setOpen(false)}
@@ -77,13 +84,14 @@ export function Nav() {
         <ul className="hidden items-center gap-9 md:flex">
           {navLinks.map((l) => (
             <li key={l.href}>
-              <a
-                href={l.href}
-                className="group relative py-2 text-[0.72rem] font-medium tracking-[0.26em] text-ivory/70 uppercase transition-colors duration-300 hover:text-ivory"
+              <NavLink
+                href={resolve(l.href)}
+                current={isCurrent(l.href)}
+                className="group relative py-2 text-[0.72rem] font-medium tracking-[0.26em] text-ivory/70 uppercase transition-colors duration-300 hover:text-ivory aria-[current=page]:text-ivory"
               >
                 {l.label}
-                <span className="absolute inset-x-0 -bottom-0.5 h-(--hair) origin-left bg-gold scale-x-0 transition-transform duration-500 ease-deco group-hover:scale-x-100" />
-              </a>
+                <span className="absolute inset-x-0 -bottom-0.5 h-(--hair) origin-left scale-x-0 bg-gold transition-transform duration-500 ease-deco group-hover:scale-x-100 group-aria-[current=page]:scale-x-100" />
+              </NavLink>
             </li>
           ))}
         </ul>
@@ -130,16 +138,17 @@ export function Nav() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, ease: easeDeco, delay: 0.06 * i + 0.08 }}
                 >
-                  <a
-                    href={l.href}
+                  <NavLink
+                    href={resolve(l.href)}
+                    current={isCurrent(l.href)}
                     onClick={() => setOpen(false)}
-                    className="flex items-baseline gap-5 py-3 font-display text-3xl tracking-[0.08em] text-ivory"
+                    className="flex items-baseline gap-5 py-3 font-display text-3xl tracking-[0.08em] text-ivory aria-[current=page]:text-gold-light"
                   >
                     <span className="w-6 font-sans text-[0.65rem] tracking-[0.2em] text-gold">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     {l.label}
-                  </a>
+                  </NavLink>
                 </m.li>
               ))}
             </ul>
@@ -148,4 +157,18 @@ export function Nav() {
       </AnimatePresence>
     </header>
   );
+}
+
+/**
+ * In-page anchors ("#…") stay plain links so the home page's smooth paging
+ * (PageScroller) can glide to them; page links ("/…") use Next.js Link for
+ * instant client-side navigation.
+ */
+function NavLink({
+  href,
+  current,
+  ...rest
+}: { href: string; current: boolean } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href">) {
+  const aria = current ? ({ "aria-current": "page" } as const) : {};
+  return href.startsWith("#") ? <a href={href} {...aria} {...rest} /> : <Link href={href} {...aria} {...rest} />;
 }

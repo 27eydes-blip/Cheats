@@ -17,10 +17,14 @@ export const site = {
   email: "hello@gleydetechnologies.com",
 } as const;
 
-/** Section anchors used by the navigation, in page order. */
+/**
+ * Navigation links, in order. "#…" links are sections of the home page
+ * (they become "/#…" on other pages); "/…" links are separate pages.
+ */
 export const navLinks = [
   { href: "#about", label: "About" },
   { href: "#divisions", label: "Divisions" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "#roadmap", label: "Roadmap" },
   { href: "#leadership", label: "Leadership" },
   { href: "#contact", label: "Contact" },

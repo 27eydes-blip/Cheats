@@ -99,12 +99,13 @@
      Strict ("mandatory") on desktop-sized screens, where every panel fits.
      Gentle ("proximity") on phones and short windows, where a long panel
      must be able to scroll naturally without fighting the swipe. */
-  html {
+  /* Only pages built from panels (the home page) snap. */
+  html:has(.panel) {
     scroll-snap-type: y proximity;
   }
 
   @media (min-width: 768px) and (min-height: 700px) {
-    html {
+    html:has(.panel) {
       scroll-snap-type: y mandatory;
     }
   }
@@ -116,6 +117,7 @@
 
   /* PageScroller.tsx is driving the scroll (desktop): native snapping and
      CSS smooth scrolling would fight its eased glide, so turn them off. */
+  html.paged:has(.panel),
   html.paged {
     scroll-snap-type: none;
     scroll-behavior: auto;

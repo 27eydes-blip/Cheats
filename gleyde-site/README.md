@@ -52,6 +52,10 @@ Each division is one object in the `divisions` array. Each product inside it is 
 
 A division also has a `numeral` (I, II, III…), a `description`, its own `status` and `url`, an optional `lead` (shown as "Led by …"; change the wording with `leadLabel`), and an optional `footnote` such as "and more in the works".
 
+### Portfolio page
+
+`/portfolio` lists every product from every division in one grid, with a filter per division. It reads the same `divisions` data, so there is nothing extra to edit: add a product to a division and it appears there too. The "Portfolio" menu link comes from `navLinks` in `src/lib/site.ts`.
+
 ### Roadmap
 
 The `roadmap` array holds the Now / Next / Later phases. Each phase has a `phase` label, an optional `when`, a `title` and a list of `items`. Add or remove phases freely; the timeline adapts.

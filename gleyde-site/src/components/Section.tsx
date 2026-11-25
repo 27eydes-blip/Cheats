@@ -11,11 +11,14 @@ export function Section({
   index,
   label,
   title,
+  aside,
   children,
 }: {
   id: string;
   index: string;
   label: string;
+  /** Optional extra content under the label (desktop only), e.g. a link. */
+  aside?: React.ReactNode;
   /** Optional large heading at the top of the content column. */
   title?: React.ReactNode;
   children: React.ReactNode;
@@ -37,6 +40,7 @@ export function Section({
             {index}
           </span>
           <p className="eyebrow pb-1 md:mt-7 md:pb-0">{label}</p>
+          {aside && <div className="mt-10 hidden md:block">{aside}</div>}
         </Reveal>
         <div className="md:col-span-9">
           {title ? (

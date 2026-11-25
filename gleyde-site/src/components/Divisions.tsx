@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { divisions } from "@/data/portfolio";
 import { Reveal } from "./Reveal";
 import { Section } from "./Section";
@@ -33,6 +34,15 @@ export function Divisions() {
           index="02"
           label={`Divisions ${d.numeral}`}
           title={d.name}
+          aside={
+            <Link
+              href="/portfolio"
+              className="group inline-flex items-center gap-2 text-[0.68rem] tracking-[0.24em] text-gold-light uppercase"
+            >
+              Full portfolio
+              <span className="transition-transform duration-500 ease-deco group-hover:translate-x-1">→</span>
+            </Link>
+          }
         >
           <div className="mt-6 grid gap-8 sm:mt-10 lg:grid-cols-9 lg:gap-10">
             <Reveal delay={0.05} className="lg:col-span-4">
