@@ -1,32 +1,29 @@
 import { site } from "@/lib/site";
 import { ContactForm } from "./ContactForm";
 import { Reveal } from "./Reveal";
-import { SectionHeading } from "./SectionHeading";
+import { Section } from "./Section";
 
-/** Section 7: email link and a short contact form. */
+/** Section 06: email link and a short contact form. */
 export function Contact() {
   return (
-    <section id="contact" aria-labelledby="contact-title" className="px-6 py-28 sm:px-8 sm:py-36">
-      <div className="mx-auto grid max-w-6xl gap-16 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-20">
-        <div>
-          <SectionHeading id="contact-title" eyebrow="Contact" title="Begin a conversation." />
-          <Reveal delay={0.1}>
-            <p className="mt-8 max-w-sm text-base leading-relaxed font-light text-ivory/70">
-              Partnerships, press, security work or a website of your own. Write to us and we will reply
-              personally.
-            </p>
-            <a
-              href={`mailto:${site.email}`}
-              className="mt-10 inline-block border-b border-gold/40 pb-1 text-lg font-light tracking-[0.04em] break-all text-gold-light transition-colors hover:border-gold-light sm:text-xl"
-            >
-              {site.email}
-            </a>
-          </Reveal>
-        </div>
-        <Reveal delay={0.15}>
+    <Section id="contact" index="06" label="Contact" title="Begin a conversation.">
+      <div className="mt-14 grid gap-16 sm:mt-20 lg:grid-cols-9 lg:gap-10">
+        <Reveal className="lg:col-span-4">
+          <p className="max-w-sm text-base leading-relaxed font-light text-ivory/65">
+            Partnerships, press, security work or a website of your own. Write to us and we will reply
+            personally.
+          </p>
+          <a
+            href={`mailto:${site.email}`}
+            className="mt-8 inline-block bg-[linear-gradient(currentColor,currentColor)] bg-[length:100%_var(--hair)] bg-left-bottom bg-no-repeat pb-1.5 text-lg font-light tracking-[0.02em] break-all text-gold-light transition-colors duration-300 hover:text-ivory"
+          >
+            {site.email}
+          </a>
+        </Reveal>
+        <Reveal delay={0.1} className="lg:col-span-5">
           <ContactForm />
         </Reveal>
       </div>
-    </section>
+    </Section>
   );
 }

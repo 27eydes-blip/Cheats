@@ -11,6 +11,9 @@
   --color-gold-light: #EFE3C4;
   --color-gold-deep: #B8A67C;
 
+  /* Hairline rule colour: ivory at 12%. */
+  --color-rule: rgb(242 239 234 / 0.12);
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-cinzel), "Times New Roman", serif;
 
@@ -58,6 +61,40 @@
 
 /* ─── Base ──────────────────────────────────────────────────────────────── */
 @layer base {
+  :root {
+    --hair: 1px;
+  }
+
+  @media (min-resolution: 2dppx) {
+    :root {
+      --hair: 0.5px;
+    }
+  }
+
+  /* Scale the whole layout up on very large / 4K displays so it never sits
+     small in the middle of the screen. Everything is sized in rem. */
+  html {
+    font-size: 100%;
+  }
+
+  @media (min-width: 1800px) {
+    html {
+      font-size: 112.5%;
+    }
+  }
+
+  @media (min-width: 2400px) {
+    html {
+      font-size: 131.25%;
+    }
+  }
+
+  @media (min-width: 3200px) {
+    html {
+      font-size: 162.5%;
+    }
+  }
+
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
@@ -70,7 +107,7 @@
     color: var(--color-ivory);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
-    text-rendering: optimizeLegibility;
+    text-rendering: geometricPrecision;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -92,67 +129,30 @@
   }
 }
 
-/* ─── Fine film grain over everything (pure CSS + inline SVG, ~400 bytes) ── */
-.grain::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0.06;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-
 /* ─── Utilities ─────────────────────────────────────────────────────────── */
-@utility text-gold-gradient {
-  background-image: linear-gradient(
-    100deg,
-    var(--color-gold) 0%,
-    var(--color-gold-light) 45%,
-    var(--color-gold) 100%
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+/* Hairline rules. 1px on standard screens, a true 0.5px on high-DPI
+   (Retina / 4K) screens, where a full pixel looks heavy. */
+@utility rule-t {
+  border-top: var(--hair) solid var(--color-rule);
 }
 
-@utility bg-gold-gradient {
-  background-image: linear-gradient(
-    100deg,
-    var(--color-gold) 0%,
-    var(--color-gold-light) 50%,
-    var(--color-gold) 100%
-  );
+@utility rule-b {
+  border-bottom: var(--hair) solid var(--color-rule);
 }
 
-/* Thin gold hairline that fades out at both ends. */
 @utility hairline {
-  height: 1px;
-  background-image: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--color-gold) 70%, transparent) 20%,
-    var(--color-gold-light) 50%,
-    color-mix(in srgb, var(--color-gold) 70%, transparent) 80%,
-    transparent
-  );
+  height: var(--hair);
+  background-color: var(--color-rule);
 }
 
 /* Small caps label used above every section title. */
 @utility eyebrow {
   font-family: var(--font-sans);
   font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.32em;
+  font-weight: 400;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--color-gold);
-}
-
-/* Soft gold glow, applied on hover/focus to cards and buttons. */
-@utility glow-gold {
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-gold) 45%, transparent),
-    0 0 40px -8px color-mix(in srgb, var(--color-gold) 35%, transparent);
+  color: rgb(242 239 234 / 0.55);
 }
 
 /* SVG strokes that draw themselves in. Paths use pathLength="1". */

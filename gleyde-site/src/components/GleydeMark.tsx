@@ -52,19 +52,19 @@ export function GleydeMark({
         </linearGradient>
       </defs>
       <g stroke={`url(#${gradientId})`} strokeLinecap="butt" strokeMiterlimit={12}>
-        <path d={DIAMOND} pathLength={1} strokeWidth={compact ? 5 : 1.4} {...draw(0)} />
+        <path d={DIAMOND} pathLength={1} strokeWidth={compact ? 5 : 1} {...draw(0)} />
         <circle
           cx={RING.cx}
           cy={RING.cy}
           r={compact ? 31 : RING.r}
           pathLength={1}
-          strokeWidth={compact ? 4.5 : 1.1}
+          strokeWidth={compact ? 4.5 : 0.8}
           // Start the ring's stroke at 12 o'clock so it draws round like a clock hand.
           transform={`rotate(-90 ${RING.cx} ${RING.cy})`}
           {...draw(0.7)}
         />
         {!compact &&
-          RAYS.map((d, i) => <path key={d} d={d} pathLength={1} strokeWidth={0.7} {...draw(1.2 + i * 0.05)} />)}
+          RAYS.map((d, i) => <path key={d} d={d} pathLength={1} strokeWidth={0.5} {...draw(1.2 + i * 0.05)} />)}
       </g>
       <path
         d={G_PATH}

@@ -8,7 +8,7 @@ import { easeDeco } from "./Reveal";
 
 /**
  * Fixed, minimal navigation. Transparent over the hero; once the page
- * scrolls it gains a blurred ink backdrop and a gold hairline underneath.
+ * scrolls it gains a blurred ink backdrop and a hairline underneath.
  * On phones the links collapse into a full-screen overlay menu.
  */
 export function Nav() {
@@ -51,14 +51,14 @@ export function Nav() {
       />
       <div
         className={`hairline absolute inset-x-0 bottom-0 transition-opacity duration-700 ${
-          scrolled && !open ? "opacity-40" : "opacity-0"
+          scrolled && !open ? "opacity-100" : "opacity-0"
         }`}
         aria-hidden="true"
       />
 
       <nav
         aria-label="Primary"
-        className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:h-18 sm:px-8"
+        className="relative mx-auto flex h-16 max-w-[calc(88rem+8rem)] items-center justify-between px-6 sm:h-18 sm:px-10 lg:px-16"
       >
         <a
           href="#top"
@@ -82,7 +82,7 @@ export function Nav() {
                 className="group relative py-2 text-[0.72rem] font-medium tracking-[0.26em] text-ivory/70 uppercase transition-colors duration-300 hover:text-ivory"
               >
                 {l.label}
-                <span className="bg-gold-gradient absolute inset-x-0 -bottom-0.5 h-px origin-left scale-x-0 transition-transform duration-500 ease-deco group-hover:scale-x-100" />
+                <span className="absolute inset-x-0 -bottom-0.5 h-(--hair) origin-left bg-gold scale-x-0 transition-transform duration-500 ease-deco group-hover:scale-x-100" />
               </a>
             </li>
           ))}

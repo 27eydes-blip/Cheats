@@ -65,7 +65,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${cinzel.variable} ${inter.variable}`}>
-      <body className="grain min-h-svh overflow-x-hidden bg-ink">
+      <body className="min-h-svh overflow-x-hidden bg-ink">
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>

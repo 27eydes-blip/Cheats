@@ -6,7 +6,7 @@ import { Magnetic } from "./Magnetic";
 type State = { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind: "error"; message: string };
 
 const field =
-  "peer w-full border-0 border-b border-ivory/20 bg-transparent px-0 pt-6 pb-3 text-base text-ivory placeholder-transparent transition-colors duration-300 focus:border-gold-light focus:ring-0 focus:outline-none";
+  "peer w-full border-0 border-b-(length:--hair) border-ivory/30 bg-transparent px-0 pt-6 pb-3 text-base text-ivory placeholder-transparent transition-colors duration-300 focus:border-gold-light focus:ring-0 focus:outline-none";
 const label =
   "pointer-events-none absolute top-6 left-0 text-[0.7rem] tracking-[0.26em] text-ivory/60 uppercase transition-all duration-300 ease-deco peer-focus:top-0 peer-focus:text-[0.6rem] peer-focus:text-gold peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-[0.6rem]";
 
@@ -81,11 +81,11 @@ export function ContactForm() {
           <button
             type="submit"
             disabled={state.kind === "sending"}
-            className="group relative inline-flex h-13 items-center gap-3 overflow-hidden rounded-full border border-gold/60 px-9 text-[0.7rem] font-medium tracking-[0.3em] text-ivory uppercase transition-[box-shadow,border-color,color] duration-500 ease-deco hover:border-gold-light hover:text-ink hover:glow-gold focus-visible:glow-gold disabled:cursor-wait disabled:opacity-60"
+            className="group relative inline-flex h-13 items-center gap-3 overflow-hidden border-(length:--hair) border-ivory/40 px-10 text-[0.68rem] tracking-[0.32em] text-ivory uppercase transition-[border-color,color] duration-500 ease-deco hover:border-gold-light hover:text-ink disabled:cursor-wait disabled:opacity-60"
           >
             <span
               aria-hidden="true"
-              className="bg-gold-gradient absolute inset-0 -z-0 origin-left scale-x-0 transition-transform duration-500 ease-deco group-hover:scale-x-100"
+              className="absolute inset-0 -z-0 origin-left bg-gold-light scale-x-0 transition-transform duration-500 ease-deco group-hover:scale-x-100"
             />
             <span className="relative">{state.kind === "sending" ? "Sending" : "Send message"}</span>
           </button>

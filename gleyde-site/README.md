@@ -127,7 +127,9 @@ src/
 
 - **Palette (Champagne):** ink `#0B0B0C`, ivory `#F2EFEA`, champagne `#D8C8A0` → `#EFE3C4`. Defined as Tailwind tokens in `globals.css` (`bg-ink`, `text-ivory`, `text-gold`, `text-gold-light`; the `gold` names now hold the champagne values) and mirrored in `src/lib/brand.ts` for the logo and generated images. To recolour the site, change both.
 - **Logo:** a sharp Art Deco diamond around a medallion Cinzel "G" with a fine Gatsby sunburst. The geometry is in `src/lib/brand.ts`, shared by the on-page logo (`src/components/GleydeMark.tsx`), the favicon, the Apple icon and the share image. Pass `animated` to draw it in (diamond, ring, rays, then the G fades up), or `compact` for small sizes (drops the rays). If you change the geometry, regenerate `src/app/icon.svg` to match.
-- **Motion:** the hero entrance is pure CSS, so it starts before JavaScript loads. Scroll reveals, parallax, hairline dividers and magnetic buttons use Framer Motion (loaded lazily). All motion respects `prefers-reduced-motion`.
+- **Style:** editorial and minimal. Every section shares one frame (`src/components/Section.tsx`): a hairline rule, a small index label ("01 About") on the left, content on the right. Rules are 1px, and a true 0.5px on Retina/4K screens (the `rule-t`, `rule-b` and `hairline` utilities in `globals.css`). No boxes, gradients, glows or grain. Champagne is reserved for the logo and a few small accents.
+- **Large screens:** the whole layout scales up in steps from 1800px wide, so it fills 2K/4K monitors instead of sitting small in the middle.
+- **Motion:** the hero entrance is pure CSS, so it starts before JavaScript loads. Scroll reveals, parallax and the magnetic button use Framer Motion (loaded lazily). All motion respects `prefers-reduced-motion`.
 - **Easter egg:** Sam Eyde III's gold SE III monogram (kept in its own gold, as his personal mark) hides in the bottom-right corner of the footer at 12% opacity. Hover over it (or tab to it) and it glows.
 
 ### Quality checks (local Lighthouse 12, production build)

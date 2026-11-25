@@ -41,11 +41,11 @@ export const RAYS: string[] = Array.from({ length: 16 }, (_, i) => {
 /** The whole mark as a standalone SVG string (for generated images). */
 export function markSvg({ compact = false }: { compact?: boolean } = {}) {
   const [s0, s1, s2] = markStops;
-  const rays = compact ? "" : `<path d="${RAYS.join(" ")}" stroke-width="0.7"/>`;
+  const rays = compact ? "" : `<path d="${RAYS.join(" ")}" stroke-width="0.5"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">` +
     `<defs><linearGradient id="g" x1="0" y1="0" x2="120" y2="160" gradientUnits="userSpaceOnUse">` +
     `<stop offset="0" stop-color="${s0}"/><stop offset=".5" stop-color="${s1}"/><stop offset="1" stop-color="${s2}"/></linearGradient></defs>` +
-    `<g stroke="url(#g)"><path d="${DIAMOND}" stroke-width="${compact ? 5 : 1.4}"/>${rays}` +
-    `<circle cx="${RING.cx}" cy="${RING.cy}" r="${compact ? 31 : RING.r}" stroke-width="${compact ? 4.5 : 1.1}"/></g>` +
+    `<g stroke="url(#g)"><path d="${DIAMOND}" stroke-width="${compact ? 5 : 1}"/>${rays}` +
+    `<circle cx="${RING.cx}" cy="${RING.cy}" r="${compact ? 31 : RING.r}" stroke-width="${compact ? 4.5 : 0.8}"/></g>` +
     `<path d="${G_PATH}" fill="url(#g)"/></svg>`;
 }
