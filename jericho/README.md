@@ -799,6 +799,56 @@ Say "Jericho, set an alarm for 7 AM", "wake me at 6:45 on weekdays for the gym" 
 
 **Settings panel (sun icon):** alarm volume, default snooze minutes, and the list of upcoming alarms with a Cancel button for each.
 
+## Smart plugs (Tapo)
+
+Two Tapo plugs, **Fan** and **Lamp** (P100, P105 or P110), on your home network. Plain commands run
+on the spot with no Claude call:
+
+- "Turn on the fan", "turn the lamp on", "turn off my lamp", "toggle the lamp", "is the fan on?"
+- "Turn everything off" (every plug; the TVs aren't plugs), "all lights off" (the `lights` group)
+- "Turn off the fan in 30 minutes", "turn the fan off in an hour and a half", "cancel the fan timer"
+
+No yes is needed for any of them. Other ways of saying it ("it's hot in here, get the fan going")
+go to Claude, which uses the `plug_control` tool.
+
+**Setup**
+
+1. In the Tapo app, give the plugs the names in `settings.json` (`plugs.devices`: Fan and Lamp), and
+   turn on **Third-Party Compatibility** (Me > Tapo Lab or Third-Party Services). Without it, newer
+   firmware refuses local control.
+2. Put your Tapo app login in `.env`: `TAPO_EMAIL=` and `TAPO_PASSWORD=`. They're read only from
+   `.env`; they're blanked from every log, never spoken or shown, never written to `data/`, and never
+   given to commands or Claude Code. The startup self-test and `npm run plugs:test` show only "set"
+   or "missing".
+3. Run `npm run plugs:test`: it finds the plugs and shows each one's on/off state, model and address.
+
+**How it finds them:** it reads the plug list (names and MAC addresses) from your Tapo account,
+scans your network for devices answering on port 80, and matches them by MAC address (ARP table).
+Your Tapo login is only ever sent to a device whose MAC is one of your account's plugs (or, if the
+account list can't be read, a TP-Link MAC prefix), never to the router or anything else. Found
+plugs are cached in `data/plugs.json` (name, IP, MAC, model; no credentials). If a plug's IP changes,
+it's found again automatically.
+
+**Timers** are saved in `data/plug-timers.json`, so "turn off the fan in 30 minutes" still happens
+after a restart (a timer that came due while Jericho was off runs as soon as he starts). Jericho
+says it when it fires.
+
+**If a plug doesn't answer**, Jericho says so with the fix: same Wi-Fi as the PC (plugs only use
+2.4 GHz), and Third-Party Compatibility on in the Tapo app.
+
+**More plugs and groups:** add `{ "name": "Heater", "aliases": ["space heater"] }` to
+`plugs.devices` (the name must match the Tapo app), and groups to `plugs.groups`, e.g.
+`{ "name": "lights", "aliases": ["all lights", "all the lights"], "devices": ["Lamp"] }`. A plain
+"the lights" isn't in the default group, so it still goes to the lights tool; add it as an alias if
+you want it to mean the plugs.
+
+**The library:** local control uses `tp-link-tapo-connect` (2.0.15, maintained), which speaks the
+plugs' KLAP protocol with the older one as fallback. Its old `axios` and `uuid` are overridden in
+`package.json` to current versions. `npm audit` still lists advisories in its auto-discovery helpers
+(`local-devices`, `ip`); Jericho never uses that part (it does its own MAC-matched discovery). The
+library has no request time limit of its own, so every call is wrapped in one
+(`plugs.timeoutSeconds`, 6).
+
 ## LG TVs (living room and blue room)
 
 Two LG webOS TVs, each by room: **living room** and **blue room** (also "living room TV", "the
@@ -911,6 +961,7 @@ None of these are secret. Keys live only in `.env`.
 | `claude.maxHistoryMessages` | After this many messages (default 24), the conversation starts fresh with a short recap. |
 | `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 16000 for the strong model (room for a researched file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway, and you only pay for what's written. |
 | `claude.maxToolRounds` | How many tool steps one request may chain on its own (default 15). |
+| `plugs` | The Tapo plugs: `devices` (name as in the Tapo app, plus aliases: Fan, Lamp), `groups` (name, aliases, devices: "all lights" -> Lamp), `timeoutSeconds` (6). The login is in `.env` (`TAPO_EMAIL`, `TAPO_PASSWORD`). |
 | `lg` | The LG TVs: `rooms` (name and aliases: living room, blue room), `candidates` (addresses tried first: 192.168.4.217, 192.168.4.48), `pairTimeoutSeconds` (60), `port` (3001), `volumeStep` (5). |
 | `planner` | `timezone` (America/Detroit), `wakeStart` / `wakeEnd` (07:00 / 22:00), `weekStartsOn` (1 = Monday), `studyChunkMinutes` (60), `breakMinutes` (10), `minFreeBlockMinutes` (15). |
 | `pc.trusted` | The trusted tier: `enabled` (false), extra `folders`, `apps`, and `commands` that run without a yes. See Controlling your PC. |
@@ -963,7 +1014,7 @@ do-not-call list, and keep the daily and per-number limits.
   best-effort extra: a determined command can get around it, which is why every command needs
   your yes and its output is scrubbed of keys before it's shown or spoken.
 - Child processes (commands, Claude Code, scheduled tasks) never get Jericho's keys, the access
-  token, your phone number, the calendar link or the TV's address. Claude Code only gets
+  token, your phone number, the calendar link, the TV's address or the Tapo login. Claude Code only gets
   `ANTHROPIC_API_KEY`, in case it needs it to sign in.
 
 ## Files
@@ -988,6 +1039,8 @@ server/planner/           the Planner: store (data/planner.json), dates (Detroit
 server/lg/                the LG TVs: ssap.js (webOS client), net.js (scan, ARP, Wake-on-LAN),
                           index.js (rooms, pairing, commands), voice.js (local commands)
 scripts/tv-pair.mjs       npm run tv:pair -- "living room"
+server/plugs/             the Tapo plugs: index.js (discovery, actions, timers), voice.js (local commands)
+scripts/plugs-test.mjs    npm run plugs:test
 public/planner.*          the Planner page (planner.html, .css, .js; plannerlayout.js helpers)
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
 server/secrets.js         detects passwords, keys, card and ID numbers
