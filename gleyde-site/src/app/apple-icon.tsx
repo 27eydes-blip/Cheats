@@ -1,6 +1,9 @@
 import { ImageResponse } from "next/og";
 import { markDataUri } from "@/lib/brand-image";
 
+// Generated once at build time (also required for the static export).
+export const dynamic = "force-static";
+
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 

@@ -62,13 +62,13 @@ export const divisions: Division[] = [
         name: "Glydrift",
         description: "The flagship: fast, fluid flight with Volt the Storm Bird.",
         status: "In Development",
-        url: "https://glydrift.gleydetechnologies.com", // placeholder
+        url: "https://glydrift.com",
       },
       {
         name: "Glydaway",
         description: "An endless side-scrolling runner spin-off of Glydrift.",
         status: "Beta",
-        url: "https://glydaway.gleydetechnologies.com", // placeholder
+        url: "https://glydaway.com",
       },
       {
         name: "Tandem",
@@ -86,7 +86,7 @@ export const divisions: Division[] = [
         name: "Motor City 1915",
         description: "Build an automotive empire in the Detroit of 1915.",
         status: "In Development",
-        url: "https://motorcity1915.gleydetechnologies.com", // placeholder
+        url: "https://motor-city-1915.pages.dev",
       },
       {
         name: "Ant Colony War",
@@ -103,7 +103,7 @@ export const divisions: Division[] = [
     name: "Cybersecurity & Software",
     description: "Gleyde Cybersecurity & Software: website security checks and protection for businesses.",
     status: "In Development",
-    url: "https://security.gleydetechnologies.com", // placeholder
+    url: "https://gleyde-security.pages.dev",
     leadLabel: "Team",
     lead: "Abe, Cybersecurity",
     projects: [
@@ -111,7 +111,7 @@ export const divisions: Division[] = [
         name: "Website Security Check",
         description: "An audit of your website's headers, TLS, exposure and weak points.",
         status: "In Development",
-        url: "https://security.gleydetechnologies.com/check", // placeholder
+        url: "https://gleyde-security.pages.dev",
       },
       {
         name: "Protection Plans",
@@ -138,7 +138,7 @@ export const divisions: Division[] = [
         name: "Sam Eyde Studios",
         description: "A recording app for capturing, layering and polishing takes.",
         status: "In Development",
-        url: "https://studios.gleydetechnologies.com", // placeholder
+        url: "https://sam-eyde-studios.pages.dev",
       },
       {
         name: "QR City Guide",
@@ -149,7 +149,6 @@ export const divisions: Division[] = [
         name: "Client Websites",
         description: "Fast, secure, beautifully made websites for businesses.",
         status: "Live",
-        url: "https://gleydetechnologies.com/#contact",
       },
     ],
   },

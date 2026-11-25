@@ -88,6 +88,20 @@ The form posts JSON to `/api/contact` (`src/app/api/contact/route.ts`). The rout
 
 Every push to the production branch redeploys the site. Every other branch gets a preview URL.
 
+## Or deploy to Cloudflare Pages
+
+A preview is live at **https://gleyde-technologies.pages.dev** (Cloudflare Pages project `gleyde-technologies`, marked `noindex` so search engines wait for the real domain).
+
+The site can also be built as plain static files:
+
+```bash
+npm run build:static                 # writes out/ (+ out/_headers)
+PREVIEW=1 NEXT_PUBLIC_SITE_URL=https://gleyde-technologies.pages.dev npm run build:static   # preview build, noindex
+npx wrangler pages deploy out --project-name gleyde-technologies --branch main
+```
+
+Run the deploy from this folder so Wrangler also picks up `functions/api/contact.ts`, which handles the contact form on Pages. To use the real domain there instead of Vercel: Cloudflare dashboard → Workers & Pages → `gleyde-technologies` → Custom domains → add `gleydetechnologies.com`, and drop `PREVIEW=1` from the build.
+
 ## Connect gleydetechnologies.com
 
 1. In Vercel, open the project → **Settings → Domains**.

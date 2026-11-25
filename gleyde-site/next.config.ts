@@ -12,12 +12,23 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
 ];
 
+/**
+ * STATIC_EXPORT=1 (set by `npm run build:static`) builds a plain static site
+ * into out/ for Cloudflare Pages. Headers then come from out/_headers, which
+ * the build script writes, instead of from Next.js.
+ */
+const staticExport = process.env.STATIC_EXPORT === "1";
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
-  },
+  ...(staticExport
+    ? { output: "export" }
+    : {
+        async headers() {
+          return [{ source: "/:path*", headers: securityHeaders }];
+        },
+      }),
 };
 
 export default nextConfig;

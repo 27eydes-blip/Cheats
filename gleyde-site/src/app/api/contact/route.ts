@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
+import { validateContact } from "@/lib/contact";
 
 /**
- * POST /api/contact
+ * POST /api/contact (Vercel / `next start`)
  *
  * Stub endpoint for the contact form. It validates the input and returns
  * { ok: true }. To actually deliver messages, replace the TODO below with an
  * email provider (Resend, Postmark, SendGrid…) or a database insert, using
- * secrets from Vercel environment variables.
+ * secrets from your host's environment variables.
+ *
+ * The Cloudflare Pages build uses functions/api/contact.ts instead, with the
+ * same validation.
  */
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -19,25 +20,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { name, email, message, company } = (body ?? {}) as Record<string, unknown>;
-
-  // Honeypot filled in: pretend success so bots learn nothing.
-  if (typeof company === "string" && company.trim() !== "") {
-    return NextResponse.json({ ok: true });
-  }
-
-  if (typeof name !== "string" || !name.trim() || name.length > 100) {
-    return NextResponse.json({ error: "Please enter your name." }, { status: 422 });
-  }
-  if (typeof email !== "string" || !EMAIL.test(email) || email.length > 200) {
-    return NextResponse.json({ error: "Please enter a valid email address." }, { status: 422 });
-  }
-  if (typeof message !== "string" || !message.trim() || message.length > 5000) {
-    return NextResponse.json({ error: "Please enter a message." }, { status: 422 });
-  }
+  const result = validateContact(body);
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  if (result.spam) return NextResponse.json({ ok: true });
 
   // TODO: deliver the message. Example with Resend:
-  //   await resend.emails.send({ from, to: site.email, replyTo: email, subject: `New message from ${name}`, text: message });
+  //   await resend.emails.send({ from, to: site.email, replyTo: result.email,
+  //     subject: `New message from ${result.name}`, text: result.message });
 
   return NextResponse.json({ ok: true });
 }
