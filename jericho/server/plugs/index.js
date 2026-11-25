@@ -1,22 +1,29 @@
 // Tapo smart plugs (P100 / P105 / P110) on the home network, by name: settings.json plugs.devices
-// ("Fan", "Lamp", ...) and plugs.groups ("lights" -> Lamp). Local control through the
-// tp-link-tapo-connect library (KLAP, with the older protocol as its fallback).
+// ("Fan", "Lamp", ...) and plugs.groups ("all lights" -> Lamp).
 //
-// Credentials: TAPO_EMAIL and TAPO_PASSWORD, only from .env. They're only ever handed to the
-// library: never logged, spoken, stored in data/, sent to the page, or given to child processes.
-// To keep them from going to random devices, they're only sent to a device whose MAC address is
-// one of the plugs on your Tapo account (from the account's device list), or, if the account
-// list can't be read, a TP-Link MAC prefix.
+// How a plug is controlled, in order:
+//   1. locally over KLAP (our own client, server/plugs/klap.js: v2 for Tapo, v1 for Kasa)
+//   2. locally over the older "secure passthrough" protocol (tp-link-tapo-connect), only for a
+//      plug that doesn't speak KLAP at all
+//   3. through the Tapo cloud with your account (server/plugs/cloud.js), when local control fails
+// The log says which path was used ("path": "local" or "cloud").
 //
-// Found plugs are cached in data/plugs.json (name, IP, MAC, model; no credentials). If a plug's
-// IP changes, it's found again. Timers ("turn off the fan in 30 minutes") are kept in
-// data/plug-timers.json, so they survive a restart.
+// Credentials: TAPO_EMAIL and TAPO_PASSWORD, only from .env. They're only ever used for the
+// login hashes and the Tapo cloud login: never logged, spoken, stored in data/, sent to the page,
+// or given to child processes. Locally they're only used with a device whose MAC address is one of
+// the plugs on your Tapo account (or, if the account list can't be read, a TP-Link MAC prefix).
+//
+// Found plugs are cached in data/plugs.json (name, IP, MAC, model, cloud device id; no
+// credentials). If a plug's IP changes, it's found again. Timers ("turn off the fan in 30
+// minutes") are kept in data/plug-timers.json, so they survive a restart.
 import fs from "node:fs";
 import path from "node:path";
 import { ROOT, settings } from "../config.js";
 import { logAction } from "../logger.js";
 import { isLocalAddress } from "../roku/ecp.js";
 import { arpTable, normalizeMac, scanSubnets } from "../lg/net.js";
+import { klapLogin } from "./klap.js";
+import { cloudDevice, cloudPlugs } from "./cloud.js";
 
 export const TIP = "Check that it's plugged in and on the same Wi-Fi as this PC (the 2.4 GHz network), and that Third-Party Compatibility is on in the Tapo app (Me, Tapo Lab or Third-Party Services).";
 const NO_CREDS = "Tapo isn't set up yet: add TAPO_EMAIL and TAPO_PASSWORD to the .env file, then restart me.";
@@ -46,45 +53,59 @@ export function credStatus(env = process.env) {
   return { TAPO_EMAIL: env.TAPO_EMAIL?.trim() ? "set" : "missing", TAPO_PASSWORD: env.TAPO_PASSWORD ? "set" : "missing" };
 }
 
-// ---- the library and the network (swapped for fakes in tests) ---------------------------------
-let deps = null;
-async function libDeps() {
-  if (deps) return deps;
-  const lib = await import("tp-link-tapo-connect");
-  const mod = lib.default || lib;
-  deps = {
-    login: (email, password, ip) => mod.loginDeviceByIp(email, password, ip),
-    cloudPlugs: async (email, password) => {
-      const cloud = await mod.cloudLogin(email, password);
-      return (await cloud.listDevicesByType("SMART.TAPOPLUG")).map((d) => ({ name: d.alias || d.deviceName || "", mac: normalizeMac(String(d.deviceMac || "").replace(/(..)(?!$)/g, "$1:")), model: d.deviceModel || "" }));
-    },
-    scan: () => scanSubnets(80),
-    arp: arpTable,
-  };
-  return deps;
-}
-export function _setPlugDepsForTests(d) {
-  deps = d ? { login: async () => { throw new Error("no fake"); }, cloudPlugs: async () => [], scan: async () => [], arp: async () => ({}), ...d } : null;
-  sessions.clear();
-}
-
-class PlugError extends Error {
-  constructor(message, code) {
+export class PlugError extends Error {
+  constructor(message, code, extra = {}) {
     super(message);
     this.code = code;
+    Object.assign(this, extra);
   }
 }
 
-/** Any library call, with our own time limit (the library has none). Library errors are never passed on as text. */
+// ---- the network side (swapped for fakes in tests) ----------------------------------------------
+
+/** Local login: KLAP first; the library's older protocol only when the plug doesn't speak KLAP. */
+async function localLogin(email, password, ip, { timeoutMs, trace = [] } = {}) {
+  try {
+    return await klapLogin(ip, { email, password, timeoutMs, trace });
+  } catch (err) {
+    if (err.code !== "not-klap") throw err;
+  }
+  trace.push({ step: "legacy", note: "trying the older secure-passthrough protocol" });
+  const { loginDeviceByIp } = await import("tp-link-tapo-connect/dist/secure-passthrough-transport.js").then((m) => m.default || m);
+  try {
+    const dev = await limited(loginDeviceByIp(email, password, ip), timeoutMs);
+    return { protocol: "passthrough", getDeviceInfo: () => dev.getDeviceInfo(), turnOn: () => dev.turnOn(), turnOff: () => dev.turnOff() };
+  } catch (err) {
+    trace.push({ step: "legacy", failed: err.code || "error" });
+    throw new PlugError("the older protocol failed too", err.code === "auth" ? "auth" : "unreachable", { step: "legacy" });
+  }
+}
+
+const defaultDeps = () => ({
+  login: (email, password, ip, opts) => localLogin(email, password, ip, opts),
+  cloudPlugs: (email, password) => cloudPlugs({ email, password }),
+  cloudDevice: (plug, email, password) => cloudDevice(plug, { email, password }),
+  scan: () => scanSubnets(80),
+  arp: arpTable,
+});
+let deps = defaultDeps();
+export function _setPlugDepsForTests(d) {
+  deps = d ? { ...defaultDeps(), login: async () => { throw new PlugError("no fake", "unreachable"); }, cloudPlugs: async () => [], cloudDevice: () => { throw new PlugError("no cloud", "unreachable"); }, scan: async () => [], arp: async () => ({}), ...d } : defaultDeps();
+  sessions.clear();
+}
+
+/** Any network call, with our own time limit. Raw errors are never passed on as text. */
 async function limited(promise, ms, code = "unreachable") {
   let timer;
   try {
     return await Promise.race([promise, new Promise((_, rej) => (timer = setTimeout(() => rej(new PlugError("timed out", code)), ms)))]);
   } catch (err) {
     if (err instanceof PlugError) throw err;
+    if (err?.code && typeof err.code === "string" && ["auth", "unreachable", "not-klap", "bad-response", "device-error", "offline", "error"].includes(err.code)) throw new PlugError(err.message, err.code === "not-klap" ? "unreachable" : err.code, { step: err.step });
     // Tapo's own "wrong email or password" (-1501); anything else counts as unreachable
     throw new PlugError("failed", /(^|\D)-1501(\D|$)|invalid (?:request or )?credentials|missing credentials/i.test(String(err?.message)) ? "auth" : code);
-  } finally {
+  }
+  finally {
     clearTimeout(timer);
   }
 }
@@ -133,93 +154,141 @@ export function findTarget(text, cfg = plugSettings()) {
 
 const plugNames = (cfg) => cfg.devices.map((d) => d.name);
 const say = (name) => name.toLowerCase();
+const safeStep = (err) => (err?.step ? String(err.step) : "connect");
 
 // ---- discovery ------------------------------------------------------------------------------------
 
 /**
- * Finds the plugs: the Tapo account's plug list (names and MACs), the network scan (port 80) and
- * the ARP table give each plug's IP; each one is logged into to read its name and state.
- * Returns { found: { Name: { ip, mac, model, on } }, missing: [names] }.
+ * Finds the plugs. The Tapo account's plug list gives names, MACs and cloud ids; the network scan
+ * (port 80) and the ARP table give IPs. Each named plug is then tried locally, and through the
+ * cloud if local control fails. A plug that's on the account is never "not found" just because
+ * local login failed: it's found with path "cloud" (or "none" if the cloud fails too).
+ * Returns { found: { Name: { ip, mac, model, on, path, localError } }, missing, debug }.
+ * debug (when asked): per candidate address, only safe facts.
  */
-export async function discover({ cfg = plugSettings(), env = process.env } = {}) {
+export async function discover({ cfg = plugSettings(), env = process.env, debug = false } = {}) {
   const { email, password } = creds(env);
   if (!email || !password) throw new PlugError(NO_CREDS, "no-creds");
-  const d = await libDeps();
   let account = [];
+  let accountError = null;
   try {
-    account = await limited(d.cloudPlugs(email, password), 10_000, "cloud");
-  } catch {
-    account = []; // offline or blocked: fall back to TP-Link MAC prefixes
+    account = await limited(deps.cloudPlugs(email, password), 12_000, "cloud");
+  } catch (err) {
+    account = [];
+    accountError = err.code || "error";
+    if (err.code === "auth") throw new PlugError("Tapo didn't accept the email and password in .env.", "auth");
   }
-  const [open, table] = await Promise.all([d.scan().catch(() => []), d.arp().catch(() => ({}))]);
-  const accountMacs = new Set(account.map((a) => a.mac).filter(Boolean));
-  const candidates = open.filter((ip) => {
-    if (!isLocalAddress(ip)) return false;
-    const mac = normalizeMac(table[ip]);
-    if (!mac) return false;
-    return accountMacs.size ? accountMacs.has(mac) : TPLINK_OUI.includes(mac.slice(0, 8));
-  });
-  const wanted = new Map(cfg.devices.map((x) => [x.name.toLowerCase(), x.name]));
+  const [open, table] = await Promise.all([deps.scan().catch(() => []), deps.arp().catch(() => ({}))]);
+  const macOfIp = (ip) => normalizeMac(table[ip]);
+  const accountMacs = new Set(account.map((a) => normalizeMac(a.mac)).filter(Boolean));
+  const candidates = open.filter((ip) => isLocalAddress(ip) && macOfIp(ip) && (accountMacs.size ? accountMacs.has(macOfIp(ip)) : TPLINK_OUI.includes(macOfIp(ip).slice(0, 8))));
+  const report = [];
   const found = {};
-  for (const ip of candidates) {
+  const tryLocal = async (ip) => {
+    const trace = [];
+    const entry = { ip, mac: macOfIp(ip) };
     try {
-      const dev = await limited(d.login(email, password, ip), cfg.timeoutMs);
+      const dev = await limited(deps.login(email, password, ip, { timeoutMs: cfg.timeoutMs, trace }), cfg.timeoutMs * 3);
       const info = await limited(dev.getDeviceInfo(), cfg.timeoutMs);
-      const mac = normalizeMac(info.mac || table[ip]);
-      const nick = String(info.nickname || account.find((a) => a.mac === mac)?.name || "").trim();
-      const name = wanted.get(nick.toLowerCase());
-      if (!name) continue;
-      found[name] = { ip, mac, model: String(info.model || "").slice(0, 20), on: Boolean(info.device_on) };
-      sessions.set(name, { dev, ip, at: Date.now() });
+      Object.assign(entry, { protocol: dev.protocol || "local", ok: true, nickname: String(info.nickname || "").trim(), on: Boolean(info.device_on), model: String(info.model || "").slice(0, 20) });
+      return { dev, entry, trace };
     } catch (err) {
-      if (err.code === "auth") throw new PlugError("Tapo didn't accept the email and password in .env.", "auth");
+      Object.assign(entry, { ok: false, failedAt: safeStep(err), reason: err.code || "error", detail: err.message && err.message !== "failed" ? err.message : undefined });
+      return { dev: null, entry, trace, err };
+    } finally {
+      if (debug) report.push({ ...entry, trace });
+    }
+  };
+
+  const wanted = new Map(cfg.devices.map((x) => [x.name.toLowerCase(), x.name]));
+  if (account.length) {
+    // match by the account's names, then find each one's address by MAC
+    for (const a of account) {
+      const name = wanted.get(String(a.name).trim().toLowerCase());
+      if (!name) continue;
+      const mac = normalizeMac(a.mac);
+      const ip = candidates.find((x) => macOfIp(x) === mac) || "";
+      const plug = { ip, mac, model: a.model, deviceId: a.deviceId, appServerUrl: a.appServerUrl };
+      let local = ip ? await tryLocal(ip) : null;
+      if (local?.dev) {
+        sessions.set(name, { dev: local.dev, ip, at: Date.now(), path: "local" });
+        found[name] = { ...plug, on: local.entry.on, path: "local", protocol: local.entry.protocol };
+        continue;
+      }
+      if (local?.err?.code === "auth" && !a.deviceId) throw new PlugError("The plug didn't accept the Tapo email and password in .env.", "auth");
+      // local failed (or no address): the cloud
+      let on = null;
+      let pathUsed = "none";
+      try {
+        const dev = deps.cloudDevice(a, email, password);
+        const info = await limited(dev.getDeviceInfo(), 10_000);
+        on = Boolean(info.device_on);
+        pathUsed = "cloud";
+        sessions.set(name, { dev, ip, at: Date.now(), path: "cloud" });
+      } catch (err) {
+        if (debug) report.push({ ip: ip || "(not on this network)", mac, cloud: "failed", reason: err.code || "error" });
+      }
+      found[name] = { ...plug, on, path: pathUsed, localError: local ? `${local.entry.failedAt}: ${local.entry.reason}` : "no address on this network" };
+    }
+  } else {
+    // no account list: try the TP-Link devices locally and match by their own names
+    for (const ip of candidates) {
+      const local = await tryLocal(ip);
+      if (local.err?.code === "auth") throw new PlugError("The plug didn't accept the Tapo email and password in .env.", "auth");
+      const name = local.dev && wanted.get(local.entry.nickname.toLowerCase());
+      if (!name) continue;
+      sessions.set(name, { dev: local.dev, ip, at: Date.now(), path: "local" });
+      found[name] = { ip, mac: local.entry.mac, model: local.entry.model, on: local.entry.on, path: "local", protocol: local.entry.protocol };
     }
   }
   const cache = loadCache();
-  for (const [name, v] of Object.entries(found)) cache.plugs[name] = { ip: v.ip, mac: v.mac, model: v.model };
+  for (const [name, v] of Object.entries(found)) cache.plugs[name] = { ip: v.ip, mac: v.mac, model: v.model, ...(v.deviceId ? { deviceId: v.deviceId, appServerUrl: v.appServerUrl } : {}) };
   writeJson(cacheFile(), cache);
-  const missing = plugNames(cfg).filter((n) => !found[n]);
-  logAction("plugs_discovered", { found: Object.keys(found).length, missing: missing.length, account: account.length, candidates: candidates.length });
-  return { found, missing };
+  const missing = plugNames(cfg).filter((n) => !found[n] || found[n].path === "none");
+  logAction("plugs_discovered", { found: Object.values(found).filter((f) => f.path !== "none").length, local: Object.values(found).filter((f) => f.path === "local").length, cloud: Object.values(found).filter((f) => f.path === "cloud").length, missing: missing.length, account: account.length, candidates: candidates.length, ...(accountError ? { accountError } : {}) });
+  return { found, missing, ...(debug ? { debug: report, account: account.map((a) => ({ name: a.name, mac: a.mac, model: a.model, online: a.online })), accountError } : {}) };
 }
 
 // ---- talking to one plug ------------------------------------------------------------------------
-const sessions = new Map(); // name -> { dev, ip, at }: a logged-in plug, reused for 20 minutes
+const sessions = new Map(); // name -> { dev, ip, at, path }: a logged-in plug, reused for 20 minutes
 const SESSION_MS = 20 * 60_000;
 
-async function device(name, cfg, { rediscover = true } = {}) {
+/** A working connection to a plug: local first (cached address, then a fresh search), then the cloud. */
+async function device(name, cfg) {
   const { email, password } = creds();
   if (!email || !password) throw new PlugError(NO_CREDS, "no-creds");
   const s = sessions.get(name);
-  if (s && Date.now() - s.at < SESSION_MS) return s.dev;
-  const d = await libDeps();
+  if (s && Date.now() - s.at < SESSION_MS) return s;
   const cached = loadCache().plugs[name];
   if (cached?.ip && isLocalAddress(cached.ip)) {
     try {
-      const dev = await limited(d.login(email, password, cached.ip), cfg.timeoutMs);
-      sessions.set(name, { dev, ip: cached.ip, at: Date.now() });
-      return dev;
+      const dev = await limited(deps.login(email, password, cached.ip, { timeoutMs: cfg.timeoutMs }), cfg.timeoutMs * 3);
+      const entry = { dev, ip: cached.ip, at: Date.now(), path: "local" };
+      sessions.set(name, entry);
+      return entry;
     } catch (err) {
-      if (err.code === "auth") throw new PlugError("Tapo didn't accept the email and password in .env.", "auth");
-      /* moved or off: look for it again */
+      if (err.code === "auth" && !cached.deviceId) throw new PlugError("The plug didn't accept the Tapo email and password in .env.", "auth");
+      /* moved, off, or local control refused: search again (which also tries the cloud) */
     }
   }
-  if (!rediscover) throw new PlugError(`I can't reach the ${say(name)}. ${TIP}`, "unreachable");
   const r = await discover({ cfg });
-  if (!r.found[name]) throw new PlugError(`I can't find the ${say(name)} on the network. ${TIP}`, "unreachable");
-  if (cached?.ip && cached.ip !== r.found[name].ip) logAction("plug_rediscovered", { plug: name }); // never the address
-  return sessions.get(name).dev;
+  const f = r.found[name];
+  if (!f || f.path === "none") throw new PlugError(f ? `I can't reach the ${say(name)}, locally or through the Tapo cloud. ${TIP}` : `I can't find the ${say(name)} on the network or your Tapo account. ${TIP}`, "unreachable");
+  if (cached?.ip && f.ip && cached.ip !== f.ip) logAction("plug_rediscovered", { plug: name }); // never the address
+  return sessions.get(name);
 }
 
-/** One action on one plug, retrying once with a fresh login (sessions expire). */
+/** One action on one plug, retrying once with a fresh connection (sessions expire). */
 async function onPlug(name, fn, cfg) {
   try {
-    return await limited(fn(await device(name, cfg)), cfg.timeoutMs);
+    const s = await device(name, cfg);
+    return { value: await limited(fn(s.dev), s.path === "cloud" ? 10_000 : cfg.timeoutMs), path: s.path };
   } catch (err) {
     if (err.code === "no-creds" || err.code === "auth") throw err;
     sessions.delete(name);
     try {
-      return await limited(fn(await device(name, cfg)), cfg.timeoutMs);
+      const s = await device(name, cfg);
+      return { value: await limited(fn(s.dev), s.path === "cloud" ? 10_000 : cfg.timeoutMs), path: s.path };
     } catch (err2) {
       if (err2 instanceof PlugError && /can't (reach|find)|isn't set up|didn't accept/.test(err2.message)) throw err2;
       throw new PlugError(`I can't reach the ${say(name)}. ${TIP}`, "unreachable");
@@ -229,7 +298,7 @@ async function onPlug(name, fn, cfg) {
 
 export const ACTIONS = ["on", "off", "toggle", "status"];
 
-/** "on" | "off" | "toggle" | "status" for one plug. Returns { ok, say, on } or { ok: false, error }. */
+/** "on" | "off" | "toggle" | "status" for one plug. Returns { ok, say, on, path } or { ok: false, error }. */
 export async function plugAction(name, action, cfg = plugSettings()) {
   const plug = cfg.devices.find((d) => d.name.toLowerCase() === String(name).toLowerCase());
   if (!plug) return { ok: false, error: `I don't know a plug called ${name}. I have ${plugNames(cfg).map(say).join(" and ")}.` };
@@ -237,18 +306,18 @@ export async function plugAction(name, action, cfg = plugSettings()) {
   let result;
   try {
     if (action === "status") {
-      const info = await onPlug(plug.name, (dev) => dev.getDeviceInfo(), cfg);
-      result = { ok: true, on: Boolean(info.device_on), say: `The ${say(plug.name)} is ${info.device_on ? "on" : "off"}.` };
+      const r = await onPlug(plug.name, (dev) => dev.getDeviceInfo(), cfg);
+      result = { ok: true, on: Boolean(r.value.device_on), path: r.path, say: `The ${say(plug.name)} is ${r.value.device_on ? "on" : "off"}.` };
     } else {
       let turnOn = action === "on";
-      if (action === "toggle") turnOn = !(await onPlug(plug.name, (dev) => dev.getDeviceInfo(), cfg)).device_on;
-      await onPlug(plug.name, (dev) => (turnOn ? dev.turnOn() : dev.turnOff()), cfg);
-      result = { ok: true, on: turnOn, say: `${plug.name} ${turnOn ? "on" : "off"}.` };
+      if (action === "toggle") turnOn = !(await onPlug(plug.name, (dev) => dev.getDeviceInfo(), cfg)).value.device_on;
+      const r = await onPlug(plug.name, (dev) => (turnOn ? dev.turnOn() : dev.turnOff()), cfg);
+      result = { ok: true, on: turnOn, path: r.path, say: `${plug.name} ${turnOn ? "on" : "off"}.` };
     }
   } catch (err) {
-    result = { ok: false, error: err instanceof PlugError ? err.message : `I can't reach the ${say(plug.name)}. ${TIP}`, reason: err.code || "error" };
+    result = { ok: false, error: err instanceof PlugError && err.message !== "failed" && err.message !== "timed out" ? err.message : `I can't reach the ${say(plug.name)}. ${TIP}`, reason: err.code || "error" };
   }
-  logAction("plug_action", { plug: plug.name, action, ok: result.ok, ...(result.ok ? {} : { reason: result.reason }), ms: Date.now() - t0 });
+  logAction("plug_action", { plug: plug.name, action, ok: result.ok, ...(result.ok ? { path: result.path } : { reason: result.reason }), ms: Date.now() - t0 });
   return result;
 }
 

@@ -142,7 +142,7 @@ test("a plug whose IP changed is found again; an unreachable plug gets a clear t
   delete s.net["192.168.4.20"];
   const gone = await plugs.plugAction("Fan", "off");
   assert.equal(gone.ok, false);
-  assert.match(gone.error, /^I can't find the fan on the network\. .*same Wi-Fi as this PC \(the 2\.4 GHz network\).*Third-Party Compatibility is on in the Tapo app/);
+  assert.match(gone.error, /^I can't find the fan on the network or your Tapo account\. .*same Wi-Fi as this PC \(the 2\.4 GHz network\).*Third-Party Compatibility is on in the Tapo app/);
   assert.doesNotMatch(log(), /ECONNREFUSED/, "raw library errors never reach the log");
 });
 
@@ -216,8 +216,67 @@ test("a wrong Tapo email or password is said plainly (and nothing private is log
   fakeTapo();
   plugs._setPlugDepsForTests({ cloudPlugs: async () => [{ name: "Fan", mac: FAN_MAC }], scan: async () => ["192.168.4.10"], arp: async () => ({ "192.168.4.10": FAN_MAC }), login: async () => { throw new Error("Invalid credentials"); } });
   const r = await plugs.plugAction("Fan", "on");
-  assert.equal(r.error, "Tapo didn't accept the email and password in .env.");
+  assert.equal(r.error, "The plug didn't accept the Tapo email and password in .env.");
   assert.doesNotMatch(log(), new RegExp(`${EMAIL}|${PASSWORD}`));
+});
+
+test("local login failing (your plugs) falls back to the Tapo cloud, and the log says which path", async () => {
+  const s = fakeTapo();
+  const cloudCalls = [];
+  plugs._setPlugDepsForTests({
+    cloudPlugs: async () => [{ name: "Fan", mac: FAN_MAC, model: "P110", deviceId: "dev-fan", appServerUrl: "https://example.invalid" }, { name: "Lamp", mac: LAMP_MAC, model: "P105", deviceId: "dev-lamp" }],
+    scan: async () => ["192.168.4.10", "192.168.4.11"],
+    arp: async () => ({ "192.168.4.10": FAN_MAC, "192.168.4.11": LAMP_MAC }),
+    login: async () => {
+      throw Object.assign(new Error("handshake2 answered HTTP 403"), { code: "bad-response", step: "handshake2" });
+    },
+    cloudDevice: (plug) => ({
+      getDeviceInfo: async () => (cloudCalls.push([plug.deviceId, "info"]), { device_on: s.net["192.168.4.10"].on }),
+      turnOn: async () => (cloudCalls.push([plug.deviceId, "on"]), (s.net["192.168.4.10"].on = true)),
+      turnOff: async () => (cloudCalls.push([plug.deviceId, "off"]), (s.net["192.168.4.10"].on = false)),
+    }),
+  });
+  const r = await plugs.discover();
+  assert.deepEqual(r.missing, [], "on the account means found, even when local login fails");
+  assert.equal(r.found.Fan.path, "cloud");
+  assert.equal(r.found.Fan.localError, "handshake2: bad-response");
+  plugs._clearTimersForTests();
+  const on = await plugs.plugAction("Fan", "on");
+  assert.equal(on.ok, true);
+  assert.equal(on.path, "cloud");
+  assert.ok(cloudCalls.some(([id, what]) => id === "dev-fan" && what === "on"));
+  assert.match(log(), /"type":"plug_action","plug":"Fan","action":"on","ok":true,"path":"cloud"/);
+  assert.match(log(), /"type":"plugs_discovered".*"cloud":2/);
+});
+
+test("npm run plugs:test -- --debug shows only safe facts", async () => {
+  fakeTapo();
+  plugs._setPlugDepsForTests({
+    cloudPlugs: async () => [{ name: "Fan", mac: FAN_MAC, model: "P110", deviceId: "dev-fan", online: true }],
+    scan: async () => ["192.168.4.10"],
+    arp: async () => ({ "192.168.4.10": FAN_MAC }),
+    login: async (email, password, ip, { trace }) => {
+      trace.push({ step: "handshake1", status: 200, bytes: 48, cookie: "absent" }, { step: "verify", matched: "none", secret: password });
+      throw Object.assign(new Error("the plug didn't accept this Tapo email and password"), { code: "auth", step: "verify" });
+    },
+    cloudDevice: () => ({ getDeviceInfo: async () => ({ device_on: true }), turnOn: async () => {}, turnOff: async () => {} }),
+  });
+  process.argv.push("--debug");
+  const lines = [];
+  try {
+    const { main } = await import("../scripts/plugs-test.mjs");
+    await main((l) => lines.push(l));
+  } finally {
+    process.argv.pop();
+  }
+  const out = lines.join("\n");
+  assert.match(out, /TAPO_EMAIL: set/);
+  assert.match(out, /Tapo account: 1 plug\(s\)/);
+  assert.match(out, /192\.168\.4\.10 +MAC e4:fa:c4:00:00:01 +FAILED at verify \(auth\): the plug didn't accept this Tapo email and password/);
+  assert.match(out, /step=handshake1 status=200 bytes=48 cookie=absent/);
+  assert.match(out, /step=verify matched=none$/m, "unknown fields (like a secret) are never printed");
+  assert.match(out, /✅ Fan +ON .* via cloud \(local: verify: auth\)/);
+  assert.doesNotMatch(out, new RegExp(`${EMAIL}|${PASSWORD}|dev-fan`));
 });
 
 test("the real Tapo library loads with the current axios and fails cleanly against a fake device", async () => {
