@@ -20,6 +20,12 @@ const PERMISSIONS = [
 ];
 const MANIFEST = { manifestVersion: 1, appVersion: "1.1", signed: { appId: "com.jericho.assistant", vendorId: "com.jericho", created: "20261126", localizedAppNames: { "": "Jericho" }, permissions: PERMISSIONS, serial: "jericho-1" }, permissions: PERMISSIONS, signatures: [{ signatureVersion: 1, signature: "jericho" }] };
 
+let loopbackForTests = false;
+/** Tests only: lets a fake TV on 127.0.0.1 stand in for a real one. */
+export function _allowLoopbackForTests(on = true) {
+  loopbackForTests = on;
+}
+
 let insecure = null; // one shared dispatcher for the TVs' self-signed certificates
 const tvDispatcher = () => (insecure ||= new Agent({ connect: { rejectUnauthorized: false, timeout: 4000 } }));
 
@@ -29,7 +35,7 @@ const tvDispatcher = () => (insecure ||= new Agent({ connect: { rejectUnauthoriz
  * Returns { clientKey, request(uri, payload), close() }.
  */
 export async function connectSsap(ip, { clientKey = "", onPrompt = () => {}, timeoutMs = 5000, promptTimeoutMs = 60_000, ports = [3001, 3000] } = {}) {
-  if (!isLocalAddress(ip)) throw new LgError("That isn't a home-network address.", "not-local");
+  if (!isLocalAddress(ip) && !(loopbackForTests && ip === "127.0.0.1")) throw new LgError("That isn't a home-network address.", "not-local");
   let lastErr = null;
   for (const port of ports) {
     try {

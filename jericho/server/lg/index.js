@@ -70,7 +70,7 @@ const ALL_RE = /\b(all (?:the |of the |my )?(?:lg )?(?:tvs|televisions|tv's)|bot
 /** The room named in the text ("blue room TV", "the living room"), "all", or null. */
 export function findRoom(text, cfg = lgSettings()) {
   const t = String(text || "").toLowerCase().replace(/[’']/g, "'");
-  if (ALL_RE.test(t)) return "all";
+  if (ALL_RE.test(t) || /^\s*(all|both|every|everything|all of them)\s*$/.test(t)) return "all";
   let best = null;
   for (const r of cfg.rooms) {
     for (const a of r.aliases) {
