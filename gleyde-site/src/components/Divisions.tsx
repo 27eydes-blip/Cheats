@@ -21,7 +21,7 @@ function Arrow() {
  * Section 02: the divisions, one full-screen panel each. Content comes from
  * src/data/portfolio.ts; add a division there and it gets its own panel.
  * Identity on the left, products on the right, separated only by hairlines.
- * On phones, product descriptions are hidden so each panel fits one screen.
+ * Products show name and status only; descriptions live on /portfolio.
  */
 export function Divisions() {
   return (
@@ -83,15 +83,12 @@ export function Divisions() {
                           </span>
                         )}
                       </span>
-                      <span className="col-span-2 row-start-2 mt-1.5 hidden text-sm leading-relaxed font-light text-ivory/60 sm:col-span-1 sm:block">
-                        {p.description}
-                      </span>
                       <span className="col-start-2 row-start-1 self-center">
                         <StatusBadge status={p.status} />
                       </span>
                     </>
                   );
-                  const row = "group/p rule-b grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 py-3.5 sm:py-3.5";
+                  const row = "group/p rule-b grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 py-4 sm:py-5";
                   return (
                     <li key={p.name}>
                       {p.url ? (

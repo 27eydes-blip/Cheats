@@ -68,28 +68,20 @@ export function PortfolioGrid({ divisions }: { divisions: Division[] }) {
           const body = (
             <>
               <div className="flex items-center justify-between gap-4">
-                <span className="eyebrow">
-                  <span className="text-gold">{p.division.numeral}</span>
-                  <span className="ml-3">{p.division.name}</span>
-                </span>
                 <StatusBadge status={p.status} />
+                {p.url && (
+                  <span className="text-gold-light opacity-0 transition-all duration-500 ease-deco group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100 group-focus-visible:opacity-100">
+                    <Arrow />
+                  </span>
+                )}
               </div>
-              <h2 className="mt-8 flex items-center gap-3 font-display text-[1.9rem] leading-tight tracking-[0.02em] text-ivory transition-colors duration-300 group-hover:text-gold-light sm:text-[2.1rem]">
+              <h2 className="mt-10 font-display text-[1.9rem] leading-tight tracking-[0.02em] text-ivory transition-colors duration-500 group-hover:text-gold-light sm:text-[2.25rem]">
                 {p.name}
               </h2>
-              <p className="mt-4 max-w-sm text-base leading-relaxed font-light text-ivory/60">{p.description}</p>
-              <p className="mt-8 flex items-center gap-2 text-[0.68rem] tracking-[0.24em] uppercase">
-                {p.url ? (
-                  <span className="flex items-center gap-2 text-gold-light">
-                    {p.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                    <span className="transition-transform duration-500 ease-deco group-hover:translate-x-1 group-hover:-translate-y-1">
-                      <Arrow />
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-ivory/55">{p.status === "Live" ? "By enquiry" : "Link coming soon"}</span>
-                )}
-              </p>
+              <p className="mt-4 max-w-sm text-[0.95rem] leading-relaxed font-light text-ivory/55">{p.description}</p>
+              {filter === "all" && (
+                <p className="mt-8 text-[0.62rem] tracking-[0.26em] text-ivory/55 uppercase">{p.division.name}</p>
+              )}
             </>
           );
           return (
@@ -101,12 +93,12 @@ export function PortfolioGrid({ divisions }: { divisions: Division[] }) {
               transition={{ duration: 0.9, ease: easeDeco, delay: Math.min(i, 8) * 0.05 }}
             >
               {p.url ? (
-                <a href={p.url} target="_blank" rel="noopener noreferrer" className="group block pt-8 pb-14">
+                <a href={p.url} target="_blank" rel="noopener noreferrer" className="group block pt-8 pb-16">
                   {body}
                   <span className="sr-only">(opens in a new tab)</span>
                 </a>
               ) : (
-                <div className="group pt-8 pb-14">{body}</div>
+                <div className="group pt-8 pb-16">{body}</div>
               )}
             </m.li>
           );
