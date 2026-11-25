@@ -820,13 +820,18 @@ go to Claude, which uses the `plug_control` tool.
    `.env`; they're blanked from every log, never spoken or shown, never written to `data/`, and never
    given to commands or Claude Code. The startup self-test and `npm run plugs:test` show only "set"
    or "missing".
-3. Run `npm run plugs:test`: it finds the plugs and shows each one's on/off state, model and address.
+3. Run `npm run plugs:test`: it finds the plugs and shows each one's on/off state, model, address
+   and whether it's controlled locally or through the cloud. If one fails, run
+   `npm run plugs:test -- --debug`: for each address tried it shows only safe facts (IP, MAC, which
+   protocol answered, the step that failed, HTTP statuses, sizes, whether a session cookie came
+   back, which login-hash variant matched, device error codes). Never the email, password, keys,
+   tokens or full responses.
 
 **How it finds them:** it reads the plug list (names and MAC addresses) from your Tapo account,
 scans your network for devices answering on port 80, and matches them by MAC address (ARP table).
 Your Tapo login is only ever sent to a device whose MAC is one of your account's plugs (or, if the
 account list can't be read, a TP-Link MAC prefix), never to the router or anything else. Found
-plugs are cached in `data/plugs.json` (name, IP, MAC, model; no credentials). If a plug's IP changes,
+plugs are cached in `data/plugs.json` (name, IP, MAC, model and cloud device id; no credentials). If a plug's IP changes,
 it's found again automatically.
 
 **Timers** are saved in `data/plug-timers.json`, so "turn off the fan in 30 minutes" still happens
@@ -842,12 +847,24 @@ says it when it fires.
 "the lights" isn't in the default group, so it still goes to the lights tool; add it as an alias if
 you want it to mean the plugs.
 
-**The library:** local control uses `tp-link-tapo-connect` (2.0.15, maintained), which speaks the
-plugs' KLAP protocol with the older one as fallback. Its old `axios` and `uuid` are overridden in
-`package.json` to current versions. `npm audit` still lists advisories in its auto-discovery helpers
-(`local-devices`, `ip`); Jericho never uses that part (it does its own MAC-matched discovery). The
-library has no request time limit of its own, so every call is wrapped in one
-(`plugs.timeoutSeconds`, 6).
+**How each plug is controlled**, in order (the action log says which: `"path": "local"` or `"cloud"`):
+
+1. **Locally over KLAP**, with Jericho's own client (`server/plugs/klap.js`, no extra libraries):
+   both login-hash variants (v2 used by Tapo, v1 used by Kasa), a time limit on every step, and no
+   need for a session cookie. `tp-link-tapo-connect` 2.0.15 crashes on plugs whose newer firmware
+   doesn't send that cookie ("Cannot read properties of undefined (reading '0')"); that's what
+   happened on real Fan and Lamp plugs, and it no longer can.
+2. **Locally over the older "secure passthrough" protocol**, only for a plug that doesn't speak
+   KLAP at all (`tp-link-tapo-connect`, with its `axios` and `uuid` overridden to current versions
+   in `package.json`).
+3. **Through the Tapo cloud** with your account, when local control fails (`server/plugs/cloud.js`,
+   plain HTTPS with normal certificate checks and time limits). A plug that's on your account is
+   found even if local login fails; it's just controlled through the cloud until local works again.
+
+If local login fails, the reason is specific: the plug didn't accept this email and password, it's
+set up with a different login (blank or a factory default), it doesn't speak KLAP, or it didn't
+answer. `npm audit` still lists advisories in the library's auto-discovery helpers (`local-devices`,
+`ip`); Jericho never uses that part. Local calls use `plugs.timeoutSeconds` (6); cloud calls 10 s.
 
 ## LG TVs (living room and blue room)
 
@@ -1039,7 +1056,8 @@ server/planner/           the Planner: store (data/planner.json), dates (Detroit
 server/lg/                the LG TVs: ssap.js (webOS client), net.js (scan, ARP, Wake-on-LAN),
                           index.js (rooms, pairing, commands), voice.js (local commands)
 scripts/tv-pair.mjs       npm run tv:pair -- "living room"
-server/plugs/             the Tapo plugs: index.js (discovery, actions, timers), voice.js (local commands)
+server/plugs/             the Tapo plugs: index.js (discovery, actions, timers), klap.js (local KLAP client),
+                          cloud.js (Tapo cloud fallback), voice.js (local commands)
 scripts/plugs-test.mjs    npm run plugs:test
 public/planner.*          the Planner page (planner.html, .css, .js; plannerlayout.js helpers)
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
