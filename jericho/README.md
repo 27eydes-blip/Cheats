@@ -153,6 +153,20 @@ Changes between states always ease in, never snap.
 - **Live HUD:** the time and date, the current weather (same Open-Meteo data as the weather tool) and your next calendar event (same iCal link as the calendar tools), refreshed every 5 minutes. A readout that can't be fetched just stays hidden. On phones it collapses to the time.
 - **Power on:** the page opens with a single **Tap to power on** prompt (the orb waits as a point of light). That tap plays the power-up, made live with Web Audio (no sound files): a low hum rising for about 2 seconds, rising tones as the rings spin up, a bright metallic chime exactly when the orb flashes, then a soft idle hum. The hieroglyphs light up and the wordmark carves in alongside it. A reload within 10 minutes gets a shorter version. Settings panel (sun icon): **Startup animation**, **Power-up sound**, **Sound volume**, **Idle hum**. With reduced motion only the sound plays.
 
+## Knowledge folder
+
+Drop any notes or documents into `data/notes/` (git-ignored, like the rest of `data/`): `.txt`,
+`.md`, `.csv`, `.json`, `.html`, `.log`, `.yaml` and Word `.docx`, in subfolders too. Jericho
+splits them into small pieces and indexes them by word; each request brings along only the two
+or three pieces that match it (about 1,800 characters at most, after the cached part of the
+prompt), so it stays cheap. Nothing matching, nothing sent. The index is rebuilt only when a file
+changes. Pieces that look like passwords or keys are never indexed.
+
+- "Remember this: the plumber's coming Thursday at ten" or "make a note of that list" saves it to
+  `data/notes/jericho-notes.md`, with the date (`save_note`, no yes needed).
+- "What do you know about the plumber?" searches the folder and your saved memories (`search_notes`).
+- Short facts about you ("remember I like oat milk") still go to memories, as before.
+
 ## Memory and learning how you talk
 
 - "Jericho, remember that I take my coffee black" saves a memory to `data/memory.json`, with the
@@ -212,8 +226,8 @@ Jericho can work with your PC, Windows first.
 
 | Tier | What | How |
 |---|---|---|
-| Runs straight away | open an app or a web page, volume, play/pause/next, timers, read or write the clipboard, list, read and search files | at once |
-| Needs your yes | write a file, move or rename, delete (to the Recycle Bin, never permanently), run a command, start Claude Code, phone calls | Jericho reads back exactly what will happen, e.g. "Should I run this command in Cheats: git status?" |
+| Runs straight away | open an app or a web page, volume, play/pause/next, timers, read or write the clipboard, list, read, search, write, move and rename files in your allowed folders, Claude Code on your projects, alarms (even cancelling all), the TV, notes | at once. Overwriting a file keeps the old copy in `data/backups` first |
+| Needs your yes | delete (to the Recycle Bin, never permanently), run a command (unless the trusted tier lists it), Claude Code on Jericho's own folder, phone calls, calendar invites, deleting a contact or a memory | Jericho reads back exactly what will happen, e.g. "Should I run this command in Cheats: node build.js?" |
 | Never | anything outside your allowed folders, system, registry or security changes, `.env`, keys and other secret files | refused before you're even asked |
 
 - **Allowed folders:** set in `settings.json` under `pc.allowedFolders`. The defaults are
@@ -222,8 +236,21 @@ Jericho can work with your PC, Windows first.
 - **Commands are kept separate from your words:** apps and files are passed as data, never pasted
   into a command line. Commands never see Jericho's API keys. Secret-looking lines in files, the
   clipboard and command output are hidden before they're spoken.
-- **Claude Code:** start it in a project folder ("todo-app", or a path inside an allowed folder
-  such as "Cheats/jericho"). Ask how it's going, or "what did Claude Code do?" to hear the result.
+- **Claude Code:** "build me a todo app", "add dark mode to todo-app": it starts at once in a
+  project folder ("todo-app" inside `claudeCode.projectsDir`, or a path inside an allowed folder
+  such as "Documents/site") and runs in the background. Ask how it's going, or "what did Claude
+  Code do?" to hear the result. Working on Jericho's own folder still needs a yes (it could change
+  his safety code), and so does every run if `claudeCode.permissionMode` is `bypassPermissions`.
+- **Multi-step jobs:** "look up the best pizza in Detroit and save it to a note", "write a packing
+  list in Documents and read it back". Jericho chains the steps himself (up to
+  `claude.maxToolRounds`, 15) on the strong model, and only stops for a yes if a step needs one.
+- **Trusted tier** (`pc.trusted` in settings.json, off by default): set `"enabled": true` to add
+  its `folders` (Pictures, Music, Videos, ~/source and ~/projects by default) and `apps` (your own
+  names for programs) to what Jericho may use, and let commands that start with one of its
+  `commands` ("git status", "npm test", "npm run"...) run without a yes. A trusted command can't
+  chain (`;`, `&&`, `|`), redirect or substitute. Everything in the Never row stays blocked, a
+  trusted app name can't open a system tool, and the kill switch, the action log (tier
+  "trusted"), the access token and the phone-call limits all apply exactly as before.
 - **Kill switch:** "Jericho, stop", "cancel everything", the Stop button or Esc stops speech, the
   reply in progress, running commands (including anything they started), timers, Claude Code
   jobs and calls, and clears any waiting yes/no. On a computer the mic stays on while Jericho
@@ -770,7 +797,9 @@ None of these are secret. Keys live only in `.env`.
 | `claude.routing` | `auto` (default): simple requests go to `claude.fastModel`. `always-strong`: everything goes to the strong model. The sun panel's Brain setting overrides it per browser. |
 | `claude.fastModel` / `claude.fastEffort` | The fast model for simple requests: `claude-haiku-5-5` at `low` effort. It never handles risky actions. |
 | `claude.maxHistoryMessages` | After this many messages (default 24), the conversation starts fresh with a short recap. |
-| `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 8000 for the strong model (room for tool inputs such as a file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway. |
+| `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 16000 for the strong model (room for a researched file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway, and you only pay for what's written. |
+| `claude.maxToolRounds` | How many tool steps one request may chain on its own (default 15). |
+| `pc.trusted` | The trusted tier: `enabled` (false), extra `folders`, `apps`, and `commands` that run without a yes. See Controlling your PC. |
 | `claude.prewarm` | `false` (default): no Claude call when the wake word is heard. `true` warms the prompt cache for a slightly faster first reply, at the cost of a cache write per model each time. |
 | `claude.backgroundModel` / `claude.learnEveryMinutes` | Learning your style and profile after a conversation runs on `claude-haiku-5-5`, at most every 30 minutes (conversations in between are learned from together), and never for conversations that were only local commands. |
 | `calls.agentModel` / `calls.screenModel` | The model that talks during a phone call (`claude-haiku-5-5`, cheap and quick), and the one that screens every call before it's placed (`claude-opus-5-5`). Set `agentModel` to `claude-opus-5-5` if calls ever sound off. All the call safety rules are enforced in code either way. |
@@ -801,10 +830,20 @@ are the exception.
 - Every request, tool call, confirmation, refusal, result and error is appended to
   `logs/actions.log` as one JSON line.
 
-Risky today: `claude_code`, `calendar_add_event` (it can email invites), phone calls, PC actions
-that write, move, delete or run commands, forgetting memories, and cancelling more than one
-alarm. When you add a tool that deletes files, runs shell commands, spends money or sends
-messages, set `risky: true`.
+Risky today (only what's hard to undo or affects other people): deleting files, running a
+command the trusted tier doesn't list, Claude Code on Jericho's own folder (or any run when it
+skips its own permission checks), phone calls, `calendar_add_event` (it can email invites),
+deleting a contact and forgetting a memory. Everything else (your own files in the allowed
+folders, alarms, notes, the TV, apps and sites, Claude Code on your projects) just runs. When you
+add a tool that deletes things, runs unknown code, spends money, sends messages or changes system
+settings, set `risky: true` (or a function of its input).
+
+How Jericho talks: he acts first and talks less. No disclaimers, lectures or "I should mention",
+no asking permission for ordinary things, and multi-step jobs are finished in one go with one
+short summary. The rules that protect other people are unchanged: calls still open with "I'm
+Jericho, Sammy's personal assistant", always say it's an AI when asked, never impersonate anyone,
+are screened before dialing (no threats, harassment, scams, pranks or deception), respect the
+do-not-call list, and keep the daily and per-number limits.
 
 - The blocklist of commands that read secret files (`.env` and similar) in `run_command` is a
   best-effort extra: a determined command can get around it, which is why every command needs
@@ -829,6 +868,7 @@ server/tools/claudeCode.js  runs `claude -p` in a project folder, announces when
 server/tools/placeholders.js  calendar + music stubs
 server/tools/memory.js    remember / recall / forget tools
 server/memory.js          data/memory.json + data/style.json (read, save, delete, wipe)
+server/knowledge.js       the knowledge folder: index data/notes, search it, "remember this"
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
 server/secrets.js         detects passwords, keys, card and ID numbers
 server/speech.js          sentence splitter + clean-up for natural speech
