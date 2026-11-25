@@ -82,7 +82,8 @@ async function limited(promise, ms, code = "unreachable") {
     return await Promise.race([promise, new Promise((_, rej) => (timer = setTimeout(() => rej(new PlugError("timed out", code)), ms)))]);
   } catch (err) {
     if (err instanceof PlugError) throw err;
-    throw new PlugError("failed", /login|credential|password|-1501|1501|auth/i.test(String(err?.message)) ? "auth" : code);
+    // Tapo's own "wrong email or password" (-1501); anything else counts as unreachable
+    throw new PlugError("failed", /(^|\D)-1501(\D|$)|invalid (?:request or )?credentials|missing credentials/i.test(String(err?.message)) ? "auth" : code);
   } finally {
     clearTimeout(timer);
   }
@@ -297,7 +298,12 @@ export function cancelTimers(plug) {
 
 function arm(t, { announce }) {
   clearTimeout(timers.get(t.id));
-  const handle = setTimeout(() => fire(t.id, { announce }), Math.max(0, t.at - Date.now()));
+  const wait = t.at - Date.now();
+  if (wait <= 0) {
+    setImmediate(() => fire(t.id, { announce })); // came due while Jericho was off: now
+    return;
+  }
+  const handle = setTimeout(() => fire(t.id, { announce }), Math.min(wait, 2 ** 31 - 1));
   handle.unref?.(); // never keeps the process (or a test) alive
   timers.set(t.id, handle);
 }
