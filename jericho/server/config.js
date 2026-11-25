@@ -131,6 +131,11 @@ export function publicConfig() {
     speechLang: settings.speechLang,
     // stray-turn filter for follow-ups without the wake word (see public/turnfilter.js)
     followUpFilter: settings.followUpFilter !== false,
+    // the startup sound (hum, three diagnostic beeps, then a passed chime or a quiet attention tone)
+    startup: {
+      sound: settings.startup?.sound !== false,
+      humSeconds: Number(settings.startup?.humSeconds) > 0 ? Math.min(8, Math.max(1, Number(settings.startup.humSeconds))) : 3.5,
+    },
     // after he answers, how long you can reply without the wake word
     followUpSeconds: Number(settings.followUpSeconds) > 0 ? Number(settings.followUpSeconds) : 8,
     // filled in by the server from voice.js (which voice the page speaks with)

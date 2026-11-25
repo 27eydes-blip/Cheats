@@ -71,8 +71,12 @@ export function createPresence({ onTap }) {
       impl?.setAlarm?.(pending.alarm);
     },
     /** The first tap: the power-up animation and sound. Returns the timeline (or null if already on). */
-    powerOn() {
-      return power.powerOn();
+    powerOn(opts) {
+      return power.powerOn(opts);
+    },
+    /** The power-up sound settings (sun panel): { power, volume, idle }. The startup sound uses them too. */
+    sound() {
+      return power.sound();
     },
     setMicLevel(v) {
       pending.mic = v;
@@ -331,7 +335,7 @@ function createPower() {
       if (pendingOrb) startOrb();
       else if (!powered) impl.hold?.();
     },
-    powerOn() {
+    powerOn({ powerSound = true } = {}) {
       if (powered) return null;
       powered = true;
       const last = Number(store.get(LAST_POWER_KEY, 0)) || 0;
@@ -354,7 +358,7 @@ function createPower() {
           const Ctx = window.AudioContext || window.webkitAudioContext;
           const ctx = new Ctx();
           ctx.resume?.();
-          audio = playPowerUp(ctx, animate ? plan : powerUpPlan("short"), { volume: snd.volume, power: snd.power, idle: snd.idle && !muted });
+          audio = playPowerUp(ctx, animate ? plan : powerUpPlan("short"), { volume: snd.volume, power: snd.power && powerSound, idle: snd.idle && !muted });
         } catch {
           /* no Web Audio: silent power-up */
         }

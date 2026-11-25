@@ -41,6 +41,9 @@ if (!secrets.anthropicKey) console.warn("⚠️  ANTHROPIC_API_KEY is not set. C
 
 const brain = new Brain();
 const listeners = new Set(); // open /api/events streams
+// For the page's startup sound: when this server started, and the self-test's verdicts (statuses only).
+const startup = { startedAt: Date.now(), selfTest: process.env.JERICHO_SKIP_SELFTEST === "1" ? { skipped: true } : null };
+const startupStatuses = (r) => Object.fromEntries(["claude", "voice", "calendar"].map((k) => [k, ["PASS", "FAIL", "SKIP"].includes(r?.[k]?.status) ? r[k].status : "FAIL"]));
 jobEvents.on("announce", (text) => {
   for (const res of listeners) res.write(`data: ${JSON.stringify({ type: "announce", text })}\n\n`);
 });
@@ -300,6 +303,11 @@ async function route(req, res) {
   if (!authorized(req, url)) return sendJson(res, 401, { error: "Wrong or missing access token" });
 
   try {
+    // The page's startup sound: when the server started and the self-test's verdicts (null while it runs).
+    if (req.method === "GET" && url.pathname === "/api/startup") {
+      return sendJson(res, 200, { startedAt: startup.startedAt, selfTest: startup.selfTest });
+    }
+
     if (req.method === "GET" && url.pathname === "/api/config") {
       const voice = publicVoice();
       return sendJson(res, 200, { ...publicConfig(), voice, elevenLabsEnabled: voice.provider !== "browser" });
@@ -536,7 +544,15 @@ server.listen(port, settings.host || "0.0.0.0", () => {
   // In its own process: the server is already answering, and nothing the checks do can stop it.
   if (process.env.JERICHO_SKIP_SELFTEST !== "1") {
     selfTestIsolated()
-      .then((r) => console.log(`${formatResults(r)}\n`))
-      .catch((err) => console.warn("Self-test couldn't run:", err.message));
+      .then((r) => {
+        console.log(`${formatResults(r)}\n`);
+        startup.selfTest = startupStatuses(r);
+        pushEvent({ type: "startup", startedAt: startup.startedAt, selfTest: startup.selfTest }); // the page's diagnostic beeps
+      })
+      .catch((err) => {
+        console.warn("Self-test couldn't run:", err.message);
+        startup.selfTest = { claude: "FAIL", voice: "FAIL", calendar: "FAIL" };
+        pushEvent({ type: "startup", startedAt: startup.startedAt, selfTest: startup.selfTest });
+      });
   }
 });

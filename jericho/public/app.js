@@ -9,6 +9,7 @@ import { formatReadout, LatencyTracker, turnLatency } from "./latency.js";
 import { isEnglish, pickVoice, sortVoices, tuneSpeech } from "./voices.js";
 import { compareEarly, earlyCommitDelay } from "./endpoint.js";
 import { classifyFollowUp, isNoise } from "./turnfilter.js";
+import { createStartupController, outcome as checkOutcome, playStartup } from "./startup.js";
 import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
 const $ = (id) => document.getElementById(id);
@@ -117,11 +118,74 @@ let config = {
   elevenLabsEnabled: false,
   voice: { provider: "browser", configured: "browser", cost: "free (your browser's own voice)", browserVoice: "", browserRate: 0.92, browserPitch: 0.85, calls: "twilio" },
 };
+// ---- the startup sound (public/startup.js) ----------------------------------------------------------
+// A deep hum, three diagnostic beeps (one per self-test check: Claude, Voice, Calendar), then a
+// "passed" chime and one glow of the orb, or a quiet low "attention" tone if a check failed.
+// Once per page load, and once more if the server restarts. Uses the power-up sound's volume and
+// on/off (sun panel), and waits for the first tap or key if the browser blocks audio.
+let startupState = null; // { startedAt, selfTest } from the server
+const startupWaiters = new Set();
+function startupResult(key) {
+  return new Promise((resolve) => {
+    const check = () => {
+      const st = startupState?.selfTest;
+      if (st?.skipped) return resolve("unknown"), true;
+      if (st && st[key]) return resolve(checkOutcome(st[key])), true;
+      return false;
+    };
+    if (!check()) startupWaiters.add(check);
+  });
+}
+function startupUpdated(state) {
+  if (state?.startedAt && startupState?.startedAt && state.startedAt !== startupState.startedAt) return; // another start's result
+  startupState = { ...startupState, ...state };
+  for (const w of [...startupWaiters]) if (w()) startupWaiters.delete(w);
+}
+const startupSound = createStartupController({
+  enabled: () => config.startup?.sound !== false && (viz.sound?.()?.power ?? true) && (viz.sound?.()?.volume ?? 0.6) > 0 && !document.body.classList.contains("muted"),
+  makeContext: () => new (window.AudioContext || window.webkitAudioContext)(),
+  getState: async () => {
+    const s = await api("/api/startup");
+    startupState = s;
+    return s;
+  },
+  listenForGesture(cb) {
+    const handler = () => cancel() || cb();
+    const cancel = () => {
+      window.removeEventListener("pointerdown", handler, true);
+      window.removeEventListener("keydown", handler, true);
+    };
+    window.addEventListener("pointerdown", handler, true);
+    window.addEventListener("keydown", handler, true);
+    return { fire: cb, cancel };
+  },
+  async play(ctx, state) {
+    startupWaiters.clear();
+    startupState = state;
+    try {
+      await playStartup(ctx, {
+        humSeconds: config.startup?.humSeconds ?? 3.5,
+        volume: viz.sound?.()?.volume ?? 0.6,
+        outcomeOf: startupResult,
+        onBeep: (i, result) => console.debug(`[jericho] startup check ${i + 1}: ${result}`),
+        onResolve(v) {
+          if (v !== "pass") return; // a failed check: just the quiet tone, no glow, no speech
+          document.body.classList.add("startup-pass"); // one gentle glow pulse of the orb
+          setTimeout(() => document.body.classList.remove("startup-pass"), 1400);
+        },
+      });
+    } finally {
+      setTimeout(() => ctx.close?.().catch(() => {}), 2500);
+    }
+  },
+});
+
 /** Does a server voice (OpenAI or ElevenLabs) speak? With the default browser voice, nothing is fetched. */
 const serverVoice = () => ["openai", "elevenlabs"].includes(config.voice?.provider);
 api("/api/config")
   .then((c) => {
     config = { ...config, ...c };
+    startupSound.start(); // the startup sound: now if the browser allows it, else on the first tap or key
     applyBargeSettings();
     showVoiceSettings();
     $("name").textContent = c.assistantName;
@@ -1447,6 +1511,7 @@ async function startMicMeter() {
   micStarting = true;
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    startupSound.gesture(); // the mic was allowed: a waiting startup sound can play now
     micStarting = false;
     if ((!running || muted) && !alarmRinging) return stopMicMeter();
     if (micLost) return stopMicMeter();
@@ -1556,7 +1621,10 @@ function powerOn() {
     p.src = silentWav();
     p.play().catch(() => {});
   }
-  viz.powerOn?.(); // the power-up animation and sound
+  // The power-up animation; its own chime is left out when the startup sound plays on this tap.
+  const startupHere = startupSound.claimsSound();
+  viz.powerOn?.({ powerSound: !startupHere });
+  startupSound.gesture();
   preloadAcks(); // "On it." ready to play instantly
   if (!SR) {
     setMode("idle", "Speech recognition isn't supported here (try Chrome or Safari). You can type instead.");
@@ -1723,7 +1791,10 @@ $("typed").addEventListener("submit", (e) => {
 let events = null;
 function connectEvents() {
   events = new EventSource(`/api/events?${new URLSearchParams({ token })}`);
-  events.onopen = () => refreshAlarmList();
+  events.onopen = () => {
+    refreshAlarmList();
+    startupSound.serverMaybeRestarted(); // the server restarted while the page was open: play once more
+  };
   events.onmessage = onEvent;
   events.onerror = () => {
     if (events.readyState === EventSource.CLOSED) setTimeout(connectEvents, 10_000);
@@ -1744,6 +1815,7 @@ function onEvent(e) {
     if (alarmRinging && (msg.ids || []).includes(alarmRinging.id)) endAlarmLocal(); // stopped elsewhere (another tab, the kill switch)
     refreshAlarmList();
   } else if (msg.type === "alarms-changed") refreshAlarmList();
+  else if (msg.type === "startup") startupUpdated({ startedAt: msg.startedAt, selfTest: msg.selfTest }); // the self-test finished: the beeps can go
 }
 connectEvents();
 

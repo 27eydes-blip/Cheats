@@ -261,5 +261,9 @@
       }
     ],
     "timeoutSeconds": 6
+  },
+  "startup": {
+    "sound": true,
+    "humSeconds": 3.5
   }
 }

@@ -282,3 +282,18 @@ body.presence-page { -webkit-font-smoothing: antialiased; text-rendering: optimi
 @media (prefers-reduced-motion: reduce) {
   .orb.heard::after { animation-duration: 1ms; }
 }
+
+/* The startup sound's "passed" chime: one gentle glow pulse of the orb (public/startup.js). */
+@keyframes startup-pass-glow {
+  0% { filter: brightness(1) drop-shadow(0 0 0 rgb(240 180 80 / 0%)); }
+  35% { filter: brightness(1.35) drop-shadow(0 0 28px rgb(240 180 80 / 55%)); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 rgb(240 180 80 / 0%)); }
+}
+body.startup-pass #stage3d,
+body.startup-pass #viz {
+  animation: startup-pass-glow 1.3s ease-out 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.startup-pass #stage3d,
+  body.startup-pass #viz { animation: none; }
+}
