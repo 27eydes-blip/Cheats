@@ -51,7 +51,8 @@
       "!**/pnpm-lock.yaml",
       "!**/Cargo.lock",
       "!crates/**/schema/**",
-      "!hunt/**"
+      "!hunt/**",
+      "!gleyde-site/**"
     ]
   }
 }

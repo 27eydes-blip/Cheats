@@ -8,3 +8,5 @@
 **/dsh-plugin-browserskill/src/client/bsk-ui.nomodule.css
 # Hunt (hunt/) is a separate project with its own style and its own CI (.github/workflows/hunt.yml).
 hunt/**
+# Gleyde company site (gleyde-site/) is a separate Next.js project with its own ESLint config.
+gleyde-site/**
