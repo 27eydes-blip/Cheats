@@ -73,10 +73,16 @@ const until = async (fn) => {
 
 // ---- provider selection ---------------------------------------------------------------------------
 
-test("the default is the free browser voice, and it needs no key at all", () => {
-  assert.equal(base.voice.provider, "browser", "settings.json default");
-  assert.deepEqual(activeVoice(), { provider: "browser", configured: "browser" });
-  const pub = publicVoice();
+test("the default is ElevenLabs; without its key it falls back to the free browser voice", () => {
+  assert.equal(base.voice.provider, "elevenlabs", "settings.json default");
+  const fallback = activeVoice(voiceSettings(), {});
+  assert.deepEqual([fallback.provider, fallback.configured], ["browser", "elevenlabs"]);
+  assert.match(fallback.reason, /ELEVENLABS_API_KEY/);
+  assert.equal(activeVoice(voiceSettings(), { elevenlabs: "k" }).provider, "elevenlabs");
+});
+
+test("the browser voice is free and needs no key at all", () => {
+  const pub = publicVoice({ ...voiceSettings(), provider: "browser" });
   assert.equal(pub.provider, "browser");
   assert.match(pub.cost, /free/);
   assert.equal(pub.calls, "twilio", "calls: Twilio's own voice with no OpenAI key");
@@ -104,6 +110,7 @@ test("a provider is used only when it's selected and its key is set; otherwise t
 
 test("with the browser voice, the server never calls ElevenLabs or OpenAI: not to speak, warm up or self-test", async () => {
   calls.length = 0;
+  writeSettings({ provider: "browser" }); // chosen in settings.json (the default is ElevenLabs)
   secrets.elevenLabsKey = "el-would-cost-money";
   secrets.openaiKey = "";
   try {
@@ -119,6 +126,7 @@ test("with the browser voice, the server never calls ElevenLabs or OpenAI: not t
     assert.equal(hits("openai").length, 0);
   } finally {
     secrets.elevenLabsKey = "";
+    writeSettings({});
   }
 });
 

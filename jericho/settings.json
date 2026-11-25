@@ -54,7 +54,7 @@
     "learnEveryMinutes": 30
   },
   "voice": {
-    "provider": "browser",
+    "provider": "elevenlabs",
     "browserVoice": "",
     "browserRate": 0.92,
     "browserPitch": 0.85,

@@ -372,15 +372,15 @@ The sun panel's Speed readout shows the last turn and the average of the last 10
 diagnostics includes them too. Each turn is added to `logs/latency.log`, numbers only, never
 what was said. Older `timing` lines still go to `logs/actions.log`.
 
-## The voice (free by default)
+## The voice (ElevenLabs by default)
 
 `voice.provider` in `settings.json` picks who speaks:
 
 | Provider | Cost | Key | Notes |
 |---|---|---|---|
-| `browser` (default) | free | none | The page's own Web Speech voice. Best in Edge, whose "Online (Natural)" voices sound close to a paid voice. |
+| `browser` | free | none | The page's own Web Speech voice, and the automatic fallback: used whenever ElevenLabs has no key in `.env` or fails mid-reply. Best in Edge, whose "Online (Natural)" voices sound close to a paid voice. |
 | `openai` | roughly 1.5 cents a minute of speech | `OPENAI_API_KEY` | `gpt-4o-mini-tts`, calm and reserved style, audio streamed so the first words start fast. |
-| `elevenlabs` | your ElevenLabs plan | `ELEVENLABS_API_KEY` | As before. Never called unless it's selected. |
+| `elevenlabs` (default) | your ElevenLabs plan | `ELEVENLABS_API_KEY` | The default, so pulling an update never switches you to the browser voice. Without the key, the browser voice speaks instead. |
 
 - **Picking the browser voice:** in the sun panel's Speed section, choose any installed voice,
   set its speed and pitch (lower is calmer and deeper), and press **Preview voice**. By default
@@ -782,7 +782,7 @@ None of these are secret. Keys live only in `.env`.
 
 | Setting | What it does |
 |---|---|
-| `voice.provider` | `browser` (default, free, no key), `openai` (needs `OPENAI_API_KEY`) or `elevenlabs` (needs `ELEVENLABS_API_KEY`). A provider whose key is missing falls back to the browser voice. Reload the page after changing it. |
+| `voice.provider` | `elevenlabs` (default, needs `ELEVENLABS_API_KEY`), `browser` (free, no key) or `openai` (needs `OPENAI_API_KEY`). A provider whose key is missing falls back to the browser voice. Reload the page after changing it. |
 | `voice.browserVoice` / `browserRate` / `browserPitch` | The browser voice's name (empty = the best English male voice installed), speed (0.92) and pitch (0.85). The sun panel's picker overrides them in that browser. |
 | `voice.openaiVoice` / `openaiModel` / `openaiInstructions` | OpenAI's voice (`onyx`), model (`gpt-4o-mini-tts`) and speaking style (calm and reserved by default). |
 | `calls.twilioVoice` | The phone voice when there's no `OPENAI_API_KEY`: Twilio's `Polly.Matthew-Neural`. |

@@ -52,9 +52,8 @@ export const COST = {
 };
 
 /** For the page: what it should speak with. No keys, only names and numbers. */
-export function publicVoice() {
-  const v = voiceSettings();
-  const a = activeVoice(v);
+export function publicVoice(v = voiceSettings(), keys = currentKeys()) {
+  const a = activeVoice(v, keys);
   return {
     provider: a.provider,
     configured: a.configured,
@@ -63,7 +62,7 @@ export function publicVoice() {
     browserVoice: v.browserVoice,
     browserRate: v.browserRate,
     browserPitch: v.browserPitch,
-    calls: callVoiceProvider(v),
+    calls: callVoiceProvider(v, keys),
   };
 }
 
