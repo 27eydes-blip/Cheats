@@ -356,10 +356,20 @@ Other changes you'll feel but that don't show in that table:
 
 The sun panel's **Brain** setting (or `claude.routing` in settings.json) picks it:
 
-- **Auto** (the default): simple everyday requests go to the fastest model, Claude Haiku 5.5.
-  That covers greetings, the time, volume, the TV, alarms, the weather, lights and short
-  questions. Everything else goes to the strong model, Claude Opus 5.5: anything complex,
-  long, vague ("do it"), a search, or anything that might need a risky action.
+- **Auto** (the default): only clearly simple turns go to the fastest model, Claude Haiku 5.5:
+  greetings, the time, volume, the TVs, alarms, the weather, lights, the planner and quick facts
+  ("what's the capital of Peru"). Everything else goes to the strong model, Claude Opus 5.5:
+  reasoning, advice and open-ended questions ("why...", "what should I...", "any ideas..."),
+  planning, writing, code, several steps, anything about you personally ("my sister", "I feel"),
+  anything long or vague ("do it"), a search, or anything that might need a risky action. If
+  unsure, the strong model. Open-ended questions never reach Haiku, so a thin short answer to a
+  big question can't happen.
+- **Answers are spoken:** one to three sentences by default, leading with the answer, longer only
+  when you ask for detail. No lists or markdown read aloud. Jericho never says "I didn't catch
+  that" when your words came through; if he's unsure what you mean, he asks one short question.
+- **Context every turn, cheaply:** matching memories, matching knowledge-folder pieces, and a
+  one-line planner summary (homework due, what's left today, free time) only when the request is
+  about time, school or plans.
 - **Always strong**: every request goes to the strong model (also `claude.routing:
   "always-strong"` in settings.json).
 
@@ -402,6 +412,18 @@ still sounds natural. Turbo is a little richer; Multilingual is the richest, wit
   up with "Sorry, Claude isn't answering right now", and the conversation carries on.
 - If the server sends nothing at all for 30 seconds (it sends a heartbeat every 10 seconds
   while tools run), the page stops waiting and says so.
+
+### npm run voice:check
+
+`npm run voice:check` prints the last 20 voice turns: which model answered (fast, strong or local),
+Claude tokens in (with how many came from the cache) and out, how long until the first word was
+heard, and how many echo transcripts were dropped. Numbers and labels only: it never prints what
+was said, and never keys. It reads `logs/latency.log` (from the page) and falls back to the
+server's `turn_stats` lines in `logs/actions.log`.
+
+**Speed:** the first sentence goes to the voice as soon as it's written; later sentences that
+have already arrived are spoken together, so there are no gaps between them. "On it." plays only
+when an answer takes longer than 3 seconds.
 
 ### The latency readout and logs
 
@@ -830,14 +852,21 @@ Jericho can control a Roku TV (or Roku stick/box) on your home network, using Ro
 
 So Jericho never hears himself through the speakers:
 
-- **Speech recognition is paused while he talks.** On a PC a separate mic stream (with the browser's echo cancellation, noise suppression and auto gain) only measures the level. When your voice is clearly above the threshold for about a quarter second, he fades out within about a tenth of a second, stops the rest of the reply, and recognition starts again. Your words from that point on are your next request (no wake word needed). Words from before that point are never transcribed.
+- **What cuts him off** (`bargeIn.mode` in settings.json):
+  - `"wakeWord"` (default): only "Jericho ..." or "stop". On a PC, recognition keeps running while
+    he talks; anything that matches his own words is dropped, and anything without the wake word is
+    ignored. "Jericho, what time is it" stops him and becomes the next request.
+  - `"loud"`: also a clearly loud interruption: your voice above `bargeIn.minVolume` (0.15, raised
+    above his measured echo) for about a quarter second. Your words from then on are the next request.
+  - `"off"`: only "stop" (and the Stop button, Esc). "Stop" always works in every mode.
+- **The mic:** echo cancellation, noise suppression and auto gain are always on in the mic stream.
 - **Echo tail:** after he finishes, the mic stays deaf for 700 ms more (`bargeIn.echoTailMs`), so room echo isn't transcribed.
-- **Text check:** anything heard during his speech, in the tail, or in the first 400 ms of a new utterance is compared with his last 3 sentences (case and punctuation ignored, small recognition slips allowed). If 60% or more of the words are his, it's dropped as echo and never sent to the brain. One- or two-word replies like "yes" are only dropped if they repeat a whole sentence of his.
+- **Text check:** anything heard during his speech, for 3 seconds after he stops, or in the first 400 ms of a new utterance is compared with his last 3 sentences (case and punctuation ignored, small recognition slips allowed). If 60% or more of the words are his, it's dropped as echo and never sent to the brain. One- or two-word replies like "yes" are only dropped if they repeat a whole sentence of his.
 - **Ducking:** while the mic listens for interruptions, his voice plays at 85% (`bargeIn.duckTo`) to reduce leakage.
 - **Calibration:** for the first 1.5 seconds of each reply Jericho measures his own echo, and the threshold is at least 1.8× that. The loudest echo measured is kept for the session, so a quiet reply doesn't lower the bar. Press **Re-calibrate** in the settings panel to measure again (after changing the volume or switching to headphones).
 - **Debug line** in the settings panel (sun icon): the mic level, the current threshold, how many transcripts were dropped as echo, and whether the ears are paused, in the echo tail or listening. The dropped text itself only goes to the browser console (`[jericho] echo ignored`).
 - Settings panel → **Interrupt while talking**: Off, Speakers (stricter, the default) or Headphones (more sensitive). Saved in your browser. With Off, talking loudly over him only turns on listening for "Jericho, stop".
-- `settings.json` → `bargeIn`: `enabled`, `minLevel` (0.15), `minMs` (270), `calibrateMs` (1500), `echoTailMs` (700), `duckTo` (0.85). If he still cuts himself off, raise `minLevel` or press Re-calibrate; if he misses you, lower it or choose Headphones.
+- `settings.json` → `bargeIn`: `enabled`, `mode` ("wakeWord"), `minVolume` (0.15), `minMs` (270), `calibrateMs` (1500), `echoTailMs` (700), `duckTo` (0.85). If he still cuts himself off, raise `minVolume` or press Re-calibrate; if he misses you, lower it or choose Headphones.
 - Phones keep the mic off while he talks: tap the light (or press Stop) to cut him off and start listening.
 - Interrupting only stops his reply. Running tools, Claude Code jobs and calls keep going, and something said over him never counts as a "yes" to a confirmation. "Jericho, stop", the Stop button and Esc still stop everything. While he's talking, "Jericho, stop" works like this: your voice cuts him off first, then the "stop" is heard. If the first word gets clipped, say "stop" again or press Esc.
 
@@ -872,7 +901,8 @@ None of these are secret. Keys live only in `.env`.
 | `elevenlabs.modelId` | `eleven_flash_v2_5` (default) is the lowest-latency natural voice. `eleven_turbo_v2_5` is a bit richer, `eleven_multilingual_v2` richer still, with more delay. |
 | `elevenlabs.stability` / `similarityBoost` / `style` / `speed` / `useSpeakerBoost` | Voice settings. Lower stability is more expressive, higher is steadier. `speed` runs from 0.7 to 1.2. All of these apply on the next sentence, no restart needed. |
 | `audioCache` | Short phrases (up to `maxWords` words) that come up `minRepeats` times are saved in `data/audio-cache` and replayed from disk. At most `maxFiles` are kept. |
-| `conversationTimeoutSeconds` | How long Jericho keeps listening without the wake word after you or it last spoke. Default 30. A pending yes/no question waits its own 60 seconds. |
+| `followUpSeconds` | After Jericho answers, how long you can reply without the wake word (default 8). Talking keeps it open. A pending yes/no question waits its own 60 seconds, and short answers ("yes", "no", "do it", "cancel") always count then. |
+| `conversationTimeoutSeconds` | Older name for the same window, used only when `followUpSeconds` isn't set. |
 | `endPhrases` | Phrases that end the conversation right away. Add your own. |
 | `wakeWords` | Words that wake the assistant: "jericho", "jer" and common mishearings ("jerico", "jerry co", "jerr"…). Add more to the array any time; a space also matches a hyphen or no gap, so "jerry co" covers "jerry-co" and "jerryco". Whole words only: "Jerry", "Jeremy" and "jersey" don't trigger it. Reload the page after editing. |
 | `claude.model` / `claude.effort` | The strong model: `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. |

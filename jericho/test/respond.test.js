@@ -73,7 +73,7 @@ test("routing: Haiku only for clearly simple turns; reasoning, advice and person
   for (const t of ["why is the sky blue", "what should I get my mom for her birthday", "what's my sister's name", "how do I fix a flat tire", "tell me about Rome", "I feel tired today", "which laptop is better for school", "write me a short poem", "help me plan my week"]) {
     assert.equal(routeFor(t).route, "strong", t);
   }
-  assert.equal(routeFor("what do you think about electric cars").reason, "open-ended");
+  assert.equal(routeFor("any ideas for dinner").reason, "open-ended");
   assert.equal(routeFor("what's my sister's name").reason, "personal context");
   assert.equal(isOpenEnded("what do you think about this"), true);
 });
