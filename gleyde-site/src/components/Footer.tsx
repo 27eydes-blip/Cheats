@@ -9,7 +9,8 @@ import { SEMonogram } from "./SEMonogram";
  */
 export function Footer() {
   return (
-    <footer className="px-6 sm:px-10 lg:px-16">
+    <footer className="snap-end px-6 sm:px-10 lg:px-16">
+      {/* snap-end (above) gives the page a final snap point so the footer is reachable. */}
       <div className="rule-t mx-auto flex max-w-[88rem] flex-col gap-10 py-14 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <GleydeMark title="" compact className="h-8 w-auto" />

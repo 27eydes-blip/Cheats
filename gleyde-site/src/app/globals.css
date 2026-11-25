@@ -95,6 +95,25 @@
     }
   }
 
+  /* One idea per scroll: the page snaps to full-screen panels.
+     Strict ("mandatory") on desktop-sized screens, where every panel fits.
+     Gentle ("proximity") on phones and short windows, where a long panel
+     must be able to scroll naturally without fighting the swipe. */
+  html {
+    scroll-snap-type: y proximity;
+  }
+
+  @media (min-width: 768px) and (min-height: 700px) {
+    html {
+      scroll-snap-type: y mandatory;
+    }
+  }
+
+  .panel {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
@@ -114,7 +133,7 @@
 
   /* Anchored sections stop below the fixed nav. */
   section[id] {
-    scroll-margin-top: 4.5rem;
+    scroll-margin-top: 0;
   }
 
   ::selection {

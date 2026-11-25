@@ -6,7 +6,7 @@ import { Section } from "./Section";
 export function Leadership() {
   return (
     <Section id="leadership" index="04" label="Leadership" title="The people behind Gleyde.">
-      <ul className="mt-16 grid grid-cols-2 gap-x-6 gap-y-16 sm:mt-24 lg:grid-cols-4 lg:gap-x-10">
+      <ul className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 sm:mt-16 sm:gap-y-16 lg:grid-cols-4 lg:gap-x-10">
         {leadership.map((person, i) => (
           <li key={person.name}>
             <Reveal delay={i * 0.06}>
@@ -25,7 +25,7 @@ export function Leadership() {
                     {person.initials}
                   </span>
                 </div>
-                <h3 className="mt-8 font-display text-lg tracking-[0.03em] text-ivory sm:text-xl">{person.name}</h3>
+                <h3 className="mt-5 font-display sm:mt-8 text-lg tracking-[0.03em] text-ivory sm:text-xl">{person.name}</h3>
                 <p className="mt-3 text-[0.62rem] leading-relaxed tracking-[0.22em] text-ivory/55 uppercase sm:text-[0.68rem]">
                   {person.title}
                 </p>

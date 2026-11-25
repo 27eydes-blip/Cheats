@@ -7,7 +7,7 @@ import { Section } from "./Section";
 export function Contact() {
   return (
     <Section id="contact" index="06" label="Contact" title="Begin a conversation.">
-      <div className="mt-14 grid gap-16 sm:mt-20 lg:grid-cols-9 lg:gap-10">
+      <div className="mt-8 grid gap-10 sm:mt-14 lg:grid-cols-9 lg:gap-10">
         <Reveal className="lg:col-span-4">
           <p className="max-w-sm text-base leading-relaxed font-light text-ivory/65">
             Partnerships, press, security work or a website of your own. Write to us and we will reply

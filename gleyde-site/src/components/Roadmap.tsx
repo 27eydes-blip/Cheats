@@ -9,10 +9,10 @@ import { Section } from "./Section";
 export function Roadmap() {
   return (
     <Section id="roadmap" index="03" label="Roadmap" title="Where we are going.">
-      <ol className="relative mt-16 sm:mt-24">
+      <ol className="relative mt-10 sm:mt-16">
         <span aria-hidden="true" className="absolute top-3 bottom-3 left-[2.5px] w-(--hair) bg-(--color-rule)" />
         {roadmap.map((phase, i) => (
-          <li key={phase.phase} className="relative pb-16 pl-12 last:pb-0 sm:grid sm:grid-cols-[12rem_1fr] sm:pb-20 sm:pl-14">
+          <li key={phase.phase} className="relative pb-8 pl-10 last:pb-0 sm:grid sm:grid-cols-[12rem_1fr] sm:pb-10 sm:pl-14">
             <span
               aria-hidden="true"
               className={`absolute top-[0.6rem] left-0 block size-1.5 rounded-full ${
@@ -20,16 +20,16 @@ export function Roadmap() {
               }`}
             />
             <Reveal>
-              <p className="font-display text-2xl tracking-[0.08em] text-ivory">{phase.phase}</p>
+              <p className="font-display text-xl tracking-[0.08em] text-ivory sm:text-2xl">{phase.phase}</p>
               {phase.when && (
                 <p className="mt-2 text-[0.65rem] tracking-[0.3em] text-ivory/50 uppercase">{phase.when}</p>
               )}
             </Reveal>
-            <Reveal delay={0.08} className="mt-6 sm:mt-0">
-              <h3 className="font-display text-xl tracking-[0.02em] text-gold-light sm:text-2xl">{phase.title}</h3>
-              <ul className="mt-6 space-y-3">
+            <Reveal delay={0.08} className="mt-3 sm:mt-0">
+              <h3 className="font-display text-lg tracking-[0.02em] text-gold-light sm:text-2xl">{phase.title}</h3>
+              <ul className="mt-3 space-y-1.5 sm:mt-6 sm:space-y-3">
                 {phase.items.map((item) => (
-                  <li key={item} className="text-base leading-relaxed font-light text-ivory/65">
+                  <li key={item} className="text-sm leading-relaxed font-light text-ivory/65 sm:text-base">
                     {item}
                   </li>
                 ))}

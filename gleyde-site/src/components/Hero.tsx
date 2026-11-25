@@ -26,7 +26,7 @@ export function Hero() {
       ref={ref}
       id="top"
       aria-labelledby="hero-title"
-      className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 pt-16 pb-24"
+      className="panel relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 pt-16 pb-24"
     >
       <m.div style={{ y: markY, opacity: fade }}>
         <GleydeMark

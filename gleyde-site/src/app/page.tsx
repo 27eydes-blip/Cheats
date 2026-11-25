@@ -6,6 +6,7 @@ import { Hero } from "@/components/Hero";
 import { Leadership } from "@/components/Leadership";
 import { Legal } from "@/components/Legal";
 import { Nav } from "@/components/Nav";
+import { type Panel, PanelIndicator } from "@/components/PanelIndicator";
 import { Roadmap } from "@/components/Roadmap";
 import { divisions, leadership } from "@/data/portfolio";
 import { site } from "@/lib/site";
@@ -37,6 +38,17 @@ function jsonLd() {
   };
 }
 
+/** Every full-screen panel, in page order, for the side indicator. */
+const panels: Panel[] = [
+  { id: "top", label: "Gleyde" },
+  { id: "about", label: "About" },
+  ...divisions.map((d, i) => ({ id: i === 0 ? "divisions" : `division-${d.id}`, label: d.name })),
+  { id: "roadmap", label: "Roadmap" },
+  { id: "leadership", label: "Leadership" },
+  { id: "legal", label: "Legal" },
+  { id: "contact", label: "Contact" },
+];
+
 export default function Home() {
   return (
     <>
@@ -47,6 +59,7 @@ export default function Home() {
         Skip to content
       </a>
       <Nav />
+      <PanelIndicator panels={panels} />
       <main id="main">
         <Hero />
         <About />
