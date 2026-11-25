@@ -813,19 +813,36 @@ go to Claude, which uses the `plug_control` tool.
 
 **Setup**
 
-1. In the Tapo app, give the plugs the names in `settings.json` (`plugs.devices`: Fan and Lamp), and
-   turn on **Third-Party Compatibility** (Me > Tapo Lab or Third-Party Services). Without it, newer
-   firmware refuses local control.
-2. Put your Tapo app login in `.env`: `TAPO_EMAIL=` and `TAPO_PASSWORD=`. They're read only from
-   `.env`; they're blanked from every log, never spoken or shown, never written to `data/`, and never
-   given to commands or Claude Code. The startup self-test and `npm run plugs:test` show only "set"
-   or "missing".
+1. In the Tapo app, give the plugs the names in `settings.json` (`plugs.devices`: Fan and Lamp).
+2. Put your Tapo app login in `.env`: `TAPO_EMAIL=` and `TAPO_PASSWORD=`, exactly as in the Tapo
+   app (the email's case matters). They're read only from `.env`; they're blanked from every log,
+   never spoken or shown, never written to `data/`, and never given to commands or Claude Code. The
+   startup self-test and `npm run plugs:test` show only "set" or "missing".
 3. Run `npm run plugs:test`: it finds the plugs and shows each one's on/off state, model, address
-   and whether it's controlled locally or through the cloud. If one fails, run
-   `npm run plugs:test -- --debug`: for each address tried it shows only safe facts (IP, MAC, which
-   protocol answered, the step that failed, HTTP statuses, sizes, whether a session cookie came
-   back, which login-hash variant matched, device error codes). Never the email, password, keys,
-   tokens or full responses.
+   and how it's controlled (`via tpap`, `via klap-v2`, ...). If one fails, run
+   `npm run plugs:test -- --debug`.
+
+**Third-Party Compatibility (Tapo app: Me > Third-Party Services).** Since firmware 1.4.0, Tapo
+plugs speak one of two local protocols depending on this switch: **TPAP** with it **off** (the
+default), **KLAP** with it **on**. Jericho speaks both and picks the one the plug announces, so
+either setting works. The setting is pushed from your account and doesn't always reach a plug that
+was updated after it was changed; if a plug seems stuck, switch it off, wait a minute, and run
+`npm run plugs:test` again (off and back on is the next thing to try).
+
+**`npm run plugs:test -- --debug`** probes every candidate address with each known protocol in turn
+and prints only safe facts: the protocol, the step, HTTP statuses, byte lengths, error codes,
+whether a session cookie came back, which login-hash variant matched, and whether the plug's owner
+is this account. Never the email, password, keys, tokens or response bodies. In order:
+
+- **TPAP discover** (not a login): whether the plug is in TPAP mode, and its announced port, TLS
+  mode, passcode types and owner.
+- **KLAP handshake1** (not a login): a KLAP answer is exactly 48 bytes. Anything else (like 49 bytes
+  of JSON) means the plug isn't in KLAP mode; the JSON's error code is shown. If it is 48 bytes, it
+  checks every login-hash variant (v2, v1, the email as typed and lowercased) and a blank or
+  factory-default login.
+- **The older passthrough handshake**: whether that answers.
+- **A full TPAP login and a status read**, only if the plug announced TPAP (this one does count as
+  a login attempt; plugs lock themselves for about 30 minutes after too many failed ones).
 
 **How it finds them:** it reads the plug list (names and MAC addresses) from your Tapo account,
 scans your network for devices answering on port 80, and matches them by MAC address (ARP table).
@@ -839,7 +856,7 @@ after a restart (a timer that came due while Jericho was off runs as soon as he 
 says it when it fires.
 
 **If a plug doesn't answer**, Jericho says so with the fix: same Wi-Fi as the PC (plugs only use
-2.4 GHz), and Third-Party Compatibility on in the Tapo app.
+2.4 GHz), and Third-Party Compatibility in the Tapo app (see above).
 
 **More plugs and groups:** add `{ "name": "Heater", "aliases": ["space heater"] }` to
 `plugs.devices` (the name must match the Tapo app), and groups to `plugs.groups`, e.g.
@@ -849,22 +866,34 @@ you want it to mean the plugs.
 
 **How each plug is controlled**, in order (the action log says which: `"path": "local"` or `"cloud"`):
 
-1. **Locally over KLAP**, with Jericho's own client (`server/plugs/klap.js`, no extra libraries):
-   both login-hash variants (v2 used by Tapo, v1 used by Kasa), a time limit on every step, and no
-   need for a session cookie. `tp-link-tapo-connect` 2.0.15 crashes on plugs whose newer firmware
-   doesn't send that cookie ("Cannot read properties of undefined (reading '0')"); that's what
-   happened on real Fan and Lamp plugs, and it no longer can.
-2. **Locally over the older "secure passthrough" protocol**, only for a plug that doesn't speak
+1. **Locally over TPAP** (`server/plugs/tpap.js`), when the plug announces it: SPAKE2+ (RFC 9383,
+   P-256, SHA-256, HKDF, HMAC) login, then AES-128-CCM encrypted requests. Built from the two
+   maintained open-source implementations, the `tapo` library (mihai-dinculescu/tapo, which ships
+   TPAP) and python-kasa's TPAP pull request (#1592, not merged yet), using node:crypto plus a small
+   BigInt P-256 (`server/plugs/p256.js`, because node:crypto can't add curve points). Checked
+   against the RFC 9383 test vectors and the `tapo` library's AES-CCM and SHA-256-crypt known
+   answers. The password is transformed the way the plug asks (`extra_crypt`: SHA-1, SHA-256-crypt,
+   salted SHA-256, ...). Jericho won't try the login on a plug that says it belongs to a different
+   account, since failed logins count toward its lockout.
+2. **Locally over KLAP** (`server/plugs/klap.js`): both login-hash variants (v2 used by Tapo, v1
+   used by Kasa), a time limit on every step, and no need for a session cookie
+   (`tp-link-tapo-connect` 2.0.15 crashes on plugs that don't send one).
+3. **Locally over the older "secure passthrough" protocol**, only for a plug that doesn't speak
    KLAP at all (`tp-link-tapo-connect`, with its `axios` and `uuid` overridden to current versions
    in `package.json`).
-3. **Through the Tapo cloud** with your account, when local control fails (`server/plugs/cloud.js`,
-   plain HTTPS with normal certificate checks and time limits). A plug that's on your account is
-   found even if local login fails; it's just controlled through the cloud until local works again.
+4. **Through the Tapo cloud** with your account, when local control fails (`server/plugs/cloud.js`,
+   plain HTTPS with normal certificate checks and time limits). **This doesn't work for plugs on
+   TPAP firmware:** the cloud API that open-source clients use (`wap.tplinkcloud.com`, "passthrough")
+   lists them as offline even while the Tapo app controls them, and answers "Device is offline".
+   The Tapo app uses a newer cloud service that no open-source project has documented. So for
+   these plugs, local TPAP (or KLAP) is the way; the cloud path stays for older plugs.
 
-If local login fails, the reason is specific: the plug didn't accept this email and password, it's
-set up with a different login (blank or a factory default), it doesn't speak KLAP, or it didn't
-answer. `npm audit` still lists advisories in the library's auto-discovery helpers (`local-devices`,
-`ip`); Jericho never uses that part. Local calls use `plugs.timeoutSeconds` (6); cloud calls 10 s.
+If local login fails, the reason is specific: the plug refused this password, it belongs to a
+different account, it's set up with a blank or factory-default login, it locked itself after too
+many failed logins (wait about 30 minutes), it asks for a password transform that isn't supported
+yet, or it didn't answer. `npm audit` still lists advisories in the library's auto-discovery helpers
+(`local-devices`, `ip`); Jericho never uses that part. Local calls use `plugs.timeoutSeconds` (6);
+cloud calls 10 s.
 
 ## LG TVs (living room and blue room)
 
@@ -1056,8 +1085,9 @@ server/planner/           the Planner: store (data/planner.json), dates (Detroit
 server/lg/                the LG TVs: ssap.js (webOS client), net.js (scan, ARP, Wake-on-LAN),
                           index.js (rooms, pairing, commands), voice.js (local commands)
 scripts/tv-pair.mjs       npm run tv:pair -- "living room"
-server/plugs/             the Tapo plugs: index.js (discovery, actions, timers), klap.js (local KLAP client),
-                          cloud.js (Tapo cloud fallback), voice.js (local commands)
+server/plugs/             the Tapo plugs: index.js (discovery, actions, timers), tpap.js (TPAP login),
+                          p256.js (curve math for it), klap.js (KLAP), cloud.js (cloud fallback),
+                          probe.js (plugs:test --debug), voice.js (local commands)
 scripts/plugs-test.mjs    npm run plugs:test
 public/planner.*          the Planner page (planner.html, .css, .js; plannerlayout.js helpers)
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)

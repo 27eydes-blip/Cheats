@@ -26,7 +26,7 @@ import { klapLogin } from "./klap.js";
 import { tpapDiscover, tpapLogin } from "./tpap.js";
 import { cloudDevice, cloudPlugs } from "./cloud.js";
 
-export const TIP = "Check that it's plugged in and on the same Wi-Fi as this PC (the 2.4 GHz network), and that Third-Party Compatibility is on in the Tapo app (Me, Tapo Lab or Third-Party Services).";
+export const TIP = "Check that it's plugged in and on the same Wi-Fi as this PC (the 2.4 GHz network). If it still won't answer, switch Third-Party Compatibility off in the Tapo app (Me, Third-Party Services), wait a minute and try again.";
 const NO_CREDS = "Tapo isn't set up yet: add TAPO_EMAIL and TAPO_PASSWORD to the .env file, then restart me.";
 
 // TP-Link / Tapo MAC prefixes, only used when the account's device list can't be read.

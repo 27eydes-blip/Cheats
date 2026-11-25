@@ -142,7 +142,7 @@ test("a plug whose IP changed is found again; an unreachable plug gets a clear t
   delete s.net["192.168.4.20"];
   const gone = await plugs.plugAction("Fan", "off");
   assert.equal(gone.ok, false);
-  assert.match(gone.error, /^I can't find the fan on the network or your Tapo account\. .*same Wi-Fi as this PC \(the 2\.4 GHz network\).*Third-Party Compatibility is on in the Tapo app/);
+  assert.match(gone.error, /^I can't find the fan on the network or your Tapo account\. .*same Wi-Fi as this PC \(the 2\.4 GHz network\).*switch Third-Party Compatibility off in the Tapo app/);
   assert.doesNotMatch(log(), /ECONNREFUSED/, "raw library errors never reach the log");
 });
 
