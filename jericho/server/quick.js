@@ -1,3 +1,5 @@
+import { matchLg } from "./lg/voice.js";
+
 // Instant answers with no Claude call at all, for the obvious commands: the time, the date,
 // volume up/down/mute, snooze while an alarm is ringing, a simple alarm at a clear time, and
 // plain TV commands (power, volume, mute, play/pause, home, back, open a well-known app). "Stop" (the kill switch) and
@@ -101,10 +103,13 @@ export function matchPlanner(text) {
   return null;
 }
 
-/** { kind: "time" | "date" | "volume" | "snooze" | "alarm" | "tv" | "planner", ... } or null when it isn't one of these. */
+/** { kind: "time" | "date" | "volume" | "snooze" | "alarm" | "tv" | "lg" | "planner", ... } or null when it isn't one of these. */
 export function matchQuick(text) {
   const plan = matchPlanner(text);
   if (plan) return plan;
+  // the LG TVs by room come before the Roku rules ("the TV" means the LGs once one is paired)
+  const lg = matchLg(text);
+  if (lg) return lg;
   const alarm = matchAlarm(text);
   if (alarm) return alarm;
   const tv = matchTv(text);
@@ -156,6 +161,19 @@ export async function runQuick(match, deps = {}) {
     if (!r?.ok) return null; // Claude can explain or ask
     const note = r.wakeNote ? " Heads up: the laptop may not wake up for it on its own. Ask me about alarm wake-up for the fix." : "";
     return { say: `${r.say}${note}`, tool: "set_alarm", input, ok: true };
+  }
+  if (match.kind === "lg") {
+    if (match.ask) return { say: match.ask, ok: true };
+    const tool = deps.tools?.get("lg_tv");
+    if (!tool) return null;
+    const r = await tool.run(match.input, { signal: deps.signal });
+    let say = r?.ok ? r.say : r?.ask || r?.error || "The TV didn't answer.";
+    if (match.roku) {
+      // "turn off all the TVs and the Roku"
+      const roku = await deps.tools?.get("tv")?.run({ action: "power_off" }, { signal: deps.signal });
+      say = `${say} ${roku?.ok ? "Roku off." : "The Roku didn't answer."}`;
+    }
+    return { say, tool: "lg_tv", input: match.input, ok: Boolean(r?.ok) };
   }
   if (match.kind === "planner") {
     const tool = deps.tools?.get(match.tool);

@@ -114,7 +114,7 @@ export const tvTool = {
   definition: {
     name: "tv",
     description:
-      "Control the Roku TV on the home network. Use it whenever they mention the TV or Roku, or want to watch something on the TV " +
+      "Control the Roku TV on the home network. Use it when they say Roku (the LG TVs by room use lg_tv), or for 'the TV' when no LG TV is paired " +
       "(for apps on this PC use open_app instead). Actions: power_on, power_off, volume_up/volume_down (times, e.g. 5), mute, " +
       "press (button: home, back, up, down, left, right, select, play_pause, rewind, fast_forward, replay, info), " +
       "open_app (app: a name like Netflix, YouTube, Hulu, Disney+, Max, Prime Video, Spotify), search (query, optional app), " +

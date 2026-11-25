@@ -194,5 +194,32 @@
     "studyChunkMinutes": 60,
     "breakMinutes": 10,
     "minFreeBlockMinutes": 15
+  },
+  "lg": {
+    "rooms": [
+      {
+        "name": "living room",
+        "aliases": [
+          "living room tv",
+          "the living room",
+          "living room"
+        ]
+      },
+      {
+        "name": "blue room",
+        "aliases": [
+          "blue room tv",
+          "the blue room",
+          "blue room"
+        ]
+      }
+    ],
+    "candidates": [
+      "192.168.4.217",
+      "192.168.4.48"
+    ],
+    "pairTimeoutSeconds": 60,
+    "port": 3001,
+    "volumeStep": 5
   }
 }

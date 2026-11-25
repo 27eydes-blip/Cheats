@@ -27,7 +27,7 @@ const SIMPLE = [
   /\b(what time|the time|what's the time|what day|what's the date|today's date|what date)\b/i,
   /\b(volume|louder|quieter|softer|turn it (up|down)|mute|unmute)\b/i,
   /\b(pause|resume|play|next (song|track)|previous (song|track)|skip)\b/i,
-  /\b(tv|television|roku|netflix|youtube|hulu|disney|channel|hdmi|input)\b/i,
+  /\b(tvs?|televisions?|roku|netflix|youtube|hulu|disney|channel|hdmi|input|living room|blue room)\b/i,
   /\b(alarm|alarms|timer|timers|wake me|snooze)\b/i,
   /\b(weather|temperature|rain|raining|forecast|umbrella|snow|windy|cold outside|hot outside|jacket)\b/i,
   /\b(lights?|lamp|brightness|dim)\b/i,
