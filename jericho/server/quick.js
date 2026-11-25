@@ -1,4 +1,5 @@
 import { matchLg } from "./lg/voice.js";
+import { matchPlug } from "./plugs/voice.js";
 
 // Instant answers with no Claude call at all, for the obvious commands: the time, the date,
 // volume up/down/mute, snooze while an alarm is ringing, a simple alarm at a clear time, and
@@ -107,6 +108,9 @@ export function matchPlanner(text) {
 export function matchQuick(text) {
   const plan = matchPlanner(text);
   if (plan) return plan;
+  // the smart plugs: "turn off the fan", "all lights off", "turn off the fan in 30 minutes"
+  const plug = matchPlug(text);
+  if (plug) return plug;
   // the LG TVs by room come before the Roku rules ("the TV" means the LGs once one is paired)
   const lg = matchLg(text);
   if (lg) return lg;
@@ -161,6 +165,12 @@ export async function runQuick(match, deps = {}) {
     if (!r?.ok) return null; // Claude can explain or ask
     const note = r.wakeNote ? " Heads up: the laptop may not wake up for it on its own. Ask me about alarm wake-up for the fix." : "";
     return { say: `${r.say}${note}`, tool: "set_alarm", input, ok: true };
+  }
+  if (match.kind === "plug") {
+    const tool = deps.tools?.get("plug_control");
+    if (!tool) return null;
+    const r = await tool.run(match.input, { signal: deps.signal });
+    return { say: r?.ok ? r.say : r?.ask || r?.error || "The plug didn't answer.", tool: "plug_control", input: match.input, ok: Boolean(r?.ok) };
   }
   if (match.kind === "lg") {
     if (match.ask) return { say: match.ask, ok: true };

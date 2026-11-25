@@ -223,5 +223,39 @@
     "port": 3001,
     "volumeStep": 5
   },
-  "followUpSeconds": 8
+  "followUpSeconds": 8,
+  "plugs": {
+    "devices": [
+      {
+        "name": "Fan",
+        "aliases": [
+          "the fan",
+          "fan"
+        ]
+      },
+      {
+        "name": "Lamp",
+        "aliases": [
+          "the lamp",
+          "my lamp",
+          "lamp"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "name": "lights",
+        "aliases": [
+          "all lights",
+          "all the lights",
+          "all my lights",
+          "every light"
+        ],
+        "devices": [
+          "Lamp"
+        ]
+      }
+    ],
+    "timeoutSeconds": 6
+  }
 }

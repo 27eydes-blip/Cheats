@@ -2,6 +2,7 @@
 // the browser voice), with a clear
 // PASS or FAIL and the real reason. Runs when the server starts, or on its own with:
 //   npm run selftest
+import { credStatus } from "./plugs/index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -141,7 +142,15 @@ export function limit(promise, ms = 15_000) {
 /** Runs the checks side by side (each with a time limit). */
 export async function runChecks(client = new Anthropic({ fetch: (url, init) => keepAliveFetch(url, init) })) {
   const [claude, voice, calendar, claudeCode] = await Promise.all([limit(testClaude(client)), limit(testVoice()), limit(testCalendar()), limit(testClaudeCode(), 20_000)]);
-  return { node: process.version, connections: connectionMode(), claude, voice, calendar, claudeCode };
+  return { node: process.version, connections: connectionMode(), claude, voice, calendar, claudeCode, plugs: testPlugs() };
+}
+
+/** Tapo plugs: only whether TAPO_EMAIL and TAPO_PASSWORD are set in .env (never the values). */
+export function testPlugs(env = process.env) {
+  const s = credStatus(env);
+  const line = `TAPO_EMAIL ${s.TAPO_EMAIL}, TAPO_PASSWORD ${s.TAPO_PASSWORD}`;
+  if (s.TAPO_EMAIL === "set" && s.TAPO_PASSWORD === "set") return { status: "PASS", reason: `${line} (npm run plugs:test finds the plugs)` };
+  return { status: "SKIP", reason: `${line}: add both to .env to control the plugs` };
 }
 
 const MARK = { PASS: "✅ PASS", FAIL: "❌ FAIL", SKIP: "➖ SKIP" };
@@ -154,6 +163,7 @@ export function formatResults(r) {
     `     Voice       ${line(r.voice ?? r.elevenlabs)}`,
     `     Calendar    ${line(r.calendar)}`,
     `     Claude Code ${line(r.claudeCode)}`,
+    ...(r.plugs ? [`     Plugs       ${line(r.plugs)}`] : []),
   ].join("\n");
 }
 

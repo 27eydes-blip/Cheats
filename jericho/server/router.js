@@ -40,7 +40,7 @@ const DEVICE = [
   /\b(tvs?|televisions?|roku|netflix|youtube|hulu|disney|channel|hdmi|input|living room|blue room)\b/i,
   /\b(alarm|alarms|timer|timers|wake me|snooze)\b/i,
   /\b(weather|temperature|rain|raining|forecast|umbrella|snow|windy|cold outside|hot outside|jacket)\b/i,
-  /\b(lights?|lamp|brightness|dim)\b/i,
+  /\b(lights?|lamp|brightness|dim|fan|plugs?|outlet|everything off)\b/i,
   /\b(homework|assignments?|due|quiz|quizzes|exams?|tests?|my planner|the planner|my week|this week|am i free|free time|finished|check off)\b/i,
 ];
 

@@ -112,6 +112,10 @@ export const secrets = {
   calendarIcsUrlFromSettingsClean: cleanCalendarLink(settings.briefing?.calendarIcsUrl),
   // the TV's home-network address (not a key, but no reason to spread it around)
   rokuIp: process.env.ROKU_IP || "",
+  // Tapo smart plugs (TP-Link account). Listed here only so they're blanked from logs; the plugs
+  // module reads them from the environment itself and only hands them to the Tapo library.
+  tapoEmail: process.env.TAPO_EMAIL || "",
+  tapoPassword: process.env.TAPO_PASSWORD || "",
 };
 if (!process.env.JERICHO_ACCESS_TOKEN && process.env.JARVIS_ACCESS_TOKEN) {
   console.warn("⚠️  Rename JARVIS_ACCESS_TOKEN to JERICHO_ACCESS_TOKEN in .env (the old name still works for now).");

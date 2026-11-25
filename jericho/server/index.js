@@ -28,6 +28,7 @@ import { activeVoice, COST, countVoice, publicVoice } from "./voice.js";
 import { acceptsGzip, sendStatic } from "./static.js";
 import { pageChange, pageView } from "./planner/index.js";
 import { plannerEvents } from "./planner/store.js";
+import { restoreTimers } from "./plugs/index.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
@@ -511,6 +512,7 @@ installCrashLog({
   scrub: (t) => scrubEnvValues(String(t)),
 });
 alarms.start(); // reload saved alarms and keep checking them
+restoreTimers({ announce: (t) => jobEvents.emit("announce", t) }); // plug timers ("fan off in 30 minutes") survive restarts
 startIdleWarm(); // DNS + TLS to Claude and ElevenLabs ready before the first request
 server.listen(port, settings.host || "0.0.0.0", () => {
   const scheme = useHttps ? "https" : "http";

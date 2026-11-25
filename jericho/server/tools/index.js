@@ -16,6 +16,7 @@ import { tvTool } from "./tv.js";
 import { noteTools } from "./notes.js";
 import { plannerTools } from "./planner.js";
 import { lgTvTool } from "./lg.js";
+import { plugControlTool } from "./plugs.js";
 
 const all = [
   lightsTool,
@@ -44,6 +45,7 @@ const all = [
   ...alarmTools,
   tvTool,
   lgTvTool,
+  plugControlTool,
   ...noteTools,
   ...plannerTools,
 ];

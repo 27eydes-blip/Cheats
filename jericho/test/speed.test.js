@@ -174,8 +174,8 @@ test("if the fast model asks for a risky tool anyway, the strong model redoes th
     (req) => (assert.equal(req.model, "claude-opus-5-5"), use("o1", "run_command", { command: "echo lamp" })),
   ]);
   const brain = new Brain({ client });
-  const r = await brain.handle("esc", "turn the lamp on");
-  assert.equal(routeFor("turn the lamp on").route, "fast");
+  const r = await brain.handle("esc", "dim the hallway");
+  assert.equal(routeFor("dim the hallway").route, "fast");
   assert.equal(r.awaitingConfirmation, true);
   assert.equal(r.timings.route, "strong");
   assert.equal(r.timings.escalated, true);
