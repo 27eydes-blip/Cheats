@@ -33,27 +33,27 @@ export function Hero() {
           animated
           delay={0.15}
           title="Gleyde Technologies logo"
-          className="h-36 w-auto sm:h-44 lg:h-52"
+          className="h-40 w-auto sm:h-52 lg:h-[clamp(14rem,24vh,18rem)]"
         />
       </m.div>
 
-      <m.div style={{ y: textY, opacity: fade }} className="mt-14 text-center sm:mt-16">
+      <m.div style={{ y: textY, opacity: fade }} className="mt-10 text-center sm:mt-14">
         <h1 id="hero-title" className="font-display text-ivory">
           <span
-            className="block animate-rise pl-[0.14em] text-[clamp(3rem,10vw,8.5rem)] leading-none tracking-[0.14em]"
+            className="block animate-rise pl-[0.12em] text-[clamp(3.4rem,13.5vw,12.5rem)] leading-[0.9] tracking-[0.12em]"
             style={{ animationDelay: "0.35s" }}
           >
             Gleyde
           </span>
           <span
-            className="mt-5 block animate-rise pl-[0.7em] text-[0.75rem] tracking-[0.7em] text-gold sm:text-sm"
+            className="mt-6 block animate-rise pl-[0.8em] text-[0.8rem] tracking-[0.8em] text-gold sm:text-base lg:text-lg"
             style={{ animationDelay: "0.6s" }}
           >
             Technologies
           </span>
         </h1>
         <p
-          className="mt-14 animate-rise pl-[0.3em] text-[0.8rem] font-light tracking-[0.3em] text-ivory/60 uppercase sm:text-[0.85rem]"
+          className="mt-10 animate-rise pl-[0.34em] text-[0.8rem] font-light tracking-[0.34em] text-ivory/65 uppercase sm:mt-12 sm:text-[0.95rem]"
           style={{ animationDelay: "1.1s" }}
         >
           {site.tagline}

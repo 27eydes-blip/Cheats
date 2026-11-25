@@ -114,6 +114,13 @@
     scroll-snap-stop: always;
   }
 
+  /* PageScroller.tsx is driving the scroll (desktop): native snapping and
+     CSS smooth scrolling would fight its eased glide, so turn them off. */
+  html.paged {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+  }
+
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
@@ -162,6 +169,13 @@
 @utility hairline {
   height: var(--hair);
   background-color: var(--color-rule);
+}
+
+/* Large outlined numerals (section numbers). */
+@utility numeral-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--color-gold);
+  letter-spacing: 0.02em;
 }
 
 /* Small caps label used above every section title. */

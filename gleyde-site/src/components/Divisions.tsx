@@ -81,7 +81,7 @@ export function Divisions() {
                       </span>
                     </>
                   );
-                  const row = "group/p rule-b grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 py-3.5 sm:py-4";
+                  const row = "group/p rule-b grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 py-3.5 sm:py-3.5";
                   return (
                     <li key={p.name}>
                       {p.url ? (

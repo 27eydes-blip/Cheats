@@ -7,7 +7,7 @@ export function About() {
   return (
     <Section id="about" index="01" label="About">
       <Reveal>
-        <p className="font-display text-[1.75rem] leading-[1.3] tracking-[0.01em] text-ivory sm:text-4xl lg:text-[3.25rem]">
+        <p className="font-display text-[2rem] leading-[1.12] tracking-[0.01em] text-ivory sm:text-5xl md:text-[clamp(3rem,5vw,5.25rem)]">
           A technology company building games, software, and security.
         </p>
       </Reveal>

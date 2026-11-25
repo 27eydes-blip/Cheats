@@ -6,6 +6,7 @@ import { Hero } from "@/components/Hero";
 import { Leadership } from "@/components/Leadership";
 import { Legal } from "@/components/Legal";
 import { Nav } from "@/components/Nav";
+import { PageScroller } from "@/components/PageScroller";
 import { type Panel, PanelIndicator } from "@/components/PanelIndicator";
 import { Roadmap } from "@/components/Roadmap";
 import { divisions, leadership } from "@/data/portfolio";
@@ -59,6 +60,7 @@ export default function Home() {
         Skip to content
       </a>
       <Nav />
+      <PageScroller />
       <PanelIndicator panels={panels} />
       <main id="main">
         <Hero />
