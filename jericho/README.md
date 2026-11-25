@@ -265,13 +265,14 @@ Other changes you'll feel but that don't show in that table:
   as soon as it's complete, and the next one downloads while the current one plays. A long
   first sentence is spoken from its first comma.
 - **Warm connections.** At startup and every 4 minutes (every 25 seconds while a page is open),
-  the server touches Claude and ElevenLabs. That covers the DNS lookup, the TLS handshake and
-  the keep-alive sockets. DNS answers are kept for 5 minutes. Hearing the wake word warms
-  Claude's prompt cache for both models.
+  the server touches Claude and ElevenLabs (a free model-list request, not a message). That
+  covers the DNS lookup, the TLS handshake and the keep-alive sockets. DNS answers are kept for
+  5 minutes. Warming Claude's prompt cache on the wake word is off by default to save money
+  (`claude.prewarm: true` turns it back on).
 - **Weather and calendar are pre-fetched** in the background while a page is open, so those
   tools answer from memory.
 - **Smaller requests.** Only the saved memories that match a request are sent with it, not all
-  of them (Claude can still look up the rest with `recall`). After 40 messages the
+  of them (Claude can still look up the rest with `recall`). After 24 messages the
   conversation starts fresh, with a short recap of the last few exchanges.
 - **Page loading.** Files are gzipped (app.js is 24 KB instead of about 80 KB) and sent with an
   ETag, so a reload is a tiny "not changed" reply. Fonts are kept for a year and the 3D
@@ -286,7 +287,15 @@ The sun panel's **Brain** setting (or `claude.routing` in settings.json) picks i
   That covers greetings, the time, volume, the TV, alarms, the weather, lights and short
   questions. Everything else goes to the strong model, Claude Opus 5.5: anything complex,
   long, vague ("do it"), a search, or anything that might need a risky action.
-- **Always strong**: every request goes to the strong model.
+- **Always strong**: every request goes to the strong model (also `claude.routing:
+  "always-strong"` in settings.json).
+
+The small model gets its own short instructions and only the everyday tools (lights, music,
+volume, media keys, timers, opening apps, weather, the calendar list, alarms, the TV, remember
+and recall, contacts list, lessons) plus a `hand_off` tool. Anything else (files, commands,
+calls, web search, Claude Code, forgetting, invites, plans, writing, code) goes to the strong
+model, either by the words or because the small model hands it off. If unsure, it's the strong
+model.
 
 Risky actions never reach the small model, through two locks. First, the words: anything about
 files, commands, Claude Code, calls, messages, invites, forgetting, cancelling or system
@@ -297,8 +306,12 @@ your API key, the strong model answers (and keeps answering for 10 minutes).
 
 ### Instant local commands (no Claude call)
 
-"What time is it", "what's the date", "volume up" / "volume down" / "mute the volume", and
-"snooze" (while an alarm rings) are answered on the spot. They use the same safe-tier tools and
+"What time is it", "what's the date", "volume up" / "volume down" / "mute the volume",
+"snooze" (while an alarm rings), a simple alarm at a clear time ("set an alarm for 7 am",
+"wake me up at 6:30 a.m. every weekday"), and plain TV commands ("turn off the TV", "pause the
+TV", "TV volume up", "mute the TV", "open Netflix on the TV") are answered on the spot. An
+alarm without am or pm ("set an alarm for 7"), with a date or a label still goes to Claude.
+Filler on its own ("um", "hmm") gets a quick "Yes?" with no Claude call. They use the same safe-tier tools and
 logs as when Claude calls them, and stay in the conversation history so Claude knows about
 them. "Stop", "go to sleep" and "mute" work as before: they're handled on the page.
 
@@ -660,6 +673,7 @@ After the one tap, Jericho listens for his name ("Jericho", "Jer", "hey Jericho"
 - **Mute:** the small gold mic button, the **M** key, or say "Jericho, go to sleep". Muted means nothing is listened to at all (the browser's mic light goes off); the orb dims and the idle hum rests. Tap the light, the button, or press M to unmute.
 - **Auto-recover:** if speech recognition stops or errors, it restarts on its own (250 ms, backing off to 5 s if it keeps failing). If the microphone is unplugged or blocked, the page says so and one tap reconnects it.
 - **Stopping:** there's no Start or Stop button any more. Esc and "Jericho, stop" stop everything as before. Tapping the light while he talks cuts him off and listens; while he's thinking or waiting for a yes, it stops everything (what the Stop button did).
+- **No wasted turns:** without the wake word, a follow-up only goes to Claude when it's clearly for him: a question, a command, a correction, or an answer to a question he just asked. "Um", "okay", "yeah" (unless he asked something), the TV or music in the background, long chatter that isn't addressed to him, very unsure transcripts and his own echo are dropped with no request at all. Saying "Jericho" always gets through. The mic meter in the settings panel counts them ("stray ignored"). `followUpFilter: false` in settings.json turns this off (filler is still dropped).
 - **Far-field** (settings panel): **Wake sensitivity** Low (the name must come first), Normal, or High (also checks the recognizer's second and third guesses and near-misses like "Jerichow"; best from across the room). **Room mode** lowers the voice level needed to interrupt him and boosts the mic level the orb reacts to. **Calibrate room**: stay quiet for a moment, then say "Jericho" a few times from where you sit; the threshold is set between the room's noise and your voice.
 
 ## Alarms
@@ -755,7 +769,12 @@ None of these are secret. Keys live only in `.env`.
 | `claude.model` / `claude.effort` | The strong model: `claude-opus-5-5` at `low` effort, which keeps spoken replies quick. |
 | `claude.routing` | `auto` (default): simple requests go to `claude.fastModel`. `always-strong`: everything goes to the strong model. The sun panel's Brain setting overrides it per browser. |
 | `claude.fastModel` / `claude.fastEffort` | The fast model for simple requests: `claude-haiku-5-5` at `low` effort. It never handles risky actions. |
-| `claude.maxHistoryMessages` | After this many messages (default 40), the conversation starts fresh with a short recap. |
+| `claude.maxHistoryMessages` | After this many messages (default 24), the conversation starts fresh with a short recap. |
+| `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 8000 for the strong model (room for tool inputs such as a file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway. |
+| `claude.prewarm` | `false` (default): no Claude call when the wake word is heard. `true` warms the prompt cache for a slightly faster first reply, at the cost of a cache write per model each time. |
+| `claude.backgroundModel` / `claude.learnEveryMinutes` | Learning your style and profile after a conversation runs on `claude-haiku-5-5`, at most every 30 minutes (conversations in between are learned from together), and never for conversations that were only local commands. |
+| `calls.agentModel` / `calls.screenModel` | The model that talks during a phone call (`claude-haiku-5-5`, cheap and quick), and the one that screens every call before it's placed (`claude-opus-5-5`). Set `agentModel` to `claude-opus-5-5` if calls ever sound off. All the call safety rules are enforced in code either way. |
+| `followUpFilter` | `true` (default): follow-ups without the wake word must be clearly for Jericho (see Always listening). |
 | `claude.stallApologySeconds` / `claude.stallAbortSeconds` | If Claude goes quiet: a short sorry after 12 seconds, and giving up after 40. |
 | `claude.hardModel` / `claude.hardEffort` | The stronger model for hard questions: `claude-fable-5-2` at `high` effort. Jericho decides when to use it (a `deep_think` tool) and says "Let me think that through" first. |
 | `claude.webSearch` | Lets Jericho look things up, such as a restaurant's number or hours. About 1 cent per search. |
