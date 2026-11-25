@@ -1,12 +1,17 @@
 "use client";
 
-import { m, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { m, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { site } from "@/lib/site";
 import { GleydeMark } from "./GleydeMark";
+import { HudOverlay } from "./HudOverlay";
+import { HudRings } from "./HudRings";
 
 /**
- * Full-screen hero: the mark, the name, the tagline. Nothing else.
+ * Full-screen hero, styled as a holographic heads-up display: the mark sits
+ * inside rotating HUD rings, a boot log types itself out, a scanner sweeps
+ * the screen and live readouts sit in the corners. On desktop the hologram
+ * tilts gently in 3D toward the mouse.
  *
  * The entrance (logo drawing in, text rising) is plain CSS so it starts on
  * first paint, before JavaScript loads; that keeps LCP fast. Framer Motion
@@ -21,14 +26,38 @@ export function Hero() {
   const textY = useTransform(scrollYProgress, [0, 1], ["0%", reduce ? "0%" : "16%"]);
   const fade = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
+  // Hologram tilt toward the mouse (desktop, motion allowed).
+  const tiltX = useSpring(useMotionValue(0), { stiffness: 60, damping: 18 });
+  const tiltY = useSpring(useMotionValue(0), { stiffness: 60, damping: 18 });
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (reduce || e.pointerType !== "mouse") return;
+    const r = e.currentTarget.getBoundingClientRect();
+    tiltY.set(((e.clientX - r.left) / r.width - 0.5) * 14);
+    tiltX.set(-((e.clientY - r.top) / r.height - 0.5) * 10);
+  };
+  const onPointerLeave = () => {
+    tiltX.set(0);
+    tiltY.set(0);
+  };
+
   return (
     <section
       ref={ref}
       id="top"
       aria-labelledby="hero-title"
-      className="panel relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 pt-16 pb-24"
+      className="panel relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 pt-24 pb-24"
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
     >
-      <m.div style={{ y: markY, opacity: fade }}>
+      <m.div style={{ opacity: fade }} className="absolute inset-0">
+        <HudOverlay />
+      </m.div>
+
+      <m.div
+        style={{ y: markY, opacity: fade, rotateX: tiltX, rotateY: tiltY, transformPerspective: 900 }}
+        className="relative isolate"
+      >
+        <HudRings className="pointer-events-none absolute top-1/2 left-1/2 -z-10 size-[21rem] -translate-x-1/2 -translate-y-1/2 sm:size-[27rem] lg:size-[clamp(25rem,46vh,34rem)]" />
         {/* Draws itself in, then glows once when complete. */}
         <span className="mark-glow block">
           <GleydeMark
