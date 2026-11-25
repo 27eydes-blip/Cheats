@@ -777,9 +777,45 @@ Say "Jericho, set an alarm for 7 AM", "wake me at 6:45 on weekdays for the gym" 
 
 **Settings panel (sun icon):** alarm volume, default snooze minutes, and the list of upcoming alarms with a Cancel button for each.
 
+## LG TVs (living room and blue room)
+
+Two LG webOS TVs, each by room: **living room** and **blue room** (also "living room TV", "the
+living room", "blue room TV", "the blue room"). Rooms and aliases are in `settings.json` under `lg`.
+
+**Pairing (once per TV).** Nothing is assumed about addresses:
+
+1. For the first room, have **only that TV on**, so Jericho knows which is which.
+2. Say "Jericho, pair the living room TV" (or run `npm run tv:pair -- "living room"`).
+3. Jericho scans your network for port 3001 and tries the TVs one at a time, starting with
+   `192.168.4.217` and `192.168.4.48`. A pairing prompt pops up on whichever TV it really is:
+   **press Accept with that TV's remote** (you have 60 seconds). Jericho tells you when it's paired,
+   and the TV shows "Paired with Jericho as the living room TV".
+4. Then pair the other one: "pair the blue room TV". Both TVs can be on now; the one already
+   paired is skipped.
+
+Its IP, MAC address (from the ARP table) and client key are saved under the room name in
+`data/lg-keys.json` (git-ignored, never logged). If two TVs answer while pairing the first room,
+Jericho stops and asks you to turn one off (`npm run tv:pair -- "living room" --force` skips that
+check). `npm run tv:pair -- --list` shows what's paired.
+
+**Using them.** Name the room: "turn off the blue room", "volume 15 in the living room", "put
+Netflix on in the blue room", "turn the living room up", "mute the blue room", "pause the living
+room", "switch the living room to HDMI 2", "turn on the blue room TV". With no room named, the last
+room you used is meant; if that's unclear, Jericho asks "Living room or blue room?" and a plain
+"blue room" finishes it. "Turn off all the TVs" turns off both LGs; the Roku stays on unless you add
+"and the Roku". Plain commands like these run locally with no Claude call.
+
+- **Turning on** uses Wake-on-LAN to the TV's MAC. On the TV, turn on Settings > General > Devices >
+  TV Management > "Turn on via Wi-Fi" (called "Mobile TV On" on some models) for it to work.
+- **If an IP changes**, Jericho finds the TV again by its MAC address and updates the saved IP.
+- **Safety:** only home-network addresses. The TVs use a self-signed certificate on port 3001,
+  which can't be verified, so that's only accepted for home-network addresses. Every TV action is
+  logged (room, action, result), never keys or addresses.
+- Until an LG is paired, "the TV" still means the Roku.
+
 ## Roku TV
 
-Jericho can control a Roku TV (or Roku stick/box) on your home network, using Roku's own External Control Protocol (plain HTTP on port 8060). No account or app needed.
+Jericho can control a Roku TV (or Roku stick/box) on your home network, using Roku's own External Control Protocol (plain HTTP on port 8060). No account or app needed. Once an LG TV is paired, say "Roku" for the Roku ("turn off the Roku", "open Netflix on the Roku"); plain "the TV" means the LGs.
 
 - "Turn on the TV", "turn the TV off", "TV volume up 5", "mute the TV", "press home / back / select / play / rewind / fast forward / replay / info" (and up, down, left, right), "open Netflix on the TV", "open Disney+", "search Netflix for Breaking Bad", "what's playing on the TV?", "what apps are on the TV?"
 - App names are matched loosely against the apps actually installed ("disney" → Disney Plus, "HBO Max" → Max, "prime" → Prime Video).
@@ -845,6 +881,7 @@ None of these are secret. Keys live only in `.env`.
 | `claude.maxHistoryMessages` | After this many messages (default 24), the conversation starts fresh with a short recap. |
 | `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 16000 for the strong model (room for a researched file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway, and you only pay for what's written. |
 | `claude.maxToolRounds` | How many tool steps one request may chain on its own (default 15). |
+| `lg` | The LG TVs: `rooms` (name and aliases: living room, blue room), `candidates` (addresses tried first: 192.168.4.217, 192.168.4.48), `pairTimeoutSeconds` (60), `port` (3001), `volumeStep` (5). |
 | `planner` | `timezone` (America/Detroit), `wakeStart` / `wakeEnd` (07:00 / 22:00), `weekStartsOn` (1 = Monday), `studyChunkMinutes` (60), `breakMinutes` (10), `minFreeBlockMinutes` (15). |
 | `pc.trusted` | The trusted tier: `enabled` (false), extra `folders`, `apps`, and `commands` that run without a yes. See Controlling your PC. |
 | `claude.prewarm` | `false` (default): no Claude call when the wake word is heard. `true` warms the prompt cache for a slightly faster first reply, at the cost of a cache write per model each time. |
@@ -918,6 +955,9 @@ server/memory.js          data/memory.json + data/style.json (read, save, delete
 server/knowledge.js       the knowledge folder: index data/notes, search it, "remember this"
 server/planner/           the Planner: store (data/planner.json), dates (Detroit parsing),
                           engine (free time, study plans), index (tools and page actions)
+server/lg/                the LG TVs: ssap.js (webOS client), net.js (scan, ARP, Wake-on-LAN),
+                          index.js (rooms, pairing, commands), voice.js (local commands)
+scripts/tv-pair.mjs       npm run tv:pair -- "living room"
 public/planner.*          the Planner page (planner.html, .css, .js; plannerlayout.js helpers)
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
 server/secrets.js         detects passwords, keys, card and ID numbers
