@@ -38,6 +38,10 @@ export async function main(log = console.log, { probe = probeAddress } = {}) {
         log("   control can't work for them; local control (TPAP or KLAP) is what will.");
       }
       log("");
+      log("Addresses considered (IP, MAC as the ARP table or settings give it, why):");
+      if (!r.considered.length) log("   none: no address set in settings.json, and the ARP table had nothing on this network");
+      for (const c of r.considered) log(`   ${String(c.ip).padEnd(15)} ${String(c.mac || "?").padEnd(17)}  ${c.source.padEnd(20)} ${c.match}`);
+      log("");
       const ips = [...new Set(r.debug.filter((d) => !d.cloud && d.ip).map((d) => d.ip))];
       const { email, password } = loginForProbe(); // used only to compute login hashes; never printed
       for (const ip of ips) {
@@ -48,7 +52,7 @@ export async function main(log = console.log, { probe = probeAddress } = {}) {
         }
         log("");
       }
-      if (!r.debug.length) log("No candidate addresses: no device on this network matched the account's MAC addresses.");
+      if (!r.debug.length) log("No address was tried: none set in settings.json (plugs.devices[].ip), and no device in the ARP table had a plug's MAC.");
       for (const d of r.debug) {
         if (d.cloud) {
           log(`   cloud      for MAC ${d.mac}: failed (${d.reason})`);

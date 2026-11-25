@@ -52,6 +52,8 @@ export async function scanSubnets(port = 3001, { subnets = localSubnets(), probe
 // macOS prints "a4:36:c7:1:2:3" (no leading zeros), Windows "a4-36-c7-01-02-03"
 const MAC_RE = /(?<![0-9a-f:-])([0-9a-f]{1,2})[:-]([0-9a-f]{1,2})[:-]([0-9a-f]{1,2})[:-]([0-9a-f]{1,2})[:-]([0-9a-f]{1,2})[:-]([0-9a-f]{1,2})(?![0-9a-f:-])/i;
 export function normalizeMac(s) {
+  const bare = /^\s*([0-9a-f]{12})\s*$/i.exec(String(s || "")); // "58D812FE4824", as the Tapo account lists it
+  if (bare) return bare[1].toLowerCase().match(/../g).join(":");
   const m = MAC_RE.exec(String(s || ""));
   return m ? m.slice(1).map((x) => x.padStart(2, "0")).join(":").toLowerCase() : "";
 }
@@ -108,5 +110,30 @@ export function sendWol(mac, { ip = "", repeats = 3 } = {}) {
       const sent = () => --left === 0 && (sock.close(), resolve(true));
       for (let r = 0; r < repeats; r++) for (const t of targets) for (const port of [9]) sock.send(packet, port, t, sent);
     });
+  });
+}
+
+/**
+ * Makes the PC learn the MAC address of every device on the local /24s, so `arp -a` lists them:
+ * a UDP datagram to the discard port (9) of every address. No child processes, nothing waits
+ * for replies; the OS resolves each address over ARP to send it.
+ */
+export function pokeSubnets(subnets = localSubnets()) {
+  return new Promise((resolve) => {
+    const ips = subnets.flatMap((s) => Array.from({ length: 254 }, (_, i) => `${s}.${i + 1}`));
+    if (!ips.length) return resolve(0);
+    const sock = dgram.createSocket("udp4");
+    let left = ips.length;
+    const done = () => {
+      try {
+        sock.close();
+      } catch {
+        /* already closed */
+      }
+      resolve(ips.length);
+    };
+    sock.once("error", done);
+    const payload = Buffer.from([0]);
+    for (const ip of ips) sock.send(payload, 9, ip, () => --left === 0 && done());
   });
 }

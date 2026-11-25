@@ -12,7 +12,9 @@ import { fakeClient, say, use } from "./fake-client.js";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-plugs-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
-fs.writeFileSync(path.join(tmp, "settings.json"), JSON.stringify({ ...base, logFile: path.join(tmp, "actions.log") }));
+// these tests are about finding plugs by scanning, so the fixed addresses from settings.json are left out
+const noFixedIps = { ...base.plugs, devices: base.plugs.devices.map(({ ip, mac, ...d }) => d) };
+fs.writeFileSync(path.join(tmp, "settings.json"), JSON.stringify({ ...base, plugs: noFixedIps, logFile: path.join(tmp, "actions.log") }));
 const EMAIL = "plug-tester@example.com";
 const PASSWORD = "not-a-real-tapo-password-123";
 Object.assign(process.env, { JERICHO_SETTINGS: path.join(tmp, "settings.json"), JERICHO_DATA_DIR: path.join(tmp, "data"), JERICHO_NO_ENV_FILE: "1", TAPO_EMAIL: EMAIL, TAPO_PASSWORD: PASSWORD });

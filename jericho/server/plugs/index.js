@@ -21,7 +21,7 @@ import path from "node:path";
 import { ROOT, settings } from "../config.js";
 import { logAction } from "../logger.js";
 import { isLocalAddress } from "../roku/ecp.js";
-import { arpTable, normalizeMac, scanSubnets } from "../lg/net.js";
+import { arpTable, normalizeMac, pokeSubnets, scanSubnets } from "../lg/net.js";
 import { klapLogin } from "./klap.js";
 import { tpapDiscover, tpapLogin } from "./tpap.js";
 import { cloudDevice, cloudPlugs } from "./cloud.js";
@@ -30,14 +30,20 @@ export const TIP = "Check that it's plugged in and on the same Wi-Fi as this PC 
 const NO_CREDS = "Tapo isn't set up yet: add TAPO_EMAIL and TAPO_PASSWORD to the .env file, then restart me.";
 
 // TP-Link / Tapo MAC prefixes, only used when the account's device list can't be read.
-const TPLINK_OUI = ["84:d8:1b", "e4:fa:c4", "ac:84:c6", "50:c7:bf", "1c:3b:f3", "28:87:ba", "30:de:4b", "3c:52:a1", "40:ed:00", "48:22:54", "54:af:97", "5c:62:8b", "60:a4:b7", "68:ff:7b", "6c:5a:b0", "78:8c:b5", "98:25:4a", "9c:53:22", "a8:42:a1", "b0:19:21", "b0:95:75", "c0:06:c3", "cc:ba:bd", "d8:07:b6", "f0:a7:31", "14:eb:b6", "34:60:f9", "5c:a6:e6", "a0:f3:c1", "b4:b0:24"];
+const TPLINK_OUI = ["58:d8:12", "84:d8:1b", "e4:fa:c4", "ac:84:c6", "50:c7:bf", "1c:3b:f3", "28:87:ba", "30:de:4b", "3c:52:a1", "40:ed:00", "48:22:54", "54:af:97", "5c:62:8b", "60:a4:b7", "68:ff:7b", "6c:5a:b0", "78:8c:b5", "98:25:4a", "9c:53:22", "a8:42:a1", "b0:19:21", "b0:95:75", "c0:06:c3", "cc:ba:bd", "d8:07:b6", "f0:a7:31", "14:eb:b6", "34:60:f9", "5c:a6:e6", "a0:f3:c1", "b4:b0:24"];
 
 // ---- settings: names, aliases and groups ------------------------------------------------------
 export function plugSettings(s = settings) {
   const p = s.plugs || {};
   const devices = (Array.isArray(p.devices) && p.devices.length ? p.devices : [{ name: "Fan", aliases: ["the fan", "fan"] }, { name: "Lamp", aliases: ["the lamp", "my lamp", "lamp"] }])
     .filter((d) => d && String(d.name || "").trim())
-    .map((d) => ({ name: String(d.name).trim(), aliases: [...new Set([String(d.name).trim().toLowerCase(), ...(d.aliases || []).map((a) => String(a).toLowerCase().trim())])].filter(Boolean) }));
+    .map((d) => ({
+      name: String(d.name).trim(),
+      aliases: [...new Set([String(d.name).trim().toLowerCase(), ...(d.aliases || []).map((a) => String(a).toLowerCase().trim())])].filter(Boolean),
+      // optional fixed address (tried first, no scan) and MAC (to find it again if the address changes)
+      ip: typeof d.ip === "string" && /^\d{1,3}(\.\d{1,3}){3}$/.test(d.ip.trim()) ? d.ip.trim() : "",
+      mac: normalizeMac(d.mac),
+    }));
   const groups = (Array.isArray(p.groups) ? p.groups : [])
     .filter((g) => g && g.name && Array.isArray(g.devices))
     // only the aliases listed: "all lights" by default, so a plain "the lights" still means the lights tool
@@ -105,11 +111,13 @@ const defaultDeps = () => ({
   cloudPlugs: (email, password) => cloudPlugs({ email, password }),
   cloudDevice: (plug, email, password) => cloudDevice(plug, { email, password }),
   scan: () => scanSubnets(80),
+  poke: () => pokeSubnets(),
+  settleMs: 2500, // after the sweep, how long ARP replies get to arrive before `arp -a` is read
   arp: arpTable,
 });
 let deps = defaultDeps();
 export function _setPlugDepsForTests(d) {
-  deps = d ? { ...defaultDeps(), login: async () => { throw new PlugError("no fake", "unreachable"); }, cloudPlugs: async () => [], cloudDevice: () => { throw new PlugError("no cloud", "unreachable"); }, scan: async () => [], arp: async () => ({}), ...d } : defaultDeps();
+  deps = d ? { ...defaultDeps(), login: async () => { throw new PlugError("no fake", "unreachable"); }, cloudPlugs: async () => [], cloudDevice: () => { throw new PlugError("no cloud", "unreachable"); }, scan: async () => [], poke: async () => 0, settleMs: 0, arp: async () => ({}), ...d } : defaultDeps();
   sessions.clear();
 }
 
@@ -178,12 +186,16 @@ const safeStep = (err) => (err?.step ? String(err.step) : "connect");
 // ---- discovery ------------------------------------------------------------------------------------
 
 /**
- * Finds the plugs. The Tapo account's plug list gives names, MACs and cloud ids; the network scan
- * (port 80) and the ARP table give IPs. Each named plug is then tried locally, and through the
- * cloud if local control fails. A plug that's on the account is never "not found" just because
- * local login failed: it's found with path "cloud" (or "none" if the cloud fails too).
+ * Finds the plugs, cheapest first:
+ *   1. an address set in settings.json (plugs.devices[].ip) is tried directly, no scan
+ *   2. otherwise (or if that address stopped answering) the local network is swept so the ARP
+ *      table is complete (TCP to port 80 and a UDP poke to every address, a short wait, then
+ *      `arp -a`), and each plug is found by its MAC address: from settings.json, the Tapo
+ *      account's plug list, or the last time it was found. With no MAC known, TP-Link MAC prefixes.
+ *      MACs are compared normalized (Windows' a4-36-c7-..., colons, upper or lower case).
+ *   3. a plug that's on the account but won't take a local login is controlled through the cloud
  * Returns { found: { Name: { ip, mac, model, on, path, localError } }, missing, debug }.
- * debug (when asked): per candidate address, only safe facts.
+ * debug (when asked): every candidate considered, and every login tried (safe facts only).
  */
 export async function discover({ cfg = plugSettings(), env = process.env, debug = false } = {}) {
   const { email, password } = creds(env);
@@ -197,19 +209,21 @@ export async function discover({ cfg = plugSettings(), env = process.env, debug 
     accountError = err.code || "error";
     if (err.code === "auth") throw new PlugError("Tapo didn't accept the email and password in .env.", "auth");
   }
-  const [open, table] = await Promise.all([deps.scan().catch(() => []), deps.arp().catch(() => ({}))]);
-  const macOfIp = (ip) => normalizeMac(table[ip]);
-  const accountMacs = new Set(account.map((a) => normalizeMac(a.mac)).filter(Boolean));
-  const candidates = open.filter((ip) => isLocalAddress(ip) && macOfIp(ip) && (accountMacs.size ? accountMacs.has(macOfIp(ip)) : TPLINK_OUI.includes(macOfIp(ip).slice(0, 8))));
+  const cache = loadCache();
   const report = [];
+  const considered = [];
   const found = {};
-  const tryLocal = async (ip) => {
+  const byName = (n) => account.find((a) => String(a.name).trim().toLowerCase() === n.toLowerCase());
+
+  const triedIps = new Set();
+  const tryLocal = async (ip, mac) => {
+    triedIps.add(ip);
     const trace = [];
-    const entry = { ip, mac: macOfIp(ip) };
+    const entry = { ip, mac };
     try {
       const dev = await limited(deps.login(email, password, ip, { timeoutMs: cfg.timeoutMs, trace }), cfg.timeoutMs * 3);
       const info = await limited(dev.getDeviceInfo(), cfg.timeoutMs);
-      Object.assign(entry, { protocol: dev.protocol || "local", ok: true, nickname: String(info.nickname || "").trim(), on: Boolean(info.device_on), model: String(info.model || "").slice(0, 20) });
+      Object.assign(entry, { protocol: dev.protocol || "local", ok: true, nickname: String(info.nickname || "").trim(), on: Boolean(info.device_on), model: String(info.model || "").slice(0, 20), mac: mac || normalizeMac(info.mac) });
       return { dev, entry, trace };
     } catch (err) {
       Object.assign(entry, { ok: false, failedAt: safeStep(err), reason: err.code || "error", detail: err.message && err.message !== "failed" ? err.message : undefined });
@@ -218,54 +232,106 @@ export async function discover({ cfg = plugSettings(), env = process.env, debug 
       if (debug) report.push({ ...entry, trace });
     }
   };
+  const record = (name, ip, local, extra = {}) => {
+    sessions.set(name, { dev: local.dev, ip, at: Date.now(), path: "local" });
+    found[name] = { ip, mac: local.entry.mac || extra.mac || "", model: local.entry.model || extra.model || "", on: local.entry.on, path: "local", protocol: local.entry.protocol, ...extra, ...(local.entry.mac ? { mac: local.entry.mac } : {}) };
+  };
+  const localErrors = {};
 
-  const wanted = new Map(cfg.devices.map((x) => [x.name.toLowerCase(), x.name]));
-  if (account.length) {
-    // match by the account's names, then find each one's address by MAC
-    for (const a of account) {
-      const name = wanted.get(String(a.name).trim().toLowerCase());
-      if (!name) continue;
-      const mac = normalizeMac(a.mac);
-      const ip = candidates.find((x) => macOfIp(x) === mac) || "";
-      const plug = { ip, mac, model: a.model, deviceId: a.deviceId, appServerUrl: a.appServerUrl };
-      let local = ip ? await tryLocal(ip) : null;
-      if (local?.dev) {
-        sessions.set(name, { dev: local.dev, ip, at: Date.now(), path: "local" });
-        found[name] = { ...plug, on: local.entry.on, path: "local", protocol: local.entry.protocol };
-        continue;
-      }
-      if (local?.err?.code === "auth" && !a.deviceId) throw new PlugError("The plug didn't accept the Tapo email and password in .env.", "auth");
-      // local failed (or no address): the cloud
-      let on = null;
-      let pathUsed = "none";
-      try {
-        const dev = deps.cloudDevice(a, email, password);
-        const info = await limited(dev.getDeviceInfo(), 10_000);
-        on = Boolean(info.device_on);
-        pathUsed = "cloud";
-        sessions.set(name, { dev, ip, at: Date.now(), path: "cloud" });
-      } catch (err) {
-        if (debug) report.push({ ip: ip || "(not on this network)", mac, cloud: "failed", reason: err.code || "error" });
-      }
-      found[name] = { ...plug, on, path: pathUsed, localError: local ? `${local.entry.failedAt}: ${local.entry.reason}` : "no address on this network" };
+  // 1. addresses set in settings.json
+  for (const d of cfg.devices) {
+    if (!d.ip) continue;
+    if (!isLocalAddress(d.ip)) {
+      considered.push({ ip: d.ip, mac: d.mac || "", source: `settings (${d.name})`, match: "skipped: not a home-network address" });
+      continue;
     }
-  } else {
-    // no account list: try the TP-Link devices locally and match by their own names
-    for (const ip of candidates) {
-      const local = await tryLocal(ip);
-      if (local.err?.code === "auth") throw new PlugError("The plug didn't accept the Tapo email and password in .env.", "auth");
-      const name = local.dev && wanted.get(local.entry.nickname.toLowerCase());
-      if (!name) continue;
-      sessions.set(name, { dev: local.dev, ip, at: Date.now(), path: "local" });
-      found[name] = { ip, mac: local.entry.mac, model: local.entry.model, on: local.entry.on, path: "local", protocol: local.entry.protocol };
+    const a = byName(d.name);
+    considered.push({ ip: d.ip, mac: d.mac || a?.mac || "", source: `settings (${d.name})`, match: "set in settings.json" });
+    const local = await tryLocal(d.ip, d.mac || normalizeMac(a?.mac));
+    if (local.dev) record(d.name, d.ip, local, a ? { deviceId: a.deviceId, appServerUrl: a.appServerUrl, model: a.model } : {});
+    else {
+      localErrors[d.name] = `${local.entry.failedAt}: ${local.entry.reason}`;
+      if (local.err?.code === "auth" && !a?.deviceId) throw new PlugError("The plug didn't accept the Tapo email and password in .env.", "auth");
     }
   }
-  const cache = loadCache();
-  for (const [name, v] of Object.entries(found)) cache.plugs[name] = { ip: v.ip, mac: v.mac, model: v.model, ...(v.deviceId ? { deviceId: v.deviceId, appServerUrl: v.appServerUrl } : {}) };
+
+  // 2. the rest: sweep the network so the ARP table is complete, then match by MAC
+  const left = cfg.devices.filter((d) => !found[d.name]);
+  let candidates = [];
+  if (left.length) {
+    const open = await deps.scan().catch(() => []);
+    await deps.poke().catch(() => 0);
+    if (deps.settleMs > 0) await new Promise((r) => setTimeout(r, deps.settleMs)); // let ARP replies arrive
+    const table = await deps.arp().catch(() => ({}));
+    const macOf = (ip) => normalizeMac(table[ip]);
+    const knownMacs = new Map(); // mac -> name
+    for (const d of left) {
+      for (const m of [d.mac, byName(d.name)?.mac, cache.plugs[d.name]?.mac]) if (normalizeMac(m)) knownMacs.set(normalizeMac(m), d.name);
+    }
+    const accountMacs = new Set(account.map((a) => normalizeMac(a.mac)).filter(Boolean));
+    const ips = [...new Set([...Object.keys(table), ...open])].filter((ip) => isLocalAddress(ip)).sort((x, y) => Number(x.split(".")[3]) - Number(y.split(".")[3]));
+    for (const ip of ips) {
+      const mac = macOf(ip);
+      let match = "no";
+      if (!mac) match = "no MAC in the ARP table";
+      else if (knownMacs.has(mac)) match = `MAC of ${knownMacs.get(mac)}`;
+      else if (accountMacs.has(mac)) match = "on the Tapo account (another name)";
+      else if (left.length > knownMacs.size && TPLINK_OUI.includes(mac.slice(0, 8))) match = "TP-Link MAC prefix";
+      const ok = match.startsWith("MAC of") || match === "TP-Link MAC prefix";
+      if (ok || debug) considered.push({ ip, mac: mac || "", source: open.includes(ip) ? "arp + port 80" : "arp", match });
+      if (ok) candidates.push(ip);
+    }
+    for (const d of left) {
+      const a = byName(d.name);
+      const macs = [d.mac, a?.mac, cache.plugs[d.name]?.mac].map(normalizeMac).filter(Boolean);
+      if (macs.length) {
+        const ip = candidates.find((x) => macs.includes(macOf(x)));
+        if (!ip) continue;
+        const local = await tryLocal(ip, macOf(ip));
+        if (local.dev) record(d.name, ip, local, a ? { deviceId: a.deviceId, appServerUrl: a.appServerUrl, model: a.model } : {});
+        else {
+          localErrors[d.name] = `${local.entry.failedAt}: ${local.entry.reason}`;
+          if (local.err?.code === "auth" && !a?.deviceId) throw new PlugError("The plug didn't accept the Tapo email and password in .env.", "auth");
+        }
+      }
+    }
+    // plugs with no MAC known anywhere: try the TP-Link devices and match by their own names
+    const unnamed = cfg.devices.filter((d) => !found[d.name] && ![d.mac, byName(d.name)?.mac, cache.plugs[d.name]?.mac].some((m) => normalizeMac(m)));
+    if (unnamed.length) {
+      const wanted = new Map(unnamed.map((x) => [x.name.toLowerCase(), x.name]));
+      // only addresses that aren't another plug's (by MAC) and weren't tried already
+      for (const ip of candidates) {
+        if (knownMacs.has(macOf(ip)) || triedIps.has(ip) || Object.values(found).some((f) => f.ip === ip)) continue;
+        const local = await tryLocal(ip, macOf(ip));
+        const name = local.dev && wanted.get(local.entry.nickname.toLowerCase());
+        if (name) record(name, ip, local);
+      }
+    }
+  }
+
+  // 3. on the account but no local login: the cloud
+  for (const d of cfg.devices) {
+    if (found[d.name]) continue;
+    const a = byName(d.name);
+    if (!a) continue;
+    const ip = d.ip || "";
+    try {
+      const dev = deps.cloudDevice(a, email, password);
+      const info = await limited(dev.getDeviceInfo(), 10_000);
+      sessions.set(d.name, { dev, ip, at: Date.now(), path: "cloud" });
+      found[d.name] = { ip, mac: normalizeMac(a.mac), model: a.model, deviceId: a.deviceId, appServerUrl: a.appServerUrl, on: Boolean(info.device_on), path: "cloud", localError: localErrors[d.name] || "no address on this network" };
+    } catch (err) {
+      if (debug) report.push({ ip: ip || "(not on this network)", mac: normalizeMac(a.mac), cloud: "failed", reason: err.code || "error" });
+      found[d.name] = { ip, mac: normalizeMac(a.mac), model: a.model, on: null, path: "none", localError: localErrors[d.name] || "no address on this network" };
+    }
+  }
+
+  for (const [name, v] of Object.entries(found)) if (v.path !== "none") cache.plugs[name] = { ip: v.ip, mac: v.mac, model: v.model, ...(v.deviceId ? { deviceId: v.deviceId, appServerUrl: v.appServerUrl } : {}) };
   writeJson(cacheFile(), cache);
+  for (const d of cfg.devices) if (!found[d.name] && localErrors[d.name]) found[d.name] = { ip: d.ip || "", mac: d.mac || "", on: null, path: "none", localError: localErrors[d.name] };
   const missing = plugNames(cfg).filter((n) => !found[n] || found[n].path === "none");
-  logAction("plugs_discovered", { found: Object.values(found).filter((f) => f.path !== "none").length, local: Object.values(found).filter((f) => f.path === "local").length, cloud: Object.values(found).filter((f) => f.path === "cloud").length, missing: missing.length, account: account.length, candidates: candidates.length, ...(accountError ? { accountError } : {}) });
-  return { found, missing, ...(debug ? { debug: report, account: account.map((a) => ({ name: a.name, mac: a.mac, model: a.model, online: a.online })), accountError } : {}) };
+  logAction("plugs_discovered", { found: Object.values(found).filter((f) => f.path !== "none").length, local: Object.values(found).filter((f) => f.path === "local").length, cloud: Object.values(found).filter((f) => f.path === "cloud").length, missing: missing.length, account: account.length, candidates: candidates.length, fromSettings: cfg.devices.filter((d) => d.ip).length, ...(accountError ? { accountError } : {}) });
+  return { found, missing, ...(debug ? { debug: report, considered, account: account.map((a) => ({ name: a.name, mac: normalizeMac(a.mac), model: a.model, online: a.online })), accountError } : {}) };
 }
 
 // ---- talking to one plug ------------------------------------------------------------------------
