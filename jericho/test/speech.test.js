@@ -8,7 +8,7 @@ import { fakeClient, say, use } from "./fake-client.js";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jericho-speech-"));
 const base = JSON.parse(fs.readFileSync(new URL("../settings.json", import.meta.url), "utf8"));
-fs.writeFileSync(path.join(tmp, "settings.json"), JSON.stringify({ ...base, logFile: path.join(tmp, "actions.log") }));
+fs.writeFileSync(path.join(tmp, "settings.json"), JSON.stringify({ ...base, logFile: path.join(tmp, "actions.log"), claude: { ...base.claude, prewarm: true } }));
 process.env.JERICHO_SETTINGS = path.join(tmp, "settings.json");
 process.env.JERICHO_DATA_DIR = path.join(tmp, "data");
 

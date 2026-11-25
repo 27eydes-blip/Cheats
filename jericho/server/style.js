@@ -104,14 +104,14 @@ export async function updateLearning(client, transcript, sessionId) {
     lessons: listLessons().map((l) => l.text),
   };
   try {
-    const useFallbacks = settings.claude?.fallbacks !== false;
+    // A background job: the small model (claude.backgroundModel, else claude.fastModel), which
+    // has no server-side fallback (a refusal just skips this round of learning).
     const response = await client.beta.messages.create({
-      model: settings.claude?.model || "claude-opus-5-5",
-      max_tokens: 6000,
+      model: settings.claude?.backgroundModel || settings.claude?.fastModel || "claude-haiku-5-5",
+      max_tokens: 4000,
       output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
       system: INSTRUCTIONS,
-      messages: [{ role: "user", content: `Current notes:\n${JSON.stringify(current, null, 2)}\n\nConversation:\n${lines}` }],
-      ...(useFallbacks ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {}),
+      messages: [{ role: "user", content: `Current notes:\n${JSON.stringify(current)}\n\nConversation:\n${lines}` }],
     });
     if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
       logAction("learning_skipped", { sessionId, reason: response.stop_reason });

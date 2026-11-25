@@ -213,7 +213,7 @@ test("a refusal or an error on the fast model goes to the strong model", async (
   _resetFastModelForTests();
 });
 
-test("the fast model gets the same cached instructions, low effort, no web search and no fallback", async () => {
+test("the fast model gets its own short cached instructions, everyday tools plus hand_off, low effort, no web search and no fallback", async () => {
   _resetFastModelForTests();
   const client = fakeClient([say("Hi there.")]);
   await new Brain({ client }).handle("shape", "hey how's it going");
@@ -224,8 +224,12 @@ test("the fast model gets the same cached instructions, low effort, no web searc
   assert.ok(!req.tools.some((t) => String(t.type || "").startsWith("web_search")));
   assert.equal(req.fallbacks, undefined);
   assert.equal(req.betas, undefined);
-  // the same tools as the strong model otherwise, so it can recognise a risky request
-  assert.equal(req.tools.filter((t) => t.input_schema).length, toolDefinitions.length);
+  // a fixed everyday set plus hand_off (anything else goes to the strong model), never a risky tool
+  const names = req.tools.map((t) => t.name);
+  assert.ok(names.includes("hand_off") && names.includes("lights") && names.includes("tv"));
+  for (const risky of ["delete_file", "run_command", "claude_code", "make_call", "forget", "write_file"]) assert.ok(!names.includes(risky), risky);
+  assert.ok(names.length < toolDefinitions.length);
+  assert.match(req.system[0].text, /hand_off/);
   assert.equal(req.messages.at(-1).content.at(-1).cache_control.type, "ephemeral");
 });
 

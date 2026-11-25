@@ -1,5 +1,6 @@
 // Instant answers with no Claude call at all, for the obvious commands: the time, the date,
-// volume up/down/mute, and snooze while an alarm is ringing. "Stop" (the kill switch) and
+// volume up/down/mute, snooze while an alarm is ringing, a simple alarm at a clear time, and
+// plain TV commands (power, volume, mute, play/pause, home, back, open a well-known app). "Stop" (the kill switch) and
 // "go to sleep" / "mute" (muting Jericho's mic) are handled even earlier, the same as before.
 // Only whole, plain commands match: anything longer or vaguer goes to Claude as usual.
 // Every action here is in the safe tier and goes through the same tool code (and logs) as
@@ -24,8 +25,73 @@ const VOL_DOWN = new Set(["volume down", "turn the volume down", "turn down the 
 const VOL_MUTE = new Set(["mute the volume", "mute the sound", "mute the pc", "mute the computer", "mute volume", "mute sound", "unmute the volume", "unmute the sound", "unmute the pc", "unmute the computer", "unmute volume", "unmute sound"]);
 const SNOOZE = new Set(["snooze", "snooze it", "snooze the alarm", "snooze alarm", "snooze that"]);
 
-/** { kind: "time" | "date" | "volume" | "snooze", ... } or null when it isn't one of these. */
+// ---- simple alarms: "set an alarm for 7 am", "wake me up at 6:30 tomorrow morning" ----------
+// Only an unambiguous clock time (am/pm, noon, midnight, or a 24-hour time) is handled here;
+// "set an alarm for 7" (morning or evening?), labels or dates go to Claude.
+const ALARM = /^(?:set (?:an |a |my |the )?alarm (?:for |at )|alarm (?:for |at )|wake me(?: up)? at |set (?:an |a )?alarm to )(.+)$/;
+const ALARM_REPEAT = / (every day|daily|each day|every weekday|on weekdays|weekdays)$/;
+const CLOCK = /^(?:(\d{1,2})(?:[:.](\d{2}))? ?(am|pm|a m|p m|in the morning|in the evening|in the afternoon|at night|tonight|o'?clock (?:am|pm|in the morning|at night|tonight))|(\d{1,2})[:.](\d{2})|noon|midnight)$/;
+
+function tidyKeep(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[’‘]/g, "'")
+    .replace(/\b([ap])\.\s?m\.?/g, "$1m")
+    .replace(/[^a-z0-9':. ]+/g, " ")
+    .replace(/\.(?!\d)/g, " ")
+    .replace(FILLER, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function matchAlarm(text) {
+  const t = tidyKeep(text);
+  const m = ALARM.exec(t);
+  if (!m) return null;
+  let when = m[1].trim();
+  let repeat = "once";
+  const r = ALARM_REPEAT.exec(when);
+  if (r) {
+    repeat = /week/.test(r[1]) ? "weekdays" : "daily";
+    when = when.slice(0, r.index).trim();
+  }
+  const c = CLOCK.exec(when);
+  if (!c) return null;
+  // 24-hour times must really be 24-hour ("19:30"), not "7:30" (morning or evening?)
+  if (c[4] && !(+c[4] >= 13 && +c[4] <= 23) && !(c[4].length === 2 && c[4].startsWith("0"))) return null;
+  return { kind: "alarm", time: when.replace(/\ba m\b/, "am").replace(/\bp m\b/, "pm"), repeat };
+}
+
+// ---- the Roku TV: power, volume, mute, play/pause, home/back, open a well-known app ---------
+const TV = "(?:the )?(?:tv|television|roku)";
+const TV_APPS = ["netflix", "youtube", "hulu", "disney plus", "disney", "max", "hbo max", "prime video", "amazon prime", "prime", "spotify", "peacock", "paramount plus", "paramount", "pluto", "tubi", "apple tv", "espn", "sling", "youtube tv", "plex"];
+const TV_RULES = [
+  [new RegExp(`^(?:turn on ${TV}|turn ${TV} on|switch on ${TV}|switch ${TV} on|power on ${TV}|${TV} on)$`), { action: "power_on" }],
+  [new RegExp(`^(?:turn off ${TV}|turn ${TV} off|switch off ${TV}|switch ${TV} off|power off ${TV}|${TV} off)$`), { action: "power_off" }],
+  [new RegExp(`^(?:turn up ${TV}|turn ${TV} up|${TV} volume up|${TV} louder|volume up on ${TV}|turn up the volume on ${TV}|turn the volume up on ${TV}|make ${TV} louder)$`), { action: "volume_up", times: 3 }],
+  [new RegExp(`^(?:turn down ${TV}|turn ${TV} down|${TV} volume down|${TV} quieter|volume down on ${TV}|turn down the volume on ${TV}|turn the volume down on ${TV}|make ${TV} quieter)$`), { action: "volume_down", times: 3 }],
+  [new RegExp(`^(?:mute ${TV}|unmute ${TV}|${TV} mute|${TV} unmute)$`), { action: "mute" }],
+  [new RegExp(`^(?:pause ${TV}|play ${TV}|resume ${TV}|${TV} pause|${TV} play|unpause ${TV}|pause (?:it |the show |the movie )?on ${TV}|resume (?:it )?on ${TV})$`), { action: "press", button: "play_pause" }],
+  [new RegExp(`^(?:${TV} home|go home on ${TV}|home on ${TV}|home screen on ${TV})$`), { action: "press", button: "home" }],
+  [new RegExp(`^(?:${TV} back|go back on ${TV}|back on ${TV})$`), { action: "press", button: "back" }],
+];
+const TV_OPEN = new RegExp(`^(?:open|launch|start|put on|put|go to|switch to) (${TV_APPS.join("|")}) on ${TV}$|^${TV} (${TV_APPS.join("|")})$`);
+
+export function matchTv(text) {
+  const t = tidy(text);
+  if (!t || t.split(" ").length > 9) return null;
+  for (const [re, input] of TV_RULES) if (re.test(t)) return { kind: "tv", input: { ...input } };
+  const o = TV_OPEN.exec(t);
+  if (o) return { kind: "tv", input: { action: "open_app", app: o[1] || o[2] } };
+  return null;
+}
+
+/** { kind: "time" | "date" | "volume" | "snooze" | "alarm" | "tv", ... } or null when it isn't one of these. */
 export function matchQuick(text) {
+  const alarm = matchAlarm(text);
+  if (alarm) return alarm;
+  const tv = matchTv(text);
+  if (tv) return tv;
   const t = tidy(text);
   if (!t || t.split(" ").length > 7) return null;
   if (TIME.has(t)) return { kind: "time" };
@@ -64,6 +130,22 @@ export async function runQuick(match, deps = {}) {
     const r = await tool.run(input, { signal: deps.signal });
     if (!r.ok) return { say: `I couldn't change the volume. ${String(r.error || "").replace(/\.?$/, ".")}`.trim(), tool: "set_volume", input, ok: false };
     return { say: match.mute ? "Okay, mute toggled." : match.step === "up" ? "Turned it up." : "Turned it down.", tool: "set_volume", input, ok: true };
+  }
+  if (match.kind === "alarm") {
+    const tool = deps.tools?.get("set_alarm");
+    if (!tool) return null;
+    const input = { time: match.time, repeat: match.repeat };
+    const r = await tool.run(input, { signal: deps.signal });
+    if (!r?.ok) return null; // Claude can explain or ask
+    const note = r.wakeNote ? " Heads up: the laptop may not wake up for it on its own. Ask me about alarm wake-up for the fix." : "";
+    return { say: `${r.say}${note}`, tool: "set_alarm", input, ok: true };
+  }
+  if (match.kind === "tv") {
+    const tool = deps.tools?.get("tv");
+    if (!tool) return null;
+    const r = await tool.run(match.input, { signal: deps.signal });
+    const say = r?.ok ? r.said || "Done." : String(r?.error || "I couldn't reach the TV.");
+    return { say, tool: "tv", input: match.input, ok: Boolean(r?.ok) };
   }
   if (match.kind === "snooze") {
     const ringing = deps.alarms?.list?.().some((a) => a.state === "ringing");

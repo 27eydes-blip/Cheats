@@ -33,6 +33,8 @@ export function callSettings() {
     defaultCountryCode: "1",
     agentModel: c.agentModel || settings.claude?.model || "claude-opus-5-5",
     agentEffort: c.agentEffort || "low",
+    // The safety screen before any call stays on the strong model, whatever runs the call itself.
+    screenModel: c.screenModel || settings.claude?.model || "claude-opus-5-5",
     language: c.language || settings.speechLang || "en-US",
   };
 }
@@ -236,7 +238,7 @@ export async function screenWithClaude(client, input) {
   const cfg = callSettings();
   try {
     const response = await client.beta.messages.create({
-      model: cfg.agentModel,
+      model: cfg.screenModel,
       max_tokens: 2000,
       output_config: { effort: "low", format: { type: "json_schema", schema: SCREEN_SCHEMA } },
       system:

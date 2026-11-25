@@ -38,7 +38,7 @@
     "routing": "auto",
     "fastModel": "claude-haiku-5-5",
     "fastEffort": "low",
-    "maxHistoryMessages": 40,
+    "maxHistoryMessages": 24,
     "stallApologySeconds": 12,
     "stallAbortSeconds": 40,
     "hardModel": "claude-fable-5-2",
@@ -46,7 +46,12 @@
     "webSearch": true,
     "fallbacks": true,
     "maxToolRounds": 8,
-    "conversationIdleMinutes": 10
+    "conversationIdleMinutes": 10,
+    "maxTokens": 8000,
+    "fastMaxTokens": 2000,
+    "prewarm": false,
+    "backgroundModel": "claude-haiku-5-5",
+    "learnEveryMinutes": 30
   },
   "voice": {
     "provider": "browser",
@@ -121,9 +126,10 @@
       "1"
     ],
     "defaultCountryCode": "1",
-    "agentModel": "claude-opus-5-5",
+    "agentModel": "claude-haiku-5-5",
     "agentEffort": "low",
-    "language": "en-US"
+    "language": "en-US",
+    "screenModel": "claude-opus-5-5"
   },
   "pc": {
     "allowedFolders": [
@@ -154,5 +160,6 @@
     "wakeLeadMinutes": 2,
     "maxRingMinutes": 30
   },
-  "logFile": "logs/actions.log"
+  "logFile": "logs/actions.log",
+  "followUpFilter": true
 }

@@ -106,8 +106,12 @@ test("each request says how it was delivered, so Claude can match mood and pace"
   const client = fakeClient([say("On.")]);
   await new Brain({ client }).handle("e", "lights on quick", {}, { speechMs: 700 });
   assert.match(client.calls[0].messages[0].content.at(-1).text, /\(delivery: 3 words, spoken at about 257 words a minute \(fast\)\)$/);
-  assert.match(client.calls[0].system[0].text, /rushed or fast: the shortest useful answer/);
-  assert.match(client.calls[0].system[0].text, /At most one suggestion per reply/);
+  // a quick request goes to the small model, whose short instructions still match the pace
+  assert.match(client.calls[0].system[0].text, /rushed means a few words/);
+  const strong = fakeClient([say("On.")]);
+  await new Brain({ client: strong }).handle("e2", "lights on quick", {}, { speechMs: 700, route: "always-strong" });
+  assert.match(strong.calls[0].system[0].text, /rushed or fast: the shortest useful answer/);
+  assert.match(strong.calls[0].system[0].text, /At most one suggestion per reply/);
 });
 
 test("fixed replies never repeat the same wording twice in a row", async () => {

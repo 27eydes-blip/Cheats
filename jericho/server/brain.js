@@ -18,6 +18,7 @@ import { describeAction, isRisky, toolDefinitions, tools, validateInput } from "
 import { routeFor, routingMode } from "./router.js";
 import { matchQuick, runQuick } from "./quick.js";
 import { alarms } from "./alarms/manager.js";
+import { isNoise } from "../public/turnfilter.js";
 
 const claudeCfg = settings.claude || {};
 const MODEL = claudeCfg.model || "claude-opus-5-5";
@@ -29,6 +30,16 @@ const IDLE_MS = (claudeCfg.conversationIdleMinutes ?? 10) * 60_000;
 // the last few exchanges (append-only, so earlier reasoning and the cache stay valid until then).
 const MAX_MESSAGES = Math.max(10, Number(claudeCfg.maxHistoryMessages) || 40);
 const WARM_TTL_MS = 4 * 60_000; // the prompt cache lasts 5 minutes
+// Warming the cache on the wake word costs a cache write per model, even when the request then
+// turns out to be local ("what time is it"). Off unless claude.prewarm is true.
+const PREWARM = claudeCfg.prewarm === true;
+// Replies are spoken, so they're short. The caps leave room for thinking and for tool inputs
+// (a file to write, a Claude Code task); the fast model hands over if it ever hits its cap.
+const FAST_MAX_TOKENS = Number(claudeCfg.fastMaxTokens) > 0 ? Number(claudeCfg.fastMaxTokens) : 2000;
+const STRONG_MAX_TOKENS = Number(claudeCfg.maxTokens) > 0 ? Number(claudeCfg.maxTokens) : 8000;
+// Background learning (style, profile, lessons) runs on the small model, at most this often;
+// conversations in between are saved up and learned from together.
+const LEARN_GAP_MS = (Number(claudeCfg.learnEveryMinutes) >= 0 && claudeCfg.learnEveryMinutes !== "" && claudeCfg.learnEveryMinutes != null ? Number(claudeCfg.learnEveryMinutes) : 30) * 60_000;
 // Safety net: if Claude goes quiet this long mid-reply, say sorry; this long, give up cleanly.
 const STALL_APOLOGY_MS = Number(claudeCfg.stallApologySeconds) > 0 ? claudeCfg.stallApologySeconds * 1000 : 12_000;
 const STALL_ABORT_MS = Number(claudeCfg.stallAbortSeconds) > 0 ? claudeCfg.stallAbortSeconds * 1000 : 40_000;
@@ -43,7 +54,6 @@ const SYSTEM = `You are ${name}, a personal voice assistant running on ${owner}'
 - Resolve references from the conversation: "that one", "do it again", "the other room", "turn it back on", "what about tomorrow" all point at what you just discussed.
 - If a word makes no sense, think about what it sounds like ("lites" is "lights"). Your notes list words the mic often gets wrong; when a request shows it was auto-corrected, trust the correction unless it clearly doesn't fit.
 - Ask one short clarifying question only when you genuinely can't tell what they want, or when a wrong guess would matter (a phone call, deleting something). Otherwise make the sensible choice and say what you did.
-- Use your profile of them, lessons, recent conversations and this conversation to work out what vague requests mean ("start it", "the usual", "do that for Maya").
 - Use web_search for current facts you don't know or that change: news, scores, prices, opening hours, a business's phone number. At most three searches per question.
 - The Roku TV: use the tv tool whenever they mention the TV or Roku, or want to watch something on the TV. open_app is for apps on this PC.
 - Alarms: set_alarm, list_alarms, cancel_alarm. Times are US Eastern. After setting one, say the exact day and time from the result's "say", and briefly any wakeNote. Cancelling all alarms is confirmed by the system, like other risky actions.
@@ -97,6 +107,28 @@ const SYSTEM = `You are ${name}, a personal voice assistant running on ${owner}'
 
 Your memories, lessons, profile of them and notes on how they talk are below. They come only from things they said. Use them quietly; don't recite them unless asked.`;
 
+// The small model's own instructions: everyday requests only, short answers, and a hand-off for
+// everything else. Its tools are a fixed everyday set (so its cache stays warm) plus hand_off.
+const FAST_SYSTEM = `You are ${name}, a personal voice assistant on ${owner}'s laptop, talking out loud. You handle quick everyday requests.
+
+- Requests come from speech recognition and may be misheard: pick the most likely meaning from the words, the last few turns and your notes. Resolve "it", "that one", "again" from the conversation.
+- Everything you write is spoken. One or two short sentences, plain words, contractions. No lists, markdown, emoji, symbols, URLs or code. Numbers as they're said ("seven thirty"). Lead with the answer, no filler, don't repeat earlier wording.
+- Match their pace: rushed means a few words; chatty means warm but brief. Follow the reply preferences and lessons in your notes.
+- Use your tools to act, and only say something happened if the tool result says so. The tv tool is the Roku TV; open_app is for this PC. Alarm times are US Eastern: say the day and time from the result's "say".
+- When they correct you ("no, I meant..."), fix it and call save_lesson with a short rule and their exact words.
+- Never store passwords, keys, card numbers or ID numbers.
+- Call hand_off (and say nothing else) when the request needs anything you don't have a tool for (files, commands, phone calls or contacts, Claude Code, web search or current facts, forgetting memories, calendar invites, the morning briefing), or it's a plan, a decision, writing, code, a long explanation, several steps, anything risky, or you're not sure what they want.
+
+Your memories, lessons, profile of them and notes on how they talk are below. Use them quietly.`;
+
+// The small model's everyday tools. Everything else goes through hand_off to the strong model.
+const FAST_TOOLS = new Set(["lights", "music", "set_volume", "media_control", "set_timer", "open_app", "weather", "check_calendar", "calendar_list_events", "remember", "recall", "save_lesson", "set_alarm", "list_alarms", "cancel_alarm", "tv", "list_contacts"]);
+const HAND_OFF = {
+  name: "hand_off",
+  description: "Pass this request to the stronger assistant, which has every tool (files, commands, calls, web search, Claude Code...) and handles complex, risky or unclear requests. Say nothing else.",
+  input_schema: { type: "object", properties: { reason: { type: "string", description: "A few words: why" } }, required: ["reason"], additionalProperties: false },
+};
+
 // Fixed replies, in a few wordings so they don't sound canned.
 const SAYINGS = {
   declined: ["Okay, I won't.", "Got it, I'll leave it.", "No problem, cancelled.", "Okay, not doing that."],
@@ -106,6 +138,7 @@ const SAYINGS = {
   stopped: ["Stopped.", "Okay, stopping everything.", "All stopped.", "Stopped. Nothing's running now."],
   slow: ["Sorry, this is taking a moment.", "Sorry, still working on it.", "Sorry, bear with me a second."],
   stalled: ["Sorry, Claude isn't answering right now. Try again in a moment.", "Sorry, I lost Claude for a second there. Please ask again."],
+  listening: ["Yes?", "I'm listening.", "Go ahead."],
 };
 
 /** A wording from the list, never the same one as last time in this conversation. */
@@ -190,8 +223,9 @@ export function shouldOfferBriefing(now = new Date()) {
 }
 
 /** Tool list sent to Claude: the same every request (per model), so the prompt cache stays warm. */
-function requestTools({ web = true } = {}) {
+function requestTools({ web = true, fast = false } = {}) {
   // Streaming requests: tool inputs stream as they're generated; we validate them ourselves.
+  if (fast) return [...toolDefinitions.filter((d) => FAST_TOOLS.has(d.name)), HAND_OFF].map((d) => ({ ...d, eager_input_streaming: true }));
   const list = toolDefinitions.map((d) => ({ ...d, eager_input_streaming: true }));
   // Web search only on the strong model (searches are routed there).
   if (web && claudeCfg.webSearch !== false && !webSearchUnavailable) list.push(WEB_SEARCH);
@@ -208,6 +242,9 @@ const CALL_TOOLS = new Set(["make_call", "call_owner"]);
 
 // When the small model fails (unknown model, overloaded), the strong one takes over for a while.
 let fastBrokenUntil = 0;
+// Background learning: saved-up transcripts and when it last ran (see conversationEnded).
+let learnBuffer = [];
+let lastLearnAt = 0;
 
 /** Applies the learned "mic hears X, user meant Y" list from style.json. */
 export function applyMishearings(text) {
@@ -321,11 +358,20 @@ export class Brain {
     const s = this.session(sessionId);
     const { text: corrected, fixes } = applyMishearings(text);
     logAction("request", { sessionId, text, ...(fixes.length ? { corrected, fixes } : {}) });
-    // The obvious commands (time, date, volume, snooze) are answered here, with no Claude call.
+    // "Um", "hmm": nothing to answer, so no Claude call.
+    if (!s.pending && isNoise(corrected)) {
+      turn.route = "local";
+      turn.hooks.onMark?.("route", "local");
+      logAction("noise_ignored", { sessionId });
+      return this.#finishTurn(turn, this.#say(turn, pick(s, "listening")));
+    }
+    // The obvious commands (time, date, volume, snooze, simple alarms, the TV) are answered
+    // here, with no Claude call.
     if (!s.pending) {
       const quick = await this.#quick(s, turn, corrected, text);
       if (quick) return this.#finishTurn(turn, quick);
     }
+    s.learnable = true; // this conversation reached Claude: worth learning from
     const hard = looksHard(corrected) || isBriefingRequest(corrected);
     const routed = Date.now() < fastBrokenUntil ? { route: "strong", reason: "fast model unavailable" } : routeFor(corrected, { mode: routingMode(meta.route, claudeCfg.routing), pending: Boolean(s.pending), hard });
     turn.route = routed.route;
@@ -402,8 +448,9 @@ export class Brain {
     return this.#finishTurn(turn, await this.#loop(sessionId, s, turn));
   }
 
-  /** Warm the prompt cache when the wake word is heard, so the first reply starts sooner. */
+  /** Warm the prompt cache when the wake word is heard, so the first reply starts sooner (claude.prewarm). */
   async prewarm(sessionId) {
+    if (!PREWARM) return false;
     const s = this.session(sessionId);
     if (s.messages.length > 0 || Date.now() - s.warmAt < WARM_TTL_MS) return false;
     s.warmAt = Date.now();
@@ -421,12 +468,30 @@ export class Brain {
     }
   }
 
-  /** The page says the conversation ended: learn from it with one small Claude call. */
-  conversationEnded(sessionId) {
+  /**
+   * The page says the conversation ended: learn from it with one small-model call. Conversations
+   * that never reached Claude (only the time, the TV, an alarm) are skipped; the call runs at most
+   * every claude.learnEveryMinutes, and conversations in between are learned from together.
+   */
+  conversationEnded(sessionId, now = Date.now()) {
     const s = this.sessions.get(sessionId);
     if (!s || !s.transcript.some((t) => t.who === "user")) return false;
     const transcript = s.transcript.splice(0);
-    updateStyle(this.client, transcript, sessionId); // in the background
+    const learnable = s.learnable;
+    s.learnable = false;
+    if (!learnable) {
+      logAction("learning_skipped", { sessionId, reason: "local commands only" });
+      return false;
+    }
+    learnBuffer = [...learnBuffer, ...transcript].slice(-40);
+    if (now - lastLearnAt < LEARN_GAP_MS) {
+      logAction("learning_queued", { sessionId, lines: learnBuffer.length });
+      return true;
+    }
+    lastLearnAt = now;
+    const batch = learnBuffer;
+    learnBuffer = [];
+    updateStyle(this.client, batch, sessionId); // in the background
     return true;
   }
 
@@ -623,8 +688,10 @@ export class Brain {
         // Second lock: the small model never runs, or asks a yes for, a risky action. Its answer
         // is dropped (not added to the history) and the strong model redoes this step.
         const riskyAsk = response.content.some((b) => b.type === "tool_use" && isRisky(b.name, b.input));
-        if (riskyAsk || response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
-          this.#escalate(turn, riskyAsk ? "risky action" : response.stop_reason);
+        // hand_off, or a tool it doesn't have: the strong model takes it from here
+        const handOff = response.content.some((b) => b.type === "tool_use" && (b.name === HAND_OFF.name || !FAST_TOOLS.has(b.name)));
+        if (riskyAsk || handOff || response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
+          this.#escalate(turn, riskyAsk ? "risky action" : handOff ? "handed off" : response.stop_reason);
           round--;
           continue;
         }
@@ -715,14 +782,14 @@ export class Brain {
     if (route === "fast") {
       return {
         model: FAST_MODEL,
-        max_tokens: 8000,
+        max_tokens: FAST_MAX_TOKENS,
         output_config: { effort: claudeCfg.fastEffort || "low" },
         system: [
-          { type: "text", text: SYSTEM },
+          { type: "text", text: FAST_SYSTEM },
           { type: "text", text: s.context, cache_control: { type: "ephemeral" } },
         ],
-        // Same tools (so it can recognise a risky request and hand it over), minus web search.
-        tools: requestTools({ web: false }),
+        // The everyday tools plus hand_off (anything else goes to the strong model), no web search.
+        tools: requestTools({ fast: true }),
         messages,
         // No server-side fallback on the small model: a refusal hands the step to the strong model.
       };
@@ -730,7 +797,7 @@ export class Brain {
     const useFallbacks = claudeCfg.fallbacks !== false;
     return {
       model: MODEL,
-      max_tokens: 16000,
+      max_tokens: STRONG_MAX_TOKENS,
       // Short spoken replies: low effort keeps latency down. Hard questions go to deep_think.
       output_config: { effort: claudeCfg.effort || "low" },
       system: [
@@ -833,3 +900,12 @@ function friendlyApiError(err) {
 export function _resetFastModelForTests() {
   fastBrokenUntil = 0;
 }
+
+/** Tests only: forget when background learning last ran, and anything saved up for it. */
+export function _resetLearningForTests() {
+  learnBuffer = [];
+  lastLearnAt = 0;
+}
+
+/** For tests and the README: the fast model's tool names. */
+export const FAST_TOOL_NAMES = [...FAST_TOOLS];
