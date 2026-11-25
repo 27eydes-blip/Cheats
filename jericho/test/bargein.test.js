@@ -237,7 +237,7 @@ test("a stray interruption doesn't cancel a running tool", async () => {
   slowRuns = 0;
   const client = fakeClient([use("t1", "slow_tool", {}), say("Okay.")]);
   const brain = new Brain({ client });
-  const p = brain.handle("b2", "do the slow thing");
+  const p = brain.handle("b2", "do the slow thing", {}, { route: "always-strong" }); // slow_tool is a test tool the small model doesn't have
   await new Promise((r) => setTimeout(r, 30));
   brain.interrupt("b2");
   // the next request waits for the tool to finish, so the history stays in order

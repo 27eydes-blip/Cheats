@@ -12,7 +12,7 @@ export const ROUTING_MODES = ["auto", "always-strong"];
 // Words that hint at a risky action (files, commands, Claude Code, calls, messages, invites,
 // forgetting, system changes): always the strong model.
 const RISKY =
-  /\b(delete|deleting|remove|erase|trash|recycle|move|moving|rename|copy|write|writing|save|create|edit|overwrite|run|execute|command|terminal|powershell|cmd|script|install|uninstall|claude code|code|coding|program|build|deploy|commit|push|call|calling|phone|dial|text|sms|email|e-?mail|send|post|tweet|message|invite|meeting|forget|wipe|clear|cancel|password|key|registry|settings|setting|admin|shut ?down|restart|reboot|format|file|files|folder|clipboard|buy|order|pay|book|reservation|appointment)\b/i;
+  /\b(delete|deleting|remove|erase|trash|recycle|move|moving|rename|copy|write|writing|save|create|edit|overwrite|run|execute|command|terminal|powershell|cmd|script|install|uninstall|claude code|code|coding|program|build|deploy|commit|push|call|calling|phone|dial|text|sms|email|e-?mail|send|post|tweet|message|invite|meeting|forget|wipe|clear|cancel|password|key|registry|settings|setting|admin|shut ?down|restart|reboot|format|file|files|folder|folders|desktop|documents|downloads|pc|computer|laptop|clipboard|buy|order|pay|book|reservation|appointment)\b/i;
 
 // Complex work: plans, reasoning, writing, research, current events.
 const COMPLEX =
