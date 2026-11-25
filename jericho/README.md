@@ -153,6 +153,52 @@ Changes between states always ease in, never snap.
 - **Live HUD:** the time and date, the current weather (same Open-Meteo data as the weather tool) and your next calendar event (same iCal link as the calendar tools), refreshed every 5 minutes. A readout that can't be fetched just stays hidden. On phones it collapses to the time.
 - **Power on:** the page opens with a single **Tap to power on** prompt (the orb waits as a point of light). That tap plays the power-up, made live with Web Audio (no sound files): a low hum rising for about 2 seconds, rising tones as the rings spin up, a bright metallic chime exactly when the orb flashes, then a soft idle hum. The hieroglyphs light up and the wordmark carves in alongside it. A reload within 10 minutes gets a shorter version. Settings panel (sun icon): **Startup animation**, **Power-up sound**, **Sound volume**, **Idle hum**. With reduced motion only the sound plays.
 
+## Planner (calendar and homework)
+
+Press **Planner** at the top of the main page, or say "open my planner". It opens over the voice
+page, so Jericho keeps listening; on a phone it's also at `/planner`. Week view by default, with
+**Day** and **Month**, in the same gold look:
+
+- **Tap an empty slot** to add homework, an event or test, a study block or a weekly class.
+  **Drag** anything to move it (homework moves its due day). **Tap homework** to check it off.
+  Tap an event to rename, re-time or delete it (the page asks first).
+- **Overdue homework glows red.** Free time is shaded gold. Items from your calendar link are
+  dashed and read-only.
+- **This week** sidebar: homework by due date (overdue first), hours of work left, and free
+  hours per day. **Plan my week** drafts study blocks; **Accept plan** or **Reject plan**, or drag a
+  draft first. Tapping one draft keeps or drops just that one.
+- It updates live when Jericho changes something by voice, and stays light: plain page, one
+  redraw per change, no animation loops.
+
+By voice (all in America/Detroit):
+
+| Say | What happens |
+|---|---|
+| "I have a physics test Friday" | an all-day test on Friday (add a time for a timed one) |
+| "Add 40 minutes of accounting homework due tomorrow" | homework due 11:59 PM tomorrow, 40 minutes; without an estimate it guesses 30 and says so |
+| "Calc is Monday Wednesday Friday 9 to 9:50, History Tuesday Thursday 1 to 2:15" | your weekly classes (`set_classes`; "replace my schedule" swaps the whole thing) |
+| "What do I have this week" / "what's due tomorrow" | answered locally, no Claude call |
+| "When am I free Thursday for 90 minutes?" | free stretches of at least 90 minutes |
+| "I finished the accounting homework" / "move my physics test to Monday" | checked off / moved |
+| "Plan my week" | draft study blocks before each due date (never saved as real until you accept) |
+| "Accept the plan" / "drop the physics blocks" | keeps or removes the drafts |
+| "Delete the dentist from my planner" | asks for a yes first |
+
+If a day is ambiguous ("next Friday" on a Monday, or "Wednesday" when today is Wednesday),
+Jericho asks one short question ("Do you mean Friday, November 27, or Friday, December 4?"). If
+two items match ("the physics one"), he asks which.
+
+- **Free time** = waking hours (`planner.wakeStart` to `wakeEnd`, 7 AM to 10 PM) minus classes,
+  timed events, your calendar's events and accepted study blocks; gaps under 15 minutes don't
+  count. "Plan my week" fills it with chunks of up to 60 minutes (`planner.studyChunkMinutes`),
+  a 10 minute break after each, at most two chunks of one assignment a day, all before the due
+  time, and says if there isn't enough room.
+- **Your calendar** (`CALENDAR_ICS_URL`) is merged in, marked "calendar", and only ever read.
+- **Data:** `data/planner.json`, git-ignored and local only. The page and its `/api/planner`
+  routes need the access token like the rest of the app. The action log records what changed
+  (type and id), never titles.
+- **Morning briefing** now adds homework due today and tomorrow, and today's free time.
+
 ## Knowledge folder
 
 Drop any notes or documents into `data/notes/` (git-ignored, like the rest of `data/`): `.txt`,
@@ -646,7 +692,7 @@ bookings is the ordinary case, but check what applies where you live.
 
 - **Web search:** ask about news, scores, prices or opening hours. Jericho searches (at most 3 searches per question), answers briefly and names the source out loud ("according to ESPN"). It never reads links aloud: they appear as buttons under the answer in the chat panel. If web search isn't enabled for your API key, Jericho says so and carries on without it (turn it on in the Anthropic Console, under privacy settings).
 - **Wake word:** "Jericho", "Jer", the misheard spellings, and the same with "hey", "hi", "ok" or "okay" in front ("hey jericho", "hey jer", "okay jericho"). The greeting and wake word are removed before your request reaches the brain.
-- **Morning briefing:** say "good morning", "morning briefing" or "brief me". You get your calendar (today, plus tomorrow's first event), the weather, and the direction of S&P 500, Nasdaq and Dow futures plus Bitcoin, in under 45 seconds, plus a Briefing card in the chat panel. Each part is fetched separately and cached for 5 minutes; if one fails, Jericho skips it and says so. Market moves are information only, not advice.
+- **Morning briefing:** say "good morning", "morning briefing" or "brief me". You get your calendar (today, plus tomorrow's first event), homework due today and tomorrow with your free time, the weather, and the direction of S&P 500, Nasdaq and Dow futures plus Bitcoin, in under 45 seconds, plus a Briefing card in the chat panel. Each part is fetched separately and cached for 5 minutes; if one fails, Jericho skips it and says so. Market moves are information only, not advice.
   - Calendar: put your calendar's private iCal link in `.env` as `CALENDAR_ICS_URL` (see `.env.example`). It's read-only, needs no sign-in, and the link is never spoken or logged.
   - Weather: Open-Meteo (free, no key). Set `location` in `settings.json` (default Birmingham, Michigan).
   - Markets: Yahoo Finance, with Stooq and CoinGecko as fallbacks.
@@ -799,6 +845,7 @@ None of these are secret. Keys live only in `.env`.
 | `claude.maxHistoryMessages` | After this many messages (default 24), the conversation starts fresh with a short recap. |
 | `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 16000 for the strong model (room for a researched file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway, and you only pay for what's written. |
 | `claude.maxToolRounds` | How many tool steps one request may chain on its own (default 15). |
+| `planner` | `timezone` (America/Detroit), `wakeStart` / `wakeEnd` (07:00 / 22:00), `weekStartsOn` (1 = Monday), `studyChunkMinutes` (60), `breakMinutes` (10), `minFreeBlockMinutes` (15). |
 | `pc.trusted` | The trusted tier: `enabled` (false), extra `folders`, `apps`, and `commands` that run without a yes. See Controlling your PC. |
 | `claude.prewarm` | `false` (default): no Claude call when the wake word is heard. `true` warms the prompt cache for a slightly faster first reply, at the cost of a cache write per model each time. |
 | `claude.backgroundModel` / `claude.learnEveryMinutes` | Learning your style and profile after a conversation runs on `claude-haiku-5-5`, at most every 30 minutes (conversations in between are learned from together), and never for conversations that were only local commands. |
@@ -869,6 +916,9 @@ server/tools/placeholders.js  calendar + music stubs
 server/tools/memory.js    remember / recall / forget tools
 server/memory.js          data/memory.json + data/style.json (read, save, delete, wipe)
 server/knowledge.js       the knowledge folder: index data/notes, search it, "remember this"
+server/planner/           the Planner: store (data/planner.json), dates (Detroit parsing),
+                          engine (free time, study plans), index (tools and page actions)
+public/planner.*          the Planner page (planner.html, .css, .js; plannerlayout.js helpers)
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
 server/secrets.js         detects passwords, keys, card and ID numbers
 server/speech.js          sentence splitter + clean-up for natural speech
