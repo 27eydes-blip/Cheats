@@ -115,7 +115,7 @@ test("each request says how it was delivered, so Claude can match mood and pace"
 });
 
 test("fixed replies never repeat the same wording twice in a row", async () => {
-  const client = fakeClient(Array.from({ length: 6 }, (_, i) => use(`t${i}`, "claude_code", { folder: "x", task: "y" })));
+  const client = fakeClient(Array.from({ length: 6 }, (_, i) => use(`t${i}`, "run_command", { command: "echo hi" })));
   const brain = new Brain({ client });
   const replies = [];
   for (let i = 0; i < 6; i++) {

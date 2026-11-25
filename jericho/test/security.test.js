@@ -116,13 +116,12 @@ test("symlinks can't escape the allowed folders, even through folders that don't
   for (const p of ["C:\\Users\\me\\Desktop\\notes.txt", "Desktop/my~notes.txt", "\\\\?\\C:\\Users\\a.txt"]) assert.equal(hasWindowsPathTricks(p), false, p);
 });
 
-test("cancelling several alarms needs a yes however it's worded; the TV check can't be fooled by leading zeros", async () => {
+test("cancelling alarms is your own data (no yes); the TV check can't be fooled by leading zeros", async () => {
   alarms.clock = () => new Date("2026-11-23T14:00:00Z");
   await alarms.set({ time: "7am", label: "meds" });
   await alarms.set({ time: "8am", label: "gym" });
   await alarms.set({ time: "9am", label: "dentist" });
-  assert.equal(isRisky("cancel_alarm", { which: "e" }), true, "matches several labels");
-  assert.equal(tools.get("cancel_alarm").confirmPrompt({ which: "e" }), "Should I cancel 2 alarms?", "meds and dentist");
+  assert.equal(isRisky("cancel_alarm", { which: "e" }), false, "several labels, still your own alarms");
   assert.equal(isRisky("cancel_alarm", { which: "gym" }), false, "just one");
   assert.equal(isRisky("cancel_alarm", { which: "2" }), false);
   for (const ip of ["010.0.0.1", "192.168.01.5", "0192.168.1.5"]) assert.equal(isLocalAddress(ip), false, ip);

@@ -16,7 +16,10 @@ const RISKY =
 
 // Complex work: plans, reasoning, writing, research, current events.
 const COMPLEX =
-  /\b(plan|planning|decide|decision|should i|compare|comparison|pros and cons|trade-?offs?|strategy|figure out|work out|think|step by step|prioriti[sz]e|budget|schedule|explain|why|analy[sz]e|summari[sz]e|review|debug|fix|essay|story|poem|letter|draft|research|search|look up|google|news|latest|today's|price|stock|stocks|market|score|who won|briefing|brief me|good morning|translate|recipe|learn|lesson|remember|recall|memory|what have you learned)\b/i;
+  /\b(plan|planning|decide|decision|should i|compare|comparison|pros and cons|trade-?offs?|strategy|figure out|work out|think|step by step|prioriti[sz]e|budget|schedule|explain|why|analy[sz]e|summari[sz]e|review|debug|fix|essay|story|poem|letter|draft|research|search|look up|google|news|latest|today's|price|stock|stocks|market|score|who won|briefing|brief me|good morning|translate|recipe|learn|lesson|remember|recall|memory|what have you learned|notes?|what do you know)\b/i;
+
+// Several steps in one request ("look it up, then save it", "and then open it"): the strong model.
+const CHAINED = /\b(and then|then (?:open|save|write|send|put|make|email|text|play|start|run|read|tell)|after that|once (?:that's|it's|you're) done|and (?:save|write|open|put) (?:it|that|them|the))\b/i;
 
 // The everyday stuff the small model handles well.
 const SIMPLE = [
@@ -46,6 +49,7 @@ export function routeFor(text, { mode = "auto", pending = false, hard = false } 
   if (pending) return { route: "strong", reason: "a confirmation is waiting" };
   if (n === 0) return { route: "strong", reason: "empty" };
   if (RISKY.test(t)) return { route: "strong", reason: "might need a risky action" };
+  if (CHAINED.test(t)) return { route: "strong", reason: "several steps" };
   if (hard || COMPLEX.test(t)) return { route: "strong", reason: "complex" };
   if (n > 14) return { route: "strong", reason: "long request" };
   if (SIMPLE.some((re) => re.test(t))) return { route: "fast", reason: "simple request" };

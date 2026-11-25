@@ -65,7 +65,7 @@ test("spoken replies get sensible token caps", async () => {
   assert.equal(fast.calls[0].max_tokens, 2000);
   const strong = fakeClient([say("Here's a plan.")]);
   await new Brain({ client: strong }).handle("cap2", "help me plan my week so I can fit in the gym and still finish the report");
-  assert.equal(strong.calls[0].max_tokens, 8000);
+  assert.equal(strong.calls[0].max_tokens, 16000);
 });
 
 test("prompt caching: stable instructions first and cached, the changing request last", async () => {

@@ -30,6 +30,7 @@ const policy = await import("../server/pc/policy.js");
 const { Brain } = await import("../server/brain.js");
 const { isKillPhrase, runningCount } = await import("../server/cancel.js");
 const { resolveProjectFolder } = await import("../server/tools/claudeCode.js");
+const { isRisky } = await import("../server/tools/index.js");
 const log = () => fs.readFileSync(path.join(tmp, "actions.log"), "utf8");
 const lastResult = (client) => client.calls.at(-1).messages.at(-1).content[0];
 
@@ -103,16 +104,17 @@ test("safe tier runs at once; secret lines are hidden; blocked paths are refused
   assert.ok(!names.includes(".env") && !names.includes(".ssh"), "secret files aren't even listed");
 });
 
-test("confirm tier: write reads back exactly what will happen, and nothing happens before yes", async () => {
+test("your own files: writing runs straight away, and an overwritten file is backed up first", async () => {
   const target = path.join(Documents, "todo.txt");
-  const client = fakeClient([use("t1", "write_file", { path: "Documents/todo.txt", content: "milk\neggs" }), say("Written.")]);
+  const client = fakeClient([use("t1", "write_file", { path: "Documents/todo.txt", content: "milk\neggs" }), say("Written."), use("t2", "write_file", { path: "Documents/todo.txt", content: "bread" }), say("Replaced.")]);
   const brain = new Brain({ client });
   const r = await brain.handle("w", "make a todo list with milk and eggs");
-  assert.equal(r.awaitingConfirmation, true);
-  assert.match(r.reply, new RegExp(`Should I create ${path.join("Documents", "todo.txt").replace(/\\/g, "\\\\")} with 2 lines\\? It starts: "milk"\\. Say yes to confirm\\.`));
-  assert.equal(fs.existsSync(target), false, "not written before yes");
-  await brain.confirm("w", "yes");
+  assert.equal(r.awaitingConfirmation, false, "no yes for your own files");
   assert.equal(fs.readFileSync(target, "utf8"), "milk\neggs");
+  await brain.handle("w", "replace my todo list with bread");
+  assert.equal(fs.readFileSync(target, "utf8"), "bread");
+  const backups = fs.readdirSync(path.join(tmp, "data", "backups"));
+  assert.ok(backups.some((f) => f.endsWith("todo.txt") && fs.readFileSync(path.join(tmp, "data", "backups", f), "utf8") === "milk\neggs"), "the old version is kept");
   assert.doesNotMatch(log(), /milk\\neggs/, "the file's text isn't in the log");
   assert.match(log(), /"content":"\[9 characters\]"/);
 });
@@ -158,14 +160,17 @@ test("run_command: exact read-back, runs after yes, and never sees Jericho's key
   assert.doesNotMatch(log(), /sk-ant-test/);
 });
 
-test("Claude Code: named project folders inside the allowed folders; starting needs a yes", async () => {
+test("Claude Code: named project folders inside the allowed folders; your projects need no yes", async () => {
   assert.equal(resolveProjectFolder("Desktop/site"), path.join(Desktop, "site"));
   assert.throws(() => resolveProjectFolder("../../etc"));
   assert.throws(() => resolveProjectFolder("/etc"));
-  const client = fakeClient([use("t1", "claude_code", { folder: "Desktop/site", task: "make a page" })]);
-  const r = await new Brain({ client }).handle("cc", "build a page in Desktop/site");
-  assert.equal(r.awaitingConfirmation, true);
-  assert.match(r.reply, /Should I run Claude Code in the "Desktop\/site" folder to: make a page\?/);
+  assert.equal(isRisky("claude_code", { folder: "Desktop/site", task: "make a page" }), false);
+  assert.equal(isRisky("claude_code", { folder: "todo-app", task: "x" }), false);
+  // a folder outside the allowed ones is refused when it runs, never started
+  const client = fakeClient([use("t1", "claude_code", { folder: "/etc", task: "x" }), say("Can't.")]);
+  const r = await new Brain({ client }).handle("cc", "build something in etc");
+  assert.equal(r.awaitingConfirmation, false);
+  assert.match(client.calls[1].messages.at(-1).content[0].content, /Error:/);
 });
 
 test("kill switch: exact phrases only", () => {
@@ -182,11 +187,12 @@ test("kill switch: stops a running command and a timer, and clears waiting confi
   const running = brain.confirm("k", "yes");
   await new Promise((r) => setTimeout(r, 300));
   // and a timer, and another conversation waiting on a yes
-  const c2 = fakeClient([use("t2", "set_timer", { minutes: 5, label: "tea" }), say("Timer set."), use("t3", "write_file", { path: "Desktop/x.txt", content: "x" })]);
+  const c2 = fakeClient([use("t2", "set_timer", { minutes: 5, label: "tea" }), say("Timer set."), use("t3", "delete_file", { path: "Desktop/x.txt" })]);
+  fs.writeFileSync(path.join(Desktop, "x.txt"), "x");
   const brain2 = brain; // same brain, other session
   brain2.client = c2;
   await brain2.handle("k2", "tea timer");
-  await brain2.handle("k3", "write x");
+  await brain2.handle("k3", "delete x");
   assert.ok(runningCount() >= 2, "command + timer registered");
 
   const result = brain.stopAll("k");
@@ -196,7 +202,7 @@ test("kill switch: stops a running command and a timer, and clears waiting confi
   await running;
   assert.ok(Date.now() - t0 < 4000, "the 8 second command was stopped");
   assert.match(log(), /"type":"kill_switch"/);
-  assert.equal(fs.existsSync(path.join(Desktop, "x.txt")), false);
+  assert.equal(fs.existsSync(path.join(Desktop, "x.txt")), true, "the waiting delete never ran");
 });
 
 test("'Jericho, stop' typed or sent to the server is the kill switch too", async () => {

@@ -45,9 +45,9 @@
     "hardEffort": "high",
     "webSearch": true,
     "fallbacks": true,
-    "maxToolRounds": 8,
+    "maxToolRounds": 15,
     "conversationIdleMinutes": 10,
-    "maxTokens": 8000,
+    "maxTokens": 16000,
     "fastMaxTokens": 2000,
     "prewarm": false,
     "backgroundModel": "claude-haiku-5-5",
@@ -140,7 +140,31 @@
     ],
     "commandTimeoutSeconds": 60,
     "maxReadKB": 200,
-    "apps": {}
+    "apps": {},
+    "trusted": {
+      "enabled": false,
+      "folders": [
+        "~/Pictures",
+        "~/Music",
+        "~/Videos",
+        "~/source",
+        "~/projects"
+      ],
+      "apps": {},
+      "commands": [
+        "git status",
+        "git log",
+        "git diff",
+        "git pull",
+        "npm test",
+        "npm run",
+        "npm install",
+        "node --version",
+        "python --version",
+        "dir",
+        "ls"
+      ]
+    }
   },
   "location": {
     "name": "Birmingham, Michigan",

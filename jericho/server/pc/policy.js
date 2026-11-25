@@ -2,8 +2,9 @@
 // inside each tool. Three tiers:
 //   safe    - runs straight away (open an app or a web page, volume, media keys, timers,
 //             clipboard, list/read/search files in the allowed folders)
+//   (also safe: write and move files in the allowed folders; an overwritten file is backed up)
 //   confirm - read back exactly what will happen, then needs your spoken yes
-//             (write, move, delete to the Recycle Bin, run a command, anything that sends or posts)
+//             (delete to the Recycle Bin, run a command, anything that sends, posts or calls)
 //   blocked - never: paths outside pc.allowedFolders, system/registry/security changes,
 //             reading .env or anything that holds secrets
 import fs from "node:fs";
@@ -14,14 +15,44 @@ import { expandHome, ROOT, settings } from "../config.js";
 const isWin = process.platform === "win32";
 const CHEATS = path.resolve(ROOT, ".."); // the folder Jericho lives in (Cheats)
 
+/**
+ * pc.trusted (off by default): when enabled, its extra folders and apps are added, and commands
+ * that start with one of its `commands` run without a yes. The blocked lists, secret files, the
+ * kill switch and the action log apply exactly as before.
+ */
+export function trustedSettings() {
+  const t = settings.pc?.trusted || {};
+  return {
+    enabled: t.enabled === true,
+    folders: Array.isArray(t.folders) ? t.folders : [],
+    apps: t.apps && typeof t.apps === "object" ? t.apps : {},
+    commands: Array.isArray(t.commands) ? t.commands.map((c) => String(c).trim()).filter(Boolean) : [],
+  };
+}
+
 export function pcSettings() {
   const pc = settings.pc || {};
+  const trusted = trustedSettings();
+  const folders = pc.allowedFolders || ["~/Desktop", "~/Documents", "~/Downloads", "{cheats}"];
   return {
-    allowedFolders: pc.allowedFolders || ["~/Desktop", "~/Documents", "~/Downloads", "{cheats}"],
+    allowedFolders: trusted.enabled ? [...folders, ...trusted.folders] : folders,
     commandTimeoutSeconds: pc.commandTimeoutSeconds ?? 60,
     maxReadKB: pc.maxReadKB ?? 200,
-    apps: pc.apps || {},
+    apps: trusted.enabled ? { ...(pc.apps || {}), ...trusted.apps } : pc.apps || {},
+    trusted: trusted.enabled,
   };
+}
+
+/**
+ * A command the trusted tier lets run without a yes: it starts with one of pc.trusted.commands
+ * (a whole word boundary after it), has no chaining, redirection or substitution, and isn't blocked.
+ */
+export function isTrustedCommand(command) {
+  const t = trustedSettings();
+  const c = String(command || "").trim();
+  if (!t.enabled || !c || !checkCommand(c).ok) return false;
+  if (/[;&|<>`$\n]|\$\(/.test(c)) return false;
+  return t.commands.some((p) => c === p || (c.startsWith(p) && /\s/.test(c[p.length])));
 }
 
 function expand(p) {

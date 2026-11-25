@@ -223,8 +223,8 @@ test("cancel by number, label or all; leftover wake tasks are cleaned up", async
   assert.deepEqual(calls.at(-1), ["remove", 99], "a task with no alarm behind it is removed");
 });
 
-test("tools: cancelling all needs a yes; one alarm doesn't", () => {
-  assert.equal(isRisky("cancel_alarm", { which: "all" }), true);
+test("tools: your own alarms are set and cancelled with no yes, even all of them", () => {
+  assert.equal(isRisky("cancel_alarm", { which: "all" }), false);
   assert.equal(isRisky("cancel_alarm", { which: "2" }), false);
   assert.equal(isRisky("set_alarm", { time: "7" }), false);
   for (const name of ["set_alarm", "list_alarms", "cancel_alarm"]) assert.ok(tools.has(name), name);
@@ -242,10 +242,10 @@ test("set_alarm through the brain: Jericho is handed the exact day and time to s
   assert.match(result.say, /^Alarm set for (today|tomorrow|[A-Z][a-z]+day), .* at 6:45 AM, and every weekday after that, labelled gym\.$/);
   const { alarms } = await import("../server/alarms/manager.js");
   assert.equal(alarms.list().length, 1);
-  // cancelling all asks first
-  const client2 = fakeClient([use("a2", "cancel_alarm", { which: "all" })]);
+  // cancelling all just does it, and the result says what was cancelled
+  const client2 = fakeClient([use("a2", "cancel_alarm", { which: "all" }), say("Cancelled.")]);
   const r2 = await new Brain({ client: client2 }).handle("al2", "cancel all my alarms");
-  assert.equal(r2.awaitingConfirmation, true);
-  assert.match(r2.reply, /cancel your only alarm\?/);
-  assert.equal(alarms.list().length, 1, "nothing cancelled before the yes");
+  assert.equal(r2.awaitingConfirmation, false);
+  assert.equal(alarms.list().length, 0);
+  assert.match(client2.calls[1].messages.at(-1).content[0].content, /"cancelled":\[\{"when"/);
 });

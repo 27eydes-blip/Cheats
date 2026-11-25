@@ -169,9 +169,9 @@ test("if the fast model asks for a risky tool anyway, the strong model redoes th
   _resetFastModelForTests();
   const client = fakeClient([
     // the fast model (wrongly) goes for a risky action: dropped, never run, never read back
-    (req) => (assert.equal(req.model, "claude-haiku-5-5"), use("h1", "claude_code", { folder: "lamp", task: "make a lamp app" })),
+    (req) => (assert.equal(req.model, "claude-haiku-5-5"), use("h1", "run_command", { command: "echo lamp" })),
     // the strong model takes over from the same point
-    (req) => (assert.equal(req.model, "claude-opus-5-5"), use("o1", "claude_code", { folder: "lamp", task: "make a lamp app" })),
+    (req) => (assert.equal(req.model, "claude-opus-5-5"), use("o1", "run_command", { command: "echo lamp" })),
   ]);
   const brain = new Brain({ client });
   const r = await brain.handle("esc", "turn the lamp on");

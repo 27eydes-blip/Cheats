@@ -59,8 +59,8 @@ export const listAlarmsTool = {
 };
 
 export const cancelAlarmTool = {
-  // cancelling several alarms at once needs a yes (however it's worded); one alarm doesn't
-  risky: (input) => /^\s*(all|every|everything|all alarms|all of them)\s*$/i.test(String(input?.which || "")) || alarms.resolve(input?.which).length > 1,
+  // your own alarms: cancelled straight away, even several (the result says which, so they can be set again)
+  risky: false,
   confirmPrompt: (input) => {
     const n = alarms.resolve(input?.which).length;
     const total = alarms.list().length;
@@ -69,7 +69,7 @@ export const cancelAlarmTool = {
   },
   definition: {
     name: "cancel_alarm",
-    description: "Cancel an alarm by its number from list_alarms, its label, or 'all' (which needs the user's yes).",
+    description: "Cancel an alarm by its number from list_alarms, its label, or 'all'. Say which ones were cancelled.",
     input_schema: {
       type: "object",
       properties: { which: { type: "string", description: "A number ('2'), a label ('gym'), or 'all'" } },

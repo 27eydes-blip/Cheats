@@ -16,7 +16,7 @@ import { ROOT } from "../config.js";
 import { logAction, scrubEnvValues } from "../logger.js";
 import { track } from "../cancel.js";
 import { isSensitive } from "../secrets.js";
-import { allowedRoots, checkApp, checkCommand, checkUrl, friendly, isSecretPath, pcSettings, resolvePath } from "../pc/policy.js";
+import { allowedRoots, checkApp, checkCommand, checkUrl, friendly, isSecretPath, isTrustedCommand, pcSettings, resolvePath } from "../pc/policy.js";
 import { jobEvents } from "./claudeCode.js";
 
 const isWin = process.platform === "win32";
@@ -365,8 +365,12 @@ export const searchFilesTool = {
 
 const lineCount = (t) => String(t).split(/\r?\n/).length;
 
+// An overwritten file is copied here first, so a write can always be undone.
+const BACKUPS = () => path.join(process.env.JERICHO_DATA_DIR || path.join(ROOT, "data"), "backups");
+
 export const writeFileTool = {
-  risky: true,
+  // Your own files in the allowed folders: done straight away. Overwriting keeps a backup.
+  risky: false,
   precheck(input) {
     const r = resolvePath(input.path);
     if (!r.ok) return { ok: false, reason: r.reason };
@@ -384,7 +388,7 @@ export const writeFileTool = {
   describe: ({ path: p }) => `write to ${p}`,
   definition: {
     name: "write_file",
-    description: "Create or change a text file in an allowed folder. Needs the user's yes.",
+    description: "Create or change a text file in an allowed folder. Runs straight away; if it replaces an existing file, the old copy is kept in Jericho's backups.",
     input_schema: obj({ path: { type: "string" }, content: { type: "string" }, mode: { type: "string", enum: ["overwrite", "append"] } }, ["path", "content"]),
   },
   async run({ path: p, content, mode = "overwrite" }) {
@@ -392,15 +396,22 @@ export const writeFileTool = {
     if (!check.ok) return { ok: false, error: check.reason };
     const r = resolvePath(p);
     fs.mkdirSync(path.dirname(r.path), { recursive: true });
+    let backup = null;
+    if (mode !== "append" && fs.existsSync(r.path)) {
+      fs.mkdirSync(BACKUPS(), { recursive: true });
+      backup = path.join(BACKUPS(), `${Date.now()}-${path.basename(r.path)}`);
+      fs.copyFileSync(r.path, backup);
+    }
     if (mode === "append") fs.appendFileSync(r.path, content);
     else fs.writeFileSync(r.path, content);
-    pcLog("write_file", "confirm", { path: r.display, mode, chars: String(content).length });
-    return { ok: true, wrote: r.display, mode };
+    pcLog("write_file", "safe", { path: r.display, mode, chars: String(content).length, ...(backup ? { backedUp: true } : {}) });
+    return { ok: true, wrote: r.display, mode, ...(backup ? { backedUp: "The old version is saved in Jericho's backups folder." } : {}) };
   },
 };
 
 export const moveFileTool = {
-  risky: true,
+  risky: false, // never overwrites, and can be moved back
+
   precheck({ from, to }) {
     const a = resolvePath(from, { mustExist: true });
     if (!a.ok) return { ok: false, reason: a.reason };
@@ -415,7 +426,7 @@ export const moveFileTool = {
   describe: ({ from, to }) => `move ${from} to ${to}`,
   definition: {
     name: "move_file",
-    description: "Move or rename a file or folder within the allowed folders. Never overwrites. Needs the user's yes.",
+    description: "Move or rename a file or folder within the allowed folders. Never overwrites. Runs straight away.",
     input_schema: obj({ from: { type: "string" }, to: { type: "string" } }),
   },
   async run({ from, to }) {
@@ -425,7 +436,7 @@ export const moveFileTool = {
     const b = resolvePath(to);
     fs.mkdirSync(path.dirname(b.path), { recursive: true });
     fs.renameSync(a.path, b.path);
-    pcLog("move_file", "confirm", { from: a.display, to: b.display });
+    pcLog("move_file", "safe", { from: a.display, to: b.display });
     return { ok: true, moved: a.display, to: b.display };
   },
 };
@@ -479,7 +490,8 @@ export const deleteFileTool = {
 };
 
 export const runCommandTool = {
-  risky: true,
+  // A command can do anything, so it needs a yes, unless the trusted tier lists it (pc.trusted.commands).
+  risky: (input) => !isTrustedCommand(input?.command),
   precheck({ command, folder }) {
     const c = checkCommand(command);
     if (!c.ok) return { ok: false, reason: c.reason };
@@ -497,7 +509,7 @@ export const runCommandTool = {
   definition: {
     name: "run_command",
     description:
-      "Run one PowerShell command in an allowed folder (default: the Cheats folder). Needs the user's yes; the exact command is read back first. " +
+      "Run one PowerShell command in an allowed folder (default: the Cheats folder). Needs the user's yes (the exact command is read back first), except commands the trusted tier lists. " +
       "System, registry and security changes, recursive deletes and anything touching secrets are blocked.",
     input_schema: obj({ command: { type: "string" }, folder: { type: "string" } }, ["command"]),
   },
@@ -510,7 +522,7 @@ export const runCommandTool = {
     const r = isWin
       ? await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", String(command)], { cwd, timeoutMs, signal: ctx.signal, label: "command" })
       : await run("sh", ["-c", String(command)], { cwd, timeoutMs, signal: ctx.signal, label: "command" });
-    pcLog("run_command", "confirm", { folder: friendly(cwd), exitCode: r.code, stopped: r.stopped, timedOut: r.timedOut });
+    pcLog("run_command", isTrustedCommand(command) ? "trusted" : "confirm", { folder: friendly(cwd), exitCode: r.code, stopped: r.stopped, timedOut: r.timedOut });
     if (r.stopped || r.timedOut) return failed(r, "The command");
     return { ok: r.code === 0, exitCode: r.code, output: scrub(r.stdout, 1500), errors: scrub(r.stderr, 600) };
   },
@@ -537,8 +549,9 @@ export const pcTools = [
 export function controlInfo() {
   return {
     allowedFolders: allowedRoots().map((r) => ({ name: path.basename(r), path: scrubEnvValues(r) })),
-    safe: ["open_app", "open_url", "set_volume", "media_control", "set_timer", "read_clipboard", "write_clipboard", "list_dir", "read_file", "search_files", "claude_code_status", "claude_code_result"],
-    confirm: ["write_file", "move_file", "delete_file (to the Recycle Bin)", "run_command", "claude_code", "make_call"],
+    trusted: pcSettings().trusted,
+    safe: ["open_app", "open_url", "set_volume", "media_control", "set_timer", "read_clipboard", "write_clipboard", "list_dir", "read_file", "search_files", "write_file (overwrites backed up)", "move_file", "claude_code (your projects)", "claude_code_status", "claude_code_result"],
+    confirm: ["delete_file (to the Recycle Bin)", "run_command" + (pcSettings().trusted ? " (except trusted commands)" : ""), "claude_code on Jericho itself", "make_call"],
     blocked: ["anything outside the allowed folders", "system, registry and security changes", ".env, keys and other secret files"],
   };
 }

@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import path from "node:path";
-import { expandHome, settings } from "../config.js";
+import { expandHome, ROOT, settings } from "../config.js";
 import { track } from "../cancel.js";
 import { logAction, scrubEnvValues } from "../logger.js";
 import { resolvePath } from "../pc/policy.js";
@@ -171,9 +171,24 @@ function startJob(folder, task) {
   return job;
 }
 
+/**
+ * Claude Code on your own projects starts straight away. A yes is still needed when it would
+ * work on Jericho itself (it could change his own safety code) or when it's set to skip its own
+ * permission checks (claudeCode.permissionMode "bypassPermissions").
+ */
+export function claudeCodeNeedsYes(input) {
+  if (cfg.permissionMode === "bypassPermissions" || cfg.permissionMode === "dontAsk") return true;
+  try {
+    const dir = resolveProjectFolder(input?.folder);
+    const rel = path.relative(ROOT, dir);
+    return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel)) || !path.relative(dir, ROOT).startsWith("..");
+  } catch {
+    return false; // refused when it runs, with the reason
+  }
+}
+
 export const claudeCodeTool = {
-  // Claude Code edits files and can run commands, so every run needs a spoken yes.
-  risky: true,
+  risky: (input) => claudeCodeNeedsYes(input),
   describe: ({ folder, task }) => `run Claude Code in the "${folder}" folder to: ${task}`,
   /** Unknown or blocked folders are refused before you're asked to confirm. */
   precheck({ folder }) {
@@ -193,7 +208,7 @@ export const claudeCodeTool = {
       "Start Claude Code (a coding agent) to build or change a software project in a folder. " +
       "It runs in the background and Jericho announces when it finishes. Folder is a project name " +
       "inside the user's projects directory (a new name creates a new project), or a path inside an allowed folder " +
-      "such as 'Cheats/jericho'. Needs the user's yes. " +
+      "such as 'Documents/site'. Starts straight away (work on Jericho's own folder needs a yes). " +
       "Pass the user's full request as the task, with any details they gave.",
     input_schema: {
       type: "object",

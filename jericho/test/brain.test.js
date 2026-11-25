@@ -14,7 +14,7 @@ fs.writeFileSync(
   JSON.stringify({
     ...base,
     logFile: path.join(tmp, "actions.log"),
-    claudeCode: { ...base.claudeCode, command: new URL("./fake-claude.mjs", import.meta.url).pathname, projectsDir: path.join(tmp, "projects") },
+    claudeCode: { ...base.claudeCode, command: new URL("./fake-claude.mjs", import.meta.url).pathname, projectsDir: path.join(tmp, "projects"), permissionMode: "bypassPermissions" }, // skips its own checks: a yes is needed
   }),
 );
 process.env.JERICHO_SETTINGS = settingsFile;
