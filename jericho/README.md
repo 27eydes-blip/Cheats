@@ -152,6 +152,11 @@ Changes between states always ease in, never snap.
 - **Background:** a faint perspective grid of light under the orb and thin gold energy lines behind it. When Jericho speaks, ripples of light travel out across the grid with his real voice level. When you talk while he listens, the lines stop and turn red with the particles. Low quality shows the grid only; Medium adds 3 lines, High 5, Ultra 7.
 - **Live HUD:** the time and date, the current weather (same Open-Meteo data as the weather tool) and your next calendar event (same iCal link as the calendar tools), refreshed every 5 minutes. A readout that can't be fetched just stays hidden. On phones it collapses to the time.
 - **Power on:** the page opens with a single **Tap to power on** prompt (the orb waits as a point of light). That tap plays the power-up, made live with Web Audio (no sound files): a low hum rising for about 2 seconds, rising tones as the rings spin up, a bright metallic chime exactly when the orb flashes, then a soft idle hum. The hieroglyphs light up and the wordmark carves in alongside it. A reload within 10 minutes gets a shorter version. Settings panel (sun icon): **Startup animation**, **Power-up sound**, **Sound volume**, **Idle hum**. With reduced motion only the sound plays.
+- **Startup sound** (on every page load or reload, and once more if the server restarts while the page is open), also made live with Web Audio, no files, no Claude call:
+  1. a deep hum that swells in for about 3.5 seconds (`startup.humSeconds`): low sine and triangle layers a fifth apart, through a filter that slowly opens;
+  2. three short high beeps (1800, 2100 and 2400 Hz, 80 ms each, 150 ms apart), one per startup check from the self-test: **Claude**, **Voice**, **Calendar**. Each beep waits for its check (the page asks `/api/startup` and gets the result live when the self-test finishes), and plays on a timer if the result doesn't come within 6 seconds;
+  3. if every check passed (or was skipped), a two-note rising chime with a soft shimmer, and the orb glows once. If a check failed, a quiet low two-note "attention" tone instead, with no glow and no speech; the self-test line in the server window says which.
+  It uses the **Power-up sound** switch and **Sound volume** from the settings panel, and doesn't play while muted. If the browser blocks sound until you interact, it plays on your first tap or key press (or when the mic is allowed); the tap that powers Jericho on then skips the power-up's own chime so the two never overlap. It never plays twice for the same page load. `startup.sound: false` in `settings.json` turns it off.
 
 ## Planner (calendar and homework)
 
@@ -1025,6 +1030,7 @@ None of these are secret. Keys live only in `.env`.
 | `claude.maxHistoryMessages` | After this many messages (default 24), the conversation starts fresh with a short recap. |
 | `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 16000 for the strong model (room for a researched file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway, and you only pay for what's written. |
 | `claude.maxToolRounds` | How many tool steps one request may chain on its own (default 15). |
+| `startup` | The startup sound: `sound` (true) and `humSeconds` (3.5, from 1 to 8). |
 | `plugs` | The Tapo plugs: `devices` (name as in the Tapo app, aliases, and optional fixed `ip` and `mac`: Fan at 192.168.4.223, Lamp at 192.168.4.222), `groups` (name, aliases, devices: "all lights" -> Lamp), `timeoutSeconds` (6). The login is in `.env` (`TAPO_EMAIL`, `TAPO_PASSWORD`). |
 | `lg` | The LG TVs: `rooms` (name and aliases: living room, blue room), `candidates` (addresses tried first: 192.168.4.217, 192.168.4.48), `pairTimeoutSeconds` (60), `port` (3001), `volumeStep` (5). |
 | `planner` | `timezone` (America/Detroit), `wakeStart` / `wakeEnd` (07:00 / 22:00), `weekStartsOn` (1 = Monday), `studyChunkMinutes` (60), `breakMinutes` (10), `minFreeBlockMinutes` (15). |
@@ -1107,6 +1113,7 @@ server/plugs/             the Tapo plugs: index.js (discovery, actions, timers),
                           p256.js (curve math for it), klap.js (KLAP), cloud.js (cloud fallback),
                           probe.js (plugs:test --debug), voice.js (local commands)
 scripts/plugs-test.mjs    npm run plugs:test
+public/startup.js         the startup sound (hum, diagnostic beeps, pass chime or attention tone)
 public/planner.*          the Planner page (planner.html, .css, .js; plannerlayout.js helpers)
 server/style.js           the after-conversation learning call (style notes, profile, lessons, summary)
 server/secrets.js         detects passwords, keys, card and ID numbers
