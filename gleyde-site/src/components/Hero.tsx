@@ -32,18 +32,18 @@ export function Hero() {
     >
       {/* Background: soft gold glow + faint concentric deco diamonds */}
       <m.div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10" style={{ y: glowY }}>
-        <div className="absolute top-1/2 left-1/2 size-[64rem] max-w-[200vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(201,162,75,0.13),rgba(201,162,75,0.04)_45%,transparent_72%)]" />
+        <div className="absolute top-1/2 left-1/2 size-[64rem] max-w-[200vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(216,200,160,0.13),rgba(216,200,160,0.04)_45%,transparent_72%)]" />
         <svg
           viewBox="0 0 800 800"
           className="absolute top-1/2 left-1/2 h-[150vmin] w-[150vmin] -translate-x-1/2 -translate-y-1/2 opacity-[0.09]"
           fill="none"
-          stroke="#C9A24B"
+          stroke="#D8C8A0"
           strokeWidth="0.6"
         >
-          {[380, 300, 220].map((r) => (
+          {[380, 260].map((r) => (
             <path key={r} d={`M400 ${400 - r} L${400 + r * 0.72} 400 L400 ${400 + r} L${400 - r * 0.72} 400 Z`} />
           ))}
-          <path d="M400 0 L400 800 M0 400 L800 400" strokeDasharray="2 10" />
+          
         </svg>
       </m.div>
 
@@ -51,9 +51,8 @@ export function Hero() {
         <GleydeMark
           animated
           delay={0.15}
-          strokeWidth={1.1}
           title="Gleyde Technologies logo"
-          className="h-40 w-auto drop-shadow-[0_0_28px_rgba(201,162,75,0.25)] sm:h-52 md:h-60"
+          className="h-40 w-auto drop-shadow-[0_0_28px_rgba(216,200,160,0.25)] sm:h-52 md:h-60"
         />
       </m.div>
 

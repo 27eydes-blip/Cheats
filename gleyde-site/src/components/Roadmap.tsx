@@ -32,7 +32,7 @@ export function Roadmap() {
                 aria-hidden="true"
                 className="absolute top-2.5 left-0 block size-[11px] rotate-45 border border-gold bg-ink sm:left-36"
               >
-                <span className={`absolute inset-[3px] ${i === 0 ? "bg-gold-light shadow-[0_0_10px_#E6C97A]" : "bg-gold/30"}`} />
+                <span className={`absolute inset-[3px] ${i === 0 ? "bg-gold-light shadow-[0_0_10px_#EFE3C4]" : "bg-gold/30"}`} />
               </span>
 
               <Reveal delay={i * 0.1 + 0.08} className="mt-4 sm:mt-0 sm:pl-12">

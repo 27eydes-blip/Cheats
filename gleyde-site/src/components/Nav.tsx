@@ -68,8 +68,8 @@ export function Nav() {
         >
           <GleydeMark
             title=""
-            strokeWidth={3.2}
-            className="h-7 w-auto transition-[filter] duration-500 group-hover:drop-shadow-[0_0_8px_rgba(230,201,122,0.55)]"
+            compact
+            className="h-7 w-auto transition-[filter] duration-500 group-hover:drop-shadow-[0_0_8px_rgba(239,227,196,0.55)]"
           />
           <span className="font-display text-[0.95rem] tracking-[0.28em] text-ivory">GLEYDE</span>
         </a>

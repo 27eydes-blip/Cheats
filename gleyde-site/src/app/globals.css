@@ -4,12 +4,12 @@
    Tailwind v4 reads these into utilities: bg-ink, text-ivory, text-gold,
    font-display, etc. Font variables come from next/font in layout.tsx. */
 @theme {
-  --color-ink: #0a0a0a;
-  --color-ink-soft: #111110;
-  --color-ivory: #f5f0e6;
-  --color-gold: #c9a24b;
-  --color-gold-light: #e6c97a;
-  --color-gold-deep: #a8853a;
+  --color-ink: #0B0B0C;
+  --color-ink-soft: #131314;
+  --color-ivory: #F2EFEA;
+  --color-gold: #D8C8A0;
+  --color-gold-light: #EFE3C4;
+  --color-gold-deep: #B8A67C;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-cinzel), "Times New Roman", serif;
@@ -162,6 +162,17 @@
   animation: var(--animate-draw);
 }
 
+.fade-in {
+  opacity: 0;
+  animation: fade 1.4s var(--ease-deco) forwards;
+}
+
+@keyframes fade {
+  to {
+    opacity: 1;
+  }
+}
+
 .scroll-cue {
   animation: scroll-cue 2.6s var(--ease-deco) infinite;
 }
@@ -187,5 +198,9 @@
 
   .scroll-cue {
     animation: none;
+  }
+
+  .fade-in {
+    opacity: 1;
   }
 }

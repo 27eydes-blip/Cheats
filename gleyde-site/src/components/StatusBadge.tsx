@@ -19,7 +19,7 @@ export function StatusBadge({ status }: { status: Status }) {
     >
       <span
         aria-hidden="true"
-        className={`block size-1 rotate-45 ${status === "Live" ? "bg-gold-light shadow-[0_0_8px_#E6C97A]" : "bg-current opacity-70"}`}
+        className={`block size-1 rotate-45 ${status === "Live" ? "bg-gold-light shadow-[0_0_8px_#EFE3C4]" : "bg-current opacity-70"}`}
       />
       {status}
     </span>

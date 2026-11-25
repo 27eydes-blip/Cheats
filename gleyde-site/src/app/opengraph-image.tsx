@@ -19,16 +19,16 @@ export default async function OpenGraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "radial-gradient(circle at 50% 45%, #1d1810 0%, #0A0A0A 62%)",
-          color: "#F5F0E6",
+          background: "radial-gradient(circle at 50% 45%, #1a1914 0%, #0B0B0C 62%)",
+          color: "#F2EFEA",
           fontFamily: "Cinzel",
           position: "relative",
         }}
       >
-        <div style={{ position: "absolute", top: 40, left: 40, right: 40, bottom: 40, border: "1px solid rgba(201,162,75,0.35)", display: "flex" }} />
-        <img src={markDataUri(2.2)} width={168} height={224} alt="" />
+        <div style={{ position: "absolute", top: 40, left: 40, right: 40, bottom: 40, border: "1px solid rgba(216,200,160,0.35)", display: "flex" }} />
+        <img src={markDataUri()} width={168} height={224} alt="" />
         <div style={{ marginTop: 36, fontSize: 84, letterSpacing: 10, display: "flex" }}>Gleyde</div>
-        <div style={{ marginTop: 8, fontSize: 26, letterSpacing: 18, color: "#E6C97A", display: "flex" }}>TECHNOLOGIES</div>
+        <div style={{ marginTop: 8, fontSize: 26, letterSpacing: 18, color: "#EFE3C4", display: "flex" }}>TECHNOLOGIES</div>
         <div style={{ marginTop: 34, fontSize: 24, letterSpacing: 6, color: "rgba(245,240,230,0.7)", display: "flex" }}>
           {site.tagline}
         </div>

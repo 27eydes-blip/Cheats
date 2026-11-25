@@ -8,8 +8,8 @@ export const contentType = "image/png";
 export default function AppleIcon() {
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#0A0A0A" }}>
-        <img src={markDataUri(3.4)} width={108} height={144} alt="" />
+      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#0B0B0C" }}>
+        <img src={markDataUri({ compact: true })} width={108} height={144} alt="" />
       </div>
     ),
     size,

@@ -16,10 +16,10 @@ export function Leadership() {
                 <article className="group flex h-full flex-col items-center border border-ivory/10 px-3 pt-9 pb-8 text-center sm:px-6 sm:pt-12 sm:pb-10 transition-[box-shadow,border-color] duration-700 ease-deco hover:border-gold/40 hover:glow-gold">
                   <div className="relative flex size-20 items-center sm:size-28 justify-center" aria-hidden="true">
                     <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" fill="none">
-                      <path d="M50 2 L98 50 L50 98 L2 50 Z" stroke="#C9A24B" strokeWidth="0.8" />
+                      <path d="M50 2 L98 50 L50 98 L2 50 Z" stroke="#D8C8A0" strokeWidth="0.8" />
                       <path
                         d="M50 10 L90 50 L50 90 L10 50 Z"
-                        stroke="#C9A24B"
+                        stroke="#D8C8A0"
                         strokeOpacity="0.35"
                         strokeWidth="0.6"
                         className="origin-center transition-transform duration-700 ease-deco group-hover:scale-[0.92]"

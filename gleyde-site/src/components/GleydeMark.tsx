@@ -1,54 +1,39 @@
 import { useId } from "react";
+import { DIAMOND, G_PATH, markStops, RAYS, RING } from "@/lib/brand";
 
 /**
- * The Gleyde mark: a sharp Art Deco diamond (double frame) around a
- * geometric "G", with a deco spine through the top and bottom points.
+ * The Gleyde mark: a sharp Art Deco diamond around a medallion "G" with a
+ * fine Gatsby sunburst. Geometry lives in src/lib/brand.ts.
  *
- * Every stroke uses pathLength="1" so it can draw itself in with the
- * `.draw-path` CSS animation (set `animated`). Delays are staggered per
- * stroke so the frame appears first, then the G, then the details.
+ * `animated`: the diamond draws itself in, then the ring, then the rays
+ * fan out one by one, and finally the G fades up. Pure CSS (pathLength="1"
+ * + the .draw-path animation), so it starts before JavaScript loads.
  *
- * Geometry (viewBox 120×160): centre (60,80); G radius 22.
+ * `compact`: for small sizes (nav, footer). Drops the rays and thickens the
+ * strokes so the mark stays crisp at ~28px.
  */
 
 interface GleydeMarkProps {
   className?: string;
-  /** Draw the strokes in on mount (CSS, runs before hydration). */
   animated?: boolean;
   /** Base delay before drawing starts, in seconds. */
   delay?: number;
   /** Accessible label. Pass "" to mark the SVG as decorative. */
   title?: string;
-  strokeWidth?: number;
+  compact?: boolean;
 }
-
-/** Each stroke of the mark with its relative draw delay (seconds). */
-const strokes: { d: string; at: number; width?: number }[] = [
-  // Outer diamond
-  { d: "M60 3 L117 80 L60 157 L3 80 Z", at: 0 },
-  // Inner diamond (hairline)
-  { d: "M60 15 L105 80 L60 145 L15 80 Z", at: 0.35, width: 0.6 },
-  // The G: a 315° arc from upper right, round the left, back to the right…
-  { d: "M75.56 64.44 A22 22 0 1 0 82 80", at: 0.8, width: 1.6 },
-  // …and its crossbar
-  { d: "M82 80 L63 80", at: 1.6, width: 1.6 },
-  // Deco spine above and below the G
-  { d: "M60 22 L60 52", at: 1.2, width: 0.6 },
-  { d: "M60 108 L60 138", at: 1.2, width: 0.6 },
-  // Side ticks at the inner points
-  { d: "M22 80 L32 80", at: 1.4, width: 0.6 },
-  { d: "M88 80 L98 80", at: 1.4, width: 0.6 },
-];
 
 export function GleydeMark({
   className,
   animated = false,
   delay = 0,
   title = "Gleyde Technologies",
-  strokeWidth = 1.2,
+  compact = false,
 }: GleydeMarkProps) {
-  const gradientId = `gleyde-gold-${useId().replace(/:/g, "")}`;
+  const gradientId = `gleyde-${useId().replace(/:/g, "")}`;
   const decorative = title === "";
+  const draw = (at: number) =>
+    animated ? { className: "draw-path", style: { animationDelay: `${delay + at}s` } } : {};
 
   return (
     <svg
@@ -61,28 +46,32 @@ export function GleydeMark({
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="120" y2="160" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#E6C97A" />
-          <stop offset="0.5" stopColor="#C9A24B" />
-          <stop offset="1" stopColor="#E6C97A" />
+          <stop offset="0" stopColor={markStops[0]} />
+          <stop offset="0.5" stopColor={markStops[1]} />
+          <stop offset="1" stopColor={markStops[2]} />
         </linearGradient>
       </defs>
-      <g
-        stroke={`url(#${gradientId})`}
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-        strokeMiterlimit={12}
-      >
-        {strokes.map((s) => (
-          <path
-            key={s.d}
-            d={s.d}
-            pathLength={1}
-            strokeWidth={(s.width ?? 1) * strokeWidth}
-            className={animated ? "draw-path" : undefined}
-            style={animated ? { animationDelay: `${delay + s.at}s` } : undefined}
-          />
-        ))}
+      <g stroke={`url(#${gradientId})`} strokeLinecap="butt" strokeMiterlimit={12}>
+        <path d={DIAMOND} pathLength={1} strokeWidth={compact ? 5 : 1.4} {...draw(0)} />
+        <circle
+          cx={RING.cx}
+          cy={RING.cy}
+          r={compact ? 31 : RING.r}
+          pathLength={1}
+          strokeWidth={compact ? 4.5 : 1.1}
+          // Start the ring's stroke at 12 o'clock so it draws round like a clock hand.
+          transform={`rotate(-90 ${RING.cx} ${RING.cy})`}
+          {...draw(0.7)}
+        />
+        {!compact &&
+          RAYS.map((d, i) => <path key={d} d={d} pathLength={1} strokeWidth={0.7} {...draw(1.2 + i * 0.05)} />)}
       </g>
+      <path
+        d={G_PATH}
+        fill={`url(#${gradientId})`}
+        className={animated ? "fade-in" : undefined}
+        style={animated ? { animationDelay: `${delay + 1.3}s` } : undefined}
+      />
     </svg>
   );
 }
