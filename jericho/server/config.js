@@ -125,6 +125,8 @@ export function publicConfig() {
     endPhrases: settings.endPhrases || [],
     conversationTimeoutSeconds: settings.conversationTimeoutSeconds ?? 30,
     speechLang: settings.speechLang,
+    // stray-turn filter for follow-ups without the wake word (see public/turnfilter.js)
+    followUpFilter: settings.followUpFilter !== false,
     // filled in by the server from voice.js (which voice the page speaks with)
     elevenLabsEnabled: false,
     bargeIn: {

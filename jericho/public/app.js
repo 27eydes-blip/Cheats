@@ -8,6 +8,7 @@ import { alarmCommand } from "./alarmrules.js";
 import { formatReadout, LatencyTracker, turnLatency } from "./latency.js";
 import { isEnglish, pickVoice, sortVoices, tuneSpeech } from "./voices.js";
 import { compareEarly, earlyCommitDelay } from "./endpoint.js";
+import { classifyFollowUp, isNoise } from "./turnfilter.js";
 import { backoffDelay, calibrateRoom, classifyRecError, DEFAULT_SENSITIVITY, isSleepCommand, pickWake, roomGain, roomThreshold, SENSITIVITIES } from "./listen.js";
 
 const $ = (id) => document.getElementById(id);
@@ -577,6 +578,8 @@ async function send(kind, text, { endAfter = false, typed = false, interrupted =
   if (turn.cancelled) return; // stopped: nothing more to say
 
   clearTimeout(confirmTimer);
+  // a reply that ends with a question lets a plain "yes", "the second one" or "Maya" through next
+  lastReplyAsked = /\?["')\s]*$/.test(bubble?.textContent || "");
   confirmPending = Boolean(result.awaitingConfirmation);
   endAfterReply = endAfter && !confirmPending; // never skip past a pending yes/no
   if (confirmPending) {
@@ -1017,7 +1020,7 @@ function showBargeDebug(level, now) {
   const ears = replyPlaying() ? (earsDuringReply ? "listening for stop" : "ears paused") : now < tailUntil ? "echo tail" : "listening";
   const cal = barge.calibrating(now) ? " · calibrating" : "";
   el.textContent = micAnalyser
-    ? `Mic ${level.toFixed(2)} · threshold ${barge.threshold(now).toFixed(2)} · echo ignored ${echoIgnored} · ${ears}${cal}`
+    ? `Mic ${level.toFixed(2)} · threshold ${barge.threshold(now).toFixed(2)} · echo ignored ${echoIgnored} · stray ignored ${strayIgnored} · ${ears}${cal}`
     : `No mic meter here (phone or mic blocked) · echo ignored ${echoIgnored}`;
 }
 function applyBargeSettings() {
@@ -1105,6 +1108,9 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 let wantListening = false;
 let lastSpoken = "";
+let lastReplyAsked = false; // Jericho's last reply ended with a question
+let lastConfidence = 0; // the recognizer's confidence in the last final transcript (0 = unknown)
+let strayIgnored = 0; // follow-ups dropped by the stray-turn filter (no Claude call)
 
 function normalize(t) {
   return String(t).toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -1284,8 +1290,18 @@ function onHeard(raw, fromBargeIn = false, wakeOk = true, { early = false } = {}
       // "Thanks Jericho" ends it now. "Lights off, that's all" does the request first.
       return rest.length > 2 ? send("ask", rest, { endAfter: true, interrupted, early }) : endConversation();
     }
+    const wakeHeard = wakeRegex().test(text);
     const request = text.replace(wakeRegex(), " ").trim();
-    if (request.length > 1) return send("ask", request, { interrupted, early });
+    if (request.length > 1) {
+      // No wake word: only a clear follow-up counts, never filler, the TV or his own echo.
+      const verdict = classifyFollowUp(request, { wakeHeard, askedQuestion: lastReplyAsked, interrupted, lastSpoken, confidence: lastConfidence, enabled: config.followUpFilter !== false });
+      if (verdict.send) return send("ask", request, { interrupted, early });
+      if (!wakeHeard) {
+        strayIgnored++;
+        console.debug("[jericho] not sent:", verdict.reason, request);
+        return;
+      }
+    }
     beep(); // just the wake word again: still listening
     return;
   }
@@ -1296,7 +1312,7 @@ function onHeard(raw, fromBargeIn = false, wakeOk = true, { early = false } = {}
   const m = wakeRegex().exec(text);
   if (!m) return; // not for us
   const rest = text.slice(m.index + m[0].length).trim();
-  if (rest.length > 1) {
+  if (rest.length > 1 && !isNoise(rest)) {
     conversation = true; // "Jericho, turn on the lights": answer, then keep listening
     return send("ask", rest, { early });
   }
@@ -1329,6 +1345,7 @@ if (SR) {
       if (r.isFinal) {
         const alts = Array.from({ length: r.length }, (_, k) => r[k].transcript);
         const pick = pickWake(alts, config.wakeWords, wakeSensitivity);
+        lastConfidence = Number(r[0].confidence) || 0;
         onHeard(pick.found ? pick.text : alts[0], false, wakeSensitivity !== "low" || pick.found);
       } else interim += r[0].transcript;
     }
