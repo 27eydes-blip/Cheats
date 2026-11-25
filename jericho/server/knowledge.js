@@ -21,13 +21,20 @@ export function notesDir() {
 
 const STOP = new Set("a an and are as at be but by can could did do does for from had has have he her his how i if in into is it its just me my of on or our she so that the their them then there these they this to was we were what when where which who why will with would you your about tell know remember".split(" "));
 
+/** A very light stemmer, so "renews", "renewed" and "renewing" all match "renew". */
+function stem(w) {
+  if (w.length <= 4 || /\d/.test(w)) return w;
+  return w.replace(/(?:ing|ed|es|s)$/, "") || w;
+}
+
 export function words(text) {
   return String(text || "")
     .toLowerCase()
     .replace(/[’‘]/g, "'")
     .split(/[^a-z0-9']+/)
     .map((w) => w.replace(/^'+|'+$/g, "").replace(/'s$/, ""))
-    .filter((w) => w.length > 1 && !STOP.has(w));
+    .filter((w) => w.length > 1 && !STOP.has(w))
+    .map(stem);
 }
 
 // ---- reading files -------------------------------------------------------------------------
