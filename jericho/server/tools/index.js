@@ -14,6 +14,7 @@ import { checkCalendarTool, weatherTool } from "./weather.js";
 import { alarmTools } from "./alarms.js";
 import { tvTool } from "./tv.js";
 import { noteTools } from "./notes.js";
+import { plannerTools } from "./planner.js";
 
 const all = [
   lightsTool,
@@ -42,6 +43,7 @@ const all = [
   ...alarmTools,
   tvTool,
   ...noteTools,
+  ...plannerTools,
 ];
 
 export const tools = new Map(all.map((t) => [t.definition.name, t]));

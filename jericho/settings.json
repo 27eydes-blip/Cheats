@@ -185,5 +185,14 @@
     "maxRingMinutes": 30
   },
   "logFile": "logs/actions.log",
-  "followUpFilter": true
+  "followUpFilter": true,
+  "planner": {
+    "timezone": "America/Detroit",
+    "wakeStart": "07:00",
+    "wakeEnd": "22:00",
+    "weekStartsOn": 1,
+    "studyChunkMinutes": 60,
+    "breakMinutes": 10,
+    "minFreeBlockMinutes": 15
+  }
 }

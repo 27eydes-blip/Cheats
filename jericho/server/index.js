@@ -26,6 +26,8 @@ import { controlInfo } from "./tools/pc.js";
 import { streamSpeech } from "./tts.js";
 import { activeVoice, COST, countVoice, publicVoice } from "./voice.js";
 import { acceptsGzip, sendStatic } from "./static.js";
+import { pageChange, pageView } from "./planner/index.js";
+import { plannerEvents } from "./planner/store.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
@@ -48,6 +50,8 @@ const pushEvent = (obj) => {
 alarms.on("ring", (alarm) => pushEvent({ type: "alarm", alarm }));
 alarms.on("stopped", (info) => pushEvent({ type: "alarm-stopped", ...info }));
 alarms.on("changed", () => pushEvent({ type: "alarms-changed" }));
+// the Planner page updates live when Jericho (or another tab) changes something
+plannerEvents.on("changed", ({ version }) => pushEvent({ type: "planner-changed", version }));
 
 function authorized(req, url) {
   if (!secrets.accessToken) return true;
@@ -229,7 +233,7 @@ function serveVendor(url, res, req) {
 
 function serveStatic(url, res, req) {
   if (url.pathname.startsWith("/vendor/three/")) return serveVendor(url, res, req);
-  const pages = { "/": "index.html", "/memory": "memory.html", "/calls": "calls.html" };
+  const pages = { "/": "index.html", "/memory": "memory.html", "/calls": "calls.html", "/planner": "planner.html" };
   const decoded = pages[url.pathname] ? null : safeDecode(url.pathname);
   if (!pages[url.pathname] && decoded === null) return res.writeHead(400).end("Bad request");
   const rel = pages[url.pathname] || decoded.replace(/^\/+/, "");
@@ -436,6 +440,15 @@ async function route(req, res) {
       const chars = countVoice(body.voiceChars); // characters spoken per voice provider (counts only)
       fs.promises.appendFile(latencyLog, `${JSON.stringify({ time: new Date().toISOString(), ...entry, ...(chars ? { voiceChars: chars } : {}) })}\n`).catch(() => {});
       return sendJson(res, 200, { ok: true });
+    }
+
+    // The Planner page: its data (behind the access token like every /api route), and its changes.
+    if (req.method === "GET" && url.pathname === "/api/planner") {
+      return sendJson(res, 200, await pageView({ view: ["day", "week", "month"].includes(url.searchParams.get("view")) ? url.searchParams.get("view") : "week", date: url.searchParams.get("date") || "" }));
+    }
+    if (req.method === "POST" && url.pathname === "/api/planner") {
+      const r = await pageChange(await readJson(req));
+      return sendJson(res, r.ok ? 200 : 400, r);
     }
 
     if (req.method === "GET" && url.pathname === "/api/events") {

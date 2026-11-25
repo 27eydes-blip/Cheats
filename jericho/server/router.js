@@ -31,6 +31,7 @@ const SIMPLE = [
   /\b(alarm|alarms|timer|timers|wake me|snooze)\b/i,
   /\b(weather|temperature|rain|raining|forecast|umbrella|snow|windy|cold outside|hot outside|jacket)\b/i,
   /\b(lights?|lamp|brightness|dim)\b/i,
+  /\b(homework|assignments?|due|quiz|quizzes|exams?|tests?|my planner|the planner|my week|this week|am i free|free time|finished|check off)\b/i,
 ];
 const VAGUE = /\b(it|that|this|those|them|again|same|one)\b/i;
 const SHORT_QUESTION = /^(what|what's|whats|who|who's|where|when|how (many|much|far|long|old|tall|big)|is|are|does|do|can|define|spell|convert)\b/i;

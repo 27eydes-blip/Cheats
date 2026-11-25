@@ -86,8 +86,25 @@ export function matchTv(text) {
   return null;
 }
 
-/** { kind: "time" | "date" | "volume" | "snooze" | "alarm" | "tv", ... } or null when it isn't one of these. */
+// ---- the Planner: open it, and the plain "what's due" questions ------------------------------
+const PLANNER_OPEN = /^(?:open|show|pull up|bring up) (?:me )?(?:my |the )?(?:planner|homework planner|schedule|calendar)$/;
+const PLANNER_DUE = /^(?:what(?:'s|s| is) due|what homework (?:is due|do i have)|what do i have due|any homework)(?: (today|tonight|tomorrow|this week))?$/;
+const PLANNER_WEEK = /^(?:what do i have|what(?:'s|s| is) on|what(?:'s|s| is) my) (?:this week|my week|for the week|the week)$|^what(?:'s| is) (?:my|the) week (?:look|looking) like$/;
+
+export function matchPlanner(text) {
+  const t = tidy(text);
+  if (!t || t.split(" ").length > 9) return null;
+  if (PLANNER_OPEN.test(t)) return { kind: "planner", tool: "open_planner", input: {} };
+  const due = PLANNER_DUE.exec(t);
+  if (due) return { kind: "planner", tool: "list_due", input: { range: /tom/.test(due[1] || "") ? "tomorrow" : /today|tonight/.test(due[1] || "") ? "today" : "week" } };
+  if (PLANNER_WEEK.test(t)) return { kind: "planner", tool: "list_week", input: { week: "this" } };
+  return null;
+}
+
+/** { kind: "time" | "date" | "volume" | "snooze" | "alarm" | "tv" | "planner", ... } or null when it isn't one of these. */
 export function matchQuick(text) {
+  const plan = matchPlanner(text);
+  if (plan) return plan;
   const alarm = matchAlarm(text);
   if (alarm) return alarm;
   const tv = matchTv(text);
@@ -139,6 +156,13 @@ export async function runQuick(match, deps = {}) {
     if (!r?.ok) return null; // Claude can explain or ask
     const note = r.wakeNote ? " Heads up: the laptop may not wake up for it on its own. Ask me about alarm wake-up for the fix." : "";
     return { say: `${r.say}${note}`, tool: "set_alarm", input, ok: true };
+  }
+  if (match.kind === "planner") {
+    const tool = deps.tools?.get(match.tool);
+    if (!tool) return null;
+    const r = await tool.run(match.input, { signal: deps.signal });
+    if (!r?.ok) return null;
+    return { say: r.say, tool: match.tool, input: match.input, ok: true, ...(tool.card ? { card: tool.card(r) } : {}) };
   }
   if (match.kind === "tv") {
     const tool = deps.tools?.get("tv");

@@ -6,6 +6,7 @@ import { withTimeout } from "./cache.js";
 import { getCalendar } from "./calendar.js";
 import { getMarkets } from "./markets.js";
 import { getWeather } from "./weather.js";
+import { briefingPart } from "../planner/index.js";
 
 const PART_TIMEOUT_MS = 6000;
 
@@ -27,7 +28,7 @@ export function briefingName() {
 }
 
 export async function getBriefing() {
-  const [calendar, weather, markets] = await Promise.all([part("calendar", getCalendar), part("weather", getWeather), part("markets", getMarkets)]);
+  const [calendar, weather, markets, planner] = await Promise.all([part("calendar", getCalendar), part("weather", getWeather), part("markets", getMarkets), part("planner", () => briefingPart())]);
   const now = new Date();
   return {
     name: briefingName(),
@@ -35,5 +36,6 @@ export async function getBriefing() {
     calendar,
     weather,
     markets,
+    planner,
   };
 }

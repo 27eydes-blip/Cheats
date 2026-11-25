@@ -137,6 +137,27 @@ export async function listCalendar(from, to) {
   return { ok: true, days: eventsBetween(r.events, from, to) };
 }
 
+/** Every event occurrence (with its end) from one "YYYY-MM-DD" to another, for the Planner. */
+export function blocksBetween(events, from, to) {
+  const [fy, fm, fd] = String(from).split("-").map(Number);
+  const [ty, tm, td] = String(to).split("-").map(Number);
+  const end = new Date(ty, tm - 1, td);
+  const out = [];
+  for (let d = new Date(fy, fm - 1, fd), n = 0; d <= end && n < 62; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), n++) {
+    for (const e of eventsOnDay(events, d)) out.push({ title: e.title, start: e.start.toISOString(), end: e.end.toISOString(), allDay: e.allDay, location: e.location });
+  }
+  return out;
+}
+
+/** The Planner's view of your calendar: read-only from the iCal link (never written to). */
+export async function calendarBlocks(from, to) {
+  const url = calendarUrl();
+  if (!url) return { ok: false, reason: "no calendar link set", blocks: [] };
+  const r = await readCalendar(url);
+  if (!r.ok) return { ...r, blocks: [] };
+  return { ok: true, blocks: blocksBetween(r.events, from, to) };
+}
+
 /** One day's events, sorted, with moved and cancelled occurrences handled. */
 function eventsOnDay(events, day) {
   // A moved single occurrence of a repeating event comes as its own event with a RECURRENCE-ID;
@@ -151,7 +172,8 @@ function eventsOnDay(events, day) {
           when = occurrenceOn(e, day);
           if (when && e.rrule && overrides.some((o) => o.uid === e.uid && sameDay(o.recurrenceId.date, day))) when = null;
         }
-        return when ? { title: e.summary || "Untitled event", start: when, allDay: e.start.allDay, location: e.location || "" } : null;
+        const dur = e.end?.date ? Math.max(0, e.end.date - e.start.date) : e.start.allDay ? 86400000 : 3600000;
+        return when ? { title: e.summary || "Untitled event", start: when, end: new Date(when.getTime() + dur), allDay: e.start.allDay, location: e.location || "" } : null;
       })
       .filter(Boolean)
       .sort((a, b) => a.start - b.start);
