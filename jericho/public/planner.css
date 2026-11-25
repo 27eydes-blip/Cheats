@@ -1,6 +1,7 @@
 /* The Planner: the same near-black and gold as the rest of Jericho, light on the GPU
    (no blur, no animation loops; one soft glow on overdue homework). */
 @font-face { font-family: "Marcellus SC"; src: url("fonts/marcellus-sc-400.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Noto Sans Egyptian Hieroglyphs"; src: url("fonts/noto-sans-egyptian-hieroglyphs-subset.woff2") format("woff2"); font-display: swap; unicode-range: U+13000-1342F; }
 
 .planner-page { --hour: 54px; --label-font: "Marcellus SC", Georgia, serif; }
 .planner-page.embedded #pl-back { display: none; }
@@ -22,13 +23,14 @@
 /* ---- the time grid (day and week) ---- */
 .pl-grid { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: auto; max-height: calc(100dvh - 120px); position: relative; touch-action: pan-x pan-y; }
 .pl-cols { display: grid; grid-template-columns: 52px repeat(var(--days), minmax(92px, 1fr)); min-width: calc(52px + var(--days) * 92px); }
-.pl-dayhead { position: sticky; top: 0; z-index: 3; background: var(--panel); border-bottom: 1px solid var(--line); padding: 6px 4px 4px; text-align: center; font: 400 0.8rem var(--label-font); color: var(--muted); letter-spacing: 0.06em; }
+.pl-dayhead { position: sticky; top: 0; z-index: 3; height: 50px; background: var(--panel); border-bottom: 1px solid var(--line); padding: 6px 4px 4px; text-align: center; font: 400 0.8rem var(--label-font); color: var(--muted); letter-spacing: 0.06em; }
 .pl-dayhead.today { color: var(--gold-bright); }
 .pl-dayhead .num { display: block; font-size: 1.1rem; color: var(--text); }
 .pl-dayhead.today .num { color: var(--gold); }
-.pl-corner { position: sticky; top: 0; left: 0; z-index: 4; background: var(--panel); border-bottom: 1px solid var(--line); }
-.pl-allday { border-bottom: 1px solid var(--line); padding: 3px; min-height: 26px; display: flex; flex-direction: column; gap: 3px; }
-.pl-allday-label { position: sticky; left: 0; z-index: 2; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 0.68rem; color: var(--muted); padding: 6px 4px; text-align: right; }
+.pl-corner { position: sticky; top: 0; left: 0; z-index: 5; height: 50px; background: var(--panel); border-bottom: 1px solid var(--line); }
+/* the due / all-day row stays in view while the hours scroll */
+.pl-allday { position: sticky; top: 50px; z-index: 3; background: var(--panel); border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 3px; min-height: 26px; max-height: 96px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 4px 6px -4px rgb(0 0 0 / 60%); }
+.pl-allday-label { position: sticky; left: 0; top: 50px; z-index: 4; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 0.68rem; color: var(--muted); padding: 6px 4px; text-align: right; }
 .pl-hours { position: sticky; left: 0; z-index: 2; background: var(--panel); }
 .pl-hour { height: var(--hour); font-size: 0.68rem; color: var(--muted); text-align: right; padding: 0 6px 0 0; transform: translateY(-0.6em); }
 .pl-col { position: relative; border-left: 1px solid var(--line); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--hour) - 1px), rgb(255 255 255 / 4%) calc(var(--hour) - 1px), rgb(255 255 255 / 4%) var(--hour)); cursor: copy; }
