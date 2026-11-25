@@ -55,6 +55,36 @@ export function matchProof(local, remote, serverProof, email, password) {
   return null;
 }
 
+/**
+ * For npm run plugs:test -- --debug: only handshake1 (which isn't a login attempt), and which
+ * login-hash variant the plug's proof matches. Safe facts only.
+ */
+export async function klapProbe(ip, { email, password, timeoutMs = 5000, fetchImpl = fetch, allowLoopback = false } = {}) {
+  if (!isLocalAddress(String(ip).split(":")[0]) && !(allowLoopback && /^127\.0\.0\.1(:\d+)?$/.test(ip))) return { protocol: "klap", step: "start", result: "not a home-network address" };
+  const local = crypto.randomBytes(16);
+  let h1;
+  try {
+    h1 = await post(`http://${ip}/app/handshake1`, local, { timeoutMs, fetchImpl, step: "handshake1" });
+  } catch (err) {
+    return { protocol: "klap", step: "handshake1", result: err.message };
+  }
+  const out = { protocol: "klap", step: "handshake1", status: h1.status, bytes: h1.buf.length, cookie: sessionCookie(h1.headers) ? "present" : "absent" };
+  if (h1.buf.length !== 48) {
+    try {
+      const j = JSON.parse(h1.buf.toString("utf8"));
+      Object.assign(out, { shape: "json", errorCode: j?.error_code ?? null });
+    } catch {
+      out.shape = h1.buf.length ? "binary" : "empty";
+    }
+    out.result = h1.status === 200 ? `not a KLAP answer (KLAP is 48 bytes)` : `HTTP ${h1.status}`;
+    return out;
+  }
+  const m = matchProof(local, h1.buf.subarray(0, 16), h1.buf.subarray(16, 48), email, password);
+  out.matched = m?.version ? `klap-v${m.version}` : m?.other || "none";
+  out.result = m?.version ? "KLAP login would work" : m?.other ? `set up with a different login (${m.other})` : "no login-hash variant matched (v2, v1, email as typed/lowercase)";
+  return out;
+}
+
 /** The session cookie, from however the response carries it (or "" when there's none). */
 function sessionCookie(headers) {
   const all = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [headers.get?.("set-cookie")].filter(Boolean);
@@ -97,7 +127,21 @@ export async function klapLogin(ip, { email, password, timeoutMs = 5000, fetchIm
   trace.push({ step: "handshake1", status: h1.status, bytes: h1.buf.length, cookie: cookie ? "present" : "absent" });
   if (h1.status === 404) throw new KlapError("this plug doesn't speak KLAP (older firmware)", "not-klap", "handshake1");
   if (h1.status !== 200) throw new KlapError(`handshake1 answered HTTP ${h1.status}`, "bad-response", "handshake1", { status: h1.status });
-  if (h1.buf.length < 48) throw new KlapError(`handshake1 answer was ${h1.buf.length} bytes, expected 48`, "bad-response", "handshake1");
+  if (h1.buf.length !== 48) {
+    // Not a KLAP answer (16-byte seed + 32-byte proof). A plug in TPAP mode answers with something
+    // else, often a short JSON error: only whether it's JSON and its error code are recorded.
+    let code = null;
+    let json = false;
+    try {
+      const j = JSON.parse(h1.buf.toString("utf8"));
+      json = true;
+      code = j?.error_code ?? null;
+    } catch {
+      /* binary */
+    }
+    trace.push({ step: "handshake1", shape: json ? "json" : "binary", errorCode: code });
+    throw new KlapError(`handshake1 answer was ${h1.buf.length} bytes, not the 48 of KLAP${json ? ` (JSON, error ${code})` : ""}: the plug is probably in TPAP mode`, "not-klap-answer", "handshake1", { bytes: h1.buf.length, errorCode: code });
+  }
   const remote = h1.buf.subarray(0, 16);
   const match = matchProof(local, remote, h1.buf.subarray(16, 48), email, password);
   trace.push({ step: "verify", matched: match?.version ? `klap-v${match.version}` : match?.other || "none" });

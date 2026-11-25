@@ -265,7 +265,8 @@ test("npm run plugs:test -- --debug shows only safe facts", async () => {
   const lines = [];
   try {
     const { main } = await import("../scripts/plugs-test.mjs");
-    await main((l) => lines.push(l));
+    const probe = async () => [{ protocol: "tpap", step: "discover", status: 200, bytes: 120, errorCode: 0, result: "announced: tls 0, port 80, pake [2], dac 0, owner is this account" }, { protocol: "klap", step: "handshake1", status: 200, bytes: 49, cookie: "absent", shape: "json", errorCode: -1010, result: "not a KLAP answer (KLAP is 48 bytes)", secret: PASSWORD }];
+    await main((l) => lines.push(l), { probe }); // no real network
   } finally {
     process.argv.pop();
   }
@@ -276,6 +277,8 @@ test("npm run plugs:test -- --debug shows only safe facts", async () => {
   assert.match(out, /step=handshake1 status=200 bytes=48 cookie=absent/);
   assert.match(out, /step=verify matched=none$/m, "unknown fields (like a secret) are never printed");
   assert.match(out, /✅ Fan +ON .* via cloud \(local: verify: auth\)/);
+  assert.match(out, /Protocol probe for 192\.168\.4\.10/);
+  assert.match(out, /klap +handshake1 +status=200 bytes=49 cookie=absent shape=json errorCode=-1010 +-> not a KLAP answer/);
   assert.doesNotMatch(out, new RegExp(`${EMAIL}|${PASSWORD}|dev-fan`));
 });
 

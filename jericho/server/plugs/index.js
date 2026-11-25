@@ -23,6 +23,7 @@ import { logAction } from "../logger.js";
 import { isLocalAddress } from "../roku/ecp.js";
 import { arpTable, normalizeMac, scanSubnets } from "../lg/net.js";
 import { klapLogin } from "./klap.js";
+import { tpapDiscover, tpapLogin } from "./tpap.js";
 import { cloudDevice, cloudPlugs } from "./cloud.js";
 
 export const TIP = "Check that it's plugged in and on the same Wi-Fi as this PC (the 2.4 GHz network), and that Third-Party Compatibility is on in the Tapo app (Me, Tapo Lab or Third-Party Services).";
@@ -48,6 +49,11 @@ export function plugSettings(s = settings) {
 function creds(env = process.env) {
   return { email: String(env.TAPO_EMAIL || "").trim(), password: String(env.TAPO_PASSWORD || "") };
 }
+/** For the --debug probe only (it hashes them for the handshakes; never prints them). */
+export function loginForProbe() {
+  return creds();
+}
+
 /** "set" / "missing" for each, for the self-test and npm run plugs:test. Never the values. */
 export function credStatus(env = process.env) {
   return { TAPO_EMAIL: env.TAPO_EMAIL?.trim() ? "set" : "missing", TAPO_PASSWORD: env.TAPO_PASSWORD ? "set" : "missing" };
@@ -63,8 +69,21 @@ export class PlugError extends Error {
 
 // ---- the network side (swapped for fakes in tests) ----------------------------------------------
 
-/** Local login: KLAP first; the library's older protocol only when the plug doesn't speak KLAP. */
+/**
+ * Local login, in the order the plugs need it:
+ *   1. ask the plug whether it's in TPAP mode (firmware 1.4.0+ with Third-Party Compatibility off)
+ *      and log in over TPAP if so
+ *   2. otherwise KLAP (Third-Party Compatibility on, or older firmware)
+ *   3. the library's older secure-passthrough protocol, only for a plug that doesn't speak KLAP
+ */
 async function localLogin(email, password, ip, { timeoutMs, trace = [] } = {}) {
+  let found = null;
+  try {
+    found = await tpapDiscover(ip, { timeoutMs, trace });
+  } catch (err) {
+    if (err.code === "locked" || err.code === "unreachable") throw err;
+  }
+  if (found) return tpapLogin(ip, { email, password, timeoutMs, trace, found });
   try {
     return await klapLogin(ip, { email, password, timeoutMs, trace });
   } catch (err) {
@@ -101,7 +120,7 @@ async function limited(promise, ms, code = "unreachable") {
     return await Promise.race([promise, new Promise((_, rej) => (timer = setTimeout(() => rej(new PlugError("timed out", code)), ms)))]);
   } catch (err) {
     if (err instanceof PlugError) throw err;
-    if (err?.code && typeof err.code === "string" && ["auth", "unreachable", "not-klap", "bad-response", "device-error", "offline", "error"].includes(err.code)) throw new PlugError(err.message, err.code === "not-klap" ? "unreachable" : err.code, { step: err.step });
+    if (err?.code && typeof err.code === "string" && ["auth", "unreachable", "not-klap", "not-klap-answer", "not-tpap", "bad-response", "device-error", "offline", "error", "locked", "unsupported"].includes(err.code)) throw new PlugError(err.message, ["not-klap", "not-tpap", "not-klap-answer"].includes(err.code) ? "unreachable" : err.code, { step: err.step });
     // Tapo's own "wrong email or password" (-1501); anything else counts as unreachable
     throw new PlugError("failed", /(^|\D)-1501(\D|$)|invalid (?:request or )?credentials|missing credentials/i.test(String(err?.message)) ? "auth" : code);
   }
