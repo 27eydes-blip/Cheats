@@ -844,12 +844,30 @@ is this account. Never the email, password, keys, tokens or response bodies. In 
 - **A full TPAP login and a status read**, only if the plug announced TPAP (this one does count as
   a login attempt; plugs lock themselves for about 30 minutes after too many failed ones).
 
-**How it finds them:** it reads the plug list (names and MAC addresses) from your Tapo account,
-scans your network for devices answering on port 80, and matches them by MAC address (ARP table).
-Your Tapo login is only ever sent to a device whose MAC is one of your account's plugs (or, if the
-account list can't be read, a TP-Link MAC prefix), never to the router or anything else. Found
-plugs are cached in `data/plugs.json` (name, IP, MAC, model and cloud device id; no credentials). If a plug's IP changes,
-it's found again automatically.
+**How it finds them**, cheapest first:
+
+1. **A fixed address in `settings.json`**: `plugs.devices[].ip` (and optionally `mac`) is tried
+   first, with no network scan. Your lamp is set to `192.168.4.222` and your fan to `192.168.4.223`,
+   with the MACs your `arp -a` showed. Remove `ip` to let Jericho search instead.
+2. **Otherwise (or if that address stops answering), a search by MAC address.** Jericho first makes
+   sure the PC's ARP table is complete: it tries port 80 on every address of your local network and
+   sends a one-byte UDP packet to each (no child processes, nothing is waited on), waits about 2.5
+   seconds, and only then reads `arp -a`. (Before this fix it read the table while the sweep was
+   still starting, so plugs the PC hadn't talked to lately weren't in it: "No candidate addresses".)
+   Each plug is then matched by its MAC from `settings.json`, from your Tapo account's plug list,
+   or from the last time it was found. MACs are compared normalized, so Windows' `58-d8-12-fe-48-24`,
+   the account's `58D812FE4824` and `58:D8:12:FE:48:24` are the same. With no MAC known at all,
+   TP-Link MAC prefixes are used (including the TP15's `58:d8:12`) and the plug's own name is checked.
+3. **A plug on the account that won't take a local login** is tried through the cloud (see below).
+
+Your Tapo login is only ever used with an address set in `settings.json` or a device whose MAC is
+one of your plugs' (or, with no MAC known, a TP-Link prefix), never with the router or anything
+else. Found plugs are cached in `data/plugs.json` (name, IP, MAC, model and cloud device id; no
+credentials). If a saved address stops answering, the plug is found again by its MAC and the new
+address is remembered (`settings.json` isn't rewritten; update its `ip` if you want).
+
+`npm run plugs:test -- --debug` always lists the addresses it considered, with each one's IP, MAC
+and why it was or wasn't tried ("set in settings.json", "MAC of Lamp", "TP-Link MAC prefix", "no").
 
 **Timers** are saved in `data/plug-timers.json`, so "turn off the fan in 30 minutes" still happens
 after a restart (a timer that came due while Jericho was off runs as soon as he starts). Jericho
@@ -1007,7 +1025,7 @@ None of these are secret. Keys live only in `.env`.
 | `claude.maxHistoryMessages` | After this many messages (default 24), the conversation starts fresh with a short recap. |
 | `claude.maxTokens` / `claude.fastMaxTokens` | Reply caps: 16000 for the strong model (room for a researched file to write), 2000 for the small one (it hands over if it hits the cap). Spoken answers are short anyway, and you only pay for what's written. |
 | `claude.maxToolRounds` | How many tool steps one request may chain on its own (default 15). |
-| `plugs` | The Tapo plugs: `devices` (name as in the Tapo app, plus aliases: Fan, Lamp), `groups` (name, aliases, devices: "all lights" -> Lamp), `timeoutSeconds` (6). The login is in `.env` (`TAPO_EMAIL`, `TAPO_PASSWORD`). |
+| `plugs` | The Tapo plugs: `devices` (name as in the Tapo app, aliases, and optional fixed `ip` and `mac`: Fan at 192.168.4.223, Lamp at 192.168.4.222), `groups` (name, aliases, devices: "all lights" -> Lamp), `timeoutSeconds` (6). The login is in `.env` (`TAPO_EMAIL`, `TAPO_PASSWORD`). |
 | `lg` | The LG TVs: `rooms` (name and aliases: living room, blue room), `candidates` (addresses tried first: 192.168.4.217, 192.168.4.48), `pairTimeoutSeconds` (60), `port` (3001), `volumeStep` (5). |
 | `planner` | `timezone` (America/Detroit), `wakeStart` / `wakeEnd` (07:00 / 22:00), `weekStartsOn` (1 = Monday), `studyChunkMinutes` (60), `breakMinutes` (10), `minFreeBlockMinutes` (15). |
 | `pc.trusted` | The trusted tier: `enabled` (false), extra `folders`, `apps`, and `commands` that run without a yes. See Controlling your PC. |
