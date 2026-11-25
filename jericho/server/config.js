@@ -127,11 +127,15 @@ export function publicConfig() {
     speechLang: settings.speechLang,
     // stray-turn filter for follow-ups without the wake word (see public/turnfilter.js)
     followUpFilter: settings.followUpFilter !== false,
+    // after he answers, how long you can reply without the wake word
+    followUpSeconds: Number(settings.followUpSeconds) > 0 ? Number(settings.followUpSeconds) : 8,
     // filled in by the server from voice.js (which voice the page speaks with)
     elevenLabsEnabled: false,
     bargeIn: {
       enabled: settings.bargeIn?.enabled !== false,
-      minLevel: Number(settings.bargeIn?.minLevel) > 0 ? Number(settings.bargeIn.minLevel) : 0.15,
+      // "wakeWord" (default): only "Jericho ..." or "stop" cuts him off; "loud": a clearly loud interruption too; "off"
+      mode: ["wakeWord", "loud", "off"].includes(settings.bargeIn?.mode) ? settings.bargeIn.mode : "wakeWord",
+      minLevel: Number(settings.bargeIn?.minVolume) > 0 ? Number(settings.bargeIn.minVolume) : Number(settings.bargeIn?.minLevel) > 0 ? Number(settings.bargeIn.minLevel) : 0.15,
       minMs: Number(settings.bargeIn?.minMs) > 0 ? Number(settings.bargeIn.minMs) : 270,
       calibrateMs: Number(settings.bargeIn?.calibrateMs) > 0 ? Number(settings.bargeIn.calibrateMs) : 1500,
       echoTailMs: Number(settings.bargeIn?.echoTailMs) >= 0 && settings.bargeIn?.echoTailMs !== "" && settings.bargeIn?.echoTailMs != null ? Number(settings.bargeIn.echoTailMs) : 700,

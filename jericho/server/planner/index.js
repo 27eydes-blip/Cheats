@@ -369,3 +369,36 @@ export async function briefingPart(now = new Date()) {
 }
 
 export { store };
+
+// ---- context for every Claude turn (only when it's about time, school or plans) -----------------
+const PLAN_WORDS = /\b(homework|assignments?|due|tests?|exams?|quiz(?:zes)?|class(?:es)?|schedule|free|busy|week|today|tonight|tomorrow|weekend|plan|study|studying|calendar|monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|afternoon|evening|later|deadline|essay|project)\b/i;
+
+/**
+ * One short line from the planner (no calendar fetch, so it's instant): homework due in the next
+ * week, what's left today, and today's free time. Empty when the request isn't about plans or
+ * the planner is empty, so it costs nothing on other turns.
+ */
+export function contextLine(text, now = new Date()) {
+  if (!PLAN_WORDS.test(String(text || ""))) return "";
+  const items = store.list();
+  if (!items.length) return "";
+  const tz = cfg().tz;
+  const t = today(now, tz);
+  const weekOut = at(addDays(t, 8), "00:00", tz).getTime();
+  const day = (iso) => new Date(iso).toLocaleDateString("en-US", { timeZone: tz, weekday: "short" });
+  const due = items
+    .filter((i) => i.type === "homework" && !i.done && new Date(i.due).getTime() < weekOut)
+    .sort((a, b) => a.due.localeCompare(b.due))
+    .slice(0, 5)
+    .map((h) => `${h.title} (${new Date(h.due) < now ? "overdue" : day(h.due)}, ${h.minutes}m)`);
+  const rest = occurrences(items, t, t, { now, cfg: cfg() })
+    .filter((o) => (o.type === "class" || o.type === "event") && new Date(o.end) > now)
+    .slice(0, 4)
+    .map((o) => `${o.title}${o.allDay ? "" : ` ${sayTime(localOf(o.start, tz).time)}`}`);
+  const free = findFree({ items, now, from: t, to: t, minutes: 15, cfg: cfg() }).reduce((a, b) => a + b.minutes, 0);
+  const parts = [];
+  if (due.length) parts.push(`due soon: ${due.join(", ")}`);
+  if (rest.length) parts.push(`still today: ${rest.join(", ")}`);
+  parts.push(`free today about ${hours(free)}`);
+  return `Planner (context; the calendar link isn't included): ${parts.join("; ")}.`.slice(0, 400);
+}

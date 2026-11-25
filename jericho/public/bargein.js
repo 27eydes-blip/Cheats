@@ -203,3 +203,32 @@ export function decideBargeIn({ text, spoken = "", current = "", sustained, enab
   if (confirmPending && soundsLikeYes(text)) return { action: "reconfirm" };
   return { action: "interrupt" };
 }
+
+// ---- barge-in policy (settings.json bargeIn.mode) ---------------------------------------------
+//   "wakeWord" (default)  only "Jericho ..." or "stop" cuts him off; loud talk alone doesn't
+//   "loud"                also a clearly loud interruption (above bargeIn.minVolume, held ~270 ms)
+//   "off"                 only "stop" (the kill phrase always works)
+export const BARGE_POLICIES = ["wakeWord", "loud", "off"];
+export function bargePolicy(cfg = {}) {
+  return BARGE_POLICIES.includes(cfg?.mode) ? cfg.mode : "wakeWord";
+}
+/** After he stops, words that match what he said are still dropped as echo for this long. */
+export const ECHO_MATCH_MS = 3000;
+
+/** The mic level held loud over his voice: cut him off ("loud"), or just listen for the words. */
+export function onLoudLevel(policy) {
+  return policy === "loud" ? "cut" : "listen";
+}
+
+/**
+ * A final transcript heard while he's speaking: "kill" (stop everything), "interrupt" (cut him
+ * off; the words are the next request), or "ignore" (his own echo, or no wake word).
+ */
+export function duringReply({ text, policy = "wakeWord", wakeHeard = false, isKill = false, echo = false, loud = false }) {
+  if (isKill) return "kill";
+  if (echo || !normalizeText(text)) return "ignore";
+  if (policy === "off") return "ignore";
+  if (wakeHeard) return "interrupt";
+  if (policy === "loud" && loud) return "interrupt";
+  return "ignore";
+}

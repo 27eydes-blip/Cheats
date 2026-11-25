@@ -12,6 +12,7 @@
     "start:safe": "node scripts/start-safe.mjs",
     "calls:setup": "node scripts/calls-setup.mjs",
     "tv:pair": "node scripts/tv-pair.mjs",
+    "voice:check": "node scripts/voice-check.mjs",
     "dev": "node --watch server/index.js",
     "test": "node --test test/*.test.js",
     "selftest": "node server/selftest.js",

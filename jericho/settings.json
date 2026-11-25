@@ -16,11 +16,12 @@
   "conversationTimeoutSeconds": 30,
   "bargeIn": {
     "enabled": true,
-    "minLevel": 0.15,
     "minMs": 270,
     "calibrateMs": 1500,
     "echoTailMs": 700,
-    "duckTo": 0.85
+    "duckTo": 0.85,
+    "mode": "wakeWord",
+    "minVolume": 0.15
   },
   "endPhrases": [
     "thanks jericho",
@@ -221,5 +222,6 @@
     "pairTimeoutSeconds": 60,
     "port": 3001,
     "volumeStep": 5
-  }
+  },
+  "followUpSeconds": 8
 }

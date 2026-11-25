@@ -21,6 +21,7 @@ import { alarms } from "./alarms/manager.js";
 import { isNoise } from "../public/turnfilter.js";
 import * as knowledge from "./knowledge.js";
 import { PLANNER_FAST_TOOLS } from "./tools/planner.js";
+import { contextLine as plannerContext } from "./planner/index.js";
 
 const claudeCfg = settings.claude || {};
 const MODEL = claudeCfg.model || "claude-opus-5-5";
@@ -62,11 +63,12 @@ const SYSTEM = `You are ${name}, ${owner}'s personal voice assistant, running on
 - Requests come from speech recognition, so they can be vague, half-finished or misheard. Work out the most likely meaning from the words, the last few turns, your memories, their notes and how they talk, then act on it. "lites" is "lights". Trust the mic corrections in your notes unless they clearly don't fit.
 - Resolve references from the conversation: "that one", "do it again", "the other room", "what about tomorrow".
 - Ask one short question only when you genuinely can't tell what they want, or a wrong guess would matter (who to call, what to delete). Otherwise make the sensible choice.
+- Never say you didn't catch or didn't hear them when their words are there: answer what they most likely meant, or ask one short, specific question ("The living room or the blue room?").
 
 # How you talk
 - Everything you write is spoken: short sentences, contractions, plain words. No lists, markdown, headings, emoji, symbols, URLs or code. Say "percent", "dollars", "and".
 - Numbers the way they're said: "seven thirty", "about twenty minutes". Phone numbers digit by digit in groups.
-- Lead with the answer. No filler like "Great question" or "Certainly". Don't reuse wording you've already used in this conversation.
+- Lead with the answer. By default one to three spoken sentences; go longer only when they ask for detail ("explain", "tell me more", "go deep"). No filler like "Great question" or "Certainly". Don't reuse wording you've already used in this conversation.
 - Each request ends with a delivery note (words, speaking speed, or typed). Match their mood and pace:
   * rushed or fast: the shortest useful answer, a few words if that's enough.
   * relaxed or chatty: casual and warm, a sentence or two.
@@ -102,7 +104,7 @@ Your memories, lessons, profile of them and notes on how they talk are below. Th
 const FAST_SYSTEM = `You are ${name}, a personal voice assistant on ${owner}'s laptop, talking out loud. You handle quick everyday requests.
 
 - Requests come from speech recognition and may be misheard: pick the most likely meaning from the words, the last few turns and your notes. Resolve "it", "that one", "again" from the conversation.
-- Everything you write is spoken. One or two short sentences, plain words, contractions. No lists, markdown, emoji, symbols, URLs or code. Numbers as they're said ("seven thirty"). Lead with the answer, no filler, don't repeat earlier wording.
+- Everything you write is spoken. Lead with the answer in one to three short sentences, plain words, contractions. Never say you didn't catch them; if unsure, ask one short question. No lists, markdown, emoji, symbols, URLs or code. Numbers as they're said ("seven thirty"). Lead with the answer, no filler, don't repeat earlier wording.
 - Match their pace: rushed means a few words; chatty means warm but brief. Follow the reply preferences and lessons in your notes.
 - Use your tools to act, and only say something happened if the tool result says so. TVs: lg_tv for the LG TVs by room (living room, blue room; no room = last used), the tv tool only when they say Roku; open_app is for this PC. Alarm times are US Eastern: say the day and time from the result's "say".
 - When they correct you ("no, I meant..."), fix it and call save_lesson with a short rule and their exact words.
@@ -390,6 +392,13 @@ export class Brain {
       logAction("knowledge_error", { sessionId, error: err.message });
     }
     if (fromNotes) content.push({ type: "text", text: fromNotes });
+    // A one-line planner summary, only when the request is about time, school or plans (cheap).
+    try {
+      const plan = plannerContext(corrected);
+      if (plan) content.push({ type: "text", text: plan });
+    } catch {
+      /* the planner is optional context */
+    }
     const note = fixes.length ? ` (speech-to-text heard "${text}"; auto-corrected ${fixes.join(", ")})` : "";
     content.push({ type: "text", text: `[${new Date().toString()}] ${corrected}${note} (delivery: ${deliveryNote(text, meta)})` });
     s.messages.push({ role: "user", content });
@@ -596,7 +605,9 @@ export class Brain {
       models: [...turn.models],
       route: turn.route,
       ...(turn.escalated ? { escalated: true } : {}),
+      ...(turn.tokens ? { tokens: turn.tokens } : {}),
     };
+    logAction("turn_stats", { sessionId: turn.sessionId, route: turn.route, models: [...turn.models], ...(turn.tokens ? { tokens: turn.tokens } : {}), firstSentenceMs: turn.firstSentence, totalMs: timings.totalMs }); // numbers only
     return { reply, awaitingConfirmation: Boolean(result.awaitingConfirmation), ...(result.interrupted ? { interrupted: true } : {}), timings, ...(turn.sources.length ? { sources: turn.sources } : {}) };
   }
 
@@ -869,6 +880,13 @@ export class Brain {
     }
     for (const sentence of splitter.flush()) this.#emit(turn, sentence);
     turn.models.add(response.model);
+    // tokens per turn, for npm run voice:check (numbers only)
+    const u = response.usage || {};
+    turn.tokens ||= { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
+    turn.tokens.in += u.input_tokens || 0;
+    turn.tokens.out += u.output_tokens || 0;
+    turn.tokens.cacheRead += u.cache_read_input_tokens || 0;
+    turn.tokens.cacheWrite += u.cache_creation_input_tokens || 0;
     for (const src of sourcesFrom(response.content)) if (!turn.sources.some((x) => x.url === src.url)) turn.sources.push(src);
     return response;
   }

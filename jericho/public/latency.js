@@ -48,6 +48,17 @@ export function cleanLatency(entry = {}) {
   if (typeof entry.typed === "boolean") out.typed = entry.typed;
   if (typeof entry.early === "boolean") out.early = entry.early;
   if (entry.fallback === "browser-voice" || entry.fallback === "apology") out.fallback = entry.fallback;
+  // Claude tokens for the turn and how many echo drops happened: numbers only
+  if (entry.tokens && typeof entry.tokens === "object") {
+    const tk = {};
+    for (const k of ["in", "out", "cacheRead", "cacheWrite"]) {
+      const v = Number(entry.tokens[k]);
+      if (Number.isInteger(v) && v >= 0 && v <= 10_000_000) tk[k] = v;
+    }
+    if (Object.keys(tk).length) out.tokens = tk;
+  }
+  const echoes = Number(entry.echoes);
+  if (Number.isInteger(echoes) && echoes >= 0 && echoes <= 1000) out.echoes = echoes;
   return out;
 }
 

@@ -2,7 +2,7 @@
 // and the gold visualizer. All thinking and all API keys live on the server.
 import { createPresence } from "./presence/index.js";
 import { wakeRegex as buildWakeRegex } from "./wake.js";
-import { BARGE_DEFAULTS, BARGE_MODES, createBargeDetector, DEFAULT_BARGE_MODE, shouldDropAsEcho } from "./bargein.js";
+import { BARGE_DEFAULTS, BARGE_MODES, bargePolicy, createBargeDetector, DEFAULT_BARGE_MODE, duringReply, ECHO_MATCH_MS, onLoudLevel, shouldDropAsEcho } from "./bargein.js";
 import { ALARM_PERFORMANCE, chooseAlarmPerformance, createAlarmRinger, sharedAlarmCache, DEFAULT_ALARM_SOUND, DEFAULT_ALARM_VOLUME, normalizeSound, previewAlarm } from "./alarm.js";
 import { alarmCommand } from "./alarmrules.js";
 import { formatReadout, LatencyTracker, turnLatency } from "./latency.js";
@@ -369,12 +369,26 @@ async function playTurn(turn) {
       await turn.next();
       continue;
     }
-    const sentence = turn.queue.shift();
+    let sentence = turn.queue.shift();
+    // Later sentences that are already here are spoken together: no gap between them.
+    // (The first sentence always goes on its own, so the reply starts as early as possible.)
+    if (turn.spokeOne) {
+      while (turn.queue.length && sentence.length + turn.queue[0].length < 240) {
+        const next = turn.queue.shift();
+        recentSentences.push(sentence);
+        if (recentSentences.length > 3) recentSentences.shift();
+        sentence = `${sentence} ${next}`;
+      }
+    }
+    turn.spokeOne = true;
     if (mode !== "speaking") {
       stopConversationTimer();
       // Speech recognition is paused while he talks, so it can't transcribe his own voice.
       // On a PC a separate echo-cancelled mic stream keeps measuring the level; a confirmed
       // interruption (loud enough, long enough) is what turns recognition back on.
+      // wakeWord barge-in (the default) on a PC: recognition keeps running, his own words are
+      // dropped as echo, and only "Jericho ..." or "stop" cuts him off.
+      if (canListenForBargeIn() && bargePolicy(config.bargeIn) === "wakeWord") earsDuringReply = true;
       if (!earsDuringReply) stopListening();
       setMode("speaking", "");
     }
@@ -413,6 +427,7 @@ async function playTurn(turn) {
     barge.stop();
     earsDuringReply = false;
     tailUntil = performance.now() + echoTailMs(); // room echo and speaker decay
+    echoMatchUntil = performance.now() + ECHO_MATCH_MS; // his words are still dropped for 3 s
   }
   turn.stats.end = performance.now();
   viz.setSpeechSource(null, false);
@@ -453,7 +468,7 @@ function restartConversationTimer() {
   if (!conversation) return;
   conversationTimer = setTimeout(() => {
     if (mode === "active") endConversation();
-  }, (config.conversationTimeoutSeconds || 30) * 1000);
+  }, (Number(config.followUpSeconds) > 0 ? config.followUpSeconds : config.conversationTimeoutSeconds || 8) * 1000); // follow-up window: talk without the wake word
 }
 function stopConversationTimer() {
   clearTimeout(conversationTimer);
@@ -604,7 +619,7 @@ async function send(kind, text, { endAfter = false, typed = false, interrupted =
 const ACK_KEY = "jericho-ack";
 const ACK_MODES = ["words", "sound", "off"];
 const ackMode = () => (ACK_MODES.includes(store.get(ACK_KEY)) ? store.get(ACK_KEY) : "words");
-const ACK_AFTER_MS = 1500;
+const ACK_AFTER_MS = 3000; // "On it." only when the answer takes longer than 3 seconds
 const ACK_PHRASES = ["On it.", "One sec.", "Okay, one moment."]; // the same list as server/tts.js (cached on disk there)
 const ackAudio = new Map(); // phrase -> preloaded Audio
 let lastAck = "";
@@ -714,12 +729,15 @@ function reportLatency(turn, server) {
     ...turnLatency(lat),
     route: lat.route,
     models: server?.models,
+    tokens: server?.tokens,
+    echoes: turnEchoes,
     voice: voices.length > 1 ? "mixed" : voices[0],
     ack: Boolean(lat.ack),
     typed: Boolean(lat.typed),
     early: Boolean(lat.early),
     fallback: lat.fallback,
   });
+  turnEchoes = 0;
   store.set(LATENCY_KEY, JSON.stringify(latency.entries));
   showLatency();
   for (const [p, n] of Object.entries(st.chars || {})) sessionChars[p] = (sessionChars[p] || 0) + n;
@@ -835,9 +853,11 @@ function replyPlaying() {
   return false;
 }
 let earsDuringReply = false; // recognition turned back on during a reply ("Jericho, stop" with interrupting off)
-let tailUntil = 0; // until then, transcripts that sound like his last sentences are dropped
+let tailUntil = 0; // until then, the mic stays deaf (room echo and speaker decay)
+let echoMatchUntil = 0; // until then (3 s after he stops), transcripts that match his last sentences are dropped
 const recentSentences = []; // his last 3 sentences, for echo matching
 let echoIgnored = 0;
+let turnEchoes = 0; // echo drops since the last reported turn
 const echoTailMs = () => config.bargeIn?.echoTailMs ?? BARGE_DEFAULTS.echoTailMs;
 
 /** PC with a working level meter: barge-in by voice is possible (phones: tap instead). */
@@ -866,17 +886,19 @@ function applyVoiceVolume(player, isRouted) {
 
 /** Drop transcripts that are his own voice coming back (and count them). */
 function dropAsEcho(text, utteranceStart = heardTimes.first, count = true) {
-  const drop = shouldDropAsEcho({ text, recent: recentSentences, now: performance.now(), speaking: replyPlaying(), tailUntil, utteranceStart: utteranceStart ?? null });
+  const drop = shouldDropAsEcho({ text, recent: recentSentences, now: performance.now(), speaking: replyPlaying(), tailUntil: Math.max(tailUntil, echoMatchUntil), utteranceStart: utteranceStart ?? null });
   if (drop && count) {
     echoIgnored++;
-    console.debug("[jericho] echo ignored:", text);
+    turnEchoes++; // reported with the turn's latency numbers (a count, never the words)
+    console.debug("[jericho] echo ignored"); // quiet: never spoken, never the text
   }
   return drop;
 }
 
 /** The level meter confirmed you're talking over him: loud enough, for long enough. */
 function levelConfirmed() {
-  if (bargeMode !== "off" && barge.enabled) return cutOff("voice");
+  // "loud" policy: a clearly loud interruption cuts him off. Otherwise only the words can.
+  if (bargeMode !== "off" && barge.enabled && onLoudLevel(bargePolicy(config.bargeIn)) === "cut") return cutOff("voice");
   // Interrupting is off: still listen for "Jericho, stop" (only the kill phrase gets through).
   if (!earsDuringReply) {
     earsDuringReply = true;
@@ -1283,8 +1305,12 @@ function onHeard(raw, fromBargeIn = false, wakeOk = true, { early = false } = {}
   if (dropAsEcho(text, utteranceStart)) return;
   // The kill switch works in every state, even while Jericho is talking or thinking.
   if (mode !== "off" && isKillPhrase(text)) return stopEverything();
-  // Anything else heard while he's still talking is discarded.
-  if (replyPlaying()) return;
+  // While he talks: "Jericho ..." cuts him off (wakeWord and loud policies); anything else is dropped.
+  if (replyPlaying()) {
+    const verdict = duringReply({ text, policy: bargePolicy(config.bargeIn), wakeHeard: wakeRegex().test(text), loud: barge.sustained(performance.now()) });
+    if (verdict === "interrupt") return cutOff("wake", text);
+    return;
+  }
   if (calibration) return; // calibrating the room: saying "Jericho" mustn't wake him
   // "Jericho, go to sleep": mute (a tap or M unmutes)
   if ((mode === "idle" || mode === "active") && isSleepCommand(text, config.wakeWords, { inConversation: mode === "active" })) {
@@ -1317,7 +1343,7 @@ function onHeard(raw, fromBargeIn = false, wakeOk = true, { early = false } = {}
     const request = text.replace(wakeRegex(), " ").trim();
     if (request.length > 1) {
       // No wake word: only a clear follow-up counts, never filler, the TV or his own echo.
-      const verdict = classifyFollowUp(request, { wakeHeard, askedQuestion: lastReplyAsked, interrupted, lastSpoken, confidence: lastConfidence, enabled: config.followUpFilter !== false });
+      const verdict = classifyFollowUp(request, { wakeHeard, askedQuestion: lastReplyAsked, interrupted, lastSpoken, confidence: lastConfidence, enabled: config.followUpFilter !== false, confirmPending });
       if (verdict.send) return send("ask", request, { interrupted, early });
       if (!wakeHeard) {
         strayIgnored++;

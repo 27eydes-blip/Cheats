@@ -19,6 +19,7 @@ const DIRECT = new RegExp(
   "i",
 );
 const ADDRESS = /\b(you|your|jericho|jer|please)\b/i;
+const CONFIRM_WORDS = /\b(yes|yeah|yep|yup|sure|ok|okay|confirm|confirmed|do it|go ahead|go for it|no|nope|nah|don't|do not|cancel|stop|never mind|wait)\b/;
 
 export const MAX_UNADDRESSED_WORDS = 25;
 
@@ -59,8 +60,10 @@ export function echoOverlap(text, lastSpoken) {
  * Returns { send, reason }.
  */
 export function classifyFollowUp(text, opts = {}) {
-  const { wakeHeard = false, askedQuestion = false, interrupted = false, lastSpoken = "", confidence = 0, enabled = true } = opts;
+  const { wakeHeard = false, askedQuestion = false, interrupted = false, lastSpoken = "", confidence = 0, enabled = true, confirmPending = false } = opts;
   const t = tokens(text);
+  // a yes/no is waiting: short answers always count ("yes", "no", "do it", "cancel", "okay")
+  if (confirmPending && t.length && t.length <= 6 && CONFIRM_WORDS.test(t.join(" "))) return { send: true, reason: "answer to a confirmation" };
   if (!t.length || isNoise(text)) return { send: false, reason: "filler" };
   if (!enabled || wakeHeard || interrupted) return { send: true, reason: wakeHeard ? "wake word" : interrupted ? "barge-in" : "filter off" };
   if (t.length >= 3 && echoOverlap(text, lastSpoken) >= 0.7) return { send: false, reason: "echo" };

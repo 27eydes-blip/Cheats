@@ -27,9 +27,10 @@ function feed(det, level, from, ms) {
 }
 
 test("settings.json has the barge-in settings and the page gets them", () => {
-  assert.deepEqual(base.bargeIn, { enabled: true, minLevel: BARGE_DEFAULTS.minLevel, minMs: BARGE_DEFAULTS.minMs, calibrateMs: 1500, echoTailMs: 700, duckTo: 0.85 });
+  assert.deepEqual(base.bargeIn, { enabled: true, minMs: BARGE_DEFAULTS.minMs, calibrateMs: 1500, echoTailMs: 700, duckTo: 0.85, mode: "wakeWord", minVolume: BARGE_DEFAULTS.minLevel });
   assert.ok(base.bargeIn.minMs >= 250 && base.bargeIn.minMs <= 300);
-  assert.deepEqual(publicConfig().bargeIn, base.bargeIn);
+  const { minVolume, ...rest } = base.bargeIn;
+  assert.deepEqual(publicConfig().bargeIn, { ...rest, minLevel: minVolume }, "minVolume is the loud-interruption level the page uses");
 });
 
 test("echo of his own voice is ignored", () => {
