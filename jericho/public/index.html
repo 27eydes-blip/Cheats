@@ -13,6 +13,7 @@
   <link rel="preload" href="fonts/marcellus-sc-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/noto-sans-egyptian-hieroglyphs-subset.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="egypt.css">
+  <link rel="stylesheet" href="planner.css">
   <link rel="modulepreload" href="/vendor/three/build/three.module.min.js">
   <script type="importmap">
     {
@@ -57,6 +58,7 @@
       <span class="glyph-row right" aria-hidden="true"><span class="hg g-eye"></span><span class="hg g-feather"></span><span class="hg g-falcon outer"></span><span class="hg g-was outer"></span></span>
     </div>
     <nav class="top-links">
+      <button id="planner-open" class="top-link" type="button" aria-controls="planner-overlay">Planner</button>
       <a class="top-link" href="/calls">Calls</a>
       <a class="top-link" href="/memory">Memory</a>
       <button id="look-open" class="top-link icon" type="button" aria-label="Look settings" aria-expanded="false" aria-controls="look-panel">
@@ -236,5 +238,9 @@
   <script src="app.js" type="module"></script>
   <script src="egypt.js" type="module"></script>
   <script src="hud.js" type="module"></script>
+  <!-- The Planner, over the voice page so Jericho keeps listening (loaded the first time it opens) -->
+  <div id="planner-overlay" class="planner-overlay" hidden role="dialog" aria-label="Planner">
+    <div class="po-bar"><button id="planner-close" class="del" type="button">Close planner</button></div>
+  </div>
 </body>
 </html>

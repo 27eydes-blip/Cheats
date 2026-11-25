@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0907">
+  <meta name="color-scheme" content="dark">
+  <title>Jericho Planner</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="planner.css">
+</head>
+<body class="planner-page">
+  <div class="pl-wrap">
+    <header class="pl-head">
+      <h1 class="pl-title"><span aria-hidden="true" class="pl-glyph">𓂀</span> Planner</h1>
+      <div class="pl-nav">
+        <button id="pl-prev" class="pl-btn" type="button" aria-label="Previous">‹</button>
+        <button id="pl-today" class="pl-btn" type="button">Today</button>
+        <button id="pl-next" class="pl-btn" type="button" aria-label="Next">›</button>
+        <span id="pl-range" class="pl-range" aria-live="polite"></span>
+      </div>
+      <div class="pl-views" role="tablist" aria-label="View">
+        <button class="pl-btn" type="button" role="tab" data-view="day">Day</button>
+        <button class="pl-btn" type="button" role="tab" data-view="week" aria-selected="true">Week</button>
+        <button class="pl-btn" type="button" role="tab" data-view="month">Month</button>
+      </div>
+      <a id="pl-back" class="top-link" href="/">Back to Jericho</a>
+    </header>
+
+    <p id="pl-status" class="pl-status" role="status"></p>
+
+    <div class="pl-body">
+      <section id="pl-grid" class="pl-grid" aria-label="Calendar"></section>
+
+      <aside class="pl-side" aria-label="This week">
+        <h2 class="pl-side-title">This week</h2>
+        <div class="pl-stats">
+          <div><span id="pl-work" class="pl-stat">0m</span><span class="pl-stat-label">work left</span></div>
+          <div><span id="pl-free" class="pl-stat">0m</span><span class="pl-stat-label">free</span></div>
+        </div>
+        <ul id="pl-homework" class="pl-hw"></ul>
+        <h3 class="pl-sub">Free time</h3>
+        <ul id="pl-freebars" class="pl-freebars"></ul>
+        <h3 class="pl-sub">Study plan</h3>
+        <p id="pl-plan-note" class="pl-note">Draft study blocks before each due date. Nothing is kept until you accept it.</p>
+        <div class="pl-plan">
+          <button id="pl-plan" class="pl-btn gold" type="button">Plan my week</button>
+          <button id="pl-accept" class="pl-btn" type="button" hidden>Accept plan</button>
+          <button id="pl-reject" class="pl-btn" type="button" hidden>Reject plan</button>
+        </div>
+        <p class="pl-note">Tap an empty slot to add something, drag to move it, tap homework to check it off. Gold shading is free time. Items from your calendar link are read-only.</p>
+      </aside>
+    </div>
+  </div>
+
+  <dialog id="pl-sheet" class="pl-sheet">
+    <form id="pl-form" method="dialog">
+      <h2 id="pl-sheet-title">Add</h2>
+      <label>Type
+        <select name="type">
+          <option value="homework">Homework</option>
+          <option value="event">Event or test</option>
+          <option value="study_block">Study block</option>
+          <option value="class">Class (every week)</option>
+        </select>
+      </label>
+      <label>Title <input name="title" required maxlength="120" autocomplete="off"></label>
+      <label data-for="homework">Subject <input name="subject" maxlength="60" autocomplete="off"></label>
+      <div class="pl-row">
+        <label>Date <input name="date" type="date" required></label>
+        <label>Time <input name="time" type="time" step="900" required></label>
+      </div>
+      <label data-for="homework event study_block class">Minutes <input name="minutes" type="number" min="5" max="600" step="5" value="60"></label>
+      <label data-for="class">Days (e.g. MWF, tues thurs) <input name="days" maxlength="40"></label>
+      <div class="pl-actions">
+        <button id="pl-delete" class="del" type="button" hidden>Delete</button>
+        <span class="pl-spacer"></span>
+        <button value="cancel" class="pl-btn" type="submit" formnovalidate>Cancel</button>
+        <button id="pl-save" value="save" class="pl-btn gold" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="planner.js"></script>
+</body>
+</html>

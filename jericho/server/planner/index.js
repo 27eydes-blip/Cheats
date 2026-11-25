@@ -264,7 +264,8 @@ export async function planMyWeek(now = new Date()) {
 export function reviewPlan({ action, which = "" }) {
   const drafts = store.list().filter((i) => i.type === "study_block" && i.status === "draft");
   if (!drafts.length) return { ok: false, error: "There's no draft plan right now. Say plan my week to make one." };
-  const match = which ? drafts.filter((d) => words(which).some((w) => words(d.title).includes(w))) : drafts;
+  const byId = drafts.filter((d) => d.id === which);
+  const match = byId.length ? byId : which ? drafts.filter((d) => words(which).some((w) => words(d.title).includes(w))) : drafts;
   if (!match.length) return { ok: false, error: "None of the drafts match that." };
   const ids = new Set(match.map((d) => d.id));
   store.batch((items) => ({ items: action === "accept" ? items.map((i) => (ids.has(i.id) ? { ...i, status: "accepted" } : i)) : items.filter((i) => !ids.has(i.id)), count: ids.size }), action === "accept" ? "plan_accepted" : "plan_rejected");

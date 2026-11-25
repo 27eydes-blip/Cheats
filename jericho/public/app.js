@@ -757,7 +757,22 @@ function addSources(bubble, sources) {
 }
 
 /** The Briefing card: the same info Jericho reads out. */
+// ---- the Planner overlay (button, or "open my planner") ------------------------------------
+function openPlanner() {
+  const overlay = document.getElementById("planner-overlay");
+  if (!overlay.querySelector("iframe")) {
+    const frame = document.createElement("iframe");
+    frame.title = "Planner";
+    frame.src = "/planner?embedded=1";
+    overlay.append(frame);
+  }
+  overlay.hidden = false;
+}
+document.getElementById("planner-open")?.addEventListener("click", openPlanner);
+document.getElementById("planner-close")?.addEventListener("click", () => (document.getElementById("planner-overlay").hidden = true));
+
 function addCard(card) {
+  if (card?.kind === "open-planner") return openPlanner();
   if (card?.kind !== "briefing") return;
   const li = node("li", "card briefing");
   li.append(node("p", "card-title", `Briefing · ${card.date}`));
@@ -779,6 +794,14 @@ function addCard(card) {
     sec.append(node("p", "card-muted", w.advice));
     if (w.tomorrow) sec.append(node("p", "card-muted", `Tomorrow: high ${w.tomorrow.high}°, low ${w.tomorrow.low}°, ${w.tomorrow.sky}, rain ${w.tomorrow.rain}%.`));
   });
+  if (card.planner?.ok) {
+    section("Homework", card.planner, (sec) => {
+      const list = (label, items) => sec.append(node("p", "", `${label}: ${items.length ? items.map((h) => h.title).join(", ") : "nothing"}`));
+      list("Due today", card.planner.dueToday || []);
+      list("Due tomorrow", card.planner.dueTomorrow || []);
+      sec.append(node("p", "card-muted", `Free today: ${card.planner.freeToday}${card.planner.longestFree ? ` (longest ${card.planner.longestFree})` : ""}`));
+    });
+  }
   section("Markets", card.markets, (sec) => {
     for (const q of card.markets.quotes) {
       if (!q.ok) {
