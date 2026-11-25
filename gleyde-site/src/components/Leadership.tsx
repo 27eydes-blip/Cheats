@@ -1,5 +1,5 @@
 import { leadership } from "@/data/portfolio";
-import { Reveal } from "./Reveal";
+import { StaggerItem, StaggerList } from "./Motion";
 import { Section } from "./Section";
 
 const numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
@@ -13,10 +13,9 @@ const numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 export function Leadership() {
   return (
     <Section id="leadership" index="04" label="Leadership">
-      <ol className="rule-t">
+      <StaggerList as="ol" className="rule-t" delay={0.2} gap={0.12}>
         {leadership.map((person, i) => (
-          <li key={person.name} className="rule-b">
-            <Reveal delay={i * 0.08} y={24}>
+          <StaggerItem key={person.name} className="rule-b">
               <article className="group grid grid-cols-[2.25rem_1fr] items-baseline gap-x-4 py-6 sm:grid-cols-[3.5rem_1fr_auto] sm:gap-x-8 sm:py-8 lg:py-9">
                 <span
                   aria-hidden="true"
@@ -36,10 +35,9 @@ export function Leadership() {
                   )}
                 </p>
               </article>
-            </Reveal>
-          </li>
+          </StaggerItem>
         ))}
-      </ol>
+      </StaggerList>
     </Section>
   );
 }

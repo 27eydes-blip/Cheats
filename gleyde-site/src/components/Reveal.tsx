@@ -13,7 +13,8 @@ type RevealProps = HTMLMotionProps<"div"> & {
 };
 
 /**
- * Fades and slides its children in the first time they scroll into view.
+ * Fades and slides its children in whenever they scroll into view (and
+ * resets once they leave, so panels come alive again on every visit).
  * Only opacity and transform animate, so there is no layout shift.
  */
 export function Reveal({ delay = 0, y = 44, children, ...rest }: RevealProps) {
@@ -21,7 +22,7 @@ export function Reveal({ delay = 0, y = 44, children, ...rest }: RevealProps) {
     <m.div
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -8% 0px" }}
+      viewport={{ once: false, amount: 0.15 }}
       transition={{ duration: 1.4, ease: easeDeco, delay }}
       {...rest}
     >
@@ -29,3 +30,6 @@ export function Reveal({ delay = 0, y = 44, children, ...rest }: RevealProps) {
     </m.div>
   );
 }
+
+/** The viewport rule every scroll animation shares: replay on each visit. */
+export const inView = { once: false, amount: 0.15 } as const;

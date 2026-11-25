@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/Footer";
+import { RevealWords } from "@/components/Motion";
 import { Nav } from "@/components/Nav";
 import { PortfolioGrid } from "@/components/PortfolioGrid";
 import { divisions } from "@/data/portfolio";
@@ -46,7 +47,7 @@ export default function PortfolioPage() {
             </span>
           </p>
           <h1 className="mt-8 font-display text-[clamp(3rem,9vw,8.5rem)] leading-[0.95] tracking-[0.01em] text-ivory">
-            Portfolio
+            <RevealWords text="Portfolio" delay={0.1} />
           </h1>
           <p className="mt-8 max-w-xl text-base leading-relaxed font-light text-ivory/65 sm:text-lg">
             Every game, app and security product we make, in one place.

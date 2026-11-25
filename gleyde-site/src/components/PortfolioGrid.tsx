@@ -3,7 +3,7 @@
 import { m } from "framer-motion";
 import { useState } from "react";
 import type { Division } from "@/data/portfolio";
-import { easeDeco } from "./Reveal";
+import { easeDeco, inView } from "./Reveal";
 import { StatusBadge } from "./StatusBadge";
 
 function Arrow() {
@@ -88,9 +88,10 @@ export function PortfolioGrid({ divisions }: { divisions: Division[] }) {
             <m.li
               key={`${p.division.id}-${p.name}`}
               className="rule-t"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: easeDeco, delay: Math.min(i, 8) * 0.05 }}
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={inView}
+              transition={{ duration: 1, ease: easeDeco, delay: (i % 3) * 0.1 }}
             >
               {p.url ? (
                 <a href={p.url} target="_blank" rel="noopener noreferrer" className="group block pt-8 pb-16">

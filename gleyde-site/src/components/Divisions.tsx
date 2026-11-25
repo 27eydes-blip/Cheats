@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { divisions } from "@/data/portfolio";
+import { StaggerItem, StaggerList } from "./Motion";
 import { Reveal } from "./Reveal";
 import { Section } from "./Section";
 import { StatusBadge } from "./StatusBadge";
@@ -69,9 +70,10 @@ export function Divisions() {
               )}
             </Reveal>
 
-            <Reveal delay={0.12} className="lg:col-span-5">
+            <div className="lg:col-span-5">
               <h3 className="sr-only">{d.name} products</h3>
-              <ul className="rule-t">
+              {/* Products cascade in one after another. */}
+              <StaggerList className="rule-t" delay={0.25} gap={0.07}>
                 {d.projects.map((p) => {
                   const body = (
                     <>
@@ -90,7 +92,7 @@ export function Divisions() {
                   );
                   const row = "group/p rule-b grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 py-4 sm:py-5";
                   return (
-                    <li key={p.name}>
+                    <StaggerItem key={p.name}>
                       {p.url ? (
                         <a href={p.url} target="_blank" rel="noopener noreferrer" className={row}>
                           {body}
@@ -99,14 +101,16 @@ export function Divisions() {
                       ) : (
                         <div className={row}>{body}</div>
                       )}
-                    </li>
+                    </StaggerItem>
                   );
                 })}
-              </ul>
+              </StaggerList>
               {d.footnote && (
-                <p className="mt-5 text-[0.68rem] tracking-[0.24em] text-ivory/50 uppercase">{d.footnote}</p>
+                <Reveal delay={0.7} y={10}>
+                  <p className="mt-5 text-[0.68rem] tracking-[0.24em] text-ivory/50 uppercase">{d.footnote}</p>
+                </Reveal>
               )}
-            </Reveal>
+            </div>
           </div>
         </Section>
       ))}

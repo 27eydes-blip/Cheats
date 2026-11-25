@@ -82,8 +82,9 @@ export function Nav() {
         </a>
 
         <ul className="hidden items-center gap-9 md:flex">
-          {navLinks.map((l) => (
-            <li key={l.href}>
+          {navLinks.map((l, i) => (
+            // On load the links drift down into place one by one (CSS).
+            <li key={l.href} className="drop-in" style={{ animationDelay: `${1.7 + i * 0.07}s` }}>
               <NavLink
                 href={resolve(l.href)}
                 current={isCurrent(l.href)}
