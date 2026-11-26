@@ -7750,68 +7750,99 @@ function fpModes(){
 }
 function patch23(){heroHTML=fpHero;renderMenu=fpModes}
 
-// ===================== PLAYER FACES =====================
-// Every player gets a cartoon portrait built from his name, so a recruit keeps his face after he signs.
-const FACE_SKIN=[["#f2cba8",5],["#e2b088",7],["#c98f66",9],["#ad7049",12],["#90583a",16],["#74442a",18],["#5c3521",16],["#4a2b1a",12]];
-const FACE_HAIR=["#17110d","#17110d","#17110d","#2a1a10","#3b2416","#5e3b22","#b88a45","#7a3418","#e6dcc4"];
+// ===================== PLAYER FACES v2: player-card portraits =====================
+// Shaded, detailed portraits built from the player's name. Same name, same face, everywhere.
+const FACE_SKIN=[["#f0c8a4",5],["#dfa982",7],["#c68a5e",9],["#a96a42",12],["#8c5434",16],["#714128",18],["#59321f",16],["#462818",12]];
+const FACE_HAIR=["#120d0a","#120d0a","#120d0a","#1f140d","#33200f","#4e301a","#a87a3c","#6e2d14"];
 const FACE_CACHE=new Map();
 function fhash(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 function frng(seed){let x=seed||1;return ()=>{x^=x<<13;x>>>=0;x^=x>>>17;x^=x<<5;x>>>=0;return x/4294967296}}
-function shade(hex,f){const n=parseInt(hex.slice(1),16),c=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v*f))));return "#"+c.map(v=>v.toString(16).padStart(2,"0")).join("")}
+function shade(hex,f){const n=parseInt(hex.slice(1),16),c=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(f>1?v+(255-v)*(f-1):v*f))));return "#"+c.map(v=>v.toString(16).padStart(2,"0")).join("")}
 function faceSVG(seed,team,size,opts){
-  const c1=team?team.c1:"#5b6b80",c2=team?team.c2:"#ffffff",no=opts&&opts.no!=null?opts.no:"",key=seed+"|"+c1+"|"+c2+"|"+no+"|"+size;if(FACE_CACHE.has(key))return FACE_CACHE.get(key);
+  const c1=team?team.c1:"#4b5a70",c2=team?team.c2:"#ffffff",no=opts&&opts.no!=null?opts.no:"",full=!!(opts&&opts.full),key=seed+"|"+c1+"|"+c2+"|"+no+"|"+size+"|"+full;
+  if(FACE_CACHE.has(key))return FACE_CACHE.get(key);
   const R=frng(fhash(seed)),pick=a=>a[Math.floor(R()*a.length)],wpick=a=>{let t=a.reduce((s,x)=>s+x[1],0)*R();for(const x of a){t-=x[1];if(t<=0)return x[0]}return a[0][0]};
-  const skin=wpick(FACE_SKIN),dk=shade(skin,.82),dk2=shade(skin,.68),light=FACE_SKIN.findIndex(x=>x[0]===skin)<=2;
-  let hair=pick(FACE_HAIR);if(!light&&(hair==="#b88a45"||hair==="#7a3418"))hair="#17110d";
-  const style=pick(light?["buzz","short","sidepart","curly","fade","bun","short"]:["buzz","fade","fade","hightop","afro","locs","cornrows","curly","bald","twists","short"]);
-  if(hair==="#e6dcc4"&&(R()<.6||!["buzz","fade","short"].includes(style)))hair="#17110d";
-  const hw=22+R()*3,hh=25+R()*3,ey=47+R()*2,es=8.5+R()*1.5,brow=1.6+R()*1.6,beard=pick(["none","none","none","stubble","stubble","goatee","mustache","beard"]),mouth=pick(["smile","smile","neutral","grin","smirk"]);
-  const band=R()<.18,ear=R()<.12;
-  const back=[],front=[];
-  // hair drawn behind the head
-  if(style==="afro")back.push(`<ellipse cx="50" cy="31" rx="${hw+8+R()*3}" ry="${22+R()*3}" fill="${hair}"/>`);
-  if(style==="locs"||style==="twists"){for(let i=0;i<9;i++){const x=27+i*5.8;back.push(`<rect x="${x-2.4}" y="${26+R()*4}" width="4.8" height="${style==="locs"?34+R()*10:20+R()*6}" rx="2.4" fill="${shade(hair,.9+R()*.3)}"/>`)}}
-  // hair drawn over the head
-  const cap=(top,depth)=>`<path d="M${50-hw} ${ey-4} Q${50-hw} ${top} 50 ${top-2} Q${50+hw} ${top} ${50+hw} ${ey-4} Q${50+hw-4} ${ey-4-depth} 50 ${ey-4-depth} Q${50-hw+4} ${ey-4-depth} ${50-hw} ${ey-4}Z" fill="${hair}"/>`;
-  if(style==="buzz")front.push(`<g opacity=".85">${cap(22,14)}</g>`);
-  if(style==="fade"||style==="short")front.push(cap(style==="fade"?19:20,style==="fade"?15:13));
-  if(style==="hightop")front.push(`<rect x="${50-hw+3}" y="4" width="${2*hw-6}" height="${ey-22}" rx="5" fill="${hair}"/>`,cap(22,15));
-  if(style==="afro")front.push(cap(18,13));
-  if(style==="cornrows"){front.push(cap(20,14));for(let i=-3;i<=3;i++)front.push(`<path d="M${50+i*5} 22 Q${50+i*6.5} 30 ${50+i*7} ${ey-9}" stroke="${shade(hair,1.9)}" stroke-width=".8" fill="none" opacity=".5"/>`)}
-  if(style==="curly"){front.push(cap(22,12));for(let i=0;i<10;i++)front.push(`<circle cx="${32+i*4}" cy="${22+R()*6}" r="${4+R()*2}" fill="${hair}"/>`)}
-  if(style==="locs"||style==="twists")front.push(cap(19,14));
-  if(style==="sidepart")front.push(cap(19,15),`<path d="M${42} 20 Q${46} 28 ${40} ${ey-12}" stroke="${shade(skin,.9)}" stroke-width="1.2" fill="none"/>`);
-  if(style==="bun")front.push(`<circle cx="50" cy="15" r="7" fill="${hair}"/>`,cap(20,14));
-  if(style==="bald")front.push(`<ellipse cx="42" cy="30" rx="7" ry="3.5" fill="#fff" opacity=".18"/>`);
-  if(band)front.push(`<rect x="${50-hw-1}" y="${ey-17}" width="${2*hw+2}" height="5.5" rx="2" fill="${c2==="#ffffff"||c2==="#FFFFFF"?"#ffffff":c2}" stroke="${c1}" stroke-width=".8"/>`);
+  const id="f"+(fhash(key)%1e8).toString(36);
+  const si=(()=>{const s=wpick(FACE_SKIN);return FACE_SKIN.findIndex(x=>x[0]===s)})(),skin=FACE_SKIN[si][0],light=si<=2;
+  const hi=shade(skin,1.16),sh=shade(skin,.78),sh2=shade(skin,.62),lip=shade(skin,.7),lip2=shade(skin,.84);
+  let hair=pick(FACE_HAIR);if(!light&&(hair==="#a87a3c"||hair==="#6e2d14"))hair="#120d0a";
+  const style=pick(light?["crop","crop","sidepart","fade","curly","buzz","flow"]:["fade","fade","waves","buzz","afro","locs","braids","curly","bald","twists","crop"]);
+  const iris=light?pick(["#4a3020","#5b3a22","#3c6e8f","#5f7a3a","#4a3020"]):pick(["#2b170c","#3a2112","#2b170c"]);
+  // head geometry
+  const jw=20.5+R()*3,ch=67+R()*4,jaw=R(),ey=45.5+R()*1.5,es=8.6+R()*1.2,brT=1.8+R()*1.4,brA=R()*2.5;
+  const beard=pick(["none","none","none","stubble","stubble","goatee","chin","full","mustache"]),mood=pick(["serious","serious","smirk","confident","smile"]);
+  const band=R()<.16,ear=R()<.12,ink=c2.toLowerCase()==="#ffffff"?"#ffffff":c2;
+  const head=`M${50-jw} 40 C${50-jw} 22 ${50-jw/2} 15 50 15 C${50+jw/2} 15 ${50+jw} 22 ${50+jw} 40 C${50+jw} ${52+jaw*3} ${50+jw-2-jaw*2} ${60} ${50+jw*.55} ${ch-3} C${50+jw*.35} ${ch+1} ${53} ${ch+2} 50 ${ch+2} C47 ${ch+2} ${50-jw*.35} ${ch+1} ${50-jw*.55} ${ch-3} C${50-jw+2+jaw*2} 60 ${50-jw} ${52+jaw*3} ${50-jw} 40Z`;
+  const D=[],B=[],H=[],F=[];
+  D.push(`<radialGradient id="${id}s" cx="42%" cy="36%" r="70%"><stop offset="0" stop-color="${hi}"/><stop offset=".55" stop-color="${skin}"/><stop offset="1" stop-color="${sh}"/></radialGradient>`,
+    `<linearGradient id="${id}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(hair,1.35)}"/><stop offset=".5" stop-color="${hair}"/><stop offset="1" stop-color="${shade(hair,.8)}"/></linearGradient>`,
+    `<linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${hair}" stop-opacity=".95"/><stop offset=".55" stop-color="${hair}" stop-opacity=".55"/><stop offset="1" stop-color="${hair}" stop-opacity="0"/></linearGradient>`,
+    `<radialGradient id="${id}b" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="${shade(c1,1.45)}"/><stop offset=".55" stop-color="${c1}"/><stop offset="1" stop-color="${shade(c1,.35)}"/></radialGradient>`,
+    `<linearGradient id="${id}j" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(c1,1.15)}"/><stop offset="1" stop-color="${shade(c1,.6)}"/></linearGradient>`,
+    `<linearGradient id="${id}n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sh2}"/><stop offset=".45" stop-color="${sh}"/><stop offset="1" stop-color="${skin}"/></linearGradient>`,
+    `<clipPath id="${id}c"><path d="${head}"/></clipPath>`);
+  const hf=`fill="url(#${id}h)"`;
+  // hair behind the head
+  if(style==="afro")B.push(`<path d="M${50-jw-7} 44 C${50-jw-11} 20 ${50-jw+2} 6 50 6 C${50+jw-2} 6 ${50+jw+11} 20 ${50+jw+7} 44 C${50+jw+3} 36 ${50-jw-3} 36 ${50-jw-7} 44Z" ${hf}/>`);
+  if(style==="locs"||style==="twists"){for(let i=0;i<11;i++){const x=50-jw-3+i*(2*jw+6)/10,len=style==="locs"?30+R()*14:16+R()*6;B.push(`<path d="M${x} 24 q${(R()-.5)*3} ${len/2} ${(R()-.5)*4} ${len}" stroke="${shade(hair,.85+R()*.35)}" stroke-width="${style==="locs"?4.2:3.4}" stroke-linecap="round" fill="none"/>`)}}
+  if(style==="flow")B.push(`<path d="M${50-jw-2} 46 C${50-jw-4} 26 ${50-jw+4} 12 50 12 C${50+jw-4} 12 ${50+jw+4} 26 ${50+jw+2} 46 L${50+jw-1} 50 C${50+jw-3} 38 ${50-jw+3} 38 ${50-jw+1} 50Z" ${hf}/>`);
+  // hair on top of the head (clipped to the skull where it should hug it)
+  const top=(y,dip)=>`M${50-jw-.5} ${ey-7} C${50-jw-1} ${y+6} ${50-jw/2} ${y} 50 ${y} C${50+jw/2} ${y} ${50+jw+1} ${y+6} ${50+jw+.5} ${ey-7} C${50+jw-3} ${ey-13-dip} ${50+jw/3} ${ey-17-dip} 50 ${ey-16-dip} C${50-jw/3} ${ey-17-dip} ${50-jw+3} ${ey-13-dip} ${50-jw-.5} ${ey-7}Z`;
+  if(style==="fade"||style==="waves"||style==="buzz"){
+    H.push(`<g clip-path="url(#${id}c)"><rect x="${50-jw-2}" y="12" width="${2*jw+4}" height="${ey-12}" fill="url(#${id}f)" opacity="${style==="buzz"?.75:.9}"/>${style!=="buzz"?`<path d="${top(13,1)}" ${hf}/>`:""}</g>`);
+    if(style==="waves")for(let r=4;r<=16;r+=3)H.push(`<path d="M${50-r} ${22+r*.25} Q50 ${17+r*.2} ${50+r} ${22+r*.25}" stroke="${shade(hair,1.9)}" stroke-width=".7" fill="none" opacity=".45"/>`);
+  }
+  if(style==="crop")H.push(`<path d="${top(12,0)}" ${hf}/>`,`<path d="M${50-jw+4} ${ey-15} q6 -3 10 -1 q5 -3 10 -1 q5 -2 9 1" stroke="${shade(hair,.7)}" stroke-width="1" fill="none" opacity=".6"/>`);
+  if(style==="sidepart")H.push(`<path d="${top(11,1)}" ${hf}/>`,`<path d="M${50-jw*.35} 13 Q${50-jw*.3} 22 ${50-jw*.45} ${ey-16}" stroke="${shade(skin,.95)}" stroke-width="1.1" fill="none"/>`,`<path d="M${50-jw*.3} 14 C${50+4} 11 ${50+jw} 16 ${50+jw+.5} ${ey-9}" stroke="${shade(hair,1.6)}" stroke-width=".8" fill="none" opacity=".5"/>`);
+  if(style==="flow")H.push(`<path d="${top(11,2)}" ${hf}/>`,`<path d="M${50-jw} ${ey-9} C${50-jw/2} 16 ${50+jw/3} 14 ${50+jw+1} ${ey-6}" stroke="${shade(hair,1.5)}" stroke-width=".9" fill="none" opacity=".5"/>`);
+  if(style==="afro"){H.push(`<path d="${top(9,0)}" ${hf}/>`);for(let i=0;i<140;i++){const a=R()*Math.PI,r=6+R()*20;H.push(`<circle cx="${50+Math.cos(a)*r*1.25}" cy="${30-Math.sin(a)*r*.8}" r="${.3+R()*.35}" fill="${shade(hair,1.45)}" opacity=".22"/>`)}}
+  if(style==="curly"){H.push(`<path d="${top(12,0)}" ${hf}/>`);for(let i=0;i<34;i++){const x=50-jw+4+R()*(2*jw-8),y=11+R()*9,r=1.3+R()*1.1;H.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="${shade(hair,.9+R()*.25)}"/><path d="M${x-r*.6} ${y-r*.2} a${r*.6} ${r*.6} 0 0 1 ${r*1.1} 0" stroke="${shade(hair,1.6)}" stroke-width=".35" fill="none" opacity=".5"/>`)}}
+  if(style==="braids"){H.push(`<path d="${top(13,1)}" ${hf}/>`);H.push(`<g clip-path="url(#${id}c)">`);for(let i=-3;i<=3;i++)H.push(`<path d="M${50+i*5.2} 13 Q${50+i*6.4} 24 ${50+i*7.2} ${ey-10}" stroke="${shade(hair,1.7)}" stroke-width=".8" fill="none" opacity=".4" stroke-dasharray="1.5 1"/>`);H.push(`</g>`)}
+  if(style==="locs"||style==="twists")H.push(`<path d="${top(12,2)}" ${hf}/>`);
+  if(style==="bald")H.push(`<ellipse cx="44" cy="24" rx="7" ry="3.2" fill="#fff" opacity=".22"/>`);
+  if(band)H.push(`<path d="M${50-jw-1} ${ey-14} Q50 ${ey-19} ${50+jw+1} ${ey-14} L${50+jw+1} ${ey-9} Q50 ${ey-14} ${50-jw-1} ${ey-9}Z" fill="${ink}" stroke="${c1}" stroke-width=".6"/>`);
   // facial hair
-  const fh=[];
-  if(beard==="stubble")fh.push(`<path d="M${50-hw+3} ${ey+6} Q50 ${ey+hh+4} ${50+hw-3} ${ey+6} Q50 ${ey+hh-6} ${50-hw+3} ${ey+6}Z" fill="${hair}" opacity=".22"/>`);
-  if(beard==="beard")fh.push(`<path d="M${50-hw+1} ${ey+2} Q${50-hw+2} ${ey+hh+3} 50 ${ey+hh+4} Q${50+hw-2} ${ey+hh+3} ${50+hw-1} ${ey+2} Q${50+hw-6} ${ey+18} 50 ${ey+19} Q${50-hw+6} ${ey+18} ${50-hw+1} ${ey+2}Z" fill="${hair}" opacity=".92"/>`);
-  if(beard==="goatee")fh.push(`<path d="M45 ${ey+21} Q50 ${ey+29} 55 ${ey+21} Q50 ${ey+24} 45 ${ey+21}Z" fill="${hair}" opacity=".9"/>`);
-  if(beard==="mustache"||beard==="goatee"||beard==="beard")fh.push(`<path d="M43 ${ey+14.5} Q50 ${ey+11.5} 57 ${ey+14.5} Q50 ${ey+13.5} 43 ${ey+14.5}Z" fill="${hair}" stroke="${hair}" stroke-width="1.4"/>`);
-  const my=ey+18,mth=mouth==="smile"?`<path d="M44 ${my} Q50 ${my+5} 56 ${my}" stroke="#4a2018" stroke-width="1.8" fill="none" stroke-linecap="round"/>`:mouth==="grin"?`<path d="M43.5 ${my-1} Q50 ${my+7} 56.5 ${my-1}Z" fill="#fff" stroke="#4a2018" stroke-width="1.4" stroke-linejoin="round"/>`:mouth==="smirk"?`<path d="M45 ${my+1} Q51 ${my+3} 56 ${my-1.5}" stroke="#4a2018" stroke-width="1.8" fill="none" stroke-linecap="round"/>`:`<path d="M45 ${my+1} L55 ${my+1}" stroke="#4a2018" stroke-width="1.8" stroke-linecap="round"/>`;
-  const eye=x=>`<ellipse cx="${x}" cy="${ey}" rx="3.3" ry="2.3" fill="#fff"/><circle cx="${x+.3}" cy="${ey+.2}" r="1.6" fill="#24140c"/><circle cx="${x+.9}" cy="${ey-.5}" r=".5" fill="#fff"/>`;
-  const vb=opts&&opts.full?"0 0 100 100":"13 9 74 74";
-  const svg=`<svg class="face" viewBox="${vb}" width="${size}" height="${size}" aria-hidden="true">
-    <path d="M6 104 C8 86 24 79 38 77 L62 77 C76 79 92 86 94 104Z" fill="${c1}"/>
-    <path d="M37 77 Q50 93 63 77" fill="${skin}" stroke="${c2}" stroke-width="2.4"/>
-    <path d="M24 82 L37 77 M76 82 L63 77" stroke="${c2}" stroke-width="2"/>
-    ${no!==""?`<text x="50" y="99" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="800" font-size="12" fill="${c2}">${no}</text>`:""}
-    <rect x="42" y="${ey+12}" width="16" height="${80-ey-12}" fill="${dk}"/>
-    ${back.join("")}
-    <ellipse cx="${50-hw}" cy="${ey+2}" rx="4.5" ry="6.5" fill="${dk}"/><ellipse cx="${50+hw}" cy="${ey+2}" rx="4.5" ry="6.5" fill="${dk}"/>
-    ${ear?`<circle cx="${50-hw-.5}" cy="${ey+7}" r="1.3" fill="#e8e8e8"/>`:""}
-    <ellipse cx="50" cy="${ey-1}" rx="${hw}" ry="${hh}" fill="${skin}"/>
-    <ellipse cx="50" cy="${ey+hh-8}" rx="${hw-7}" ry="6" fill="${dk}" opacity=".18"/>
-    ${fh.join("")}${front.join("")}
-    <path d="M${50-es-4.5} ${ey-6} Q${50-es} ${ey-8-brow*.4} ${50-es+4.5} ${ey-6.5}" stroke="${hair==="#e6dcc4"?"#3b2416":hair}" stroke-width="${brow}" fill="none" stroke-linecap="round"/>
-    <path d="M${50+es-4.5} ${ey-6.5} Q${50+es} ${ey-8-brow*.4} ${50+es+4.5} ${ey-6}" stroke="${hair==="#e6dcc4"?"#3b2416":hair}" stroke-width="${brow}" fill="none" stroke-linecap="round"/>
-    ${eye(50-es)}${eye(50+es)}
-    <path d="M49 ${ey+3} Q46 ${ey+10} 48.5 ${ey+12} Q51.5 ${ey+12.8} 53.5 ${ey+11}" stroke="${dk2}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    ${mth}</svg>`;
-  FACE_CACHE.set(key,svg);if(FACE_CACHE.size>3000)FACE_CACHE.clear();return svg;
+  const bc=shade(hair,1.05);
+  if(beard==="stubble")F.push(`<path d="M${50-jw+2} ${ey+6} C${50-jw+3} ${ch-4} 44 ${ch+2} 50 ${ch+2} C56 ${ch+2} ${50+jw-3} ${ch-4} ${50+jw-2} ${ey+6} C${50+jw-6} ${ey+18} 56 ${ey+16} 50 ${ey+16} C44 ${ey+16} ${50-jw+6} ${ey+18} ${50-jw+2} ${ey+6}Z" fill="${bc}" opacity=".2"/>`);
+  if(beard==="full")F.push(`<path d="M${50-jw+.5} ${ey+2} C${50-jw+1} ${ch-2} 43 ${ch+4} 50 ${ch+4} C57 ${ch+4} ${50+jw-1} ${ch-2} ${50+jw-.5} ${ey+2} C${50+jw-5} ${ey+15} 57 ${ey+19} 50 ${ey+19} C43 ${ey+19} ${50-jw+5} ${ey+15} ${50-jw+.5} ${ey+2}Z" fill="${bc}" opacity=".9"/>`);
+  if(beard==="chin"||beard==="full")F.push(`<path d="M${50-jw*.55} ${ch-4} C46 ${ch+3} 54 ${ch+3} ${50+jw*.55} ${ch-4}" stroke="${bc}" stroke-width="2.6" fill="none" opacity=".85"/>`);
+  if(beard==="goatee")F.push(`<path d="M45.5 ${ey+21} C46 ${ch+2} 54 ${ch+2} 54.5 ${ey+21} C52 ${ey+23} 48 ${ey+23} 45.5 ${ey+21}Z" fill="${bc}" opacity=".9"/>`);
+  if(beard!=="none"&&beard!=="stubble"&&beard!=="chin")F.push(`<path d="M43.5 ${ey+15.2} C46 ${ey+13} 54 ${ey+13} 56.5 ${ey+15.2} C54 ${ey+14.6} 46 ${ey+14.6} 43.5 ${ey+15.2}Z" fill="${bc}" stroke="${bc}" stroke-width="1.2" opacity=".95"/>`);
+  // features
+  const eye=(x,s)=>`<path d="M${x-4} ${ey+.3} Q${x} ${ey-2.9} ${x+4} ${ey+.1} Q${x} ${ey+2.2} ${x-4} ${ey+.3}Z" fill="#f3ece4"/>
+    <circle cx="${x+s*.2}" cy="${ey-.1}" r="1.75" fill="${iris}"/><circle cx="${x+s*.2}" cy="${ey-.1}" r=".8" fill="#0a0604"/><circle cx="${x+s*.2+.6}" cy="${ey-.7}" r=".45" fill="#fff"/>
+    <path d="M${x-4.2} ${ey+.2} Q${x} ${ey-3.4} ${x+4.2} ${ey}" stroke="#1a0d07" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+    <path d="M${x-3} ${ey+1.9} Q${x} ${ey+2.9} ${x+3.2} ${ey+1.5}" stroke="${sh2}" stroke-width=".5" fill="none" opacity=".7"/>`;
+  const browC=hair==="#a87a3c"?"#5e3b1c":shade(hair,1.1);
+  const brow=(x,d)=>`<path d="M${x-d*5} ${ey-5.4+brA*.2} Q${x} ${ey-7.6-brT*.4} ${x+d*5} ${ey-6.6-brA*.3} L${x+d*4.6} ${ey-5.6-brA*.3} Q${x} ${ey-6.4} ${x-d*5} ${ey-4.6+brA*.2}Z" fill="${browC}"/>`;
+  const my=ey+18.5,mouth=mood==="smile"?`<path d="M44.5 ${my-.6} Q50 ${my+3.2} 55.5 ${my-.6}" stroke="#3b1a12" stroke-width="1.1" fill="none" stroke-linecap="round"/>`:mood==="smirk"?`<path d="M45 ${my} Q50.5 ${my+1.2} 55.5 ${my-1.4}" stroke="#3b1a12" stroke-width="1.1" fill="none" stroke-linecap="round"/>`:`<path d="M45 ${my} Q50 ${my+.6} 55 ${my}" stroke="#3b1a12" stroke-width="1.1" fill="none" stroke-linecap="round"/>`;
+  const lips=`<path d="M44.6 ${my} C46.5 ${my-2.6} 48.8 ${my-1.9} 50 ${my-1.5} C51.2 ${my-1.9} 53.5 ${my-2.6} 55.4 ${my}Z" fill="${lip}"/><path d="M45 ${my} C47 ${my+3.2} 53 ${my+3.2} 55 ${my}Z" fill="${lip2}"/><ellipse cx="50.5" cy="${my+1.6}" rx="2.2" ry=".6" fill="#fff" opacity=".18"/>`;
+  const nose=`<path d="M48.6 ${ey+2} C48.2 ${ey+7} 46.4 ${ey+9.5} 46.8 ${ey+11.4} C47.6 ${ey+13} 52.4 ${ey+13} 53.2 ${ey+11.4} C53.6 ${ey+9.5} 51.8 ${ey+7} 51.4 ${ey+2}" fill="${shade(skin,.92)}" opacity=".55"/>
+    <path d="M51.3 ${ey+1.5} C51.8 ${ey+6} 53.6 ${ey+9} 53.4 ${ey+11.2}" stroke="${sh}" stroke-width=".9" fill="none" opacity=".8"/><ellipse cx="50" cy="${ey+9.2}" rx="1.6" ry="1" fill="${hi}" opacity=".5"/>
+    <ellipse cx="48" cy="${ey+12}" rx="1.2" ry=".7" fill="${sh2}"/><ellipse cx="52" cy="${ey+12}" rx="1.2" ry=".7" fill="${sh2}"/>`;
+  const out=`<svg class="face" viewBox="${full?"0 0 100 100":"14 8 72 72"}" width="${size}" height="${size}" aria-hidden="true"><defs>${D.join("")}</defs>
+    <rect width="100" height="100" fill="url(#${id}b)"/>
+    <ellipse cx="50" cy="100" rx="60" ry="22" fill="#000" opacity=".25"/>
+    <path d="M2 104 C4 85 22 78 37 75.5 L63 75.5 C78 78 96 85 98 104Z" fill="url(#${id}j)"/>
+    <path d="M24 81 C30 78 34 76.5 37 75.5 M76 81 C70 78 66 76.5 63 75.5" stroke="${ink}" stroke-width="2.6" fill="none"/>
+    <path d="M36 75 Q50 92 64 75" fill="url(#${id}n)" stroke="${ink}" stroke-width="2.6"/>
+    ${no!==""?`<text x="50" y="99" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="800" font-size="11" fill="${ink}" stroke="${shade(c1,.5)}" stroke-width=".4">${no}</text>`:""}
+    <path d="M42.5 ${ch-6} L42 78 Q50 84 58 78 L57.5 ${ch-6}Z" fill="url(#${id}n)"/>
+    ${B.join("")}
+    <path d="M${50-jw+.8} 42 C${50-jw-5} 40 ${50-jw-6} 50 ${50-jw-1} 54 C${50-jw+.5} 53 ${50-jw+1} 47 ${50-jw+.8} 42Z" fill="${sh}"/><path d="M${50+jw-.8} 42 C${50+jw+5} 40 ${50+jw+6} 50 ${50+jw+1} 54 C${50+jw-.5} 53 ${50+jw-1} 47 ${50+jw-.8} 42Z" fill="${sh}"/>
+    ${ear?`<circle cx="${50-jw-2.2}" cy="52.6" r="1.2" fill="#f4f4f4" stroke="#999" stroke-width=".3"/>`:""}
+    <path d="${head}" fill="url(#${id}s)"/>
+    <g clip-path="url(#${id}c)"><path d="M${50+jw*.45} 20 C${50+jw+2} 34 ${50+jw} 56 ${50+jw*.3} ${ch+3} L${50+jw+4} ${ch+3} L${50+jw+4} 20Z" fill="${sh2}" opacity=".28"/>
+      <ellipse cx="50" cy="${ch+1}" rx="${jw*.7}" ry="5" fill="${sh2}" opacity=".18"/>
+      <ellipse cx="${50-es}" cy="${ey-1}" rx="5.5" ry="3.2" fill="${sh2}" opacity=".16"/><ellipse cx="${50+es}" cy="${ey-1}" rx="5.5" ry="3.2" fill="${sh2}" opacity=".16"/>
+      <ellipse cx="${50-jw*.62}" cy="${ey+9}" rx="3.5" ry="5" fill="${hi}" opacity=".22"/>${F.join("")}</g>
+    <path d="M${50-jw} 36 C${50-jw} 24 ${50-jw/2} 16 50 15.5" stroke="${shade(c2.toLowerCase()==="#ffffff"?c1:c2,1.3)}" stroke-width="1" fill="none" opacity=".35"/>
+    ${H.join("")}
+    ${brow(50-es,-1)}${brow(50+es,1)}${eye(50-es,1)}${eye(50+es,-1)}${nose}${lips}${mouth}
+  </svg>`;
+  FACE_CACHE.set(key,out);if(FACE_CACHE.size>3000)FACE_CACHE.clear();return out;
 }
+
 let PT={};
 function ptTeam(id){const p=PL[id];if(!p||!S)return null;const t=PT[id];if(t&&t.roster.includes(p))return t;for(const x of S.teams)if(x.roster.includes(p)){PT[id]=x;return x}return null}
 const pfaceSm=(id,n)=>`<span class="pface">${faceSVG(n,ptTeam(id),22)}</span>`;
