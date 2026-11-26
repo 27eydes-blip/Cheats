@@ -1457,6 +1457,17 @@ body.ice :is(.cere-ov,.film,.epi-top,.phead,.cere) :is(h1,h2,h3,p,.muted,.sub){c
 body.ice :is(.cere-ov,.film,.epi-top,.phead,.cere) .eyebrow{color:rgba(255,255,255,.82)!important}
 body.ice .cere-lines p{color:#dfe8f8!important}body.ice .cere-res.good{color:#7ff0bf!important}body.ice .cere-res.bad{color:#ffb1bd!important}
 body.ice .film-ch b{color:#fff!important}body.ice .film-ch p{color:#cfd8ee!important}
+/* Darker backdrop behind the white cards */
+body.ice{background:radial-gradient(ellipse 120% 60% at 50% -10%,color-mix(in srgb,var(--ta) 38%,#22384f),transparent 70%),linear-gradient(180deg,color-mix(in srgb,var(--ta) 16%,#1c2f44),color-mix(in srgb,var(--ta) 10%,#0e1a28)) fixed!important;background-color:#132234!important}
+body.ice #app>:is(h1,h2,h3,p,.eyebrow,.muted,.sub),body.ice #app>.row>:is(.eyebrow,.muted,.sub,span),body.ice .sel-conf,body.ice .fp-h,body.ice .tabbody>:is(h2,p.muted),body.ice .hub-head :is(h1,.eyebrow){color:#e8f1fb!important}
+body.ice #app>p.muted,body.ice #app>p .muted{color:#b4c6da!important}
+body.ice .sel-conf .tag{background:rgba(255,255,255,.14)!important;color:#e8f1fb!important;border-color:rgba(255,255,255,.3)!important}
+body.ice .navgroups{background:rgba(255,255,255,.95)!important}
+body.ice .bb-space{background:transparent}
+body.ice .hub-head{background:linear-gradient(135deg,var(--ta),color-mix(in srgb,var(--ta) 50%,#000))!important;border-color:rgba(255,255,255,.15)!important;box-shadow:0 10px 26px rgba(0,0,0,.3)!important}
+body.ice .hub-head :is(h1,.eyebrow){color:#fff!important}
+body.ice .uchip{background:#fff!important;color:#0d2236!important;border:1px solid #c9dbe9!important;text-shadow:none!important}
+body.ice .uchip.on{background:var(--ta)!important;color:var(--ta-ink)!important;border-color:var(--ta)!important}
 body.ice{background:radial-gradient(1100px 520px at 50% -220px,color-mix(in srgb,var(--tc1) 38%,transparent),transparent 72%),
     radial-gradient(900px 500px at 50% 120%,color-mix(in srgb,var(--tc1) 14%,transparent),transparent 70%),
     repeating-linear-gradient(90deg,rgba(13,34,54,0.008) 0 1px,transparent 1px 96px),var(--night)}
@@ -1798,6 +1809,17 @@ body.ice :is(.cere-ov,.film,.epi-top,.phead,.cere) :is(h1,h2,h3,p,.muted,.sub){c
 body.ice :is(.cere-ov,.film,.epi-top,.phead,.cere) .eyebrow{color:rgba(255,255,255,.82)!important}
 body.ice .cere-lines p{color:#dfe8f8!important}body.ice .cere-res.good{color:#7ff0bf!important}body.ice .cere-res.bad{color:#ffb1bd!important}
 body.ice .film-ch b{color:#fff!important}body.ice .film-ch p{color:#cfd8ee!important}
+/* Darker backdrop behind the white cards */
+body.ice{background:radial-gradient(ellipse 120% 60% at 50% -10%,color-mix(in srgb,var(--ta) 38%,#22384f),transparent 70%),linear-gradient(180deg,color-mix(in srgb,var(--ta) 16%,#1c2f44),color-mix(in srgb,var(--ta) 10%,#0e1a28)) fixed!important;background-color:#132234!important}
+body.ice #app>:is(h1,h2,h3,p,.eyebrow,.muted,.sub),body.ice #app>.row>:is(.eyebrow,.muted,.sub,span),body.ice .sel-conf,body.ice .fp-h,body.ice .tabbody>:is(h2,p.muted),body.ice .hub-head :is(h1,.eyebrow){color:#e8f1fb!important}
+body.ice #app>p.muted,body.ice #app>p .muted{color:#b4c6da!important}
+body.ice .sel-conf .tag{background:rgba(255,255,255,.14)!important;color:#e8f1fb!important;border-color:rgba(255,255,255,.3)!important}
+body.ice .navgroups{background:rgba(255,255,255,.95)!important}
+body.ice .bb-space{background:transparent}
+body.ice .hub-head{background:linear-gradient(135deg,var(--ta),color-mix(in srgb,var(--ta) 50%,#000))!important;border-color:rgba(255,255,255,.15)!important;box-shadow:0 10px 26px rgba(0,0,0,.3)!important}
+body.ice .hub-head :is(h1,.eyebrow){color:#fff!important}
+body.ice .uchip{background:#fff!important;color:#0d2236!important;border:1px solid #c9dbe9!important;text-shadow:none!important}
+body.ice .uchip.on{background:var(--ta)!important;color:var(--ta-ink)!important;border-color:var(--ta)!important}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -7701,7 +7723,7 @@ function iceTheme(){
   // Live games keep the dark arena look; everything else goes ice.
   const ice=themeName()==="ice"&&!(typeof WATCH!=="undefined"&&WATCH);
   if(!ice){b.classList.remove("ice");if(H&&H.style)H.style.removeProperty("background");if(!b.style.getPropertyValue("--ta-d"))b.style.setProperty("--ta-d","var(--ta,#f5b83d)");return}
-  b.classList.add("ice");if(H&&H.style)H.style.background="#e3eff8";
+  b.classList.add("ice");if(H&&H.style)H.style.background="#132234";
   // With no team (title screen) or team colors off, the accent is the default ice blue.
   if(!b.classList.contains("tt")){b.style.setProperty("--ta","#0b84d8");b.style.setProperty("--ta-ink","#ffffff")}
   else{// On a light page, dark team colors read best, so use the real primary color unless it's nearly white.
@@ -7709,7 +7731,7 @@ function iceTheme(){
     b.style.setProperty("--ta",a);b.style.setProperty("--ta-ink",L>.4?"#0d0f14":"#ffffff")}
   const a=b.style.getPropertyValue("--ta")||"#0b84d8",L=/^#/.test(a)?lum(a):.3;
   b.style.setProperty("--ta-d",L>.2?`color-mix(in srgb,${a} ${L>.45?48:62}%,#000)`:a);
-  const m=document.querySelector&&document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#eaf4fb");
+  const m=document.querySelector&&document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#132234");
 }
 function patch22(){
   const tt0=teamTheme;teamTheme=function(){tt0();try{iceTheme()}catch(e){}};
