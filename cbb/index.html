@@ -1327,6 +1327,14 @@ body.tt .gh-lvl{border-color:var(--ta);background:radial-gradient(circle at 50% 
 @media (max-width:600px){.ptiers small{display:none}.hats{gap:8px}.hat{min-width:0;padding:10px}.hat span{font-size:28px}}
 @media (prefers-reduced-motion:reduce){.hat,.dn,.cere-lines p,.cere-box>.btn,.bossb{animation:none!important;opacity:1}}
 @keyframes appear{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* ===== Real logos ===== */
+.logo.hasimg,.badge.hasimg{position:relative}
+.logo.hasimg{color:transparent!important;text-shadow:none!important;background:radial-gradient(circle at 50% 40%,#fff,#e9edf5)!important;border-color:var(--b1)!important;overflow:hidden}
+.logo .tlogo{position:absolute;inset:12%;width:76%;height:76%;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+.logo:not(.hasimg) .tlogo,.badge:not(.hasimg) .tlogo{opacity:0}
+.badge.hasimg{padding-left:30px}
+.badge .tlogo{position:absolute;left:3px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;background:#fff;padding:2px;object-fit:contain;box-sizing:border-box}
+.hub-head .badge.hasimg{padding-left:40px}.hub-head .badge .tlogo{width:32px;height:32px}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -6297,7 +6305,7 @@ function renderHub(){
   <div id="saveWarn" class="panel warn" ${saveErr?"":"hidden"}><b>Your progress isn't saving.</b><p>This browser's storage is full or turned off. Free up space or leave private browsing mode, then keep playing to save again.</p></div>
   ${S.tab==="home"?`<div class="hubgrid solo"><div class="hubmain">${isMP()?mpCard():""}${canEditSched()&&!isMP()?preSchedStep():`${mediaDayCard()}${mmCard()}${exhCard()}${bcOpen()?bcCallout():""}${(()=>{const ug=userGame();return isMP()?"":pressCard()})()}${S.phase==="ncaa"?tourneyCentral():""}${nextCard()}${dashHTML()}${(()=>{const ug=userGame();return ug?hypeCard(ug)+rivalryCard(ug)+rivalCoachCard(ug):""})()}${S.phase==="regular"&&S.day===0?coachTip():""}${ctPanel()}`}${side.length?`<details class="moreh" ${S.moreH?"open":""}><summary>More from around the game</summary><div class="moreh-in">${side.join("")}</div></details>`:""}</div></div>`
     :`<section class="tabbody">${({nil:tabNIL,trophies:()=>trophyShelf()+tabTrophies(),bracket:()=>tourneyCentral()+tabBracket(),conspiracy:tabConspiracy,mp:tabMP,arena:()=>tabArena()+namingHTML()+courtDesigner()+studentExtras(),feed:()=>(S.phase==="regular"?debateCard():"")+tabFeed(),weekly:tabWeekly,preseason:tabPreseason,locker:lockerTab,practice:tabPractice,uniforms:tabUniforms,news:tabNews,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:()=>dwinCard()+tabRoster()+anaHTML(),plan:()=>tabPlan()+pbookHTML(),coach:()=>tabCoach()+retireHTML(),history:()=>tabHistory()+rulesHTML(),town:townHTML,films:filmsHTML})[S.tab]()}</section>`}
-  <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">Save & main menu</button><button class="btn ghost" data-act="theme">🎨 Team colors: ${themeOn()?"On":"Off"}</button></div>${botbarHTML(tabs)}`;
+  <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">Save & main menu</button><button class="btn ghost" data-act="theme">🎨 Team colors: ${themeOn()?"On":"Off"}</button><button class="btn ghost" data-act="logosT">🏀 Real logos: ${logosOn()?"On":"Off"}</button></div>${botbarHTML(tabs)}`;
 }
 function coachTip(){
   const me=T(S.user),f=schemeFits(me)[0][0],d=defFits(me)[0][0],P=plan(S.user);
@@ -7206,7 +7214,23 @@ function patch20(){
   Object.assign(ACT,{cereDone(){if(S.off)S.off.cere=null},dramaPick(d){dramaPick(d.v)}});
 }
 
-Object.assign(ACT,ACT17);patchACT18();patch19();patch20();
+// ===================== REAL SCHOOL LOGOS =====================
+// Loaded live from ESPN's logo server by team ID. If an image can't load, the colored badge stays.
+const ESPN_ID={"DUKE":150,"UNC":153,"LOU":97,"CLEM":228,"UVA":258,"MIA":2390,"NCST":152,"WAKE":154,"SYR":183,"PITT":221,"FSU":52,"GT":59,"VT":259,"BC":103,"ND":87,"SMU":2567,"STAN":24,"CAL":25,"MSU":127,"MICH":130,"PUR":2509,"IND":84,"ILL":356,"WIS":275,"IOWA":2294,"OSU":194,"MD":120,"RUTG":164,"NW":77,"MINN":135,"NEB":158,"PSU":213,"UCLA":26,"USC":30,"ORE":2483,"UW":264,"KU":2305,"HOU":248,"ISU":66,"BAY":239,"TTU":2641,"BYU":252,"ARIZ":12,"CIN":2132,"KSU":2306,"TCU":2628,"WVU":277,"UCF":2116,"UTAH":254,"COLO":38,"OKST":197,"ASU":9,"UK":96,"AUB":2,"BAMA":333,"TENN":2633,"FLA":57,"ARK":8,"TAMU":245,"MISS":145,"MSST":344,"MIZ":142,"TEX":251,"OU":201,"LSU":99,"UGA":61,"VAN":238,"SC":2579,"UCONN":41,"NOVA":222,"MARQ":269,"CREI":156,"SJU":2599,"XAV":2752,"PROV":2507,"BUT":2086,"HALL":2550,"GTWN":46,"DEP":305,"GONZ":2250,"SMC":2608,"SF":2539,"SCU":2541,"WSU":265,"ORST":204,"LMU":2351,"PEPP":2492,"PORT":2501,"SD":301,"SDSU":21,"USU":328,"UNM":167,"BSU":68,"CSU":36,"UNLV":2439,"NEV":2440,"WYO":2751,"FRES":278,"AFA":2005,"GCU":2253,"DAY":2168,"VCU":2670,"SLU":139,"LUC":2350,"GMU":2244,"RICH":257,"DAV":2166,"URI":227,"SBU":179,"DUQ":2184,"SJOE":2603,"GW":45,"MEM":235,"FAU":2226,"WICH":2724,"UNT":249,"UAB":5,"TEM":218,"TULN":2655,"USF":58,"CLT":2429,"TLSA":202,"DRKE":2181,"BRAD":71,"UNI":2460,"BEL":2057,"ILST":2287,"INST":282,"MUR":93,"SIU":79,"EVAN":339,"VALP":2674,"AKR":2006,"KENT":2309,"TOL":2649,"OHIO":195,"M-OH":193,"BALL":2050,"CMU":2117,"WMU":2711,"NIU":2459,"BUFF":2084,"YALE":43,"PRIN":163,"CORN":172,"HARV":108,"BRWN":225,"PENN":219,"COLU":171,"DART":159,"OAK":2473,"NKU":94,"WRST":2750,"MILW":270,"CLEV":325,"YSU":2754,"PFW":2870,"RMU":2523,"SPU":2612,"IONA":314,"FAIR":2217,"MRST":2368,"QUIN":2514,"SIE":2561,"RID":2520,"MSM":116,"GRAM":2755,"SOU":2582,"JKST":2296,"ALCN":2016,"TXSO":2640,"PVAM":2504,"ALST":2011,"AAMU":2010,"FOR":2230,"LAS":2325,"ECU":151,"RICE":242,"UTSA":2636,"UIC":82,"BGSU":189,"EMU":2199,"UMASS":113,"SAC":16,"DET":2174,"GB":2739,"IUI":85,"CAN":2099,"MAN":2363,"MRMK":2771,"NIAG":315,"SHU":2529,"UAPB":2029,"BCU":2065,"FAMU":50,"MVSU":2400,"PAC":279,"SEA":2547,"HAW":62,"UTEP":2638,"APP":2026,"ARST":2032,"CCU":324,"GASO":290,"GAST":2247,"JMU":256,"ULL":309,"MRSH":276,"ODU":295,"USA":6,"USM":2572,"TXST":326,"TROY":2653,"ULM":2433,"LIB":2335,"MTSU":2393,"LT":2348,"KENN":338,"JVST":55,"SHSU":2534,"WKU":98,"NMSU":166,"FIU":2229,"MOST":2623,"DEL":48,"COFC":232,"UNCW":350,"TOW":119,"DREX":2182,"HOF":2275,"NE":111,"W&M":2729,"ELON":2210,"CAMP":2097,"MON":2405,"STBK":2619,"HAMP":2261,"NCAT":2448,"UCI":300,"UCSD":28,"UCSB":2540,"UCR":27,"CP":13,"CSUN":2463,"LBSU":299,"UCD":302,"CSUF":2239,"CSUB":2934,"UVU":3084,"CBU":2856,"ACU":2000,"UTA":250,"TARL":2627,"SUU":253,"UTU":3101,"LAM":2320,"LIP":288,"FGCU":526,"UNA":2453,"APSU":2046,"EKU":2198,"QU":2511,"JAX":294,"UNF":2454,"STET":56,"BELL":91,"UCA":2110,"UWG":2698,"SAM":2535,"UTC":236,"FUR":231,"ETSU":2193,"UNCG":2430,"WOF":2747,"WCU":2717,"MER":2382,"VMI":2678,"CIT":2643,"SDST":2571,"STMN":2900,"NDSU":2449,"OMA":2437,"SDAK":233,"UMKC":140,"ORU":198,"UND":155,"DEN":2172,"UVM":261,"BRY":2803,"UML":2349,"UMBC":2378,"ME":311,"BING":2066,"UNH":160,"NJIT":2885,"MONT":149,"UNCO":2458,"MTST":147,"PRST":2502,"WEB":2692,"EWU":331,"IDST":304,"NAU":2464,"IDHO":70,"HPU":2272,"WIN":2737,"UNCA":2427,"LONG":2344,"RAD":2515,"GWEB":2241,"PRE":2506,"CHSO":2127,"UPST":2908,"NSU":2450,"HOW":47,"NCCU":2428,"SCST":2569,"MORG":2415,"DSU":2169,"COPP":2154,"UMES":2379,"CCSU":2115,"FDU":161,"LIU":112358,"LEM":2330,"WAG":2681,"STO":284,"MERC":2385,"NHVN":2441,"CHS":2130,"MORE":2413,"UALR":2031,"SIUE":2565,"SEMO":2546,"UTM":2630,"TNST":2634,"USI":88,"TNTC":2635,"WIU":2710,"LIN":2815,"EIU":2197,"COLG":2142,"AMER":44,"LEH":2329,"BUCK":2083,"BU":104,"NAVY":2426,"LOYMD":2352,"HC":107,"LAF":322,"ARMY":349,"MCN":2377,"SFA":2617,"NICH":2447,"SELA":2545,"AMCC":357,"UTRGV":292,"NWST":2466,"UIW":2916,"ETAM":2837,"HCU":2277,"ALB":399,"UNO":2443,"SFU":2598};
+const logosOn=()=>{try{return localStorage.getItem("cbb-logos")!=="off"}catch(e){return true}};
+const logoSrc=(id,w)=>`https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/${id}.png&w=${w}&h=${w}`;
+function logoPass(){
+  if(!logosOn()||!app.querySelectorAll)return;
+  for(const el of app.querySelectorAll(".logo:not([data-l]),.badge:not([data-l])")){el.dataset.l=1;const id=ESPN_ID[el.textContent.trim()];if(!id)continue;
+    const big=el.classList.contains("logo"),img=new Image();img.alt="";img.decoding="async";img.className="tlogo";
+    img.onload=()=>el.classList.add("hasimg");img.onerror=()=>img.remove();img.src=logoSrc(id,big?200:64);el.appendChild(img)}
+}
+function patch21(){
+  const r0=render;render=function(){r0();try{logoPass()}catch(e){}};
+  Object.assign(ACT,{logosT(){try{localStorage.setItem("cbb-logos",logosOn()?"off":"on")}catch(e){}}});
+}
+
+Object.assign(ACT,ACT17);patchACT18();patch19();patch20();patch21();
 window.claude?.hot?.snapshot?.(()=>({S}));
 // One-time repair for saves from before the development fix: a practice drill let your players climb to 99.
 // Ratings above 84 on teams you've coached are pulled back toward realistic levels; everyone keeps their rank order.
