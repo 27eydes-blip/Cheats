@@ -1289,11 +1289,44 @@ body.tt .gh-lvl{border-color:var(--ta);background:radial-gradient(circle at 50% 
 .cere-h h2{font-family:var(--display);font-size:clamp(26px,7vw,44px);margin:4px 0;color:#ffe9a8}
 .montage{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .mt{display:flex;flex-direction:column;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);border-left:3px solid #ffd34d;animation:filmin .7s ease both;animation-delay:var(--d)}.mt small{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.nets{display:flex;flex-direction:column;gap:4px}.nets span{opacity:0;animation:filmin .6s ease forwards;animation-delay:var(--d)}
+.nets{display:flex;flex-direction:column;gap:4px}.nets span{opacity:0;animation:appear .6s ease forwards;animation-delay:var(--d)}
 .rings{display:flex;flex-wrap:wrap;gap:10px}.ring{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 14px;border-radius:16px;background:radial-gradient(circle at 50% 20%,color-mix(in srgb,var(--c1) 50%,transparent),rgba(10,14,28,.9));border:1px solid #ffd34d;min-width:90px}
 .ring span{font-size:30px;filter:drop-shadow(0 0 10px rgba(255,211,77,.7))}.ring small{color:var(--muted);font-size:11.5px}
 @media (max-width:600px){.huddle .hd-row{grid-template-columns:1fr 1fr}.abil-row{grid-template-columns:1fr}.gh-lvl{width:50px;height:50px}.ovl-clutch span{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.gh-alert,.ovl-clutch,.mt,.nets span{animation:none!important;opacity:1}}
+/* ===== Dynasty drama ===== */
+.pstat{display:inline-block;padding:1px 8px;margin-right:4px;border-radius:999px;background:rgba(255,211,77,.16);border:1px solid rgba(255,211,77,.5);color:#ffe9a8;font-weight:700;font-size:.92em}
+.ptiers{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.ptiers span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:10px;background:rgba(255,255,255,.04);font-size:20px;opacity:.45;text-align:center}
+.ptiers small{font-size:9.5px;line-height:1.1;letter-spacing:.02em}.ptiers .past{opacity:.8}.ptiers .on{opacity:1;background:rgba(255,211,77,.16);border:1px solid #ffd34d;box-shadow:0 0 14px rgba(255,211,77,.3)}
+.cere-ov{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:rgba(2,4,10,.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.cere-box{width:min(560px,100%);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:24px 18px;border-radius:24px;background:linear-gradient(180deg,#0e1530,#05070e);border:1px solid rgba(255,211,77,.35);box-shadow:0 0 60px rgba(0,0,0,.6)}
+.cere-box h2{font-family:var(--display);font-size:clamp(22px,6vw,34px);margin:0}
+.hats{display:flex;gap:14px;justify-content:center;margin:8px 0}
+.hat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,var(--c1),color-mix(in srgb,var(--c1) 50%,#000));border:2px solid var(--c2);min-width:78px;color:#fff;animation:hatbob 1.2s ease-in-out infinite alternate}
+.hat span{font-size:34px}.hat b{font-family:var(--num);letter-spacing:.06em;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+@keyframes hatbob{to{transform:translateY(-4px)}}
+.hat.win{animation:hatbob 1.2s ease-in-out infinite alternate,hatwin .8s ease forwards var(--d)}
+.hat:not(.win){animation:hatbob 1.2s ease-in-out infinite alternate,hatlose .6s ease forwards var(--d)}
+.hat.fake{animation:hatbob 1.2s ease-in-out infinite alternate,hatfake 1.6s ease forwards var(--fd)}
+@keyframes hatwin{to{transform:translateY(-14px) scale(1.25);box-shadow:0 0 40px var(--c1),0 0 0 3px #ffd34d}}
+@keyframes hatlose{to{opacity:.25;transform:scale(.85)}}
+@keyframes hatfake{0%{transform:none}40%{transform:translateY(-14px) scale(1.2)}70%{transform:translateY(-10px) rotate(-25deg) scale(1.15)}100%{transform:translateY(30px) rotate(-60deg) scale(.8);opacity:.2}}
+.cere-lines p{margin:4px 0;opacity:0;animation:appear .5s ease forwards;animation-delay:var(--d)}
+.cere-res{font-size:20px;font-weight:800}.cere-res.good{color:#7ff0bf}.cere-res.bad{color:#ffb1bd}
+.cere-box>.btn{opacity:0;animation:appear .4s ease forwards;animation-delay:var(--d)}
+.dn-list{display:flex;flex-direction:column;gap:6px}
+.dn{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.04);opacity:0;animation:appear .5s ease forwards;animation-delay:var(--d)}
+.dn span{font-size:20px;font-weight:800;color:#a9d8ff}.dn div{display:flex;flex-direction:column}.dn small{font-size:11px;color:var(--muted)}.dn em{font-style:normal;font-size:12.5px;color:#cfd8ee}
+.dn.me{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.5)}.dn i{font-style:normal;font-weight:800;color:#7ff0bf;font-size:12px}
+.drama{border-color:rgba(251,113,133,.5)!important}
+.bossb{padding:12px 16px;border-radius:14px;font-size:15px;font-weight:600;animation:pulse 1.8s infinite}
+.bossb.boss{background:linear-gradient(90deg,rgba(180,20,40,.35),rgba(40,8,16,.6));border:1px solid #fb7185}.bossb.jug{background:linear-gradient(90deg,rgba(255,120,40,.3),rgba(40,16,6,.6));border:1px solid #ff8a3c}
+.jugrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.jt{display:flex;flex-direction:column;gap:3px;text-align:left;padding:12px 14px;border-radius:16px;border:1px solid rgba(255,138,60,.45);background:rgba(40,16,6,.55);color:inherit;font:inherit;cursor:pointer}
+.jt.boss{border-color:rgba(251,113,133,.5);background:rgba(40,8,16,.55)}.jt small{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.jt span{font-size:13px;color:#cfd8ee}
+@media (max-width:600px){.ptiers small{display:none}.hats{gap:8px}.hat{min-width:0;padding:10px}.hat span{font-size:28px}}
+@media (prefers-reduced-motion:reduce){.hat,.dn,.cere-lines p,.cere-box>.btn,.bossb{animation:none!important;opacity:1}}
+@keyframes appear{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -2510,7 +2543,7 @@ function crowdPenalty(pos,st){
 const REC_COST={5:18,4:10,3:4,2:0},REC_CAP={5:.72,4:.86,3:.97};
 function prospectChance(pos,st){
   if(st===2)return 1;const me=T(S.user);
-  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()+(ssHas("recruit")?.02:0)+folBoost()+nilBoost()+tvBoost()+townBoost()+celebBoost()+(hasAbil("magnet")?.06:0)-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
+  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()+(ssHas("recruit")?.02:0)+folBoost()+nilBoost()+tvBoost()+townBoost()+celebBoost()+(hasAbil("magnet")?.06:0)+tierBoost()-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
 }
 function makeProspect(pos,st){
   const me=T(S.user),[a,b]=HT[pos];
@@ -7035,7 +7068,145 @@ function patch19(){
   });
 }
 
-Object.assign(ACT,ACT17);patchACT18();patch19();
+// ===================== DYNASTY DRAMA: program status, commitment ceremonies, draft night,
+// breaking-news decisions, the yearly juggernaut and the Final Boss.
+
+// ===================== PROGRAM STATUS =====================
+const PTIERS=[["Doormat","🪵"],["Mid-Major","🏫"],["Rising Program","📈"],["Power Program","💪"],["National Contender","🔥"],["Blue Blood","💎"],["Dynasty","👑"]];
+const PCUT=[0,1.7,2.4,3.05,3.6,4.15,4.6];
+function progScore(){
+  const u=S.user,t=T(u),H=(S.history||[]).filter(h=>h.team===u),last=H.slice(-5),wins=last.length?last.reduce((s,h)=>s+h.w,0)/last.length:record(u).w*1.2;
+  const deep=last.filter(h=>/Sweet 16|Elite Eight|Final Four|title game|Champion/i.test(h.result||"")).length,titles=H.slice(-8).filter(h=>h.champ===u).length;
+  return t.pres*.72+clamp((wins-12)/18,0,1)*.9+deep*.12+titles*.3;
+}
+function progTier(){if(!G19())return 0;const sc=progScore(),H=(S.history||[]).filter(h=>h.team===S.user);let k=0;PCUT.forEach((c,i)=>{if(sc>=c)k=i});
+  if(k===6&&H.slice(-8).filter(h=>h.champ===S.user).length<2)k=5;return k}
+const tierBoost=()=>G19()?progTier()*.012:0;
+function statusHTML(){
+  if(!G19())return "";const k=progTier(),sc=progScore(),nx=k<6?PCUT[k+1]:null,lo=PCUT[k],pct=nx?Math.round(clamp((sc-lo)/(nx-lo),0,1)*100):100;
+  return `<div class="panel" data-c="amber"><div class="row" style="justify-content:space-between"><h3>🏛️ Program status</h3><span class="tag amber">${PTIERS[k][1]} ${PTIERS[k][0]}</span></div>
+    <div class="ptiers">${PTIERS.map((x,i)=>`<span class="${i===k?"on":i<k?"past":""}">${x[1]}<small>${x[0]}</small></span>`).join("")}</div>
+    ${nx?`<div class="xpbar"><i style="width:${pct}%"></i></div><p class="muted" style="font-size:13px">${pct}% of the way to <b>${PTIERS[k+1][0]}</b>. Prestige, recent wins, deep March runs and titles all count.${k===5?" Dynasty status takes 2 titles in 8 years.":""}</p>`:`<p>You built a dynasty. 👑</p>`}
+    <p class="muted" style="font-size:13px">Each status level adds +1.2% to every recruit's commit chance (+${Math.round(tierBoost()*1000)/10}% now).</p></div>`;
+}
+function statusCheck(before){
+  const k=progTier();if(k===before)return;const me=T(S.user),up=k>before;
+  news(`${PTIERS[k][1]} PROGRAM STATUS: ${me.name} ${up?"rose":"fell"} to ${PTIERS[k][0]}.`);
+  gtoast(PTIERS[k][1],up?"Program status up":"Program status down",`${me.name} · ${PTIERS[k][0]}`,up?"#ffd34d":"#fb7185");
+  post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:up?`${me.name} is officially a ${PTIERS[k][0].toUpperCase()} now. ${PTIERS[k][1]} Coach ${S.coach.name||me.abbr} built this.`:`${me.name} has slipped to ${PTIERS[k][0]}. The heat is on.`,tag:"Status",likes:clout(up?4:2)});
+  if(up)addXP(200*k);
+}
+
+// ===================== COMMITMENT CEREMONIES =====================
+function cereStart(c){
+  const won=c.status==="signed",me=S.user,pool=rankIds().filter(id=>id!==me&&id!==c.rvt).slice(0,12),r1=c.rvt!=null?c.rvt:pool[0],r2=pool.find(id=>id!==r1);
+  const hats=[me,r1,r2].sort(()=>Math.random()-.5),winner=won?me:(c.rvt!=null?c.rvt:r1),fake=won?(Math.random()<.35?(r1===me?r2:r1):null):(Math.random()<.3?me:null);
+  S.off.cere={n:c.n,st:c.st,pos:c.pos,won,hats,winner,fake};
+  try{setTimeout(()=>{try{sfx(won?"huge":"horn")}catch(e){}},fake!=null?3300:1900)}catch(e){}
+}
+function cereHTML(){
+  const C=S.off&&S.off.cere;if(!C)return "";const W=T(C.winner),F=C.fake!=null?T(C.fake):null,d1=F?3.2:1.8;
+  return `<div class="cere-ov" role="dialog" aria-label="Commitment ceremony"><div class="cere-box" style="--wc:${W.c1}">
+    <span class="eyebrow">Live · Commitment ceremony</span><h2>${"★".repeat(C.st)} ${esc(C.n)}</h2><p class="muted">${esc(POS_NAME[C.pos]||C.pos)} · the gym is packed, the cameras are rolling</p>
+    <div class="hats">${C.hats.map(id=>{const t=T(id),cls=id===C.winner?"win":F&&id===C.fake?"fake":"";return `<div class="hat ${cls}" style="--c1:${t.c1};--c2:${t.c2};--d:${d1}s;--fd:1.6s"><span>🧢</span><b>${esc(t.abbr)}</b></div>`}).join("")}</div>
+    <div class="cere-lines"><p style="--d:.2s">He reaches under the table…</p>${F?`<p style="--d:1.6s">He grabs the <b>${esc(F.name)}</b> hat… 😳</p><p style="--d:3.2s"><b>…AND TOSSES IT!</b></p>`:""}
+    <p class="cere-res ${C.won?"good":"bad"}" style="--d:${d1+.2}s">${C.won?`🎉 He's coming to ${esc(T(S.user).name)}!`:`💔 He picks ${esc(W.name)}.`}</p></div>
+    <button class="btn" data-act="cereDone" style="--d:${d1+.6}s">Continue</button></div></div>`;
+}
+
+// ===================== DRAFT NIGHT =====================
+function draftNightHTML(){
+  const O=S.off;if(!O||!G19())return "";const mine=new Set((O.draft||[]).map(d=>d.name)),top=O.topDraft||[];if(!top.length&&!(O.draft||[]).length)return "";
+  const extra=(O.draft||[]).filter(d=>d.pick>top.length);
+  return `<div class="panel dnight" data-c="blue"><div class="row" style="justify-content:space-between"><h3>🎤 Draft night</h3>${O.draft&&O.draft.length?`<span class="tag good">${O.draft.length} of yours drafted</span>`:""}</div>
+    <div class="dn-list">${top.map((d,i)=>`<div class="dn ${mine.has(d.name)?"me":""}" style="--d:${i*.45}s"><span class="num">${d.pick}</span><div><small>With the ${ordinal(d.pick)} pick…</small><b>${esc(d.name)}</b><em>${d.pos} · ${esc(T(d.tid).name)}</em></div>${mine.has(d.name)?"<i>🎉 YOUR GUY</i>":""}</div>`).join("")}
+    ${extra.map((d,i)=>`<div class="dn me" style="--d:${(top.length+i)*.45}s"><span class="num">${d.pick}</span><div><small>Round ${d.round}…</small><b>${esc(d.name)}</b><em>${d.pos} · ${esc(T(S.user).name)}</em></div><i>🎉 YOUR GUY</i></div>`).join("")}</div></div>`;
+}
+function draftPay(){
+  const O=S.off;if(!O||O.dnPaid||!G19())return;O.dnPaid=1;const D=O.draft||[];if(!D.length)return;const me=T(S.user);
+  addXP(D.reduce((s,d)=>s+(d.round===1?150:60),0));const f=D.find(d=>d.round===1)||D[0];
+  post({h:`@Coach${(S.coach.name||me.abbr).replace(/\W/g,"")}`,n:`Coach ${S.coach.name||me.abbr}`,v:true,mine:true,txt:`So proud of ${f.name}. Pick No. ${f.pick}. From our gym to the league. 🙏 #${me.abbr}Made`,tag:"Draft",likes:clout(3)});
+  if(D.filter(d=>d.round===1).length>=2)news(`🎤 ${D.filter(d=>d.round===1).length} first-rounders from ${me.name}. Recruits are watching.`);
+}
+
+// ===================== BREAKING NEWS DECISIONS =====================
+const DRAMA={
+  agent:{t:(X)=>`🚨 Agents are circling ${X.p.n}. They're telling him he's a lottery pick right now.`,o:[["Sit down with him","sit"],["Call his mom","mom"],["Ignore it","ign"]]},
+  tamper:{t:(X)=>`🚨 ${X.c} of ${T(X.t).name} accused you of tampering on live TV.`,o:[["Fire back","fire"],["Stay classy","classy"],["Troll him online","troll"]]},
+  docu:{t:()=>`🎬 A streaming service wants cameras in your locker room for the rest of the season.`,o:[["Let them film","yes"],["No cameras","no"]]},
+  visit:{t:(X)=>`⭐ A five-star from ${X.town} wants an official visit this weekend.`,o:[["Host him yourself","host"],["Send an assistant","asst"],["Pass","pass"]]},
+  scare:{t:(X)=>`🩺 ${X.p.n} went down hard in practice. The scans are inconclusive.`,o:[["Rest him 2 games","rest"],["Let him play","play"]]},
+  meet:{t:()=>`😤 The locker room is tense after the losses.`,o:[["Players-only meeting","meet"],["Brutal practice","hard"],["Give them a day off","off"]]},
+  booster:{t:()=>`💰 A huge booster offers $2M for the practice facility… if his nephew gets minutes.`,o:[["Take the money","take"],["Turn it down","no"]]},
+};
+function dramaRoll(){
+  if(!G19()||S.phase!=="regular"||S.day<3)return;const D=S.drama&&S.drama.season===S.season?S.drama:(S.drama={season:S.season,used:[],cur:null});
+  if(D.cur||D.used.length>=3||Math.random()>.1)return;const me=T(S.user),st=me.roster.slice().sort((a,b)=>b.ovr-a.ovr),streak=(()=>{let n=0;const R=(S.results||[]).filter(r=>r.h===S.user||r.a===S.user);for(let i=R.length-1;i>=0;i--){if((R[i].h===S.user)===(R[i].hs>R[i].as))break;n++}return n})();
+  const can=Object.keys(DRAMA).filter(k=>!D.used.includes(k)&&(k!=="meet"||streak>=2)&&(k!=="tamper"||rivalCoaches().length)&&(k!=="agent"||st[0].yr<3));if(!can.length)return;
+  const k=can[Math.floor(Math.random()*can.length)],X={k};
+  if(k==="agent")X.p=st[0];if(k==="scare")X.p=st[1+Math.floor(Math.random()*3)];if(k==="tamper"){const t=rivalCoaches()[0];X.t=t;X.c=`Coach ${coachOf(T(t)).n}`}if(k==="visit")X.town=cp(["your backyard","across the state","the next town over"]);
+  D.cur={k,pid:X.p?X.p.id:null,t:X.t,c:X.c,town:X.town,txt:DRAMA[k].t(X)};D.used.push(k);news(D.cur.txt);
+}
+function dramaCard(){
+  const D=S.drama;if(!G19()||!D||D.season!==S.season||!D.cur)return "";const C=D.cur;
+  return `<div class="panel drama" data-c="bad"><div class="row" style="justify-content:space-between"><h3>Breaking</h3><span class="tag bad">Your call</span></div><p class="dq">${esc(C.txt)}</p>
+    <div class="row">${DRAMA[C.k].o.map(([l,v])=>`<button class="btn ghost" data-act="dramaPick" data-v="${v}">${esc(l)}</button>`).join("")}</div></div>`;
+}
+function dramaPick(v){
+  const D=S.drama,C=D&&D.cur;if(!C)return;D.cur=null;const me=T(S.user),p=C.pid!=null?me.roster.find(x=>x.id===C.pid):null,u=S.user,X=grind();S.mo=S.mo||{};let out="";
+  const rel=(q,n)=>{if(q)q.rel=clamp((q.rel??60)+n,0,100)};
+  switch(C.k){
+    case "agent":if(v==="sit"){rel(p,15);addXP(30);out=`${p.n} says he's locked in for the season.`}else if(v==="mom"){rel(p,8);p.ovr=Math.min(99,p.ovr+1);out=`His mom set him straight. ${p.n} is playing angry (+1 OVR).`}else{rel(p,-12);out=`${p.n} is distracted. Your relationship took a hit.`}break;
+    case "tamper":{const t=T(C.t);if(v==="fire"){addBeef(t,20);addXP(50);S.job.sec=clamp(S.job.sec-2,0,100);out=`You fired back. The clip is everywhere. The AD isn't thrilled.`}else if(v==="classy"){S.job.sec=clamp(S.job.sec+2,0,100);out="You took the high road. The AD loves it."}else{addBeef(t,30);prof().followers+=clout(2);post({h:`@Coach${(S.coach.name||me.abbr).replace(/\W/g,"")}`,n:`Coach ${S.coach.name||me.abbr}`,v:true,mine:true,viral:true,txt:`Imagine being this worried about us 😂 See you on the court, ${C.c}.`,tag:"🔥 Viral",likes:clout(10)});out="Your troll went viral. This rivalry just got nasty."}break}
+    case "docu":if(v==="yes"){X.bank+=6;me.roster.forEach(q=>rel(q,-4));out="Cameras are rolling. Recruits love it (+6 recruiting points). Some players hate it."}else{me.roster.forEach(q=>rel(q,3));out="No cameras. Your players appreciate it."}break;
+    case "visit":if(v==="host"){X.bank+=6;addXP(40);S.mo[u]=(S.mo[u]||0)-.5;out="Huge visit (+6 recruiting points). Practice was a little light this week."}else if(v==="asst"){X.bank+=2;out="Your assistant held it down (+2 recruiting points)."}else out="You passed. Focus on the season.";break;
+    case "scare":if(v==="rest"){p.inj=Math.max(p.inj||0,2);rel(p,6);out=`${p.n} sits 2 games. He appreciated the caution.`}else if(Math.random()<.5){addXP(30);out=`${p.n} played through it and looked fine. Tough kid.`}else{p.inj=Math.max(p.inj||0,5);out=`Bad call. ${p.n} aggravated it and is out 5 games.`}break;
+    case "meet":if(v==="meet"){S.mo[u]=clamp((S.mo[u]||0)+1.5,-3,3);out="The players-only meeting worked. They're fired up."}else if(v==="hard"){S.mo[u]=clamp((S.mo[u]||0)+1,-3,3);me.roster.forEach(q=>rel(q,-5));out="Brutal practice. They're sharper, and a little mad at you."}else{me.roster.forEach(q=>rel(q,5));out="A day off. The vibes are better."}break;
+    case "booster":if(v==="take"){S.job.sec=clamp(S.job.sec+3,0,100);X.bank+=8;me.roster.forEach(q=>rel(q,-4));out="Money's in (+8 recruiting points). The locker room noticed the nephew though."}else{addXP(50);S.job.sec=clamp(S.job.sec-2,0,100);out="You turned it down. Integrity intact. The booster is sulking."}break;
+  }
+  news(`📰 ${out}`);gtoast("📰","Your call",out.length>70?out.slice(0,68)+"…":out,"#6ed2ff");
+}
+
+// ===================== THE JUGGERNAUT AND THE FINAL BOSS =====================
+function jugSetup(){
+  if(!G19()||(S.jug&&S.jug.season===S.season))return;let pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]===2);if(!pool.length)pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]>=2);if(!pool.length)return;
+  const t=pool[Math.floor(Math.random()*pool.length)];t.roster.slice().sort((a,b)=>b.ovr-a.ovr).slice(0,5).forEach(p=>{p.ovr=Math.min(90,Math.max(p.ovr+9,82+Math.floor(Math.random()*5)))});
+  const boss=rankIds().find(id=>id!==S.user);S.jug={season:S.season,id:t.id,boss};RK.key=null;
+  news(`🧨 Nobody's talking about ${t.name}. They should be. Their starting five is loaded.`);
+  post({h:"@TheBubbleBoy",n:"",v:true,txt:`Mark it down: ${t.name} (${CONFS[t.conf]}) is this year's juggernaut. Nobody wants them in March. 🧨`,tag:"Juggernaut",likes:clout(2)});
+  if(boss!=null)post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`Preseason No. 1 ${T(boss).name} is the team everybody's chasing. The Final Boss. 👹`,tag:"Final Boss",likes:clout(2)});
+}
+function jugGame(gm){
+  const J=S.jug;if(!G19()||!J||J.season!==S.season||gm.winner!==S.user)return;const o=gm.h===S.user?gm.a:gm.h;
+  if(o===J.id&&!J.beatJ){J.beatJ=1;addXP(150);gtoast("🧨","Juggernaut slayer",`You took down ${T(o).name}`,"#ff8a3c");news(`🧨 You slayed the juggernaut: ${T(o).name}. (+150 XP)`)}
+  if(o===J.boss&&!J.beatB){J.beatB=1;addXP(200);gtoast("👹","Final Boss defeated",`You beat ${T(o).name}`,"#ffd34d");news(`👹 You beat the Final Boss, ${T(o).name}. (+200 XP)`)}
+}
+function bossBanner(){
+  const J=S.jug,ug=G19()&&S.phase!=="offseason"?userGame():null;if(!J||J.season!==S.season||!ug)return "";const o=ug.h===S.user?ug.a:ug.h;
+  if(o===J.boss&&!J.beatB)return `<div class="bossb boss">👹 <b>FINAL BOSS:</b> ${esc(T(o).name)} is next. Win for +200 XP.</div>`;
+  if(o===J.id&&!J.beatJ)return `<div class="bossb jug">🧨 <b>JUGGERNAUT:</b> ${esc(T(o).name)} is next. Win for +150 XP.</div>`;return "";
+}
+function jugTile(){const J=S.jug;if(!G19()||!J||J.season!==S.season)return "";const a=T(J.id),b=J.boss!=null?T(J.boss):null;
+  return `<div class="jugrow"><button class="jt" data-act="tab" data-t="standings"><small>🧨 Juggernaut</small><b>${esc(a.name)}</b><span>${recStr(a.id)}${rankOf(a.id)<=25?` · No. ${rankOf(a.id)}`:""}${J.beatJ?" · ✅ slain":""}</span></button>${b?`<button class="jt boss" data-act="tab" data-t="top25"><small>👹 Final Boss</small><b>${esc(b.name)}</b><span>${recStr(b.id)}${rankOf(b.id)<=25?` · No. ${rankOf(b.id)}`:""}${J.beatB?" · ✅ beaten":""}</span></button>`:""}</div>`}
+
+function patch20(){
+  const of0=offer;offer=function(si,ci){const c=S.off&&S.off.board[si]&&S.off.board[si].cands[ci],was=c&&c.status;of0(si,ci);try{if(c&&was==="open"&&c.status!=="open"&&c.st>=4&&G19())cereStart(c)}catch(e){}};
+  // Insert into the page that was just drawn instead of rebuilding it.
+  const addAt=(sel,pos,html)=>{if(!html)return;const el=app.querySelector&&app.querySelector(sel);if(el&&el.insertAdjacentHTML)el.insertAdjacentHTML(pos,html);else if(!app.querySelector)app.innerHTML+=html};
+  const ro0=renderOff;renderOff=function(){ro0();try{if(S.off&&S.off.step==="recap")addAt(".grid2","beforebegin",draftNightHTML());if(S.off&&S.off.cere){if(app.insertAdjacentHTML)app.insertAdjacentHTML("beforeend",cereHTML());else app.innerHTML+=cereHTML()}}catch(e){}};
+  const bo1=beginOffseason;beginOffseason=function(){const before=G19()?progTier():0;bo1();try{if(G19()){statusCheck(before);draftPay()}}catch(e){}};
+  const ss1=startSeason;startSeason=function(y){ss1(y);try{jugSetup()}catch(e){}};
+  const pr1=playRound;playRound=function(r){const x=pr1(r);try{dramaRoll()}catch(e){}return x};
+  const gA1=gameAch;gameAch=function(gm){gA1(gm);try{jugGame(gm)}catch(e){}};
+  const nc0=nextCard;nextCard=function(){try{jugSetup()}catch(e){}return dramaCard()+bossBanner()+nc0()};
+  const d1=dashHTML;dashHTML=function(){return d1()+jugTile()};
+  const th0=tabHistory;tabHistory=function(){return statusHTML()+th0()};
+  const rh0=renderHub;renderHub=function(){rh0();try{if(G19()){const k=progTier();addAt(".tb-sub","afterbegin",`<span class="pstat">${PTIERS[k][1]} ${PTIERS[k][0]}</span> `)}}catch(e){}};
+  const bt1=badgeTokens;badgeTokens=function(){const B=bt1();try{if(S.drama&&S.drama.cur&&S.drama.season===S.season)B.home="dr-"+S.drama.used.length}catch(e){}return B};
+  Object.assign(ACT,{cereDone(){if(S.off)S.off.cere=null},dramaPick(d){dramaPick(d.v)}});
+}
+
+Object.assign(ACT,ACT17);patchACT18();patch19();patch20();
 window.claude?.hot?.snapshot?.(()=>({S}));
 // One-time repair for saves from before the development fix: a practice drill let your players climb to 99.
 // Ratings above 84 on teams you've coached are pulled back toward realistic levels; everyone keeps their rank order.
