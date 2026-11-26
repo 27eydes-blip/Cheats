@@ -7572,13 +7572,13 @@ function statusCheck(before){
 function cereStart(c){
   const won=c.status==="signed",me=S.user,pool=rankIds().filter(id=>id!==me&&id!==c.rvt).slice(0,12),r1=c.rvt!=null?c.rvt:pool[0],r2=pool.find(id=>id!==r1);
   const hats=[me,r1,r2].sort(()=>Math.random()-.5),winner=won?me:(c.rvt!=null?c.rvt:r1),fake=won?(Math.random()<.35?(r1===me?r2:r1):null):(Math.random()<.3?me:null);
-  S.off.cere={n:c.n,st:c.st,pos:c.pos,won,hats,winner,fake};
+  S.off.cere={n:c.n,st:c.st,pos:c.pos,won,hats,winner,fake,org:originOf(c)};
   try{setTimeout(()=>{try{sfx(won?"huge":"horn")}catch(e){}},fake!=null?3300:1900)}catch(e){}
 }
 function cereHTML(){
   const C=S.off&&S.off.cere;if(!C)return "";const W=T(C.winner),F=C.fake!=null?T(C.fake):null,d1=F?3.2:1.8;
   return `<div class="cere-ov" role="dialog" aria-label="Commitment ceremony"><div class="cere-box" style="--wc:${W.c1}">
-    <span class="eyebrow">Live · Commitment ceremony</span><div class="cere-face">${faceSVG(C.n,null,110,{full:true})}</div><h2>${"★".repeat(C.st)} ${esc(C.n)}</h2><p class="muted">${esc(POS_NAME[C.pos]||C.pos)} · the gym is packed, the cameras are rolling</p>
+    <span class="eyebrow">Live · Commitment ceremony</span><div class="cere-face">${faceSVG(C.n,null,110,{full:true,origin:C.org})}</div><h2>${"★".repeat(C.st)} ${esc(C.n)}</h2><p class="muted">${esc(POS_NAME[C.pos]||C.pos)} · the gym is packed, the cameras are rolling</p>
     <div class="hats">${C.hats.map(id=>{const t=T(id),cls=id===C.winner?"win":F&&id===C.fake?"fake":"";return `<div class="hat ${cls}" style="--c1:${t.c1};--c2:${t.c2};--d:${d1}s;--fd:1.6s"><span>🧢</span><b>${esc(t.abbr)}</b></div>`}).join("")}</div>
     <div class="cere-lines"><p style="--d:.2s">He reaches under the table…</p>${F?`<p style="--d:1.6s">He grabs the <b>${esc(F.name)}</b> hat… 😳</p><p style="--d:3.2s"><b>…AND TOSSES IT!</b></p>`:""}
     <p class="cere-res ${C.won?"good":"bad"}" style="--d:${d1+.2}s">${C.won?`🎉 He's coming to ${esc(T(S.user).name)}!`:`💔 He picks ${esc(W.name)}.`}</p></div>
@@ -7590,8 +7590,8 @@ function draftNightHTML(){
   const O=S.off;if(!O||!G19())return "";const mine=new Set((O.draft||[]).map(d=>d.name)),top=O.topDraft||[];if(!top.length&&!(O.draft||[]).length)return "";
   const extra=(O.draft||[]).filter(d=>d.pick>top.length);
   return `<div class="panel dnight" data-c="blue"><div class="row" style="justify-content:space-between"><h3>🎤 Draft night</h3>${O.draft&&O.draft.length?`<span class="tag good">${O.draft.length} of yours drafted</span>`:""}</div>
-    <div class="dn-list">${top.map((d,i)=>`<div class="dn ${mine.has(d.name)?"me":""}" style="--d:${i*.45}s"><span class="num">${d.pick}</span><span class="pface dnf">${faceSVG(d.name,T(d.tid),34)}</span><div><small>With the ${ordinal(d.pick)} pick…</small><b>${esc(d.name)}</b><em>${d.pos} · ${esc(T(d.tid).name)}</em></div>${mine.has(d.name)?"<i>🎉 YOUR GUY</i>":""}</div>`).join("")}
-    ${extra.map((d,i)=>`<div class="dn me" style="--d:${(top.length+i)*.45}s"><span class="num">${d.pick}</span><span class="pface dnf">${faceSVG(d.name,T(S.user),34)}</span><div><small>Round ${d.round}…</small><b>${esc(d.name)}</b><em>${d.pos} · ${esc(T(S.user).name)}</em></div><i>🎉 YOUR GUY</i></div>`).join("")}</div></div>`;
+    <div class="dn-list">${top.map((d,i)=>`<div class="dn ${mine.has(d.name)?"me":""}" style="--d:${i*.45}s"><span class="num">${d.pick}</span><span class="pface dnf">${faceSVG(d.name,T(d.tid),34,{origin:originByName(d.name)})}</span><div><small>With the ${ordinal(d.pick)} pick…</small><b>${esc(d.name)}</b><em>${d.pos} · ${esc(T(d.tid).name)}</em></div>${mine.has(d.name)?"<i>🎉 YOUR GUY</i>":""}</div>`).join("")}
+    ${extra.map((d,i)=>`<div class="dn me" style="--d:${(top.length+i)*.45}s"><span class="num">${d.pick}</span><span class="pface dnf">${faceSVG(d.name,T(S.user),34,{origin:originByName(d.name)})}</span><div><small>Round ${d.round}…</small><b>${esc(d.name)}</b><em>${d.pos} · ${esc(T(S.user).name)}</em></div><i>🎉 YOUR GUY</i></div>`).join("")}</div></div>`;
 }
 function draftPay(){
   const O=S.off;if(!O||O.dnPaid||!G19())return;O.dnPaid=1;const D=O.draft||[];if(!D.length)return;const me=T(S.user);
@@ -7763,11 +7763,15 @@ function faceSVG(seed,team,size,opts){
   if(FACE_CACHE.has(key))return FACE_CACHE.get(key);
   const R=frng(fhash(seed)),pick=a=>a[Math.floor(R()*a.length)],wpick=a=>{let t=a.reduce((s,x)=>s+x[1],0)*R();for(const x of a){t-=x[1];if(t<=0)return x[0]}return a[0][0]};
   const id="f"+(fhash(key)%1e8).toString(36);
-  const si=(()=>{const s=wpick(FACE_SKIN);return FACE_SKIN.findIndex(x=>x[0]===s)})(),skin=FACE_SKIN[si][0],light=si<=2;
+  const org=opts&&opts.origin;
+  const si=(()=>{const s=wpick(FACE_SKIN);return FACE_SKIN.findIndex(x=>x[0]===s)})();let skin=FACE_SKIN[si][0],light=si<=2;
+  if(org==="eu"){skin=pick(["#f8dcc8","#f5d3bb","#f2cbb0","#f6d8c2"]);light=true}
+  if(org==="af"){skin=pick(["#3a2015","#331c12","#2c170f","#3f2317"]);light=false}
   const hi=shade(skin,1.16),sh=shade(skin,.78),sh2=shade(skin,.62),lip=shade(skin,.7),lip2=shade(skin,.84);
   let hair=pick(FACE_HAIR);if(!light&&(hair==="#a87a3c"||hair==="#6e2d14"))hair="#120d0a";
+  if(org==="eu")hair=pick(["#e2c47a","#d8b465","#ebd49a","#caa152","#e2c47a","#8a6234"]);if(org==="af")hair="#0d0907";
   const style=pick(light?["crop","crop","sidepart","fade","curly","buzz","flow"]:["fade","fade","waves","buzz","afro","locs","braids","curly","bald","twists","crop"]);
-  const iris=light?pick(["#4a3020","#5b3a22","#3c6e8f","#5f7a3a","#4a3020"]):pick(["#2b170c","#3a2112","#2b170c"]);
+  const iris=org==="eu"?pick(["#3f78a8","#4f86b5","#5f7d48","#6b7c8c","#3f78a8"]):light?pick(["#4a3020","#5b3a22","#3c6e8f","#5f7a3a","#4a3020"]):pick(["#2b170c","#3a2112","#2b170c"]);
   // head geometry
   const jw=20.5+R()*3,ch=67+R()*4,jaw=R(),ey=45.5+R()*1.5,es=8.6+R()*1.2,brT=1.8+R()*1.4,brA=R()*2.5;
   const beard=pick(["none","none","none","stubble","stubble","goatee","chin","full","mustache"]),mood=pick(["serious","serious","smirk","confident","smile"]);
@@ -7844,13 +7848,23 @@ function faceSVG(seed,team,size,opts){
 }
 
 let PT={};
+// Where an international player is from decides his look.
+const EU_C=new Set(["Serbia","France","Lithuania","Spain","Germany","Greece","Latvia","Croatia"]),AF_C=new Set(["Nigeria","Senegal"]);
+const originOf=x=>x&&x.kind==="intl"&&x.from?(EU_C.has(x.from)?"eu":AF_C.has(x.from)?"af":null):null;
+function originByName(n){if(!S)return null;for(const t of S.teams)for(const p of t.roster)if(p.n===n)return originOf(p);const a=(S.alumni||[]).find(x=>x.n===n);return a?originOf(a):null}
+const EU_FIRST=["Luka","Nikola","Mateo","Aleksa","Théo","Tadas","Dario","Killian","Arturs","Lucas","Jonas","Marko","Matas","Lars","Niklas","Stefan","Filip","Rokas","Dimitris","Hugo"];
+const EU_LAST=["Marić","Stanković","Moreau","Kazlauskas","Jankauskas","Ortega","Ozoliņš","Babić","Papadakis","Brandt","Vasić","Lemieux","Petrović","Schröder","Garnier","Valančiūnas","Bertāns","Kovač","Navarro","Wagner"];
+const AF_FIRST=["Ousmane","Moussa","Chukwuemeka","Babacar","Ibrahima","Tobi","Emeka","Mamadou","Oumar","Chidi","Abdou","Femi","Cheikh","Obinna","Sekou"];
+const AF_LAST=["Diallo","Ndiaye","Okonkwo","Sow","Okafor","Diop","Adeyemi","Fall","Nwosu","Gueye","Eze","Mbaye","Okoro","Sarr","Adebayo"];
 function ptTeam(id){const p=PL[id];if(!p||!S)return null;const t=PT[id];if(t&&t.roster.includes(p))return t;for(const x of S.teams)if(x.roster.includes(p)){PT[id]=x;return x}return null}
-const pfaceSm=(id,n)=>`<span class="pface">${faceSVG(n,ptTeam(id),22)}</span>`;
-const candFace=c=>`<span class="pface cf">${faceSVG(c.n,c.from!=null&&S.teams[c.from]?T(c.from):null,26)}</span>`;
+const pfaceSm=(id,n)=>`<span class="pface">${faceSVG(n,ptTeam(id),22,{origin:originOf(PL[id])})}</span>`;
+const candFace=c=>`<span class="pface cf">${faceSVG(c.n,null,26,{origin:originOf(c)})}</span>`;
 function patch24(){
   const bp=buildPL;buildPL=function(){bp();PT={}};
+  // International recruits get names that fit their country.
+  const mv=makeVet;makeVet=function(pos,kind){const c=mv(pos,kind);if(kind!=="juco"){const o=originOf(c);if(o==="eu")c.n=pick(EU_FIRST)+" "+pick(EU_LAST);if(o==="af")c.n=pick(AF_FIRST)+" "+pick(AF_LAST)}return c};
   const rp=renderPlayer;renderPlayer=function(){rp();try{const f=findPlayer(S.pv);if(!f)return;const el=app.querySelector&&app.querySelector(".phead");
-    if(el&&el.insertAdjacentHTML)el.insertAdjacentHTML("afterbegin",`<div class="pportrait">${faceSVG(f.p.n,f.t||T(S.user),120,{full:true,no:f.p.no})}</div>`)}catch(e){}};
+    if(el&&el.insertAdjacentHTML)el.insertAdjacentHTML("afterbegin",`<div class="pportrait">${faceSVG(f.p.n,f.t||T(S.user),120,{full:true,no:f.p.no,origin:originOf(f.p)})}</div>`)}catch(e){}};
 }
 
 Object.assign(ACT,ACT17);patchACT18();patch19();patch20();patch21();patch22();patch23();patch24();
