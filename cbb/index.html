@@ -1250,6 +1250,50 @@ td.good{color:#7ff0bf}td.bad{color:#ffb1bd}
   .pb-form{grid-template-columns:1fr}
 }
 @media (min-width:601px){.moresheet{display:none}}
+/* ===== Championship grind ===== */
+.xpbar{position:relative;height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.1)}
+.xpbar i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,#ffb347,#ffd34d,#fff1b0);box-shadow:0 0 14px rgba(255,211,77,.6);transition:width .6s ease}
+body.tt .xpbar i{background:linear-gradient(90deg,color-mix(in srgb,var(--ta) 80%,#000),var(--ta),color-mix(in srgb,var(--ta) 50%,#fff));box-shadow:0 0 14px color-mix(in srgb,var(--ta) 60%,transparent)}
+.lvlp .xpbar{height:22px}.lvlp .xpbar span{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.ghud{gap:10px}.gh-top{display:flex;gap:12px;align-items:center}
+.gh-lvl{flex:0 0 auto;width:56px;height:56px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #ffd34d;background:radial-gradient(circle at 50% 30%,rgba(255,211,77,.35),rgba(10,14,28,.9));color:#fff;cursor:pointer;font:inherit;box-shadow:0 0 18px rgba(255,211,77,.35)}
+body.tt .gh-lvl{border-color:var(--ta);background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--ta) 45%,transparent),rgba(10,14,28,.9));box-shadow:0 0 18px color-mix(in srgb,var(--ta) 45%,transparent)}
+.gh-lvl b{font-size:24px;line-height:1}.gh-lvl span{font-size:10px;letter-spacing:.14em;color:var(--muted)}
+.gh-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}.gh-last{font-size:12.5px;color:#7ff0bf}
+.gh-alert{padding:10px 12px;border-radius:12px;border:1px solid #ffd34d;background:rgba(255,211,77,.12);color:#ffe9a8;font:inherit;font-weight:700;text-align:left;cursor:pointer;animation:pulse 1.6s infinite}
+.gh-wk{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:12px;background:rgba(110,210,255,.07);border:1px solid rgba(110,210,255,.22)}
+.gh-wk>span{font-size:20px}.gh-wk div{flex:1;min-width:0;display:flex;flex-direction:column}.gh-wk small{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.gh-wk em{font-style:normal;font-size:12px;color:#ffd34d;white-space:nowrap}
+.gh-wk.ok{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.1)}.gh-wk.no{opacity:.6}
+.gh-goals>summary{cursor:pointer;font-weight:700;padding:4px 0}.gl{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
+.gl em{font-style:normal;font-size:12.5px;color:var(--muted)}.gl.ok b{color:#7ff0bf}.gl.no b{text-decoration:line-through;opacity:.6}
+.bwatch{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;border-radius:16px;border:1px solid rgba(110,210,255,.25);background:rgba(10,16,34,.82);color:inherit;font:inherit;cursor:pointer}
+.bwatch div{display:flex;flex-direction:column;min-width:0}.bwatch small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.bw-seed{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-family:var(--num);font-size:22px;font-weight:800;background:#1d4ed8;color:#fff}
+.bwatch.good .bw-seed{background:#0f9f6e}.bwatch.amber .bw-seed{background:#c98a10}.bwatch.bad .bw-seed{background:#b42343}
+.abil-pick{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:14px;border:1px dashed #ffd34d;background:rgba(255,211,77,.06)}
+.abil-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.abil{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:inherit;font:inherit;cursor:pointer}
+.abil:hover{border-color:#ffd34d}.abil span{font-size:26px}.abil small{color:var(--muted);font-size:12.5px}
+.abil-list{display:flex;flex-wrap:wrap;gap:6px}.abil-on,.abil-off{padding:5px 10px;border-radius:999px;font-size:12.5px;border:1px solid rgba(255,255,255,.12)}.abil-on{background:rgba(255,211,77,.14);border-color:rgba(255,211,77,.5)}.abil-off{opacity:.55}
+.ladder{display:flex;flex-direction:column;gap:4px}.ladder div{display:grid;grid-template-columns:34px 1fr auto auto;gap:8px;align-items:center;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.03);font-size:14px}
+.ladder div.me{background:rgba(255,211,77,.14);border:1px solid rgba(255,211,77,.45)}
+.huddle .hd-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.hd-p{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:inherit;font:inherit;cursor:pointer}
+.hd-p span{font-size:22px}.hd-p small{font-size:12px;color:var(--muted)}.hd-p:hover{border-color:#ffd34d}
+.ovl-clutch{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;align-items:flex-end;padding:6px 12px;border-radius:10px;background:rgba(180,20,40,.85);color:#fff;box-shadow:0 0 24px rgba(255,40,70,.6);animation:pulse 1s infinite}
+.ovl-clutch b{font-size:11px;letter-spacing:.16em}.ovl-clutch span{font-size:22px;font-weight:800}
+.ovl-sus{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-family:var(--display);font-size:clamp(18px,4.5vw,34px);color:#fff;text-shadow:0 4px 24px rgba(0,0,0,.9);animation:gfx 1s ease}
+.ovl-rev{position:absolute;left:50%;top:18%;transform:translateX(-50%);padding:8px 16px;border-radius:10px;font-weight:800;letter-spacing:.1em;background:rgba(5,8,18,.92);border:2px solid #ffd34d;color:#ffd34d;white-space:nowrap}
+.ovl-rev.ok{border-color:#34d399;color:#7ff0bf}.ovl-rev.bad{border-color:#fb7185;color:#ffb1bd}
+.cere{display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:22px;background:linear-gradient(160deg,color-mix(in srgb,var(--c1) 55%,#000),#05070e 70%);border:1px solid rgba(255,211,77,.4);box-shadow:0 0 40px rgba(255,211,77,.18)}
+.cere-h h2{font-family:var(--display);font-size:clamp(26px,7vw,44px);margin:4px 0;color:#ffe9a8}
+.montage{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.mt{display:flex;flex-direction:column;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);border-left:3px solid #ffd34d;animation:filmin .7s ease both;animation-delay:var(--d)}.mt small{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.nets{display:flex;flex-direction:column;gap:4px}.nets span{opacity:0;animation:filmin .6s ease forwards;animation-delay:var(--d)}
+.rings{display:flex;flex-wrap:wrap;gap:10px}.ring{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 14px;border-radius:16px;background:radial-gradient(circle at 50% 20%,color-mix(in srgb,var(--c1) 50%,transparent),rgba(10,14,28,.9));border:1px solid #ffd34d;min-width:90px}
+.ring span{font-size:30px;filter:drop-shadow(0 0 10px rgba(255,211,77,.7))}.ring small{color:var(--muted);font-size:11.5px}
+@media (max-width:600px){.huddle .hd-row{grid-template-columns:1fr 1fr}.abil-row{grid-template-columns:1fr}.gh-lvl{width:50px;height:50px}.ovl-clutch span{font-size:17px}}
+@media (prefers-reduced-motion:reduce){.gh-alert,.ovl-clutch,.mt,.nets span{animation:none!important;opacity:1}}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -2067,7 +2111,7 @@ function attempt(g,o,d,mode,buzzer){
     else if(type==="mid")mk=.36+(Sa.mid-72)*.0017-(dP-72)*.0011+DS.mid;
     else mk=.32+(Sa.thr-72)*.0019-(dP-72)*.0009+DS.three-(mode==="three"&&g.clock<8?.05:0);
     const pb=g.pb;if(pb&&me)mk+=(type==="three"?pb.three:type==="rim"?pb.rim:0)+pb.all+(g.half>=2&&g.clock<600?pb.late:0);if(pb&&d===S.user)mk-=pb.def+pb.all*.5;if(type==="three"&&d===S.user&&isDem("gamble"))mk+=.012;if(g.ssT)mk+=ssLive(g,o,sh,type);if(g.rev&&g.rev.has(sh.id))mk+=.025;
-    if(PC)mk+=PC.b;if(type==="three"&&ruleOn("three"))mk-=.015;if(type==="rim"&&ruleOn("lane"))mk-=.012;
+    if(PC)mk+=PC.b;mk+=abilMk(g,o,d,type,cl);if(type==="three"&&ruleOn("three"))mk-=.015;if(type==="rim"&&ruleOn("lane"))mk-=.012;
     mk+=hcMod(g,sh)+(type==="three"&&hasGB(g,sh,"range")?.015:0)+(type==="rim"&&hasGB(g,sh,"finisher")?.02:0)+(cl&&hasGB(g,sh,"clutch")?.03:0)-(hasGB(g,df,"lock")?.02:0);mk=clamp(mk+edge,.08,.88);
     const fouled=rnd()<(type==="rim"?.2:type==="mid"?.07:.016)*refFoul(g,d);
     // Blocks
@@ -2427,7 +2471,7 @@ function beginOffseason(){
     const gone=new Set(leave.map(x=>x[0])),slots=[];t.roster.forEach((p,i)=>{if(gone.has(p))slots.push(i)});
     for(const p of t.roster){
       if(gone.has(p))continue;
-      let gr=([6,4,3][p.yr]??2)+(p.st-3)*.8+(mine?S.coach.dev*.4+.3*fac("train")+(p.yr<=1&&S.prac?Math.min(1.5,S.prac.dev):0):dif().ai*.5)+mpGrowth(p)+normal()*1.6;
+      let gr=([6,4,3][p.yr]??2)+(p.st-3)*.8+(mine?S.coach.dev*.4+(hasAbil("dev")?.6:0)+.3*fac("train")+(p.yr<=1&&S.prac?Math.min(1.5,S.prac.dev):0):dif().ai*.5)+mpGrowth(p)+normal()*1.6;
       // Gains shrink near the top of the scale, so only rare players reach the high 90s.
       if(gr>0)gr*=clamp((97-p.ovr)/18,.06,1);
       if(mine&&p.rel!=null)p.rel=Math.round(p.rel*.6+62*.4);
@@ -2466,7 +2510,7 @@ function crowdPenalty(pos,st){
 const REC_COST={5:18,4:10,3:4,2:0},REC_CAP={5:.72,4:.86,3:.97};
 function prospectChance(pos,st){
   if(st===2)return 1;const me=T(S.user);
-  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()+(ssHas("recruit")?.02:0)+folBoost()+nilBoost()+tvBoost()+townBoost()+celebBoost()-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
+  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()+(ssHas("recruit")?.02:0)+folBoost()+nilBoost()+tvBoost()+townBoost()+celebBoost()+(hasAbil("magnet")?.06:0)-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
 }
 function makeProspect(pos,st){
   const me=T(S.user),[a,b]=HT[pos];
@@ -6732,7 +6776,266 @@ document.addEventListener("keydown",e=>{
 });
 
 // ===================== BOOT =====================
-Object.assign(ACT,ACT17);patchACT18();
+// ===================== CHAMPIONSHIP GRIND: coach levels, abilities, goals, weekly challenges,
+// the all-time ladder, clutch-time coaching, replay review, the title ceremony and live bracketology.
+const G19=()=>S&&S.phase!=="h2h"&&!S.mp&&S.user!=null;
+function grind(){
+  if(!S.grind)S.grind={xp:0,lvl:1,abil:{},bank:0,goals:null,wk:null,flags:{},log:[],passed:[]};
+  const X=S.grind;if(G19()&&(!X.goals||X.goals.season!==S.season)&&S.phase!=="offseason")genGoals();return X;
+}
+const xpNeed=L=>150+L*100;
+const LVL_TITLE=[[1,"Rookie Coach"],[4,"Rising Star"],[8,"Program Builder"],[13,"Big-Time Coach"],[19,"National Name"],[26,"March Legend"],[34,"Hall of Famer"],[43,"Living Legend"],[50,"The GOAT"]];
+const lvlTitle=L=>LVL_TITLE.filter(x=>L>=x[0]).pop()[1];
+
+// ===================== SIGNATURE ABILITIES =====================
+const ABIL={
+  fast:["⚡","Fast Starter","Your team plays sharper in the first half."],
+  closer:["🧊","The Closer","Your team executes better in the final four minutes of close games."],
+  road:["🧳","Road Warrior","Cancels half of the other team's home-court edge."],
+  fortress:["🏰","Fortress","Your home-court edge is 40% stronger."],
+  shooter:["🎯","Green Light","Your team shoots threes better."],
+  lockdown:["🔒","Lockdown","Opponents shoot worse against you."],
+  giant:["🗡️","Giant Killer","Your team rises up against top-10 teams."],
+  comeback:["🔥","Comeback Kids","Your team plays better when down 8+ in the second half."],
+  magnet:["🧲","Recruiting Magnet","+6% commit chance on every recruit."],
+  dev:["📈","Player Whisperer","Every player grows +0.6 more each offseason."],
+  march:["🏀","March Mastermind","Your team plays better in the NCAA Tournament."],
+  dynasty:["👑","Dynasty Builder","+1 extra skill point every season."],
+};
+const ABIL_TIERS=[[3,"fast","closer"],[7,"road","fortress"],[12,"shooter","lockdown"],[18,"giant","comeback"],[25,"magnet","dev"],[33,"march","dynasty"]];
+const hasAbil=k=>!!(S&&S.grind&&S.grind.abil&&Object.values(S.grind.abil).includes(k)&&G19());
+const abilPending=()=>{if(!G19())return null;const X=grind();return ABIL_TIERS.find(t=>X.lvl>=t[0]&&!X.abil[t[0]])||null};
+// Called by the engine on every shot. Positive helps the shooter.
+function abilMk(g,o,d,type,cl){
+  if(!S||!S.grind||!G19())return 0;const u=S.user;if(o!==u&&d!==u)return 0;const off=o===u,them=off?d:o,A=S.grind.abil;if(!A||!Object.keys(A).length)return 0;
+  const has=k=>Object.values(A).includes(k);let v=0;const my=g.score[u],th=g.score[them],away=!g.neutral&&g.away===u,home=!g.neutral&&g.home===u;
+  if(g.oppRk==null)g.oppRk=rankOf(them);
+  if(off){if(has("fast")&&g.half===1)v+=.01;if(has("closer")&&cl)v+=.012;if(has("shooter")&&type==="three")v+=.015;if(has("comeback")&&g.half>=2&&th-my>=8)v+=.014}
+  else if(has("lockdown"))v+=.01;
+  if(has("giant")&&g.oppRk<=10)v+=off?.008:.006;if(has("march")&&g.type==="ncaa")v+=.006;
+  if(has("road")&&away)v+=(g.hfa||0)*.5;if(has("fortress")&&home)v+=(g.hfa||0)*.4;
+  return off?v:-v;
+}
+
+// ===================== XP =====================
+function addXP(n,why){
+  if(!G19()||n<=0)return;const X=grind();X.xp+=Math.round(n);let up=false;
+  while(X.lvl<50&&X.xp>=xpNeed(X.lvl)){X.xp-=xpNeed(X.lvl);X.lvl++;up=true;X.bank+=2;
+    const t=ABIL_TIERS.find(x=>x[0]===X.lvl);gtoast("⬆️","LEVEL UP",`Level ${X.lvl} · ${lvlTitle(X.lvl)}${t?" · New ability to pick!":""}`,"#ffd34d");
+    news(`⬆️ Coach level ${X.lvl}: ${lvlTitle(X.lvl)}.${t?" A new signature ability is ready in the Coach tab.":""} (+2 recruiting points banked)`)}
+  if(X.lvl>=50)X.xp=Math.min(X.xp,xpNeed(50));
+  return up;
+}
+function gtoast(icon,small,big,color){S.toasts=(S.toasts||[]).concat({icon,small,big,color})}
+function grindGame(gm){
+  if(!G19())return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const X=grind(),o=gm.h===u?gm.a:gm.h,won=gm.winner===u,my=gm.h===u?gm.hs:gm.as,th=gm.h===u?gm.as:gm.hs;
+  const rk=rankOf(o),parts=[];let xp=0;const add=(n,w)=>{xp+=n;parts.push(w)};
+  if(won){add(40,"win");if(!gm.neutral&&gm.a===u)add(20,"road win");if(rk<=25)add(30,"ranked opponent");if(rk<=10)add(20,"top 10");if(rk===1)add(60,"beat No. 1");
+    if(rivalryOf(gm.h,gm.a))add(25,"rivalry");if(ovr(T(o))>ovr(T(u))+3)add(40,"upset");if(my-th>=20)add(10,"blowout");
+    if(gm.type==="ncaa"&&S.ncaa)add(100*(S.ncaa.round+1),"NCAA win");if(gm.type==="ct")add(40,"tournament win");
+    if(gm.type==="ncaa"&&S.ncaa&&S.ncaa.round===5){add(600,"NATIONAL TITLE")}
+    if(rk<=25)X.flags.beatRanked=S.season;if(rivalryOf(gm.h,gm.a))X.flags.beatRival=S.season;if(gm.type==="ct")X.flags.ctWin=S.season}
+  else{add(10,"effort");if(rk<=10&&th-my<=5)add(15,"close vs top 10")}
+  X.last={xp,why:parts.slice(0,3).join(" · ")};addXP(xp);
+  try{wkGame(gm,won,my,th)}catch(e){}
+  try{ladderCheck()}catch(e){}
+}
+
+// ===================== SEASON GOALS (from your AD) =====================
+function ovrRank(){const me=ovr(T(S.user));return S.teams.filter(t=>ovr(t)>me).length+1}
+function genGoals(){
+  const X=S.grind,r=ovrRank(),me=T(S.user),riv=(typeof RIVALS!=="undefined")&&RIVALS.some(x=>x[0]===me.abbr||x[1]===me.abbr);
+  const G=r<=10?[["wins",26],["regchamp"],["ncaa",3],["ap",10],["title"]]:r<=40?[["wins",22],["conf",3],["dance"],["ncaa",1]]:r<=120?[["wins",18],["conf",Math.max(2,Math.ceil(confSize()/2))],["ct"],["beatRanked"]]:[["wins",14],["conf",Math.max(3,Math.ceil(confSize()/2))],["ct"],["beatRanked"]];
+  if(riv)G.push(["rival"]);
+  X.goals={season:S.season,list:G.map(([k,n])=>({k,n,st:0}))};X.flags={};
+}
+function confSize(){return S.teams.filter(t=>t.conf===T(S.user).conf).length}
+const GOAL_T={wins:n=>`Win ${n} games`,regchamp:()=>"Win the conference regular season",conf:n=>`Finish top ${n} in the conference`,dance:()=>"Make the NCAA Tournament",
+  ncaa:n=>n>=4?"Reach the Final Four":n===3?"Reach the Elite Eight":n===2?"Reach the Sweet 16":"Win an NCAA Tournament game",ap:n=>`Finish in the AP top ${n}`,title:()=>"Win the national title (stretch goal)",
+  ct:()=>"Win a conference tournament game",beatRanked:()=>"Beat a ranked team",rival:()=>"Beat your rival"};
+const GOAL_XP={wins:250,regchamp:300,conf:200,dance:300,ncaa:400,ap:250,title:1000,ct:150,beatRanked:200,rival:200};
+function goalState(g,fin){ // [progress text, done?, failed?]
+  const u=S.user,rec=record(u),X=S.grind,N=S.ncaa,end=fin||S.phase==="offseason";const pos=()=>{const st=confStandings(T(u).conf);return st.indexOf(u)+1};
+  switch(g.k){
+    case "wins":return [`${rec.w}/${g.n}`,rec.w>=g.n,end&&rec.w<g.n];
+    case "regchamp":{const p=pos(),RC=S.regChamps||{},c=RC[T(u).conf];return [`${ordinal(p)} now`,c===u,(c!=null&&c!==u)||(end&&c!==u)]}
+    case "conf":{const p=pos();const fin=S.phase!=="regular";return [`${ordinal(p)} now`,fin&&p<=g.n,fin&&p>g.n]}
+    case "dance":return [N&&N.seed[u]!=null?"In!":"",!!(N&&N.seed[u]!=null),!!(N&&S.phase!=="selection"&&N.seed[u]==null)];
+    case "ncaa":{const w=N?ncaaWins(u):0,alive=N&&N.alive&&N.alive.includes(u)&&N.champ==null;return [N&&N.seed[u]!=null?`${w}/${g.n} wins`:"",w>=g.n,!!(N&&N.seed[u]!=null&&!alive&&w<g.n)||!!(N&&S.phase!=="selection"&&N.seed[u]==null)]}
+    case "ap":return [rankOf(u)<=25?`No. ${rankOf(u)} now`:"Unranked",end&&rankOf(u)<=g.n,end&&rankOf(u)>g.n];
+    case "title":return ["",!!(N&&N.champ===u),!!(N&&N.seed&&(N.champ!=null&&N.champ!==u||N.alive&&!N.alive.includes(u)&&N.round>0))];
+    case "ct":return ["",X.flags.ctWin===S.season,S.phase!=="regular"&&S.phase!=="ctourn"&&X.flags.ctWin!==S.season];
+    case "beatRanked":return ["",X.flags.beatRanked===S.season,end&&X.flags.beatRanked!==S.season];
+    case "rival":return ["",X.flags.beatRival===S.season,end&&X.flags.beatRival!==S.season];
+  }
+  return ["",false,false];
+}
+// Pay out goals as soon as they're met; settle the rest at the end of the season.
+function goalsTick(final){
+  if(!G19())return;const X=grind();if(!X.goals)return;let met=0,miss=0;
+  for(const g of X.goals.list){if(g.st)continue;const [,d,f]=goalState(g,final);
+    if(d){g.st=1;addXP(GOAL_XP[g.k]||200);gtoast("🎯","Goal complete",GOAL_T[g.k](g.n),"#34d399");news(`🎯 Season goal complete: ${GOAL_T[g.k](g.n)} (+${GOAL_XP[g.k]||200} XP)`);met++}
+    else if(f||final){g.st=-1;miss++}}
+  if(final){const all=X.goals.list,ok=all.filter(g=>g.st===1&&g.k!=="title").length,bad=all.filter(g=>g.st===-1&&g.k!=="title").length;
+    S.job.sec=clamp(S.job.sec+ok*3-bad*4,0,100);news(`📋 Your AD's report card: ${ok} of ${all.filter(g=>g.k!=="title").length} season goals met.${bad>=3?" The boosters are restless.":ok>=3?" The AD is thrilled.":""}`)}
+}
+
+// ===================== WEEKLY CHALLENGES =====================
+const WK={
+  win2:["Win your next 2 games",2],road:["Win a road game this week",1],score85:["Score 85+ in a game",1],hold60:["Hold an opponent under 60",1],
+  star25:["Have a player score 25+",1],blow20:["Win a game by 20+",1],ast20:["Hand out 20+ assists in a game",1],ranked:["Beat a ranked team this week",1],
+};
+function wkTick(){
+  if(!G19()||S.phase!=="regular")return;const X=grind(),W=X.wk;
+  if(W&&!W.done&&!W.failed&&S.day<W.day0+7)return;
+  if(W&&!W.done&&!W.failed){W.failed=true;news(`⏱️ Weekly challenge missed: ${WK[W.k][0]}.`)}
+  if(W&&S.day<W.day0+7)return;
+  const soon=[];for(let d=S.day;d<Math.min(S.day+7,(S.schedule||[]).length);d++){const p=myPair(d);if(p)soon.push(p)}
+  if(!soon.length){X.wk=null;return}
+  const opts=Object.keys(WK).filter(k=>k==="ranked"?soon.some(p=>rankOf(p[0]===S.user?p[1]:p[0])<=25):k==="road"?soon.some(p=>p[1]===S.user&&!p[2]):k==="win2"?soon.length>=2:true);
+  const k=opts[Math.floor(Math.random()*opts.length)];X.wk={k,day0:S.day,prog:0,need:WK[k][1],done:false,failed:false};
+}
+function wkGame(gm,won,my,th){
+  const X=S.grind,W=X.wk;if(!W||W.done||W.failed)return;const L=S.lastGame,box=L&&L.box?Object.entries(L.box).filter(([pid])=>T(S.user).roster.some(p=>p.id===+pid)).map(x=>x[1]):[];
+  const hit={win2:won,road:won&&gm.a===S.user&&!gm.neutral,score85:my>=85,hold60:th<60,star25:box.some(b=>b.pts>=25),blow20:won&&my-th>=20,ast20:box.reduce((s,b)=>s+(b.ast||0),0)>=20,ranked:won&&rankOf(gm.h===S.user?gm.a:gm.h)<=25}[W.k];
+  if(W.k==="win2"&&!won){W.failed=true;news(`⏱️ Weekly challenge failed: ${WK.win2[0]}.`);return}
+  if(hit)W.prog++;
+  if(W.prog>=W.need){W.done=true;addXP(150);X.bank+=3;gtoast("✅","Weekly challenge",WK[W.k][0]+" · +150 XP","#6ed2ff");news(`✅ Weekly challenge complete: ${WK[W.k][0]} (+150 XP, +3 recruiting points)`)}
+}
+
+// ===================== ALL-TIME COACHES LADDER =====================
+const LEGENDS=[["Hank Ellery",1098,5],["Mo 'The Professor' Abbott",1021,3],["Ray Delacroix",977,4],["Bud Kincaid",942,2],["Vince Talbot",901,3],["Gus Whitlow",880,1],["Earl 'Ice' Benning",861,2],["Lou Castellano",838,2],["Dean Marlowe",815,1],["Walt Oyelaran",790,1],
+  ["Jimmy Prosser",766,1],["Pat Reyes",741,0],["Sonny McGill",722,1],["Clint Haverford",700,0],["Tom Esposito",681,1],["Benny Okafor",655,0],["Frank Dumont",630,0],["Lyle Ashby",604,1],["Rocco Vitale",577,0],["Norm Feeney",551,0],
+  ["Stan Pulaski",520,0],["Doc Whitaker",488,0],["Arch Bellamy",455,1],["Chet Lindqvist",420,0],["Dutch Moreau",388,0],["Mack Tolliver",350,0],["Hal Greer-Watts",312,0],["Smitty Ronan",275,0],["Lefty Caruso",240,0],["Buzz Delaney",200,0],["Skip Monahan",162,0],["Woody Pratt",125,0],["Red Albers",90,0],["Jojo Kessler",61,0],["Tiny Burke",34,0],["Cal 'One Year' Dobbs",12,0]];
+function career(){const H=(S.history||[]),cur=record(S.user),inH=H.some(h=>h.season===S.season);
+  return {w:H.reduce((s,h)=>s+h.w,0)+(inH?0:cur.w),l:H.reduce((s,h)=>s+h.l,0)+(inH?0:cur.l),t:H.filter(h=>h.champ===h.team).length+(!inH&&S.ncaa&&S.ncaa.champ===S.user?1:0)}}
+function ladder(){const c=career(),me={n:`You (Coach ${S.coach.name||T(S.user).abbr})`,w:c.w,t:c.t,me:true};return LEGENDS.map(x=>({n:x[0],w:x[1],t:x[2]})).concat(me).sort((a,b)=>b.w-a.w||b.t-a.t)}
+function ladderCheck(){const X=grind(),c=career(),L=ladder(),i=L.findIndex(x=>x.me);const fresh=L.filter(x=>!x.me&&x.w<c.w&&!X.passed.includes(x.n));if(!fresh.length)return;
+  fresh.forEach(x=>X.passed.push(x.n));const x=fresh[0];if(fresh.length>2){news(`🪜 You're No. ${i+1} on the all-time wins list.`);return}
+  gtoast("🪜","All-time ladder",`You passed ${x.n} (${x.w} wins)`,"#c7d0dc");news(`🪜 You passed ${x.n} on the all-time wins list. You're No. ${i+1} all-time.`);addXP(100)}
+function ladderHTML(){if(!G19())return "";
+  const L=ladder(),i=L.findIndex(x=>x.me),c=career(),next=i>0?L[i-1]:null,show=L.slice(Math.max(0,i-3),i+3);
+  return `<div class="panel" data-c="amber"><div class="row" style="justify-content:space-between"><h3>🪜 All-time coaches</h3><span class="tag amber">No. ${i+1} all-time</span></div>
+    <p class="muted" style="font-size:13.5px">${c.w}-${c.l} career · ${c.t} title${c.t===1?"":"s"}.${next?` Next up: <b>${esc(next.n)}</b>, ${next.w-c.w} more win${next.w-c.w===1?"":"s"}.`:" You're the winningest coach ever. 🐐"}</p>
+    <div class="ladder">${show.map(x=>`<div class="${x.me?"me":""}"><span class="num">${L.indexOf(x)+1}.</span><b>${esc(x.n)}</b><span class="num">${x.w} W</span><span>${"💍".repeat(Math.min(x.t,6))}</span></div>`).join("")}</div></div>`;
+}
+
+// ===================== COACH PANEL =====================
+function levelHTML(){
+  if(!G19())return "";const X=grind(),need=xpNeed(X.lvl),P=abilPending();
+  return `<div class="panel lvlp" data-c="amber"><div class="row" style="justify-content:space-between"><h3>⭐ Coach level</h3><span class="tag amber">Level ${X.lvl} · ${esc(lvlTitle(X.lvl))}</span></div>
+    <div class="xpbar"><i style="width:${X.lvl>=50?100:Math.round(X.xp/need*100)}%"></i><span class="num">${X.lvl>=50?"MAX":`${X.xp} / ${need} XP`}</span></div>
+    <p class="muted" style="font-size:13px">Earn XP from wins (more for road wins, ranked teams, rivals and upsets), March wins, season goals and weekly challenges. Every level banks 2 recruiting points for the offseason${X.bank?` (${X.bank} banked)`:""}.</p>
+    ${P?`<div class="abil-pick"><b>Pick your level-${P[0]} ability</b><div class="abil-row">${[P[1],P[2]].map(k=>`<button class="abil" data-act="abilPick" data-t="${P[0]}" data-k="${k}"><span>${ABIL[k][0]}</span><b>${ABIL[k][1]}</b><small>${ABIL[k][2]}</small></button>`).join("")}</div></div>`:""}
+    <div class="abil-list">${ABIL_TIERS.map(t=>{const k=X.abil[t[0]];return k?`<span class="abil-on" title="${esc(ABIL[k][2])}">${ABIL[k][0]} ${esc(ABIL[k][1])}</span>`:`<span class="abil-off">🔒 Level ${t[0]}</span>`}).join("")}</div></div>`;
+}
+
+// ===================== HOME: grind HUD and bracket watch =====================
+function grindHUD(){
+  if(!G19())return "";const X=grind();if(!X.wk||S.day>=X.wk.day0+7)try{wkTick()}catch(e){}const need=xpNeed(X.lvl),W=X.wk,G=X.goals,P=abilPending();
+  const goals=G?G.list.map(g=>{const [p]=goalState(g);return `<div class="gl ${g.st===1?"ok":g.st===-1?"no":""}"><span>${g.st===1?"✅":g.st===-1?"❌":"⬜"}</span><b>${esc(GOAL_T[g.k](g.n))}</b><em>${esc(p||"")}</em></div>`}).join(""):"";
+  const wkLeft=W?Math.max(0,W.day0+7-S.day):0;
+  return `<div class="panel ghud" data-c="amber">
+    <div class="gh-top"><button class="gh-lvl" data-act="tab" data-t="coach"><b class="num">${X.lvl}</b><span>LVL</span></button><div class="gh-mid"><div class="row" style="justify-content:space-between"><b>${esc(lvlTitle(X.lvl))}</b><span class="muted num" style="font-size:12px">${X.lvl>=50?"MAX":`${X.xp}/${need} XP`}</span></div>
+      <div class="xpbar"><i style="width:${X.lvl>=50?100:Math.round(X.xp/need*100)}%"></i></div>${X.last?`<span class="gh-last">Last game: +${X.last.xp} XP${X.last.why?` · ${esc(X.last.why)}`:""}</span>`:""}</div></div>
+    ${P?`<button class="gh-alert" data-act="tab" data-t="coach">✨ New signature ability ready. Pick it now →</button>`:""}
+    ${W&&S.phase==="regular"?`<div class="gh-wk ${W.done?"ok":W.failed?"no":""}"><span>${W.done?"✅":W.failed?"❌":"⏱️"}</span><div><small>Weekly challenge${!W.done&&!W.failed?` · ${wkLeft} day${wkLeft===1?"":"s"} left`:""}</small><b>${esc(WK[W.k][0])}</b></div><em class="num">${W.need>1?`${W.prog}/${W.need}`:""} +150 XP</em></div>`:""}
+    ${goals?`<details class="gh-goals" ${S.ghOpen?"open":""}><summary>📋 Season goals · ${G.list.filter(g=>g.st===1).length}/${G.list.length} done</summary>${goals}</details>`:""}
+  </div>`;
+}
+function myProj(){
+  const u=S.user,F=projectField(false),seedOf={},auto=new Set(F.autos);F.lines.forEach((l,i)=>l.forEach(x=>{if(x&&x.pi)x.pi.forEach(id=>seedOf[id]=i+1);else if(x!=null)seedOf[x]=i+1}));
+  const s=seedOf[u];if(s==null)return {s:null,txt:F.firstOut.includes(u)?"First four out. One or two big wins and you're in.":"Out of the field right now. You need wins, and probably the auto bid.",c:"bad"};
+  return {s,txt:auto.has(u)?`Projected No. ${s} seed as your conference's auto bid.`:F.lastIn.includes(u)?`Last four in. Projected No. ${s} seed, sweating it.`:s<=4?`Projected No. ${s} seed. Protected seed territory.`:`Projected No. ${s} seed. Comfortably in.`,c:F.lastIn.includes(u)?"amber":s<=4?"good":"blue"};
+}
+function bracketWatch(){
+  if(!G19()||S.phase!=="regular"||S.day<8)return "";let P;try{P=myProj()}catch(e){return ""}
+  return `<button class="bwatch ${P.c}" data-act="tab" data-t="top25"><span class="bw-seed">${P.s?P.s:"—"}</span><div><small>🎯 Bracketology</small><b>${esc(P.txt)}</b></div></button>`;
+}
+
+// ===================== LIVE: timeouts, clutch time, replay review =====================
+const HUDDLE={iso:["⭐","Iso your star","Clear out for your best player."],mismatch:["🎯","Hunt the mismatch","Attack their weakest defender."],spread:["🏹","Spread and shoot","Five out, let it fly."],lock:["🔒","Lock it down","Get stops. Switch everything."]};
+const clutchOn=W=>{const g=W.g;return !g.over&&g.half>=2&&g.clock<=60&&g.clock>0&&Math.abs(g.score[g.home]-g.score[g.away])<=5};
+function huddleCall(k){
+  const W=WATCH;if(!W||W.kind!=="user"||!W.huddle||S.phase==="h2h")return;const g=W.g,u=S.user,o=opp(g,u),star=T(u).roster.slice().sort((a,b)=>b.ovr-a.ovr)[0],onF=(g.lu[u]||[]).some(p=>p===star);
+  g.xb=g.xb||{};const until=g.el+80;
+  if(k==="iso")g.xb[u]={until,v:onF?.016:.006};else if(k==="mismatch")g.xb[u]={until:g.el+90,v:.012};else if(k==="spread")g.xb[u]={until:g.el+90,v:.011};else g.xb[o]={until:g.el+90,v:-.012};
+  g.mom=(g.mom||0)*.4;W.huddle=false;W.paused=false;W.tol--;if(W.x&&W.x.tos)W.x.tos[u]=W.tol;
+  W.bk={who:crew().an||crew().pbp,txt:`${T(u).abbr} come out of the timeout with a plan: ${HUDDLE[k][1].toLowerCase()}.`};
+  if(typeof tick17==="function")tick17(W,`@${T(u).abbr}Nation`,cp(["Timeout was NEEDED 🙏","Coach is cooking something 🧑‍🍳","Let's see the plan…","Stop the bleeding!!"]));
+  say(g,`Timeout, ${T(u).abbr}. Coach ${S.coach.name||T(u).abbr} draws up "${HUDDLE[k][1]}".`,true);
+}
+function huddleHTML(W){
+  if(W.kind!=="user"||!W.huddle||W.g.over)return "";
+  return `<div class="panel huddle" data-c="amber"><h3>⏸ Timeout huddle · ${W.tol} left after this</h3><p class="muted" style="font-size:13.5px">Pick the play. It stops their momentum and gives your team a short boost.</p>
+    <div class="hd-row">${Object.entries(HUDDLE).map(([k,v])=>`<button class="hd-p" data-act="huddleCall" data-k="${k}"><span>${v[0]}</span><b>${v[1]}</b><small>${v[2]}</small></button>`).join("")}</div></div>`;
+}
+function reviewStep(W){
+  if(W.kind!=="user"||S.phase==="h2h")return;const g=W.g,R=W.rv||(W.rv={h:0,a:0});const dh=g.score[g.home]-R.h,da=g.score[g.away]-R.a;R.h=g.score[g.home];R.a=g.score[g.away];
+  if(g.over||g.half<2||g.clock>120)return;const tid=dh===3?g.home:da===3?g.away:null;if(tid==null)return;
+  const txt=(g.log[0]&&g.log[0].txt)||"";if(!/three/i.test(txt)||/miss/i.test(txt)||Math.abs(g.score[g.home]-g.score[g.away])>4||Math.random()>.35)return;
+  const flip=Math.random()<.24,p=g.lsh&&(T(tid).roster.find(x=>x.id===g.lsh));W.review={t:nowMs(),flip,tid};
+  if(flip&&p){g.score[tid]--;R[tid===g.home?"h":"a"]--;const b=g.box[p.id];if(b){b.pts--;b.tpm--;b.tpa--}g.tstat[tid].tpm--;g.tstat[tid].tpa--;
+    say(g,`REVIEW: ${p.n}'s foot was on the line. It's a two, not a three. ${T(g.home).abbr} ${g.score[g.home]}, ${T(g.away).abbr} ${g.score[g.away]}.`,true)}
+  else say(g,`REVIEW: After a look at the monitor, the three stands.`,true);
+}
+function clutchOverlay(W){
+  const g=W.g,R=W.review,t=nowMs();let h="";
+  if(R&&t-R.t<2600)h+=t-R.t<1300?`<div class="ovl-rev">🔍 UNDER REVIEW…</div>`:`<div class="ovl-rev ${R.flip?"bad":"ok"}">${R.flip?"OVERTURNED · 2 POINTS":"CALL STANDS · THREE"}</div>`;
+  if(clutchOn(W))h+=`<div class="ovl-clutch"><b>CLUTCH TIME</b><span class="num">${Math.floor(g.clock/60)}:${(g.clock%60).toFixed(1).padStart(4,"0")}</span></div>${W.sus?`<div class="ovl-sus">The ball goes up…</div>`:""}`;
+  return h;
+}
+
+// ===================== THE TITLE: ceremony, montage, rings =====================
+function ceremonyHTML(){
+  const N=S.ncaa;if(!N||N.champ!==S.user||!G19())return "";const me=T(S.user),st=me.roster.slice().sort((a,b)=>(b.s.min||0)-(a.s.min||0)).slice(0,6),R=(S.results||[]).filter(r=>r.type==="ncaa"&&(r.h===S.user||r.a===S.user));
+  const RN=["First Round","Second Round","Sweet 16","Elite Eight","Final Four","Title game"],ring=(S.history||[]).filter(h=>h.team===S.user&&h.champ===S.user).length+1;
+  const mop=me.roster.slice().sort((a,b)=>(b.s.pts/Math.max(1,b.s.g))-(a.s.pts/Math.max(1,a.s.g)))[0];
+  return `<div class="cere" style="--c1:${me.c1};--c2:${me.c2}">
+    <div class="cere-h"><span class="eyebrow">One Shining Moment</span><h2>💍 Ring No. ${ring}</h2></div>
+    <div class="montage">${R.map((r,i)=>{const w=(r.h===S.user)===(r.hs>r.as),o=r.h===S.user?r.a:r.h,m=r.h===S.user?r.hs:r.as,t=r.h===S.user?r.as:r.hs;return `<div class="mt" style="--d:${i*.35}s"><small>${RN[i]||"NCAA"}</small><b>${w?"Beat":"Lost to"} ${esc(T(o).name)}</b><span class="num">${m}-${t}</span></div>`}).join("")}</div>
+    <div class="nets"><b>✂️ Cutting down the nets</b>${st.map((p,i)=>`<span style="--d:${1.5+i*.4}s">${esc(p.n)} cuts a strand</span>`).join("")}<span style="--d:${1.5+st.length*.4}s"><b>Coach ${esc(S.coach.name||me.abbr)} takes the last one. 🏆</b></span></div>
+    ${mop?`<p class="muted">Most Outstanding Player: <b>${esc(mop.n)}</b></p>`:""}</div>`;
+}
+function ringsHTML(){
+  if(!G19())return "";const H=(S.history||[]).filter(h=>h.champ===h.team);if(!H.length)return "";
+  return `<div class="panel" data-c="amber"><h3>💍 Championship rings</h3><div class="rings">${H.map(h=>{const t=T(h.team);return `<div class="ring" style="--c1:${t.c1};--c2:${t.c2}"><span>💍</span><b>${seasonLabel(h.season)}</b><small>${esc(t.abbr)} · ${h.w}-${h.l}</small></div>`}).join("")}</div></div>`;
+}
+
+// ===================== Hooks into the existing game =====================
+function patch19(){
+  const gA0=gameAch;gameAch=function(gm){gA0(gm);try{grindGame(gm)}catch(e){}};
+  const ss0=startSeason;startSeason=function(y){ss0(y);try{if(G19()){grind().wk=null;const h=(S.history||[]).at(-1);if(h&&h.champ===S.user&&h.team===S.user){news(`🏆 Banner night: the ${seasonLabel(h.season)} national championship banner goes up before the opener.`);post({h:`@${T(S.user).abbr}Nation`,n:`${T(S.user).name} Nation`,txt:`BANNER NIGHT 🏆 Hang it up. Then go get another one.`,tag:"Banner",likes:clout(4)})}}}catch(e){}};
+  const bo0=beginOffseason;beginOffseason=function(){try{goalsTick(true)}catch(e){}bo0();try{if(G19()){const X=grind();if(S.off&&X.bank){S.off.points+=X.bank;news(`🏦 ${X.bank} banked recruiting points from coach levels and challenges were added to your offseason budget.`);X.bank=0}if(hasAbil("dynasty"))S.coach.pts++}}catch(e){}};
+  const pr0=playRound;playRound=function(r){const x=pr0(r);try{if(G19()){goalsTick(false);wkTick()}}catch(e){}return x};
+  const st0=showToasts;showToasts=function(){const q=(S&&S.toasts)||[],obj=q.filter(x=>typeof x==="object");if(S)S.toasts=q.filter(x=>typeof x!=="object");st0();
+    const box=document.getElementById("toasts");if(!box||!box.appendChild)return;
+    // Several level-ups at once become one toast, and never more than three on screen.
+    const ups=obj.filter(x=>x.small==="LEVEL UP");let list=obj.filter(x=>x.small!=="LEVEL UP");if(ups.length){const L=ups[ups.length-1];list.unshift(ups.length>1?{...L,big:L.big+` (+${ups.length} levels)`}:L)}list=list.slice(0,3);
+    list.forEach((a,i)=>{const el=document.createElement("div");el.className="toast";el.style.setProperty("--tc",a.color||"#ffd34d");el.style.animationDelay=`${i*.3}s,${4+i*.3}s`;
+      el.innerHTML=`<span class="ti">${a.icon}</span><div><small>${esc(a.small)}</small><b>${esc(a.big)}</b></div>`;box.appendChild(el);setTimeout(()=>el.remove(),5400+i*300)})};
+  const d0=dashHTML;dashHTML=function(){return grindHUD()+bracketWatch()+d0()};
+  const tc0=tabCoach;tabCoach=function(){return levelHTML()+ladderHTML()+tc0()};
+  const ts0=trophyShelf;trophyShelf=function(){return ringsHTML()+ts0()};
+  const ch0=champHero;champHero=function(b){return ceremonyHTML()+ch0(b)};
+  const bt0=badgeTokens;badgeTokens=function(){const B=bt0();try{const P=abilPending();if(P)B.coach="ab-"+P[0]}catch(e){}return B};
+  const lf0=liveFx;liveFx=function(W,bf){lf0(W,bf);try{reviewStep(W)}catch(e){}};
+  const ov0=overlayHTML;overlayHTML=function(W){return ov0(W)+clutchOverlay(W)};
+  const sb0=scorebugHTML;scorebugHTML=function(W){return huddleHTML(W)+sb0(W)};
+  const hb0=heatBtn;heatBtn=function(W){return (W.kind==="user"&&!W.g.over&&S.phase!=="h2h"?`<button class="tab" data-act="wTimeout" ${W.tol>0&&!W.huddle?"":"disabled"}>⏸ Timeout (${W.tol??4})</button>`:"")+hb0(W)};
+  const sw0=startWatch;startWatch=function(gm,kind){sw0(gm,kind);if(WATCH){WATCH.tol=4}};
+  // Clutch time slows down and adds a beat of suspense before every possession.
+  wLoop=function(){if(!WATCH)return;const W=WATCH;let delay=SPEED[W.speed];
+    if(!W.paused&&!W.g.over){if(clutchOn(W)&&W.speed<10){if(!W.sus){W.sus=1;delay=650}else{W.sus=0;wStep(1);delay=Math.max(1250,delay)}}else{W.sus=0;wStep(W.speed>=10?3:1)}render()}
+    if(WATCH&&!WATCH.g.over)wTimer=setTimeout(wLoop,delay)};
+  Object.assign(ACT,{
+    abilPick(d){const X=grind(),t=+d.t,T0=ABIL_TIERS.find(x=>x[0]===t);if(!T0||X.abil[t]||X.lvl<t||![T0[1],T0[2]].includes(d.k))return;X.abil[t]=d.k;news(`✨ New signature ability: ${ABIL[d.k][1]}. ${ABIL[d.k][2]}`)},
+    wTimeout(){const W=WATCH;if(!W||W.kind!=="user"||W.g.over||W.tol<=0||W.huddle||(W.pp&&!W.pp.locked&&W.g.el===0))return;W.huddle=true;W.paused=true},
+    huddleCall(d){huddleCall(d.k)},
+  });
+}
+
+Object.assign(ACT,ACT17);patchACT18();patch19();
 window.claude?.hot?.snapshot?.(()=>({S}));
 // One-time repair for saves from before the development fix: a practice drill let your players climb to 99.
 // Ratings above 84 on teams you've coached are pulled back toward realistic levels; everyone keeps their rank order.
