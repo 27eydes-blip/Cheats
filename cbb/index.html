@@ -16,7 +16,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Graduate&family=Chakra+Petch:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Graduate&family=Anton&family=Chakra+Petch:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: March under the arena lights. Team-colored hero band, glass stat chips, grouped dock nav, hardwood court for live games. */
 :root{
@@ -1335,6 +1335,62 @@ body.tt .gh-lvl{border-color:var(--ta);background:radial-gradient(circle at 50% 
 .badge.hasimg{padding-left:30px}
 .badge .tlogo{position:absolute;left:3px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;background:#fff;padding:2px;object-fit:contain;box-sizing:border-box}
 .hub-head .badge.hasimg{padding-left:40px}.hub-head .badge .tlogo{width:32px;height:32px}
+/* ===== Front page: tip-off poster ===== */
+.fp{position:relative;overflow:hidden;border-radius:28px;min-height:clamp(430px,92vw,560px);display:flex;align-items:flex-end;padding:22px 20px 24px;
+  background:linear-gradient(180deg,#0b1a3a 0%,#123b7a 55%,#f26b1d 160%);box-shadow:0 24px 50px rgba(11,26,58,.35);isolation:isolate}
+body.ice .fp{background:linear-gradient(170deg,#ffffff 0%,#e6f1fb 45%,#cfe3f5 100%);box-shadow:0 24px 50px rgba(16,42,67,.18)}
+.fp.compact{min-height:150px;align-items:center;justify-content:center;padding:18px}
+.fp-wall{position:absolute;inset:-34% -20% 10%;display:flex;flex-direction:column;justify-content:center;gap:16px;transform:rotate(-12deg);z-index:-1;opacity:.5;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 58%,transparent 92%);mask-image:linear-gradient(180deg,#000 0%,#000 58%,transparent 92%)}
+body.ice .fp-wall{opacity:.8}
+.fp.compact .fp-wall{-webkit-mask-image:none;mask-image:none;opacity:.22;inset:-60% -20%}
+.fp-row{overflow:hidden}.fp-row>div{display:flex;gap:16px;width:max-content;animation:fpslide var(--s) linear infinite}.fp-row.rev>div{animation-direction:reverse}
+@keyframes fpslide{to{transform:translateX(-50%)}}
+.fp-l{flex:0 0 auto;width:74px;height:74px;border-radius:20px;display:grid;place-items:center;background:rgba(255,255,255,.92);box-shadow:0 6px 16px rgba(0,0,0,.18)}
+body.ice .fp-l{background:#fff;box-shadow:0 6px 16px rgba(16,42,67,.12)}
+.fp-l img{width:78%;height:78%;object-fit:contain}.fp-t{font-family:var(--num);font-weight:800;font-size:15px;color:#fff;background:var(--c)}
+.fp-in{position:relative;display:flex;flex-direction:column;gap:12px;width:100%}
+.fp-in::before{content:"";position:absolute;inset:-36px -20px -24px;z-index:-1;background:linear-gradient(180deg,transparent,rgba(8,18,40,.82) 38%,rgba(8,18,40,.92))}
+body.ice .fp-in::before{background:linear-gradient(180deg,transparent,rgba(240,247,253,.9) 36%,rgba(240,247,253,.97))}
+.fp.compact .fp-in::before{display:none}
+.fp-kick{display:flex;align-items:center;gap:8px;font-family:var(--num);font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#ffb062}
+body.ice .fp-kick{color:#d0560f}
+.fp-dot{width:9px;height:9px;border-radius:50%;background:#ff4a3d;box-shadow:0 0 0 4px rgba(255,74,61,.25);animation:pulse 1.4s infinite}
+.fp-title{margin:0;display:flex;flex-direction:column;line-height:.86;font-weight:400}
+.fp-cbb{display:flex;align-items:center;gap:10px;font-family:'Anton',var(--num),sans-serif;font-size:clamp(30px,9vw,46px);letter-spacing:.32em;color:#9cc4ff}
+body.ice .fp-cbb{color:#3d6d94}
+.fp-ball{width:clamp(30px,8.5vw,44px);height:clamp(30px,8.5vw,44px);animation:fpspin 9s linear infinite;filter:drop-shadow(0 6px 10px rgba(242,107,29,.45))}
+@keyframes fpspin{to{transform:rotate(360deg)}}
+.fp-dyn{font-family:'Anton',var(--num),sans-serif;font-size:clamp(64px,22vw,124px);letter-spacing:.01em;color:#fff;text-shadow:0 8px 30px rgba(0,0,0,.35)}
+body.ice .fp-dyn{color:#0b1a3a;text-shadow:none;background:linear-gradient(180deg,#0b1a3a 55%,#1d5fb8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.fp-title.sm{align-items:center}.fp-title.sm .fp-cbb{font-size:18px;letter-spacing:.4em}.fp-title.sm .fp-dyn{font-size:clamp(44px,13vw,64px)}
+.fp-sub{margin:0;font-size:17px;color:#d9e6ff;max-width:30em}.fp-sub b{color:#fff}
+body.ice .fp-sub{color:#3d566e}body.ice .fp-sub b{color:#0b1a3a}
+.fp-cta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:4px}
+.fp-go{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px 16px;border-radius:16px;border:0;cursor:pointer;font:inherit;text-align:left;
+  background:linear-gradient(180deg,#ff8a3d,#f26b1d);color:#fff;box-shadow:0 10px 24px rgba(242,107,29,.4);transition:transform .15s}
+.fp-go:hover{transform:translateY(-2px)}.fp-go span{font-family:var(--num);font-weight:800;font-size:19px;letter-spacing:.06em;text-transform:uppercase}.fp-go small{font-size:13px;opacity:.92}
+.fp-go.alt{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.4);box-shadow:none}
+body.ice .fp-go.alt{background:#fff;color:#0b1a3a;border:1.5px solid #c9dbe9}
+.fp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.fp-stats div{display:flex;flex-direction:column;align-items:center;padding:12px 4px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+body.ice .fp-stats div{background:#fff;border-color:#d3e3ef;box-shadow:0 4px 12px rgba(16,42,67,.06)}
+.fp-stats b{font-family:'Anton',var(--num),sans-serif;font-size:clamp(24px,7vw,34px);font-weight:400;color:#f26b1d;line-height:1}.fp-stats span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center}
+.fp-modes{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.fp-h{margin:4px 2px;font-family:'Anton',var(--num),sans-serif;font-weight:400;font-size:26px;letter-spacing:.04em;text-transform:uppercase;color:var(--chalk)}
+.fpm{position:relative;display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:14px;padding:16px 18px 16px 0;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden;transition:transform .15s,box-shadow .15s}
+body.ice .fpm{background:#fff;border-color:#d3e3ef;box-shadow:0 6px 18px rgba(16,42,67,.08)}
+.fpm:hover{transform:translateY(-2px)}
+.fpm-n{align-self:stretch;display:grid;place-items:center;width:58px;font-family:'Anton',var(--num),sans-serif;font-size:26px;color:#fff;background:var(--mc)}
+.fpm.m1{--mc:#1d5fb8}.fpm.m2{--mc:#e0324a}.fpm.m3{--mc:#12a06b}
+.fpm-i{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:var(--mc);background:color-mix(in srgb,var(--mc) 12%,transparent)}.fpm-i svg{width:28px;height:28px}
+.fpm-b{display:flex;flex-direction:column;gap:3px;min-width:0}.fpm-b b{font-family:'Anton',var(--num),sans-serif;font-weight:400;font-size:24px;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.fpm-b span{font-size:14px;color:var(--muted)}.fpm-b em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--mc)}
+.fpm-go{font-size:22px;color:var(--mc);font-weight:800}
+.fp-feats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}.fp-feats span{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+body.ice .fp-feats span{background:#fff;border-color:#d3e3ef}
+@media (max-width:600px){.fp-l{width:60px;height:60px;border-radius:16px}.fp-stats{gap:6px}.fpm{gap:10px;padding-right:12px}.fpm-n{width:46px;font-size:22px}.fpm-i{width:38px;height:38px}.fpm-b b{font-size:21px}}
+@media (prefers-reduced-motion:reduce){.fp-row>div,.fp-ball,.fp-dot{animation:none!important}}
 /* ===== Ice Cold base (generated rules follow) ===== */
 body.ice{--amber:var(--ta);--night:#eaf4fb;--panel:#ffffff;--panel-2:#f3f8fc;--line:#c9dbe9;--chalk:#0d2236;--muted:#5d7891;--glass:rgba(255,255,255,.86);--hair:rgba(16,42,67,.1);--steel:#3d6d94;--good:#0a8a5c;--bad:#c0264a;--gold-soft:var(--ta-d);--neon:var(--ta);
   color:#0d2236;background:linear-gradient(180deg,color-mix(in srgb,var(--ta) 7%,#f3f9fd),color-mix(in srgb,var(--ta) 14%,#dcebf6)) fixed!important;background-color:#eaf4fb!important}
@@ -7638,7 +7694,41 @@ function patch22(){
   Object.assign(ACT,{themeT(){try{localStorage.setItem("cbb-theme",themeName()==="ice"?"midnight":"ice")}catch(e){}}});
 }
 
-Object.assign(ACT,ACT17);patchACT18();patch19();patch20();patch21();patch22();
+// ===================== FRONT PAGE: the tip-off poster =====================
+// A wall of real school logos drifting behind a giant title, a Continue button and ticket-style mode cards.
+const FP_BALL=`<svg class="fp-ball" viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="fpb" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#ffb062"/><stop offset=".6" stop-color="#f26b1d"/><stop offset="1" stop-color="#b8430a"/></radialGradient></defs><circle cx="32" cy="32" r="29" fill="url(#fpb)"/><g fill="none" stroke="#3a1606" stroke-width="2.4" stroke-linecap="round"><path d="M3 32h58M32 3v58"/><path d="M12 11c8 7 8 35 0 42M52 11c-8 7-8 35 0 42"/></g></svg>`;
+let FP_ROWS=null;
+function fpWall(){
+  if(!FP_ROWS){const pool=TEAMS0.map(r=>r).sort((a,b)=>b[4]-a[4]).slice(0,96);const sh=pool.sort(()=>Math.random()-.5);FP_ROWS=[0,1,2,3].map(i=>sh.slice(i*24,i*24+24))}
+  const on=typeof logosOn==="function"&&logosOn();
+  const cell=r=>{const id=typeof ESPN_ID!=="undefined"&&ESPN_ID[r[1]];return on&&id?`<span class="fp-l"><img src="${logoSrc(id,96)}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.textContent='${esc(r[1])}'"></span>`:`<span class="fp-l fp-t" style="--c:${r[2]}">${esc(r[1])}</span>`};
+  return `<div class="fp-wall" aria-hidden="true">${FP_ROWS.map((row,i)=>`<div class="fp-row ${i%2?"rev":""}" style="--s:${70+i*12}s"><div>${row.map(cell).join("")}${row.map(cell).join("")}</div></div>`).join("")}</div>`;
+}
+function fpHero(compact){
+  const L=Array.isArray(SAVED)?SAVED.filter(x=>x.s&&!x.s.mp):[],last=L[0]&&L[0].s,lt=last?last.teams[last.user]:null;
+  if(compact)return `<section class="fp compact">${fpWall()}<div class="fp-in"><h1 class="fp-title sm"><span class="fp-cbb">CBB</span><span class="fp-dyn">DYNASTY</span></h1></div></section>`;
+  return `<section class="fp" aria-label="CBB Dynasty">${fpWall()}
+    <div class="fp-in">
+      <div class="fp-kick"><span class="fp-dot"></span>${seasonLabel(2027)} season · Tip-off</div>
+      <h1 class="fp-title"><span class="fp-cbb">CBB ${FP_BALL}</span><span class="fp-dyn">DYNASTY</span></h1>
+      <p class="fp-sub">364 programs. One national title. <b>How many can you win?</b></p>
+      <div class="fp-cta">${lt?`<button class="fp-go" data-act="resume" data-n="${L[0].n}"><span>▶ Continue</span><small>${esc(lt.name)} · ${seasonLabel(last.season)}</small></button>`:""}
+        <button class="fp-go ${lt?"alt":""}" data-act="titleMode" data-m="team"><span>${lt?"＋ New dynasty":"▶ Start a dynasty"}</span><small>${lt?"Pick any of 364 schools":"Pick your school and go"}</small></button></div>
+    </div></section>
+    <div class="fp-stats">${[["364","Programs"],["31","Conferences"],["68","Team March"],["1","Champion"]].map(([n,l])=>`<div><b>${n}</b><span>${l}</span></div>`).join("")}</div>`;
+}
+function fpModes(){
+  const d=h2hStore(),L=Array.isArray(SAVED)?SAVED.filter(x=>x.s):[],last=L.find(x=>!x.s.mp),lt=last?last.s.teams[last.s.user]:null,mpl=(L.find(x=>x.s.mp&&!x.s.mp.done)||{}).s;
+  const card=(m,n,cls,t,dsc,st,ic)=>`<button class="fpm ${cls}" data-act="titleMode" data-m="${m}"><span class="fpm-n">${n}</span><span class="fpm-i">${ic}</span><span class="fpm-b"><b>${t}</b><span>${dsc}</span><em>${st}</em></span><span class="fpm-go">→</span></button>`;
+  return `<div class="fp-modes"><h2 class="fp-h">Choose your mode</h2>
+    ${card("team","01","m1","My Team","Build a program. Recruit, win your league, chase banners.",lt?`${esc(lt.name)} · ${seasonLabel(last.s.season)}`:"Start a dynasty",ICON_BALL)}
+    ${card("h2h","02","m2","Head to Head","Challenge a friend with a code. Your team vs theirs.",`Record ${d.w}-${d.l}${d.coach?` · Coach ${esc(d.coach)}`:""}`,ICON_VS)}
+    ${card("mp","03","m3","My Player","Be one player. Earn minutes, win awards, get drafted.",mpl?`${esc(mpl.mp.name)} · ${esc(mpl.teams[mpl.user].name)}`:"Start a career",ICON_MP)}</div>
+    <div class="fp-feats">${["68-team March Madness","Live play-by-play","Recruiting & portal","Coach levels & abilities","Real school logos"].map(x=>`<span>${x}</span>`).join("")}</div>`;
+}
+function patch23(){heroHTML=fpHero;renderMenu=fpModes}
+
+Object.assign(ACT,ACT17);patchACT18();patch19();patch20();patch21();patch22();patch23();
 window.claude?.hot?.snapshot?.(()=>({S}));
 // One-time repair for saves from before the development fix: a practice drill let your players climb to 99.
 // Ratings above 84 on teams you've coached are pulled back toward realistic levels; everyone keeps their rank order.
