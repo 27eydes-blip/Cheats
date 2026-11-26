@@ -6,18 +6,18 @@
   <title>Free Website Security Check | Gleyde Technologies</title>
   <meta name="description" content="Free, passive website security check: HTTPS, security headers, SPF and DMARC, and exposed files, with a score and plain-English fixes.">
   <link rel="canonical" href="https://gleyde.com/security-check">
-  <meta name="theme-color" content="#0a0a0b">
+  <meta name="theme-color" content="#0b0b0c">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Free Website Security Check | Gleyde Technologies">
   <meta property="og:description" content="Free, passive website security check: HTTPS, security headers, SPF and DMARC, and exposed files, with a score and plain-English fixes.">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="/site.webmanifest">
-  <link rel="preload" href="/assets/fonts/cormorant-garamond-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=6b3ba29ec6">
+  <link rel="preload" href="/assets/fonts/gleyde-serif-500.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/gleyde-sans-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/site.css?v=b6dd12e37c">
   <script src="/assets/js/site.js?v=307e6c3d5b"></script>
   <script src="/assets/js/chat.js?v=f171e7e770" defer></script>
-  <script src="/assets/js/security-check.js?v=042a8f0fe9" defer></script>
+  <script src="/assets/js/security-check.js?v=96d93268dd" defer></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=gleydeTurnstileReady" async defer></script>
 </head>
 <body>
@@ -25,11 +25,11 @@
   <header class="site-header">
     <nav class="wrap nav" aria-label="Main">
       <a class="brand" href="/" aria-label="Gleyde Technologies home">
-        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 58 32 32 58 6 32Z" fill="none" stroke="#d4af6a" stroke-width="2.5"/><path d="M32 20 44 32 32 44 20 32Z" fill="#d4af6a"/></svg>
-        <span class="brand-text"><span class="brand-name">GLEYDE</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
+        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 57 32 32 57 7 32Z" fill="none" stroke="#c9a86a" stroke-width="2"/><path d="M32 22 42 32 32 42 22 32Z" fill="#c9a86a"/></svg>
+        <span class="brand-text"><span class="brand-name">Gleyde</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
       </a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu">
-        <span></span><span></span><span></span>
+        <span></span><span></span>
       </button>
       <ul class="nav-menu" id="nav-menu">
         <li><a href="/">Home</a></li>
@@ -37,7 +37,7 @@
         <li><a href="/how-it-works">How It Works</a></li>
         <li><a href="/about">About</a></li>
         <li><a href="/contact">Contact</a></li>
-        <li><a class="btn btn-gold" href="/security-check" aria-current="page">Free security check</a></li>
+        <li class="nav-cta"><a class="btn btn-line" href="/security-check" aria-current="page">Free security check</a></li>
       </ul>
     </nav>
   </header>
@@ -46,9 +46,9 @@
 
     <section class="page-hero page-hero-tight">
       <div class="wrap">
-        <span class="eyebrow reveal">Free tool</span>
-        <h1 class="reveal d1">Website <em class="gold">Security Check</em></h1>
-        <p class="lede reveal d2">Get a graded report with your top three fixes and step-by-step instructions for your platform.</p>
+        <p class="eyebrow reveal">Free tool</p>
+        <h1 class="reveal d1">Website <em>Security Check</em></h1>
+        <p class="lede reveal d2">A graded report with your top three fixes, in plain English. Free, and about 15 seconds.</p>
       </div>
     </section>
 
@@ -97,7 +97,7 @@
               <noscript><p class="note">This tool needs JavaScript. You can also <a href="/contact">ask us to run the check for you</a>.</p></noscript>
               <div class="form-status" id="scan-status" role="status" aria-live="polite" tabindex="-1"></div>
               <button class="btn btn-gold scan-submit" type="submit" id="scan-submit" aria-disabled="true" aria-describedby="scan-status"><span class="label">Check my website</span> <span class="arrow" aria-hidden="true">&rarr;</span></button>
-              <p class="scan-trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><span>Read-only checks. We never log in or change anything. <a href="/privacy">Privacy policy</a></span></p>
+              <p class="scan-trust">{ICON['lock']}<span>Read-only checks. We never log in or change anything. <a href="/privacy">Privacy policy</a></span></p>
               <p class="small">If you add your email, we send you the report and may follow up once. We never share it.</p>
             </form>
 
@@ -118,13 +118,13 @@
             <div class="example-card">
               <div class="example-head">
                 <span class="example-tag">Example</span>
-                <h2 id="example-title">Sample report preview</h2>
+                <h2 id="example-title">Sample report</h2>
               </div>
               <div class="example-body">
                 <div class="example-grade" role="img" aria-label="Example grade C, 72 out of 100"><span>C</span><small>72/100</small></div>
                 <div class="example-meta">
                   <p class="example-domain">example.com</p>
-                  <p>14 passed · 4 need work · 3 at risk</p>
+                  <p>14 passed &middot; 4 need work &middot; 3 at risk</p>
                 </div>
               </div>
               <p class="example-sub">Top fixes</p>
@@ -138,11 +138,11 @@
 
             <h2 class="aside-title">What we check</h2>
             <ul class="checks-included">
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><div><strong>Encryption</strong>HTTPS, redirects, HSTS and certificate expiry.</div></li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg><div><strong>Email protection</strong>SPF, DKIM and DMARC against fake emails in your name.</div></li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6Z"/><path d="m8.8 12 2.2 2.2 4.4-4.4"/></svg><div><strong>Headers &amp; software</strong>Browser protections, outdated WordPress, PHP and libraries, cookies and forms.</div></li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/><path d="M8.5 11h5M11 8.5v5"/></svg><div><strong>Exposed files</strong>Files often left public by mistake, like .env and .git. We never download or show their contents.</div></li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 8.5h18"/><path d="m10 12.5-2.5 2.5 2.5 2.5M14 12.5l2.5 2.5-2.5 2.5"/></svg><div><strong>Domain &amp; DNS</strong>Renewal date, transfer lock and DNSSEC.</div></li>
+              <li><strong>Encryption</strong>HTTPS, redirects, HSTS and certificate expiry.</li>
+              <li><strong>Email protection</strong>SPF, DKIM and DMARC against fake emails in your name.</li>
+              <li><strong>Headers &amp; software</strong>Browser protections, outdated software, cookies and forms.</li>
+              <li><strong>Exposed files</strong>Files often left public by mistake. We never download their contents.</li>
+              <li><strong>Domain &amp; DNS</strong>Renewal date, transfer lock and DNSSEC.</li>
             </ul>
           </aside>
         </div>
@@ -156,36 +156,27 @@
   <footer class="site-footer">
     <div class="wrap">
       <div class="footer-grid">
-        <div>
+        <div class="footer-brand">
           <a class="brand" href="/" aria-label="Gleyde Technologies home">
-            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 58 32 32 58 6 32Z" fill="none" stroke="#d4af6a" stroke-width="2.5"/><path d="M32 20 44 32 32 44 20 32Z" fill="#d4af6a"/></svg>
-            <span class="brand-text"><span class="brand-name">GLEYDE</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 57 32 32 57 7 32Z" fill="none" stroke="#c9a86a" stroke-width="2"/><path d="M32 22 42 32 32 42 22 32Z" fill="#c9a86a"/></svg>
+            <span class="brand-text"><span class="brand-name">Gleyde</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
           </a>
-          <p class="small">Secure software and website protection for local small businesses. A division of Gleyde Technologies, LLC.</p>
+          <p>Website security and secure software for local businesses. A division of Gleyde Technologies, LLC.</p>
         </div>
-        <div>
-          <h2>Services</h2>
-          <ul>
-            <li><a href="/services#audit">Security Audit</a></li>
-            <li><a href="/services#hardening">Security Hardening</a></li>
-            <li><a href="/services#development">Secure Development</a></li>
-            <li><a href="/services#monitoring">Monitoring &amp; Updates</a></li>
-          </ul>
-        </div>
-        <div>
-          <h2>Company</h2>
-          <ul>
+        <nav aria-label="Footer">
+          <ul class="footer-links">
+            <li><a href="/services">Services</a></li>
             <li><a href="/how-it-works">How It Works</a></li>
             <li><a href="/about">About</a></li>
-            <li><a href="/security-check">Free Security Check</a></li>
             <li><a href="/contact">Contact</a></li>
+            <li><a href="/security-check">Free Security Check</a></li>
             <li><a href="/privacy">Privacy</a></li>
             <li><a href="/.well-known/security.txt">security.txt</a></li>
           </ul>
-        </div>
+        </nav>
       </div>
       <div class="footer-bottom">
-        <span>&copy; <span data-year>2026</span> Gleyde Technologies, LLC. All rights reserved.</span>
+        <span>&copy; <span data-year>2026</span> Gleyde Technologies, LLC</span>
         <span>We only test systems we have written permission to test.</span>
       </div>
     </div>

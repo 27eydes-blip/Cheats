@@ -6,15 +6,15 @@
   <title>About | Gleyde Technologies</title>
   <meta name="description" content="The cybersecurity and software division of Gleyde Technologies, LLC. Founded by Sam Eyde III.">
   <link rel="canonical" href="https://gleyde.com/about">
-  <meta name="theme-color" content="#0a0a0b">
+  <meta name="theme-color" content="#0b0b0c">
   <meta property="og:type" content="website">
   <meta property="og:title" content="About | Gleyde Technologies">
   <meta property="og:description" content="The cybersecurity and software division of Gleyde Technologies, LLC. Founded by Sam Eyde III.">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="/site.webmanifest">
-  <link rel="preload" href="/assets/fonts/cormorant-garamond-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=6b3ba29ec6">
+  <link rel="preload" href="/assets/fonts/gleyde-serif-500.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/gleyde-sans-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/site.css?v=b6dd12e37c">
   <script src="/assets/js/site.js?v=307e6c3d5b"></script>
   <script src="/assets/js/chat.js?v=f171e7e770" defer></script>
 </head>
@@ -23,11 +23,11 @@
   <header class="site-header">
     <nav class="wrap nav" aria-label="Main">
       <a class="brand" href="/" aria-label="Gleyde Technologies home">
-        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 58 32 32 58 6 32Z" fill="none" stroke="#d4af6a" stroke-width="2.5"/><path d="M32 20 44 32 32 44 20 32Z" fill="#d4af6a"/></svg>
-        <span class="brand-text"><span class="brand-name">GLEYDE</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
+        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 57 32 32 57 7 32Z" fill="none" stroke="#c9a86a" stroke-width="2"/><path d="M32 22 42 32 32 42 22 32Z" fill="#c9a86a"/></svg>
+        <span class="brand-text"><span class="brand-name">Gleyde</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
       </a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu">
-        <span></span><span></span><span></span>
+        <span></span><span></span>
       </button>
       <ul class="nav-menu" id="nav-menu">
         <li><a href="/">Home</a></li>
@@ -35,7 +35,7 @@
         <li><a href="/how-it-works">How It Works</a></li>
         <li><a href="/about" aria-current="page">About</a></li>
         <li><a href="/contact">Contact</a></li>
-        <li><a class="btn btn-gold" href="/security-check">Free security check</a></li>
+        <li class="nav-cta"><a class="btn btn-line" href="/security-check">Free security check</a></li>
       </ul>
     </nav>
   </header>
@@ -44,31 +44,29 @@
 
     <section class="page-hero">
       <div class="wrap">
-        <span class="eyebrow reveal">About Gleyde</span>
-        <h1 class="reveal d1">Big-company security, <em class="gold">built for Main Street</em></h1>
+        <p class="eyebrow reveal">About</p>
+        <h1 class="reveal d1">Big-company security, <em>built for Main Street</em></h1>
         <p class="lede reveal d2">The cybersecurity and software division of Gleyde Technologies, LLC.</p>
       </div>
     </section>
 
     <section class="section">
-      <div class="wrap">
-        <div class="prose reveal">
-          <!-- TODO-EDIT: company story -->
-          <p>Gleyde Technologies started with a simple observation: the local businesses people trust most, like the real estate agent handling a family&rsquo;s home purchase, the lender reviewing their finances, and the service company with their address and payment details, are often protected by the least security.</p>
-          <p>Large companies have security teams. Small businesses have a website someone built years ago, a few plugins nobody has updated, and a contact form that quietly collects sensitive information. Attackers know this, and they target small businesses because they are easier to break into.</p>
-          <p>Our cybersecurity and software division exists to change that. We audit and harden the websites and apps small businesses already depend on, and we build new software that is secure from the start. We work in writing, test only with permission, and explain everything in plain English, because security only works when you understand it.</p>
-        </div>
+      <div class="wrap narrow prose reveal">
+        <!-- TODO-EDIT: company story -->
+        <p>The local businesses people trust most, like the agent handling a family&rsquo;s home purchase or the lender reviewing their finances, are often protected by the least security.</p>
+        <p>Large companies have security teams. Small businesses have a website someone built years ago, plugins nobody has updated, and a form that quietly collects sensitive information. Attackers know this.</p>
+        <p>We exist to close that gap. We audit and harden the sites small businesses already depend on, and build new software that is secure from the start: in writing, only with permission, and in plain English.</p>
       </div>
     </section>
 
-    <section class="section section-alt">
+    <section class="section section-alt" aria-labelledby="team-title">
       <div class="wrap">
         <div class="section-head reveal">
-          <span class="eyebrow">Leadership</span>
-          <h2>The team</h2>
+          <p class="eyebrow">Leadership</p>
+          <h2 id="team-title">The team</h2>
         </div>
-        <div class="grid grid-2 team-pair">
-          <article class="card team-card reveal">
+        <div class="team">
+          <article class="team-card reveal">
             <div class="avatar avatar-photo">
               <picture>
                 <source srcset="/assets/img/team/sammy-eyde.webp" type="image/webp">
@@ -80,39 +78,52 @@
             <!-- TODO-EDIT: bio -->
             <p>Sam founded Gleyde Technologies to bring serious security to the businesses that need it most and can least afford a breach. Sam leads strategy, client engagements and technical delivery.</p>
           </article>
-          <article class="card team-card reveal d1">
+          <article class="team-card reveal d1">
             <div class="avatar" aria-hidden="true">TK</div>
             <p class="role">Chief Technology Officer</p>
             <h3>Tristan Kerr</h3>
             <!-- TODO-EDIT: bio -->
-            <p>Tristan leads Gleyde&rsquo;s technology: the secure development practices, tools and testing behind every website, app and security audit we deliver.</p>
+            <p>Tristan leads Gleyde&rsquo;s technology: the secure development practices, tools and testing behind every website, app and audit we deliver.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" aria-labelledby="values-title">
       <div class="wrap">
         <div class="section-head reveal">
-          <span class="eyebrow">What we stand for</span>
-          <h2>How we work</h2>
+          <p class="eyebrow">What we stand for</p>
+          <h2 id="values-title">How we work</h2>
         </div>
         <ul class="values">
           <li class="reveal"><h3>Integrity</h3><p>We test only with written permission, report honestly, and never use fear to sell.</p></li>
-          <li class="reveal d1"><h3>Clarity</h3><p>Fixed written quotes, clear scopes, and reports a business owner can actually read.</p></li>
-          <li class="reveal d2"><h3>Craft</h3><p>We hold our own work to the standard we recommend. This website is built with the same protections we sell.</p></li>
+          <li class="reveal d1"><h3>Clarity</h3><p>Fixed written quotes, clear scopes, and reports an owner can actually read.</p></li>
+          <li class="reveal d2"><h3>Craft</h3><p>We hold our own work to the standard we recommend to clients.</p></li>
         </ul>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section section-alt" aria-labelledby="practise-title">
       <div class="wrap">
-        <div class="cta reveal">
-          <span class="eyebrow">Free security check</span>
-          <h2>Let&rsquo;s talk about your website</h2>
-          <p class="lede">Tell us a little about your business. We will reply within one business day.</p>
-          <a class="btn btn-gold" href="/security-check">Run a free security check <span class="arrow" aria-hidden="true">&rarr;</span></a>
+        <div class="section-head reveal">
+          <p class="eyebrow">We practise what we sell</p>
+          <h2 id="practise-title">This site is built the way we&rsquo;d build yours</h2>
         </div>
+        <ul class="values values-4">
+          <li class="reveal"><h3>Strict security policy</h3><p>Browsers run only our own code, so injected scripts are blocked.</p></li>
+          <li class="reveal d1"><h3>Always encrypted</h3><p>HTTPS on every page, enforced so browsers never fall back.</p></li>
+          <li class="reveal d2"><h3>No trackers</h3><p>No advertising or analytics scripts, and no outside fonts.</p></li>
+          <li class="reveal d3"><h3>Tested on every change</h3><p>Hundreds of automated security and accessibility checks run before anything goes live.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section closing">
+      <div class="wrap reveal">
+        <span class="rule" aria-hidden="true"></span>
+        <h2>Let&rsquo;s talk about your website.</h2>
+        <p>Tell us a little about your business. We reply within one business day.</p>
+        <a class="btn btn-line" href="/contact">Get in touch <span class="arrow" aria-hidden="true">&rarr;</span></a>
       </div>
     </section>
 
@@ -121,36 +132,27 @@
   <footer class="site-footer">
     <div class="wrap">
       <div class="footer-grid">
-        <div>
+        <div class="footer-brand">
           <a class="brand" href="/" aria-label="Gleyde Technologies home">
-            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 58 32 32 58 6 32Z" fill="none" stroke="#d4af6a" stroke-width="2.5"/><path d="M32 20 44 32 32 44 20 32Z" fill="#d4af6a"/></svg>
-            <span class="brand-text"><span class="brand-name">GLEYDE</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 57 32 32 57 7 32Z" fill="none" stroke="#c9a86a" stroke-width="2"/><path d="M32 22 42 32 32 42 22 32Z" fill="#c9a86a"/></svg>
+            <span class="brand-text"><span class="brand-name">Gleyde</span><span class="brand-sub">Cybersecurity &amp; Software</span></span>
           </a>
-          <p class="small">Secure software and website protection for local small businesses. A division of Gleyde Technologies, LLC.</p>
+          <p>Website security and secure software for local businesses. A division of Gleyde Technologies, LLC.</p>
         </div>
-        <div>
-          <h2>Services</h2>
-          <ul>
-            <li><a href="/services#audit">Security Audit</a></li>
-            <li><a href="/services#hardening">Security Hardening</a></li>
-            <li><a href="/services#development">Secure Development</a></li>
-            <li><a href="/services#monitoring">Monitoring &amp; Updates</a></li>
-          </ul>
-        </div>
-        <div>
-          <h2>Company</h2>
-          <ul>
+        <nav aria-label="Footer">
+          <ul class="footer-links">
+            <li><a href="/services">Services</a></li>
             <li><a href="/how-it-works">How It Works</a></li>
             <li><a href="/about">About</a></li>
-            <li><a href="/security-check">Free Security Check</a></li>
             <li><a href="/contact">Contact</a></li>
+            <li><a href="/security-check">Free Security Check</a></li>
             <li><a href="/privacy">Privacy</a></li>
             <li><a href="/.well-known/security.txt">security.txt</a></li>
           </ul>
-        </div>
+        </nav>
       </div>
       <div class="footer-bottom">
-        <span>&copy; <span data-year>2026</span> Gleyde Technologies, LLC. All rights reserved.</span>
+        <span>&copy; <span data-year>2026</span> Gleyde Technologies, LLC</span>
         <span>We only test systems we have written permission to test.</span>
       </div>
     </div>

@@ -758,14 +758,20 @@ describe("Browser: site quality", () => {
     await ctx.close();
   });
 
-  test("the hero example report is complete at first paint (no scrolling needed)", async () => {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await page.goto(BASE + "/", { waitUntil: "networkidle" });
-    await page.waitForTimeout(1500);
-    const vis = await page.evaluate(() => [...document.querySelectorAll(".hero-report, .hero-report li")].every((e) => parseFloat(getComputedStyle(e).opacity) > 0.99));
-    assert.ok(vis);
-    assert.match(await page.locator(".hero-report .example-tag").textContent(), /Example/);
-    await page.close();
+  test("home first screen: headline, value line and ONE primary action, visible without scrolling", async () => {
+    for (const viewport of [{ width: 375, height: 667 }, { width: 1440, height: 900 }]) {
+      const page = await browser.newPage({ viewport });
+      await page.goto(BASE + "/", { waitUntil: "load" });
+      await page.waitForTimeout(1200); // let the fade-in finish
+      const hero = await page.evaluate(() => {
+        const s = document.querySelector(".hero");
+        const vis = (el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && parseFloat(getComputedStyle(el).opacity) > 0.99; };
+        const primary = [...s.querySelectorAll(".btn-gold")];
+        return { h1: vis(s.querySelector("h1")), lede: vis(s.querySelector(".lede")), primaries: primary.length, cta: primary[0] && vis(primary[0]), href: primary[0]?.getAttribute("href") };
+      });
+      assert.deepEqual(hero, { h1: true, lede: true, primaries: 1, cta: true, href: "/security-check" }, `${viewport.width}px`);
+      await page.close();
+    }
   });
 
   test("pages only talk to this site (plus Cloudflare's human check on form pages)", async () => {

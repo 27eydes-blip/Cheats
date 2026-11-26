@@ -279,7 +279,7 @@
     if (report.priorities?.length) {
       container.append(el("section", { class: "top-fixes", "aria-labelledby": "top-fixes-title" },
         el("h3", { id: "top-fixes-title" }, "Fix these first"),
-        el("ol", {}, report.priorities.map((p) => el("li", {},
+        el("ol", {}, report.priorities.slice(0, 3).map((p) => el("li", {},
           el("h4", {}, String(p.title)),
           el("p", { class: "tags" },
             el("span", { class: `tag impact-${p.impact}` }, IMPACT[p.impact] || p.impact),
