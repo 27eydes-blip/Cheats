@@ -11,5 +11,7 @@ page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') 
 page.on('pageerror', (e) => console.log('PAGEERR', e.message));
 await page.goto(server.resolvedUrls.local[0] + '?' + process.argv[2]);
 await page.waitForFunction(() => window.__game?.frame > 8, null, { timeout: 120000 });
-console.log(await page.evaluate((src) => { const g = window.__game; return JSON.stringify((0, eval)(src)); }, `(()=>{ const g = window.__game; ${process.argv[3]} })()`));
+const r = await page.evaluate((src) => { const g = window.__game; return JSON.stringify((0, eval)(src)); }, `(()=>{ const g = window.__game; ${process.argv[3]} })()`);
+console.log(r);
+if (process.argv[4]) { await page.evaluate(() => new Promise((res) => { let n = 0; const t = () => (++n > 4 ? res() : requestAnimationFrame(t)); t(); })); await page.screenshot({ path: process.argv[4] }); }
 await browser.close(); await server.close();

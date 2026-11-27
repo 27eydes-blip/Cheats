@@ -6,7 +6,8 @@ export class Dialogue {
     const d = npc.def, ctx = this.ctx;
     const lines = d.talk.filter((l) => !l.if || ctx.story.flag(l.if));
     const key = (l) => d.id + ':' + d.talk.indexOf(l);
-    let line = lines.find((l) => !this.seen[key(l)]);
+    // newly unlocked (flag-gated) lines take priority, then lines in order
+    let line = lines.find((l) => l.if && !this.seen[key(l)]) || lines.find((l) => !this.seen[key(l)]);
     if (!line) { const n = (this.seen[d.id + ':cyc'] = ((this.seen[d.id + ':cyc'] || 0) + 1)); line = lines[n % lines.length]; }
     this.seen[key(line)] = true;
     if (line.set) ctx.story.setFlag(line.set);

@@ -25,6 +25,7 @@ npm run build        # production build in dist/
 npm run preview      # serve the build
 npm run validate:data  # check the JSON content for broken references
 npm run test:shots     # headless Chromium screenshots + console-error check (needs Playwright)
+npm run test:smoke     # drives the stage-1 loop (tie-up, loot, craft, trade, dive, radio, save, finale)
 ```
 
 ### Controls
@@ -52,15 +53,18 @@ Phones default to low, desktops to medium.
 | Pixel ratio cap | 1 | 1.5 | 2 |
 | Render path | single pass, no refraction | HDR target + refraction, depth foam, underwater shafts | same, bigger shadows |
 | Sun shadows | off | 1024 | 2048 |
+| Planar water reflections | off (sky only) | 35 % res | 50 % res |
 | Streaming radius (near / far) | 200 / 900 m | 260 / 1200 m | 320 / 1500 m |
 | Water grid | 48×64 | 72×96 | 96×128 |
 | Debris, particles, rain, birds | reduced | medium | full |
 
 ### Debug URL parameters
 
-`?skipintro=1&time=21.5&freeze=1&weather=storm&quality=high&stats=1`
+`?skipintro=1&time=21.5&freeze=1&weather=storm&quality=high&stats=1&pause=1&touch=1`
 plus `pos=x,y,z&mode=foot|swim|boat`, `boat=x,z,heading`, `yaw=`, `pitch=`, `tp=1` (third-person boat
-camera), `flashlight=1`, `patrol=1` (Tide Warden patrol at any hour). `window.__game` exposes everything.
+camera), `flashlight=1`, `patrol=1` (Tide Warden patrol at any hour), `pause=1` (start paused; step with
+`__game.step(n)`), `touch=1` (force the touch UI). `window.__game` exposes everything; `scripts/probe-eval.mjs`
+evaluates an expression in a headless page.
 
 ## Architecture
 
@@ -68,7 +72,7 @@ camera), `flashlight=1`, `patrol=1` (Tide Warden patrol at any hour). `window.__
 src/
   main.js               boot
   core/                 Game loop + ctx, EventBus, seeded RNG/noise, Input, Settings (quality presets), Debug params
-  render/               Pipeline (far layer + HDR target + composite + water/FX pass), FogChunk, Effects (rain, smoke, motes, breath, flashlight)
+  render/               Pipeline (far layer, planar reflection, HDR target, composite, water/FX pass), FogChunk, Effects (rain, smoke, motes, breath, flashlight)
   world/                WorldMap (atlas → regions, seabed), ChunkManager (streamed LOD chunks), Builder (merge-by-material),
                         Collision (AABB hash + moving bodies), Interactables, Materials, WorldShader (windows, vines, waterline, caustics),
                         Textures (procedural canvas textures), Props (instanced prop geometry), Architecture (towers, storeys, ladders, containers),

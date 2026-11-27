@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:shots": "node scripts/screenshots.mjs",
+    "test:smoke": "node scripts/smoke.mjs",
     "validate:data": "node scripts/validate-data.mjs"
   },
   "dependencies": {

@@ -75,6 +75,8 @@ export class Story {
       if (a.event) ctx.events.emit(a.event);
       if (a.flag) this.setFlag(a.flag);
     }
+    // diving deep into the Sounding once you know what it is also starts the end
+    if (!this.finale && this.flag('signal_decoded') && !this.flag('finale_done') && ctx.player.depth > 14 && Math.hypot(pp.x - 96, pp.z + 128) < 50) this.startFinale();
     if (this.finale) this.updateFinale(dt);
   }
 
@@ -84,7 +86,7 @@ export class Story {
     const ctx = this.ctx;
     this.finale = { t: 0 };
     ctx.events.emit('gulls:silence');
-    ctx.ui.whisper('You lower the hydrophone into the black water. The cable runs out and keeps going.');
+    ctx.ui.whisper(ctx.player.headUnder ? 'Far below you, in the black, something begins to click.' : 'You lower the hydrophone into the black water. The cable runs out and keeps going.');
     ctx.audio?.play('hydrophone');
   }
   updateFinale(dt) {
@@ -97,7 +99,7 @@ export class Story {
       G.uGlow.value = Math.min(1, (t - 9) / 5);
       ctx.water.uniforms.uGlowPos.value.set(96, 0, -128);
       ctx.events.emit('shake', dt * 0.4);
-      ctx.waves.amp = ctx.waves.amp; // waves flatten in the tone
+      if (t < 21) ctx.waves.setWeather(Math.max(0.04, ctx.weather.cur.waves * (1 - Math.min(1, (t - 9) / 3))), ctx.weather.windDir); // the sea goes flat
     }
     if (t > 12 && !f.c) { f.c = true; ctx.ui.whisper('Far below, rings of green light open one inside the other.'); }
     if (t > 20 && !f.d) { f.d = true; ctx.ui.whisper('The tone stops. The water is perfectly still. On the horizon, the Highmark lighthouse has stopped turning.'); ctx.state.flags.lighthouseStopped = true; }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { prepGeometry, boxGeometry } from './Builder.js';
 import { mat } from './Materials.js';
+import { LAYER_DETAIL } from '../render/Pipeline.js';
 
 // Reusable prop geometry (built once, shared by every instance in every chunk).
 const cache = new Map();
@@ -94,6 +95,7 @@ export class InstanceBatch {
       im.computeBoundingSphere();
       im.castShadow = shadows && CASTERS.has(prop); im.receiveShadow = shadows;
       im.name = 'inst:' + prop;
+      if (!CASTERS.has(prop)) im.layers.set(LAYER_DETAIL);
       out.push(im);
     }
     return out;

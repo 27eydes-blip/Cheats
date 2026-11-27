@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { boxGeometry } from './Builder.js';
+import { LAYER_DETAIL } from '../render/Pipeline.js';
 
 // Reusable architectural pieces shared by procedural chunks and landmarks.
 export const FLOOR_H = 3.4;
@@ -173,6 +174,7 @@ export function sign(b, x, y, z, w, h, ry, def, inst) {
   mesh.position.set(x - b.origin.x, y - b.origin.y, z - b.origin.z);
   mesh.rotation.y = ry;
   mesh.receiveShadow = true;
+  mesh.layers.set(LAYER_DETAIL);
   b.object(mesh);
   return mesh;
 }

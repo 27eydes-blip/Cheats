@@ -7,7 +7,8 @@ import * as THREE from 'three';
 //              restoring depth via gl_FragDepth, then water + transparent FX on
 //              top. The water samples the opaque color/depth for refraction,
 //              depth tint and shoreline foam.
-export const LAYER_WORLD = 0, LAYER_WATER = 1, LAYER_FX = 2;
+// LAYER_DETAIL: small props — drawn in the main pass, skipped by water reflections
+export const LAYER_WORLD = 0, LAYER_WATER = 1, LAYER_FX = 2, LAYER_DETAIL = 3;
 
 const compositeVS = /* glsl */`
 varying vec2 vUv;
@@ -20,7 +21,7 @@ uniform sampler2D tColor; uniform sampler2D tDepth;
 uniform float uNear; uniform float uFar; uniform float uTime;
 uniform float uUnder; uniform vec2 uSunScreen; uniform float uSunVis; uniform vec3 uUnderColor;
 uniform float uVignette; uniform float uGrain; uniform float uSat; uniform float uFlash; uniform float uFade;
-uniform float uCamDepth;
+uniform float uCamDepth; uniform float uIndoor;
 varying vec2 vUv;
 float rnd(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
@@ -32,7 +33,7 @@ void main() {
     vec2 dir = vUv - uSunScreen;
     float ang = atan(dir.y, dir.x);
     float rays = sin(ang * 23.0 + uTime * 0.3) * sin(ang * 41.0 - uTime * 0.21) * 0.5 + 0.5;
-    rays = pow(rays, 3.0) * smoothstep(1.2, 0.0, length(dir)) * uSunVis;
+    rays = pow(rays, 3.0) * smoothstep(1.2, 0.0, length(dir)) * uSunVis * (1.0 - uIndoor);
     float distFade = 1.0 - exp(-viewZ * 0.09);
     col += uUnderColor * rays * 2.4 * distFade * exp(-uCamDepth * 0.06);
     // drifting murk
@@ -68,7 +69,7 @@ export class Pipeline {
       tColor: { value: null }, tDepth: { value: null }, uNear: { value: 0.1 }, uFar: { value: 2000 },
       uTime: { value: 0 }, uUnder: { value: 0 }, uSunScreen: { value: new THREE.Vector2(0.5, 1) }, uSunVis: { value: 0 },
       uUnderColor: { value: new THREE.Color(0.1, 0.3, 0.3) }, uVignette: { value: 0.9 }, uGrain: { value: 0.025 }, uSat: { value: 1 },
-      uFlash: { value: 0 }, uFade: { value: 0 }, uCamDepth: { value: 0 },
+      uFlash: { value: 0 }, uFade: { value: 0 }, uCamDepth: { value: 0 }, uIndoor: { value: 0 },
     };
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
       vertexShader: compositeVS, fragmentShader: compositeFS, uniforms: this.uniforms,
@@ -150,10 +151,14 @@ export class Pipeline {
     if (this.usePost && this.target) {
       if (this.reflTarget && !world.atmosphere.underwater) { this.updateReflection(world); this.reflActive = true; } else this.reflActive = false;
       r.setRenderTarget(this.target);
+      // underwater the far layer is replaced by the murk itself
+      const under = world.atmosphere.underwater;
+      if (under) r.setClearColor(world.scene.fog.color, 1);
       r.clear(true, true, true);
-      r.render(farScene, farCamera);
+      if (under) r.setClearColor(0x000000, 1); else r.render(farScene, farCamera);
       r.clearDepth();
       camera.layers.set(LAYER_WORLD);
+      camera.layers.enable(LAYER_DETAIL);
       r.render(scene, camera);
       r.setRenderTarget(null);
       r.clear(true, true, true);
@@ -164,8 +169,10 @@ export class Pipeline {
       camera.layers.enableAll();
     } else {
       r.setRenderTarget(null);
+      const under = world.atmosphere.underwater;
+      if (under) r.setClearColor(world.scene.fog.color, 1);
       r.clear(true, true, true);
-      r.render(farScene, farCamera);
+      if (under) r.setClearColor(0x000000, 1); else r.render(farScene, farCamera);
       r.clearDepth();
       camera.layers.enableAll();
       r.render(scene, camera);

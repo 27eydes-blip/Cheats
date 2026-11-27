@@ -156,6 +156,7 @@ export class Game {
     this.fps = 60; this.fpsAcc = 0; this.fpsN = 0;
     renderer.setAnimationLoop(() => this.loop());
     window.__game = this;
+    window.__THREE = THREE;
     ctx.events.emit('booted');
   }
 
@@ -266,6 +267,7 @@ export class Game {
     u.uTime.value = G.uTime.value;
     u.uUnder.value = ctx.atmosphere.underwater ? 1 : 0;
     u.uCamDepth.value = Math.max(0, -cam.position.y);
+    u.uIndoor.value = ctx.atmosphere.indoor;
     u.uUnderColor.value.copy(ctx.atmosphere.fog.color).multiplyScalar(4);
     u.uFlash.value = ctx.weather.flash * 0.25;
     // underwater shafts fan down from the surface above, leaning toward the sun
