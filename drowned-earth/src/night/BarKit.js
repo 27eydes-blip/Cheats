@@ -92,7 +92,7 @@ export function buildBar(b, st, y, rng, out) {
     for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; b.boxR(st.x + Math.cos(a) * 1.3, y + 0.22, st.z + 0.9 + Math.sin(a) * 0.9, 0.9, 0.44, 0.3, -a + Math.PI / 2, 'wood', { color: [0.33, 0.22, 0.15] }); }
   }
   // lanterns inside (the community's pooled lights pick them up at night)
-  out.lanterns.push({ x: st.x - W / 4, y: y + H - 0.4, z: st.z }, { x: st.x + W / 4, y: y + H - 0.4, z: st.z }, { x: st.x, y: y + H - 0.6, z: z1 + 1.2 });
+  out.lanterns.push({ x: st.x - W / 4, y: y + H - 0.4, z: st.z, small: true }, { x: st.x + W / 4, y: y + H - 0.4, z: st.z, small: true }, { x: st.x, y: y + H - 0.6, z: z1 + 1.2, small: true });
   // NPC spots by name: counter, seats, stage, the door
   out.spots.push({ x: st.x, z: cz - 0.55, kind: `bar:${st.bar}:counter` });
   seats.forEach((s, i) => out.spots.push({ x: s.x, z: s.z, kind: `bar:${st.bar}:seat${i}`, face: s.face }));

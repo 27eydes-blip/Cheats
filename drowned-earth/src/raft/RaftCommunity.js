@@ -94,6 +94,7 @@ export function buildRaftCommunity(ctx, def) {
   }
   // ---- NPCs ----
   const npcs = [];
+  const c0 = ctx;
   for (const nd of ctx.data.npcs.npcs || []) {
     const r = rafts.get(nd.raft);
     if (!r) continue;
@@ -101,8 +102,9 @@ export function buildRaftCommunity(ctx, def) {
     npcs.push(npc);
     interactables.push({
       id: 'npc:' + nd.id, kind: 'npc', radius: 3.4, pos: (v) => npc.worldPos(v).setY(v.y + 1.5),
-      prompt: () => (npc.activity === 'sleep' ? `${nd.name} is asleep` : `Talk to ${nd.name}`),
-      onUse: (c) => (npc.activity === 'sleep' ? c.ui.whisper(`${nd.name} is asleep. Better not.`) : c.dialogue.talk(npc)),
+      enabled: () => npc.root.visible,
+      prompt: () => (npc.activity === 'sleep' ? `${nd.name} is asleep` : nd.bar ? c0.nightlife?.prompt(nd.bar) : `Talk to ${nd.name}`),
+      onUse: (c) => (npc.activity === 'sleep' ? c.ui.whisper(`${nd.name} is asleep. Better not.`) : nd.bar ? c.nightlife?.open(nd.bar) : c.dialogue.talk(npc)),
     });
   }
   // ---- workbench, beds, notice + ration boards, lookout log ----

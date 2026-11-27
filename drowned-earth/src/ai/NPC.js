@@ -109,6 +109,10 @@ export class NPC {
       const [x, z] = task.pos || (spot ? [spot.x, spot.z] : [this.local.x, this.local.z]);
       this.target.set(x, this.raft.deckAt(x, z), z);
       this.activity = task.do;
+      this.face = task.face ?? spot?.face ?? null;
+      // off-shift people go home (out of sight) and come back on schedule
+      this.root.visible = task.do !== 'away';
+      if (task.do === 'away') { this.local.copy(this.target); }
     }
     // keep a polite distance
     let tx = this.target.x, tz = this.target.z;
@@ -133,6 +137,8 @@ export class NPC {
       this.local.y = this.raft.deckAt(this.local.x, this.local.z);
       this.heading = damp(this.heading, Math.atan2(dx, dz), 8, dt);
       moving = true;
+    } else if (this.face != null && !(playerNear && playerLocal && this.talkT > 0)) {
+      this.heading = damp(this.heading, this.face, 4, dt);
     } else if (playerNear && playerLocal && this.activity !== 'sleep') {
       // turn to face the player when they are close
       const fx = playerLocal.x - this.local.x, fz = playerLocal.z - this.local.z;

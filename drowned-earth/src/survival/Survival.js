@@ -17,7 +17,7 @@ export class Survival {
     this.blackout = false;
   }
   coldness() { return clamp((60 - this.warmth) / 50, 0, 1) + (this.ctx.time.out.night > 0.5 ? 0.3 : 0) + this.ctx.weather.cur.rain * 0.3; }
-  swayAmount() { return clamp((45 - this.rest) / 35, 0, 1) + this.sick * 0.6 + (this.oxygen < 30 ? (30 - this.oxygen) / 30 : 0); }
+  swayAmount() { return (this.ctx.nightlife ? this.ctx.nightlife.sway() : 0) + clamp((45 - this.rest) / 35, 0, 1) + this.sick * 0.6 + (this.oxygen < 30 ? (30 - this.oxygen) / 30 : 0); }
   shiverAmount() { return clamp((35 - this.warmth) / 30, 0, 1); }
   moveFactor() { return 1 - clamp((20 - Math.min(this.thirst, this.hunger)) / 40, 0, 0.35) - clamp((15 - this.rest) / 40, 0, 0.3); }
   canSprint() { return this.rest > 8 && this.thirst > 5; }

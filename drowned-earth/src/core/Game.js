@@ -60,6 +60,7 @@ import { Deep } from '../deep/Deep.js';
 import { Senses } from '../creatures/Senses.js';
 import { Injury } from '../creatures/Injury.js';
 import { Creatures } from '../creatures/Creatures.js';
+import { Nightlife } from '../night/Nightlife.js';
 import { loadCreatureModels, ambientFishGeometry } from '../creatures/Models.js';
 import { Journal } from '../ui/Journal.js';
 import { Photo } from '../ui/Photo.js';
@@ -154,6 +155,7 @@ export class Game {
     ctx.loot = new Loot(ctx);
     ctx.crafting = new Crafting(ctx);
     ctx.trade = new Trade(ctx);
+    ctx.nightlife = new Nightlife(ctx);
     ctx.survival = new Survival(ctx);
     ctx.story = new Story(ctx);
     ctx.standing = new Standing(ctx);
@@ -192,7 +194,7 @@ export class Game {
     if (ctx.params.get('creatures') !== 'basic' && ctx.params.get('creatures') !== 'off') { loading.set?.(0.97, 'creatures'); ctx.creatureModels = await loadCreatureModels(ctx); const fg = ambientFishGeometry(ctx.creatureModels); if (fg) ctx.fish.useGeometry?.(fg); }
     ctx.creatures = new Creatures(ctx);
     ctx.ui.applyAccessibility();
-    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures];
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife];
     this.ambientSystems = [ctx.fx, ctx.birds, ctx.fish, ctx.highmark, ctx.abyss];
     this.wireEvents();
     this.newGame();

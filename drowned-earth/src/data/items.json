@@ -544,6 +544,64 @@
     "material",
     "creature"
    ]
+  },
+  "greenwater_crate": {
+   "name": "Crate of 'vinegar'",
+   "desc": "Greenwater, labelled vinegar. Smells like a forest fell into a still.",
+   "value": 0,
+   "weight": 3,
+   "tags": [
+    "contraband",
+    "cargo"
+   ]
+  },
+  "engine_parts": {
+   "name": "Syndicate engine parts",
+   "desc": "Wrapped in oilcloth. Too clean to be scrap.",
+   "value": 0,
+   "weight": 4,
+   "tags": [
+    "contraband",
+    "cargo"
+   ]
+  },
+  "sealed_bag": {
+   "name": "Sealed bag (Lowlight)",
+   "desc": "Don't open it.",
+   "value": 0,
+   "weight": 1,
+   "tags": [
+    "contraband",
+    "cargo"
+   ]
+  },
+  "blank_seals": {
+   "name": "Blank seal stock",
+   "desc": "Highmark paper. The watermark is real.",
+   "value": 0,
+   "weight": 1,
+   "tags": [
+    "contraband",
+    "cargo"
+   ]
+  },
+  "debt_letter": {
+   "name": "Vigil debt-letter",
+   "desc": "Wax-sealed with a candle. It forgives someone.",
+   "value": 0,
+   "weight": 0.1,
+   "tags": [
+    "cargo"
+   ]
+  },
+  "seed_packet": {
+   "name": "Seed cutting",
+   "desc": "Wrapped in damp cloth. Plant it somewhere stubborn.",
+   "value": 3,
+   "weight": 0.1,
+   "tags": [
+    "material"
+   ]
   }
  }
 }

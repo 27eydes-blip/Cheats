@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Band } from './Band.js';
 import { Synth } from './Synth.js';
 import { Music } from './Music.js';
 
@@ -114,6 +115,8 @@ export class AudioEngine {
       case 'patrolEngine': { const n = s.chug(add, 22, 6); n.connect(out); out.base = 0.9; break; }
       case 'crowd': { const n = s.murmur(add, 5); n.connect(out); out.base = 0.5 * (def.gain ?? 1); out.dayOnly = true; break; }
       case 'fire': { const src = add(this.noiseSrc('brown')); const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300; src.connect(f).connect(out); out.base = 0.25; out.crackle = true; break; }
+      case 'band': { const band = new Band(ac, out, def.style, def.seed || 1); out.band = band; parts.push({ stop: () => band.stop(), disconnect() {} }); out.base = 0.55; out.fn = def.gainFn; break; }
+      case 'barCrowd': { const n = s.murmur(add, 7); n.connect(out); out.base = 0.6; out.fn = def.gainFn; break; }
       case 'lap': { const src = add(this.noiseSrc('pink')); const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 600; f.Q.value = 1.2; src.connect(f).connect(out); out.base = 0.0; out.lap = true; break; }
       default: out.base = 0;
     }
@@ -126,7 +129,7 @@ export class AudioEngine {
       const def = e.def;
       const pos = this.posOf(def);
       const d = pos.distanceTo(cam);
-      const range = def.type === 'deepHum' ? 160 : def.type === 'crowd' ? 140 : def.type === 'patrolEngine' ? 260 : 90;
+      const range = def.type === 'band' || def.type === 'barCrowd' ? 70 : def.type === 'deepHum' ? 160 : def.type === 'crowd' ? 140 : def.type === 'patrolEngine' ? 260 : 90;
       const isOneShotType = ['creak', 'drip', 'ropes', 'chimes'].includes(def.type);
       if (isOneShotType) {
         if (d > range) continue;
@@ -148,6 +151,8 @@ export class AudioEngine {
       if (n.out.windK) g *= Math.max(0, wind - 0.2) * 1.5;
       if (n.out.dayOnly) g *= 1 - night * 0.8;
       if (n.out.crackle) g *= 0.7 + Math.random() * 0.6;
+      if (n.out.fn) g *= n.out.fn();
+      if (n.out.band) { if (g > 0.01) n.out.band.tick(); }
       if (n.out.lap) g = 0.12 + Math.max(0, Math.sin(t * 1.3 + pos.x)) * 0.25 * (0.4 + wind);
       n.out.gain.setTargetAtTime(g, t, 0.15);
     }

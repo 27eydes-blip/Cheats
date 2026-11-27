@@ -23,7 +23,8 @@ export function loadData() {
     story: get('story') || {},
     deep: get('deep') || { zones: [], swarms: [], listeners: [], glow: {} },
     standing: get('standing') || { tiers: {}, steps: {} },
-    creatures: get('creatures') || { species: {}, placements: [], encounters: {} },
+    nightlife: get('nightlife'),
+  creatures: get('creatures') || { species: {}, placements: [], encounters: {} },
     life: loadLife(optional),
   };
   data.bottles = get('bottles') || { spots: [], notes: [] };

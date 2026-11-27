@@ -564,6 +564,43 @@
       "standingMax": 7,
       "name": "Quarantine Dock"
      }
+    },
+    {
+     "id": "anchor",
+     "name": "The Brass Anchor",
+     "pos": [
+      30,
+      4
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "bar",
+       "bar": "brass_anchor",
+       "style": "trader",
+       "x": 0,
+       "z": -1,
+       "w": 12,
+       "d": 6.2
+      },
+      {
+       "type": "lantern",
+       "x": -7.5,
+       "z": 3.2
+      },
+      {
+       "type": "lantern",
+       "x": 7.5,
+       "z": 3.2
+      }
+     ]
     }
    ],
    "bridges": [
@@ -673,6 +710,18 @@
      [
       7,
       3.5
+     ]
+    ],
+    [
+     "market",
+     [
+      9,
+      2.5
+     ],
+     "anchor",
+     [
+      -9,
+      1
      ]
     ]
    ],
@@ -834,6 +883,48 @@
        "z": 2.2
       }
      ]
+    },
+    {
+     "id": "gt_fermentary",
+     "name": "The Fermentary",
+     "pos": [
+      -4,
+      -17
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "bar",
+       "bar": "fermentary",
+       "style": "garden",
+       "x": 0,
+       "z": -1,
+       "w": 11,
+       "d": 6.2
+      },
+      {
+       "type": "garden",
+       "x": -7,
+       "z": 2.5
+      },
+      {
+       "type": "garden",
+       "x": 7,
+       "z": 2.5
+      },
+      {
+       "type": "lantern",
+       "x": 0,
+       "z": 3.4
+      }
+     ]
     }
    ],
    "bridges": [
@@ -847,6 +938,18 @@
      [
       -2.8,
       1
+     ]
+    ],
+    [
+     "gt_plots",
+     [
+      -2,
+      -5
+     ],
+     "gt_fermentary",
+     [
+      2,
+      4
      ]
     ]
    ]
@@ -943,9 +1046,375 @@
       "standingMax": 7,
       "name": "Tender Ramp"
      }
+    },
+    {
+     "id": "rh_rivet",
+     "name": "The Hot Rivet",
+     "pos": [
+      18,
+      -6
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "bar",
+       "bar": "hot_rivet",
+       "style": "forge",
+       "x": 0,
+       "z": -1,
+       "w": 12,
+       "d": 6.2
+      },
+      {
+       "type": "stove",
+       "x": -7.6,
+       "z": 2.6
+      },
+      {
+       "type": "lantern",
+       "x": 7.6,
+       "z": 3.2
+      }
+     ]
     }
    ],
-   "bridges": []
+   "bridges": [
+    [
+     "rh_rig",
+     [
+      5,
+      -2
+     ],
+     "rh_rivet",
+     [
+      -9,
+      0
+     ]
+    ]
+   ]
+  },
+  "vigil": {
+   "name": "The Vigil",
+   "leader": "the Tideholders",
+   "faction": "vigil",
+   "color": [
+    0.95,
+    0.85,
+    0.6
+   ],
+   "drift": {
+    "radius": 2,
+    "period": 900
+   },
+   "platforms": [
+    {
+     "id": "vg_cup",
+     "name": "The Quiet Cup",
+     "pos": [
+      0,
+      0
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "bar",
+       "bar": "quiet_cup",
+       "style": "candle",
+       "x": 0,
+       "z": -1,
+       "w": 11,
+       "d": 6.2
+      },
+      {
+       "type": "lantern",
+       "x": -8,
+       "z": 3
+      },
+      {
+       "type": "lantern",
+       "x": -5,
+       "z": 3.4
+      },
+      {
+       "type": "lantern",
+       "x": 5,
+       "z": 3.4
+      },
+      {
+       "type": "lantern",
+       "x": 8,
+       "z": 3
+      }
+     ],
+     "mooring": {
+      "x": -10.5,
+      "z": 0,
+      "facing": -1.5708,
+      "stepX": -8.4,
+      "stepZ": 0,
+      "standingMax": 7,
+      "name": "Candle Steps"
+     }
+    },
+    {
+     "id": "vg_hall",
+     "name": "Lantern Deck",
+     "pos": [
+      0,
+      16
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "plankdeck",
+       "x": -4,
+       "z": 0
+      },
+      {
+       "piece": "plankdeck",
+       "x": 4,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "lantern",
+       "x": -6,
+       "z": -1.5
+      },
+      {
+       "type": "lantern",
+       "x": -2,
+       "z": 1.5
+      },
+      {
+       "type": "lantern",
+       "x": 2,
+       "z": -1.5
+      },
+      {
+       "type": "lantern",
+       "x": 6,
+       "z": 1.5
+      },
+      {
+       "type": "bed",
+       "x": -5,
+       "z": 0.5
+      },
+      {
+       "type": "bed",
+       "x": 5,
+       "z": -0.5
+      },
+      {
+       "type": "garden",
+       "x": 0,
+       "z": 0
+      }
+     ]
+    }
+   ],
+   "bridges": [
+    [
+     "vg_cup",
+     [
+      0,
+      4
+     ],
+     "vg_hall",
+     [
+      0,
+      -2.5
+     ]
+    ]
+   ]
+  },
+  "lowlight": {
+   "name": "Lowlight",
+   "leader": "nobody you can name",
+   "faction": "lowlight",
+   "color": [
+    0.35,
+    0.85,
+    0.75
+   ],
+   "drift": {
+    "radius": 3,
+    "period": 650
+   },
+   "fog": 0.9,
+   "platforms": [
+    {
+     "id": "ll_rat",
+     "name": "The Drowned Rat",
+     "pos": [
+      0,
+      0
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "bar",
+       "bar": "drowned_rat",
+       "style": "smoke",
+       "x": 0,
+       "z": -1,
+       "w": 11,
+       "d": 6.2
+      },
+      {
+       "type": "lantern",
+       "x": -8,
+       "z": 3.2
+      },
+      {
+       "type": "stack",
+       "x": 7.4,
+       "z": 2.8,
+       "levels": 2,
+       "color": [
+        0.2,
+        0.3,
+        0.32
+       ]
+      }
+     ]
+    },
+    {
+     "id": "ll_dock",
+     "name": "Fog Jetty",
+     "pos": [
+      -24,
+      4
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "hulldeck",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "piece": "plankdeck",
+       "x": 0,
+       "z": 4.5
+      }
+     ],
+     "structures": [
+      {
+       "type": "container",
+       "x": 0,
+       "z": 0,
+       "color": [
+        0.15,
+        0.3,
+        0.3
+       ]
+      },
+      {
+       "type": "lantern",
+       "x": -4,
+       "z": 5.5
+      }
+     ],
+     "mooring": {
+      "x": -5.2,
+      "z": 0,
+      "facing": -1.5708,
+      "stepX": -3.6,
+      "stepZ": 0,
+      "standingMax": 7,
+      "name": "Fog Jetty"
+     }
+    },
+    {
+     "id": "ll_huts",
+     "name": "The Stilts",
+     "pos": [
+      2,
+      18
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "pontoon",
+       "x": -3.2,
+       "z": 0
+      },
+      {
+       "piece": "pontoon",
+       "x": 3.2,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "shack",
+       "x": -3.2,
+       "z": 0
+      },
+      {
+       "type": "shack",
+       "x": 3.2,
+       "z": 0,
+       "ry": 3.14159
+      },
+      {
+       "type": "laundry",
+       "x": 0,
+       "z": 2.5
+      }
+     ]
+    }
+   ],
+   "bridges": [
+    [
+     "ll_rat",
+     [
+      -9,
+      0
+     ],
+     "ll_dock",
+     [
+      4,
+      2
+     ]
+    ],
+    [
+     "ll_rat",
+     [
+      2,
+      4
+     ],
+     "ll_huts",
+     [
+      -1,
+      -3
+     ]
+    ]
+   ]
   }
  }
 }

@@ -36,7 +36,7 @@ export class Raft {
     if (this.body) this.ctx.collision.removeBody(this.body);
     const rng = rngFor(this.id);
     const b = new Builder(new THREE.Vector3(), { shadows: this.ctx.settings.q.shadows });
-    const out = { spots: [], stalls: [], plants: [], smoke: [], fires: [], sounds: [], lanterns: [], ladders: [], cloths: [], beds: [], workbench: null, lookoutTop: null };
+    const out = { spots: [], stalls: [], plants: [], smoke: [], fires: [], sounds: [], lanterns: [], ladders: [], cloths: [], beds: [], bars: [], workbench: null, lookoutTop: null };
     const rects = [];
     let mass = 0;
     for (const p of this.def.pieces) {
@@ -76,10 +76,10 @@ export class Raft {
     this.root.add(this.mesh);
     // lantern glow sprites (lights are pooled by the community)
     this.lanterns = out.lanterns.map((l) => {
-      const m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffb060 }));
+      const m = new THREE.Mesh(new THREE.SphereGeometry(l.small ? 0.06 : 0.1, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffb060 }));
       m.position.set(l.x, l.y, l.z);
       const halo = new THREE.Sprite(this.ctx.fx.glowMaterial);
-      halo.scale.setScalar(1.4);
+      halo.scale.setScalar(l.small ? 0.45 : 1.4);
       halo.position.copy(m.position);
       halo.layers.set(LAYER_FX);
       this.root.add(m, halo);
@@ -90,6 +90,7 @@ export class Raft {
     this.body = this.ctx.collision.addBody(this.root, boxes, 'wood');
     this.body.radius = 40;
     this.localInteract = b.interactables;
+    if (out.bars.length && !this.dressedBars) { this.dressedBars = true; this.ctx.nightlife?.dress(this, out.bars); }
   }
 
   worldPoint(local, out = new THREE.Vector3()) { return out.copy(local).applyMatrix4(this.root.matrixWorld); }

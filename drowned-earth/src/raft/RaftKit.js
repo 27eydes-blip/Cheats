@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RNG } from '../core/rng.js';
+import { buildBar } from '../night/BarKit.js';
 
 // Geometry builders for raft pieces (floats + decks) and deck structures.
 // Everything is emitted into a Builder in the raft's local space.
@@ -61,6 +62,7 @@ export function buildStructure(b, st, deck, rng, out) {
   const col = st.color || [0.5, 0.5, 0.48];
   const y = deck;
   switch (st.type) {
+    case 'bar': { buildBar(b, st, y, rng, out); break; }
     case 'shack': {
       b.boxR(x, y + 1.3, z, 4.6, 2.6, 2.4, ry, 'wood', { color: col, collide: true });
       b.boxR(x, y + 2.7, z, 5.2, 0.12, 3.0, ry, 'container', { color: [0.45, 0.4, 0.33], rx: 0.08 });
