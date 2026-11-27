@@ -41,7 +41,22 @@ export class Patrol {
     this.spot.target = this.spotTarget;
     this.group.add(this.spot);
     const cg = new THREE.ConeGeometry(9, 70, 16, 1, true); cg.translate(0, -35, 0); cg.rotateX(-Math.PI / 2);
-    this.beam = new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ color: 0xcfe4ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }));
+    // volumetric-looking beam: additive, brightest near the lamp, fading with
+    // distance, and soft at the cone's silhouette (no hard wedge edges)
+    const beamMat = new THREE.ShaderMaterial({
+      uniforms: { opacity: { value: 0 }, color: { value: new THREE.Color(0xcfe4ff) } },
+      vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+        void main() { vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+      fragmentShader: `uniform float opacity; uniform vec3 color; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+        void main() {
+          float along = pow(vUv.y, 1.6);                       // 1 at the lamp, 0 at the far end
+          float edge = pow(abs(dot(normalize(vN), normalize(vV))), 1.8); // fade where the cone is seen edge-on
+          gl_FragColor = vec4(color * opacity * along * edge * 2.2, 1.0);
+        }`,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    });
+    Object.defineProperty(beamMat, 'opacity', { get() { return this.uniforms.opacity.value; }, set(v) { if (this.uniforms) this.uniforms.opacity.value = v; } });
+    this.beam = new THREE.Mesh(cg, beamMat);
     this.beam.layers.set(LAYER_FX);
     this.group.add(this.beam);
     ctx.scene.add(this.group, this.spotTarget);

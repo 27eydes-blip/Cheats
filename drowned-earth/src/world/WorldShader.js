@@ -147,7 +147,7 @@ export function patchMaterial(mat, opts = {}) {
         float frameAll = clamp(frame + mull + tran, 0.0, 1.0) * deWinMask;
         vec3 frameCol = mix(vec3(0.07, 0.075, 0.08), vec3(0.24, 0.23, 0.21), step(0.65, fract(vMeta.w * 13.0))) * (0.75 + 0.5 * h2); // weathered, not uniform
         deBroken = step(0.84, h) * deWinMask;
-        deLit = step(0.9985, deHash(cellId * 1.7 + 3.1)) * deWinMask * (1.0 - deBroken);
+        deLit = step(0.993, deHash(cellId * 1.7 + 3.1)) * deWinMask * (1.0 - deBroken);
         float pane = deWinMask * (1.0 - frameAll * (1.0 - deBroken * 0.7));
         // ---- interior mapping: a room behind every window
         if (pane > 0.001) {
