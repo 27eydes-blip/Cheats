@@ -12,7 +12,7 @@ const LIGHTS = {
   day: { sun: [0.55, 0.62, 0.45], sunCol: 0xfff2e0, sunI: 2.6, hemi: [0xb9cde0, 0x5a5048, 0.7], hdri: 'day', exposure: 1.0, wet: 0 },
   overcast: { sun: [0.2, 0.9, 0.3], sunCol: 0xdfe6ee, sunI: 0.8, hemi: [0xc8d2dc, 0x6a645c, 1.1], hdri: 'overcast', exposure: 1.05, wet: 0 },
   dusk: { sun: [-0.8, 0.12, 0.35], sunCol: 0xff9a55, sunI: 1.8, hemi: [0x6c6680, 0x3a2c26, 0.45], hdri: 'dusk', exposure: 1.1, wet: 0 },
-  night: { sun: [0.3, 0.5, -0.6], sunCol: 0x8fa6d6, sunI: 0.35, hemi: [0x223044, 0x0c0d10, 0.35], hdri: 'night', exposure: 1.6, wet: 0, lantern: true },
+  night: { sun: [0.3, 0.5, -0.6], sunCol: 0x8fa6d6, sunI: 0.45, hemi: [0x223044, 0x0c0d10, 0.35], hdri: 'night', exposure: 1.25, wet: 0, lantern: true },
   rain: { sun: [0.2, 0.8, 0.4], sunCol: 0xc8d0d8, sunI: 0.6, hemi: [0x9aa6b0, 0x4a4844, 1.0], hdri: 'overcast', exposure: 1.0, wet: 1 },
   backlit: { sun: [0.1, 0.35, -0.95], sunCol: 0xffd8a8, sunI: 3.0, hemi: [0x8a96a8, 0x403830, 0.35], hdri: 'dawn', exposure: 1.15, wet: 0 },
 };
@@ -30,7 +30,7 @@ export class Viewer {
     this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera; sc.left = sc.bottom = -1.5; sc.right = sc.top = 1.5; sc.near = 0.5; sc.far = 20; this.sun.shadow.bias = -0.0004; this.sun.shadow.normalBias = 0.01;
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-    this.lantern = new THREE.PointLight(0xffa850, 0, 6, 2); this.lantern.position.set(0.45, 1.55, 0.6);
+    this.lantern = new THREE.PointLight(0xffa04a, 0, 8, 2); this.lantern.position.set(0.9, 1.5, 1.1);
     this.scene.add(this.sun, this.sun.target, this.hemi, this.lantern);
     const floor = new THREE.Mesh(new THREE.CircleGeometry(4, 48), new THREE.MeshStandardMaterial({ color: 0x3a3530, roughness: 0.85 }));
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; this.scene.add(floor);
@@ -102,7 +102,7 @@ export class Viewer {
     this.sun.target.position.set(0, 1.2, 0);
     this.sun.color.set(L.sunCol); this.sun.intensity = L.sunI;
     this.hemi.color.set(L.hemi[0]); this.hemi.groundColor.set(L.hemi[1]); this.hemi.intensity = L.hemi[2];
-    this.lantern.intensity = L.lantern ? 6 : 0;
+    this.lantern.intensity = L.lantern ? 2.2 : 0;
     G.uSunDir.value.copy(d); G.uSunColor.value.copy(this.sun.color).multiplyScalar(this.sun.intensity * 0.5);
     this.ctx.renderer.toneMappingExposure = L.exposure;
     const h = this.ctx.assets.hdris[L.hdri];
