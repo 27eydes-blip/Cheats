@@ -142,6 +142,7 @@ input.txt{width:100%;min-height:48px;background:#0a0a0c;border:1px solid var(--l
 .fade-in{animation:fi .45s ease-out}
 @keyframes fi{from{opacity:0;transform:translateY(8px)}}
 html.noimpact .disp,html.noimpact h2.sec,html.noimpact .big,html.noimpact .mid,html.noimpact .btn,html.noimpact .stat b,html.noimpact .bcast .msg,html.noimpact .dhead .dn,html.noimpact .num,html.noimpact .story .st,html.noimpact .result .verdict,html.noimpact .vs .sc{font-weight:800;letter-spacing:.01em}
+.scr>.mid:first-child,.scr>.row:first-child,.scr>.kicker:first-child{padding-right:48px}
 @media (min-width:521px){#app{border-left:1px solid #141418;border-right:1px solid #141418}}
 @media (prefers-reduced-motion:reduce){.bcast.rebel .msg{animation:none}}
 </style>
@@ -394,7 +395,7 @@ var RF = (function () {
     const m = {
       t: 0, q: 1, qlen: q, clock: q, ot: false, otT: 0, state: 'ready', stateT: 1.6, score: [0, 0], qs: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
       rng: mulberry(o.seed || 1), mods: o.mods, human: o.human == null ? -1 : o.human, ctrl: null,
-      inp: { mx: 0, my: 0, shoot: false, thr: false, kick: false, chk: false, sw: false },
+      inp: { mx: 0, my: 0, active: false, shoot: false, thr: false, kick: false, chk: false, sw: false },
       ev: [], all: [[], []], pl: [], ball: null, chain: emptyChain(), lastPoss: -1, fire: [false, false], lastScorer: -1, streak: 0,
       fury: [0, 0], furyT: [0, 0], ps: {}, inbound: -1, endAfterDead: false, periodAfterDead: false, goOT: false, winner: -1, refCall: false,
       stats: { shots: 0, checks: 0, fouls: 0, pulses: 0, turnovers: 0, passes: 0, kinds: { dunk: 0, mid: 0, deep: 0 }, mult: [0, 0, 0, 0, 0], otLen: 0, maxIdle: 0 },
@@ -788,7 +789,8 @@ var RF = (function () {
   function runAI(m, dt) {
     const b = m.ball, poss = possTeam(m);
     for (const p of m.pl) {
-      if (m.human === p.team && m.ctrl === p) continue;
+      // the human's player is AI-steered only while the stick is idle and he is not carrying (defensive assist)
+      if (m.human === p.team && m.ctrl === p && (m.inp.active || b.own === p)) continue;
       if (p.stun > 0) { p.dx = p.dy = 0; continue; }
       if (b.own === p) carrierAI(m, p, dt);
       else offBall(m, p, dt, poss);
@@ -971,6 +973,7 @@ var RF = (function () {
       }
     }
     const mg = hyp(I.mx, I.my);
+    I.active = mg > 0.1;
     c.dx = mg > 1 ? I.mx / mg : I.mx; c.dy = mg > 1 ? I.my / mg : I.my;
     if (I.shoot) {
       I.shoot = false;
@@ -2943,6 +2946,7 @@ if (typeof module !== 'undefined') module.exports = RF;
       for (const q of m.pl) if (q !== p) { q.y = Math.max(q.y, 230 + q.k * 8); q.stun = 0; }
       const b = m.ball; Object.assign(b, { mode: 'held', own: p, hold: 0.6, carry: 80, passTeam: -1, target: null });
       m.chain = { team: 0, s: { C: 1, T: 1, K: 1, W: 0 } }; m.lastPoss = 0; m.ctrl = p;
+      const keep = m.form[0]; m.form[0] = 9; setTimeout(() => { m.form[0] = keep; }, 120); G.banner = null; G.bigs = []; G.texts = [];
       m.inp.shoot = true;
     },
     finish() { if (G) { G.m.human = -1; while (G.m.state !== 'final') { RF.step(G.m, RF.DT); G.m.ev.length = 0; } finishGame(); } },

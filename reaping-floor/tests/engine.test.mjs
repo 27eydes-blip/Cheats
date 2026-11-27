@@ -64,7 +64,7 @@ for (const q of QL) {
   const sc = [], ots = [];
   let maxFree = 0, maxIdle = 0, maxStill = 0, ref = 0;
   const kinds = { dunk: 0, mid: 0, deep: 0 }, mult = [0, 0, 0, 0, 0];
-  const n = q === 900 ? Math.max(4, per >> 1) : per;
+  const n = per;
   for (let i = 0; i < n; i++) {
     const a = (i * 7 + q) % 50, b = (i * 13 + 5 + q) % 50;
     const m = watchedMatch(mk(L0, a, b === a ? (b + 1) % 50 : b, q, 1000 + i + q));
