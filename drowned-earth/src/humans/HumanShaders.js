@@ -227,7 +227,7 @@ export function hairMaterial(color, opts = {}) {
         // keep the texture's strand detail, take the colour from the person
         float hl = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
         float bright = dot(uHairCol, vec3(0.3, 0.59, 0.11));
-        diffuseColor.rgb = uHairCol * mix(0.45 + hl * 1.6, 0.55 + hl * 0.75, smoothstep(0.15, 0.5, bright)) * (1.0 - uWetHair * 0.35);`)
+        diffuseColor.rgb = (uHairCol * mix(0.3 + hl * 2.4, 0.55 + hl * 0.75, smoothstep(0.15, 0.5, bright)) + vec3(0.012, 0.01, 0.008) * hl) * (1.0 - uWetHair * 0.35);`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.32, uWetHair);')
       .replace('#include <opaque_fragment>', `
         {
@@ -244,7 +244,8 @@ export function hairMaterial(color, opts = {}) {
           float s1 = pow(sqrt(max(0.0, 1.0 - pow(dot(T1, H), 2.0))), mix(90.0, 160.0, uWetHair));
           float s2 = pow(sqrt(max(0.0, 1.0 - pow(dot(T2, H), 2.0))), 30.0);
           float lit = smoothstep(-0.1, 0.3, dot(Nn, L));
-          outgoingLight += uSunColor * lit * (s1 * mix(0.12, 0.3, uWetHair) + s2 * 0.08 * diffuseColor.rgb * 3.0);
+          float dark = 1.0 - smoothstep(0.05, 0.3, dot(uHairCol, vec3(0.3, 0.59, 0.11)));
+          outgoingLight += uSunColor * lit * (s1 * mix(0.12, 0.3, uWetHair) * (1.0 + dark * 1.5) + s2 * (0.08 + dark * 0.05) * (diffuseColor.rgb * 3.0 + dark * 0.05)) * (0.6 + 0.4 * hl * 2.0);
         }
         #include <opaque_fragment>`);
   };

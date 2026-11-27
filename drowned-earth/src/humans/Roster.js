@@ -25,7 +25,7 @@ export const HEROES = {
   teo: {
     name: 'Teo', sex: 0.85, age: 29, muscle: 0.75, weight: 0.4, race: { caucasian: 0.5, asian: 0.3, african: 0.2 }, height: 1.03,
     dials: { 'nose/nose-hump-incr': 0.4, 'chin/chin-jaw-drop-incr': 0.2, 'head/head-square': 0.3, 'eyes/l-eye-bag-incr': 0.3, 'eyes/r-eye-bag-incr': 0.3 },
-    skin: 'young_caucasian_male', eyes: 'bluegreen', brow: 'brow3', lash: 'lash1', hair: 'long01',
+    skin: 'young_asian_male', eyes: 'bluegreen', brow: 'brow3', lash: 'lash1', hair: 'long01',
     look: { hairColor: H.darkBrown, stubble: 0.9, beard: 0.15, weathered: 0.6, underEye: 0.7, salt: 0.8, wear: 0.8, patches: 2 },
     clothes: ['male_casualsuit04', 'shoes01'], clothTints: [[0.25, 0.3, 0.32], [0.2, 0.18, 0.16]], emotion: 'tired', tier: 7,
   },
