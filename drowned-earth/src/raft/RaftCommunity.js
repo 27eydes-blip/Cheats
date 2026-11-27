@@ -215,8 +215,13 @@ export function buildRaftCommunity(ctx, def) {
 function setupFestival(ctx, cdef, main, group, interactables) {
   const f = cdef.festival;
   const n = f.boats;
-  const geo = new THREE.ConeGeometry(0.26, 0.42, 4); geo.translate(0, 0.21, 0);
-  const paper = new THREE.MeshBasicMaterial({ color: 0xffb466, transparent: true, opacity: 0.95, fog: true });
+  // a folded paper lantern: open-topped square body, a little taller than wide,
+  // lit from inside so it glows brightest at the base and fades to the rim
+  const geo = new THREE.CylinderGeometry(0.17, 0.21, 0.34, 4, 3, true); geo.rotateY(Math.PI / 4); geo.translate(0, 0.17, 0);
+  { const p = geo.attributes.position, c = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) { const k = 1.15 - (p.getY(i) / 0.34) * 0.75 + Math.sin(i * 12.9) * 0.04; c.set([k, k * 0.92, k * 0.8], i * 3); }
+    geo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
+  const paper = new THREE.MeshBasicMaterial({ color: 0xffb466, vertexColors: true, transparent: true, opacity: 0.92, side: THREE.DoubleSide, fog: true });
   const boats = new THREE.InstancedMesh(geo, paper, n + 1);
   boats.frustumCulled = false;
   boats.layers.set(LAYER_FX);
@@ -270,7 +275,7 @@ function setupFestival(ctx, cdef, main, group, interactables) {
         
       });
       boats.instanceMatrix.needsUpdate = true;
-      paper.color.setRGB(1, 0.62, 0.32).multiplyScalar(0.3 + ctx.time.out.night * 0.8);
+      paper.color.setRGB(1, 0.55, 0.24).multiplyScalar(0.22 + ctx.time.out.night * 0.5); // warm, not blown out to white
     },
     dispose: () => {},
   };
