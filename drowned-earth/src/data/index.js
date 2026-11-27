@@ -26,6 +26,7 @@ export function loadData() {
     nightlife: get('nightlife'),
   boats: get('boats'),
   club: get('club'),
+  crews: get('crews'),
   creatures: get('creatures') || { species: {}, placements: [], encounters: {} },
     life: loadLife(optional),
   };
@@ -38,7 +39,7 @@ export function loadData() {
     if (d.events) data.life.events.push(...d.events);
     Object.assign(data.logs.logs || {}, d.logs || {});
     if (d.bottles) data.bottles.notes.push(...d.bottles);
-    for (const [st, lines] of Object.entries(d.radioLines || {})) data.radio.stations?.find((s) => s.id === st)?.lines.push(...lines);
+    for (const [st, lines] of Object.entries(d.radioLines || {})) { const s = data.radio.stations?.find((x) => x.id === st); if (s) (s.talk ||= []).push(...lines); }
     data.modPacks = [...(data.modPacks || []), path.split('/').pop()];
   }
   validate(data);

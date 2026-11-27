@@ -1,70 +1,263 @@
 {
-  "_doc": "The Gentleman's Club (nicknamed 'the Club' or 'the Gill'): a masked, members-only cabaret in the air-filled saloon of the sunken luxury ferry MV Seraphine Gray, entered by a hatch at the base of the drowned Cape Orrin lighthouse. Open only in the long dark (hours). quest: the 'Under the Lamp' steps (flags) in order with journal text. door: the door check. patrons: masked guests with lines and eavesdroppable conversations (listen: fragments; reveals: flags/rumours). favors: Madame Ondine's jobs. raid: the midnight flooding set piece. vault: the ledger and art (mature: true items carry a clean alternative). All original to this world.",
-  "name": "The Gentleman's Club", "nicknames": ["the Club", "the Gill"],
-  "plaque": "THE GENTLEMAN'S CLUB", "monogram": "SG",
-  "lighthouse": { "pos": [-640, -180], "name": "Cape Orrin Light", "hatchDepth": 7.5 },
-  "ferry": { "name": "MV Seraphine Gray", "pos": [-612, -176], "depth": 15, "heading": 0.35 },
-  "hours": [23, 4.5],
-  "quest": {
-    "id": "under_the_lamp", "name": "Under the Lamp",
-    "steps": [
-      { "flag": "lamp_rumour", "text": "Somebody at a bar said people go down a hatch under the old lighthouse and come back dressed better." },
-      { "flag": "coded_lamp", "text": "The coded channel at night: 'Under the lamp. Three short, one long.'" },
-      { "flag": "rat_backroom", "text": "Fenn at the Drowned Rat opened the bookcase. There's a chart on the wall back there." },
-      { "flag": "lamp_map", "text": "The chart in the Rat's back room has Cape Orrin Light circled in amber ink, and a brass fish drawn in the margin." },
-      { "flag": "lamp_seen", "text": "At night, under the drowned lighthouse, the lanternfish pulse amber: three short, one long." },
-      { "flag": "coded_pin", "text": "'The fish wears brass. The door opens for the fish.' A password, and a token." },
-      { "flag": "has_pin", "text": "A brass fish pin, warm from somebody's pocket." },
-      { "flag": "club_entered", "text": "Under the lamp, there is a door. Behind the door, there is music." }
-    ]
-  },
-  "door": {
-    "doorman": "Augustin", "doormanLine": "Evening. This is a private club. Members only. Are you a member?",
-    "password": "The fish wears brass.",
-    "wrong": ["The tide is high tonight.", "Madame Ondine sent me.", "I'm with the band."],
-    "refuseHot": "Augustin looks past you at the hatch, as if he can hear sirens through four metres of water. 'Not tonight. You're bringing weather.'",
-    "refuseNoPin": "'Members wear the fish.' He looks at your lapel. There is nothing on your lapel. 'Come back when the fish chooses you.'",
-    "admit": "He studies the pin, then your face, then hands you a mask from a velvet-lined drawer. 'Welcome to the Club. Fights are forbidden. So is remembering faces. Enjoy your evening.'",
-    "ledger": "The members' ledger lies open on a lectern: names in a dozen hands, most of them crossed out and rewritten as something else."
-  },
-  "ondine": {
-    "name": "Madame Ondine",
-    "greet": ["You found my little lamp. Most people find the bottom of the sea instead. Sit.", "Back again. The sea is generous to people who listen.", "Shh. The band is about to do the slow one."],
-    "neutral": "Everyone here owes somebody. In here, nobody collects. That's the whole trick.",
-    "favors": [
-      { "id": "f_ledger_page", "ask": "A Highmark auditor drinks at the Fermentary. He carries a ledger page that has my name on it. I'd like it to stop having my name on it.", "reward": "The Concord has a cellar under the Calloway Foundation. Wine, they say. It isn't wine.", "pay": 40, "sets": "ondine_trust1" },
-      { "id": "f_song", "ask": "Della Moon on Night Songs owes me a song. Tell her the Seraphine is listening. She'll know.", "reward": "Every Tuesday a Concord barge runs the east channel with two guards and a captain who drinks. Haddie knows the captain's brand.", "pay": 25, "sets": "ondine_trust2" },
-      { "id": "f_meeting", "ask": "There is a gentleman in booth three who talks too much about the Cathedral. Sit near him. Listen. Then forget his face, and tell me everything.", "reward": "Now you know what I know. That makes you dangerous. Welcome.", "pay": 60, "sets": "ondine_trust3" }
-    ]
-  },
-  "patrons": [
-    { "id": "p_sundial", "mask": "gold sun", "who": "a Concord gentleman", "booth": 3, "lines": ["Do you know what a sundial is good for, down here? Nothing. That's why we like the name."],
-      "listen": { "title": "Booth three", "fragments": ["—the Cathedral isn't flooded, Halden, not all of it—", "—Voss says the Beacon is a door, not a light—", "—if the raft-folk ever find out what's under the nave—", "—the Chancellor's daughter went down last spring. She came back different—"], "reveals": "cathedral_overheard", "requires": "ondine_trust2" } },
-    { "id": "p_ward", "mask": "silver owl", "who": "an off-duty Ward captain", "booth": 1, "lines": ["I am not here. Nobody here is here. Isn't it wonderful?"],
-      "listen": { "title": "Booth one", "fragments": ["—raid's been signed off for the new moon—", "—they'll come in through the service tunnel, not the hatch—", "—Ondine's paid up till spring, so who signed it?—"], "reveals": "raid_warning" } },
-    { "id": "p_broker", "mask": "porcelain fox", "who": "a Portage broker", "booth": 2, "lines": ["Prices up there are a joke. Prices down here are a confession."],
-      "listen": { "title": "Booth two", "fragments": ["—the Highmark barge carries seals, real ones, a whole crate—", "—Syndicate wants the hydrofoil back more than they want the crate—", "—Lowlight will take either—"], "reveals": "heist_lead" } },
-    { "id": "p_singer", "mask": "black lace", "who": "the evening's singer", "stage": true, "lines": ["I sing what the sea hums. People call it jazz. The sea doesn't call it anything."] },
-    { "id": "p_rich", "mask": "gilded stag", "who": "a philanthropist", "booth": 4, "satire": true, "lines": ["I donate a tenth of everything I take. It's very moving. You should see the ceremony.", "My foundation feeds the raft children. Symbolically. With a photograph of food."] }
+ "_doc": "The Gentleman's Club (nicknamed 'the Club' or 'the Gill'): a masked, members-only cabaret in the air-filled saloon of the sunken luxury ferry MV Seraphine Gray, entered by a hatch at the base of the drowned Cape Orrin lighthouse. Open only in the long dark (hours). quest: the 'Under the Lamp' steps (flags) in order with journal text. door: the door check. patrons: masked guests with lines and eavesdroppable conversations (listen: fragments; reveals: flags/rumours). favors: Madame Ondine's jobs. raid: the midnight flooding set piece. vault: the ledger and art (mature: true items carry a clean alternative). All original to this world.",
+ "name": "The Gentleman's Club",
+ "nicknames": [
+  "the Club",
+  "the Gill"
+ ],
+ "plaque": "THE GENTLEMAN'S CLUB",
+ "monogram": "SG",
+ "lighthouse": {
+  "pos": [
+   -640,
+   -180
   ],
-  "games": ["tide_cards", "bones"],
-  "jobs": [ { "id": "bartend", "name": "Pour at the Club", "pay": 30, "desc": "Behind the long bar in a white jacket. Nobody looks at the bartender. The bartender sees everything." }, { "id": "musician", "name": "Sit in with the band", "pay": 20, "desc": "The Velvet Hull Quartet needs a fifth, sometimes. You hum. They forgive you." }, { "id": "informant", "name": "Keep your ears open for Ondine", "pay": 45, "desc": "Every week, a page of what you heard. She pays in scrap and in silence." } ],
-  "raid": {
-    "trigger": "raid_night", "warning": "raid_warning",
-    "alarm": "A bell rings somewhere in the hull. Then a sound like a door the size of a house being opened. Then water.",
-    "brief": "Water's coming in the forward hatch. The service tunnel aft is the only way out. Get people out — and yourself.",
-    "seconds": 90, "guests": 6,
-    "saved": "You count heads on the lighthouse rocks at dawn. {n} out of {total}. Ondine counts too, and remembers.",
-    "lost": "The Seraphine settles another metre. Some of the masks are floating in the saloon when the Ward divers come down."
+  "name": "Cape Orrin Light",
+  "hatchDepth": 7.5
+ },
+ "ferry": {
+  "name": "MV Seraphine Gray",
+  "pos": [
+   -612,
+   -176
+  ],
+  "depth": 10,
+  "heading": 0.35
+ },
+ "hours": [
+  23,
+  4.5
+ ],
+ "quest": {
+  "id": "under_the_lamp",
+  "name": "Under the Lamp",
+  "steps": [
+   {
+    "flag": "lamp_rumour",
+    "text": "Somebody at a bar said people go down a hatch under the old lighthouse and come back dressed better."
+   },
+   {
+    "flag": "coded_lamp",
+    "text": "The coded channel at night: 'Under the lamp. Three short, one long.'"
+   },
+   {
+    "flag": "rat_backroom",
+    "text": "Fenn at the Drowned Rat opened the bookcase. There's a chart on the wall back there."
+   },
+   {
+    "flag": "lamp_map",
+    "text": "The chart in the Rat's back room has Cape Orrin Light circled in amber ink, and a brass fish drawn in the margin."
+   },
+   {
+    "flag": "lamp_seen",
+    "text": "At night, under the drowned lighthouse, the lanternfish pulse amber: three short, one long."
+   },
+   {
+    "flag": "coded_pin",
+    "text": "'The fish wears brass. The door opens for the fish.' A password, and a token."
+   },
+   {
+    "flag": "has_pin",
+    "text": "A brass fish pin, warm from somebody's pocket."
+   },
+   {
+    "flag": "club_entered",
+    "text": "Under the lamp, there is a door. Behind the door, there is music."
+   }
+  ]
+ },
+ "door": {
+  "doorman": "Augustin",
+  "doormanLine": "Evening. This is a private club. Members only. Are you a member?",
+  "password": "The fish wears brass.",
+  "wrong": [
+   "The tide is high tonight.",
+   "Madame Ondine sent me.",
+   "I'm with the band."
+  ],
+  "refuseHot": "Augustin looks past you at the hatch, as if he can hear sirens through four metres of water. 'Not tonight. You're bringing weather.'",
+  "refuseNoPin": "'Members wear the fish.' He looks at your lapel. There is nothing on your lapel. 'Come back when the fish chooses you.'",
+  "admit": "He studies the pin, then your face, then hands you a mask from a velvet-lined drawer. 'Welcome to the Club. Fights are forbidden. So is remembering faces. Enjoy your evening.'",
+  "ledger": "The members' ledger lies open on a lectern: names in a dozen hands, most of them crossed out and rewritten as something else."
+ },
+ "ondine": {
+  "name": "Madame Ondine",
+  "greet": [
+   "You found my little lamp. Most people find the bottom of the sea instead. Sit.",
+   "Back again. The sea is generous to people who listen.",
+   "Shh. The band is about to do the slow one."
+  ],
+  "neutral": "Everyone here owes somebody. In here, nobody collects. That's the whole trick.",
+  "favors": [
+   {
+    "id": "f_ledger_page",
+    "ask": "A Highmark auditor drinks at the Fermentary. He carries a ledger page that has my name on it. I'd like it to stop having my name on it.",
+    "reward": "The Concord has a cellar under the Calloway Foundation. Wine, they say. It isn't wine.",
+    "pay": 40,
+    "sets": "ondine_trust1"
+   },
+   {
+    "id": "f_song",
+    "ask": "Della Moon on Night Songs owes me a song. Tell her the Seraphine is listening. She'll know.",
+    "reward": "Every Tuesday a Concord barge runs the east channel with two guards and a captain who drinks. Haddie knows the captain's brand.",
+    "pay": 25,
+    "sets": "ondine_trust2"
+   },
+   {
+    "id": "f_meeting",
+    "ask": "There is a gentleman in booth three who talks too much about the Cathedral. Sit near him. Listen. Then forget his face, and tell me everything.",
+    "reward": "Now you know what I know. That makes you dangerous. Welcome.",
+    "pay": 60,
+    "sets": "ondine_trust3"
+   }
+  ]
+ },
+ "patrons": [
+  {
+   "id": "p_sundial",
+   "mask": "gold sun",
+   "who": "a Concord gentleman",
+   "booth": 3,
+   "lines": [
+    "Do you know what a sundial is good for, down here? Nothing. That's why we like the name."
+   ],
+   "listen": {
+    "title": "Booth three",
+    "fragments": [
+     "—the Cathedral isn't flooded, Halden, not all of it—",
+     "—Voss says the Beacon is a door, not a light—",
+     "—if the raft-folk ever find out what's under the nave—",
+     "—the Chancellor's daughter went down last spring. She came back different—"
+    ],
+    "reveals": "cathedral_overheard",
+    "requires": "ondine_trust2"
+   }
   },
-  "vault": {
-    "code": "SG-1931",
-    "hour": [2, 3],
-    "intro": "Behind Ondine's office, a door with a ship's wheel for a handle. Inside, the ledger: who has been paid by whom, for thirty years.",
-    "ledgerLines": ["Calloway Foundation → Ward Command: 'for discretion'.", "Director H. Voss → Rusthold Syndicate: 'for the plans'.", "Portage Brokers → Tide Ward, east channel: 'for the second bell'.", "M. Ondine → the Vigil: 'for the lanterns'. Every year. No amount written."],
-    "art": [
-      { "id": "mural_sirens", "mature": true, "title": "The Drowned Muses (mural)", "desc": "A pre-flood mural rescued from a theatre: three classical figures rising from painted water, in the old academic style — draped only where the painter felt like it.", "clean": { "title": "The Drowned Muses (mural)", "desc": "A pre-flood mural rescued from a theatre: three robed classical figures rising from painted water, in the old academic style." } },
-      { "id": "statue_tide", "mature": true, "title": "Tide (marble)", "desc": "A marble figure from the drowned museum, life-size, classical, unclothed in the way old statues are. Ondine keeps it because it was the only thing in the museum that didn't drown.", "clean": { "title": "Tide (marble)", "desc": "A marble figure from the drowned museum, life-size, classical, wrapped in a carved sea-cloak. Ondine keeps it because it was the only thing in the museum that didn't drown." } }
-    ]
+  {
+   "id": "p_ward",
+   "mask": "silver owl",
+   "who": "an off-duty Ward captain",
+   "booth": 1,
+   "lines": [
+    "I am not here. Nobody here is here. Isn't it wonderful?"
+   ],
+   "listen": {
+    "title": "Booth one",
+    "fragments": [
+     "—raid's been signed off for the new moon—",
+     "—they'll come in through the service tunnel, not the hatch—",
+     "—Ondine's paid up till spring, so who signed it?—"
+    ],
+    "reveals": "raid_warning"
+   }
+  },
+  {
+   "id": "p_broker",
+   "mask": "porcelain fox",
+   "who": "a Portage broker",
+   "booth": 2,
+   "lines": [
+    "Prices up there are a joke. Prices down here are a confession."
+   ],
+   "listen": {
+    "title": "Booth two",
+    "fragments": [
+     "—the Highmark barge carries seals, real ones, a whole crate—",
+     "—Syndicate wants the hydrofoil back more than they want the crate—",
+     "—Lowlight will take either—"
+    ],
+    "reveals": "heist_lead"
+   }
+  },
+  {
+   "id": "p_singer",
+   "mask": "black lace",
+   "who": "the evening's singer",
+   "stage": true,
+   "lines": [
+    "I sing what the sea hums. People call it jazz. The sea doesn't call it anything."
+   ]
+  },
+  {
+   "id": "p_rich",
+   "mask": "gilded stag",
+   "who": "a philanthropist",
+   "booth": 4,
+   "satire": true,
+   "lines": [
+    "I donate a tenth of everything I take. It's very moving. You should see the ceremony.",
+    "My foundation feeds the raft children. Symbolically. With a photograph of food."
+   ]
   }
+ ],
+ "games": [
+  "tide_cards",
+  "bones"
+ ],
+ "jobs": [
+  {
+   "id": "bartend",
+   "name": "Pour at the Club",
+   "pay": 30,
+   "desc": "Behind the long bar in a white jacket. Nobody looks at the bartender. The bartender sees everything."
+  },
+  {
+   "id": "musician",
+   "name": "Sit in with the band",
+   "pay": 20,
+   "desc": "The Velvet Hull Quartet needs a fifth, sometimes. You hum. They forgive you."
+  },
+  {
+   "id": "informant",
+   "name": "Keep your ears open for Ondine",
+   "pay": 45,
+   "desc": "Every week, a page of what you heard. She pays in scrap and in silence."
+  }
+ ],
+ "raid": {
+  "trigger": "raid_night",
+  "warning": "raid_warning",
+  "alarm": "A bell rings somewhere in the hull. Then a sound like a door the size of a house being opened. Then water.",
+  "brief": "Water's coming in the forward hatch. The service tunnel aft is the only way out. Get people out — and yourself.",
+  "seconds": 90,
+  "guests": 6,
+  "saved": "You count heads on the lighthouse rocks at dawn. {n} out of {total}. Ondine counts too, and remembers.",
+  "lost": "The Seraphine settles another metre. Some of the masks are floating in the saloon when the Ward divers come down."
+ },
+ "vault": {
+  "code": "SG-1931",
+  "hour": [
+   2,
+   3
+  ],
+  "intro": "Behind Ondine's office, a door with a ship's wheel for a handle. Inside, the ledger: who has been paid by whom, for thirty years.",
+  "ledgerLines": [
+   "Calloway Foundation → Ward Command: 'for discretion'.",
+   "Director H. Voss → Rusthold Syndicate: 'for the plans'.",
+   "Portage Brokers → Tide Ward, east channel: 'for the second bell'.",
+   "M. Ondine → the Vigil: 'for the lanterns'. Every year. No amount written."
+  ],
+  "art": [
+   {
+    "id": "mural_sirens",
+    "mature": true,
+    "title": "The Drowned Muses (mural)",
+    "desc": "A pre-flood mural rescued from a theatre: three classical figures rising from painted water, in the old academic style — draped only where the painter felt like it.",
+    "clean": {
+     "title": "The Drowned Muses (mural)",
+     "desc": "A pre-flood mural rescued from a theatre: three robed classical figures rising from painted water, in the old academic style."
+    }
+   },
+   {
+    "id": "statue_tide",
+    "mature": true,
+    "title": "Tide (marble)",
+    "desc": "A marble figure from the drowned museum, life-size, classical, unclothed in the way old statues are. Ondine keeps it because it was the only thing in the museum that didn't drown.",
+    "clean": {
+     "title": "Tide (marble)",
+     "desc": "A marble figure from the drowned museum, life-size, classical, wrapped in a carved sea-cloak. Ondine keeps it because it was the only thing in the museum that didn't drown."
+    }
+   }
+  ]
+ }
 }

@@ -1,0 +1,62 @@
+{
+  "_doc": "Rival crews, the city feed, property and heists. crews: standing -100..100 with you, relations between crews (war < -50 < cold < 50 < allied). events: weekly crew politics. feed: how the city's graffiti/pamphlet network and the radio report you (legend / villain / ghost). property: things you can own, with income and risk per day. roles: crew members you can hire. heists: multi-stage jobs; each stage has a goal type (reach, talk, wait, deliver, escape), a place, text and heat. All original to this world.",
+  "crews": {
+    "lowlight": { "name": "Lowlight Smugglers", "home": "lowlight", "color": "#56f0c8", "likes": ["smuggle", "ghost"], "hates": ["snitch"], "boss": "nobody you can name" },
+    "syndicate": { "name": "The Welders' Syndicate", "home": "rusthold_tender", "color": "#ff7a2a", "likes": ["legend", "boats"], "hates": ["steal_syndicate"], "boss": "Jax Fontaine (says he isn't)" },
+    "brokers": { "name": "Portage Brokers", "home": "portage", "color": "#ffb347", "likes": ["trade", "legend"], "hates": ["villain"], "boss": "Madam Oru Vance (officially retired)" },
+    "tideholders": { "name": "The Tideholders", "home": "vigil", "color": "#ffd9a0", "likes": ["mercy", "ghost"], "hates": ["villain"], "boss": "a Tideholder" },
+    "sundials": { "name": "The Sundials", "home": "highmark", "color": "#d4af37", "likes": ["villain"], "hates": ["heist", "legend"], "boss": "a Calloway cousin, deniably" }
+  },
+  "relations": { "lowlight|syndicate": 20, "lowlight|brokers": -10, "lowlight|sundials": -70, "syndicate|brokers": 30, "syndicate|sundials": -40, "brokers|sundials": 10, "tideholders|sundials": -30, "tideholders|lowlight": 15 },
+  "events": [
+    { "text": "The Syndicate and Lowlight split a cargo of engine parts. Both claim they got the better half.", "pair": "lowlight|syndicate", "delta": 6 },
+    { "text": "A Sundial boat rammed a Lowlight runner off the east channel. Lowlight is counting.", "pair": "lowlight|sundials", "delta": -12 },
+    { "text": "Portage Brokers raised dock fees for Rusthold hulls. The Syndicate sent a welder to 'discuss' it.", "pair": "syndicate|brokers", "delta": -9 },
+    { "text": "The Tideholders paid off a Lowlight debt nobody asked them to pay. Lowlight is suspicious of kindness.", "pair": "tideholders|lowlight", "delta": 8 },
+    { "text": "A Sundial patron bought a raft at Portage and renamed it after himself. The Brokers took his money and his raft back.", "pair": "brokers|sundials", "delta": -10 },
+    { "text": "Somebody betrayed somebody at the Drowned Rat. The saw player stopped mid-song.", "pair": "lowlight|brokers", "delta": -7 }
+  ],
+  "feed": {
+    "legend": ["A FAST BOAT AND A FASTER MOUTH — chalked on the Portage seawall", "Pamphlet: 'Who outran the Ward on Tuesday? Free Voice salutes you.'", "Graffiti on a Highmark billboard: a little boat, three stars, and a grin."],
+    "villain": ["Ward notice: REWARD for information on an unregistered craft. Description: 'fast'.", "Highmark Official asks: 'Is your neighbour a criminal? Probably.'", "Somebody painted WANTED under a smudge on the ration board."],
+    "ghost": ["Nobody saw anything on the east channel. Nobody ever does.", "A rumour with no name in it is going round three rafts at once.", "Chalk on the Vigil steps: 'They went under. They came back. They said nothing.'"]
+  },
+  "property": {
+    "sh_stilts": { "name": "The Stilts (Lowlight)", "income": 0, "risk": 0.0 },
+    "raft_club": { "name": "A raft club at Portage", "cost": 220, "income": 18, "risk": 0.08, "desc": "A barge, a band, a licence nobody checks. It makes money and enemies." },
+    "boat_yard": { "name": "A boat yard at Rusthold", "cost": 300, "income": 22, "risk": 0.06, "crew": "syndicate", "desc": "Hulls in, hulls out. Some of them were yours to begin with." },
+    "front": { "name": "A smuggling front: 'Vinegar & Sons'", "cost": 160, "income": 26, "risk": 0.14, "crew": "lowlight", "desc": "A stall at Greentide selling vinegar. Some of it is vinegar." }
+  },
+  "roles": {
+    "pilot": { "name": "Vesna Kade", "role": "pilot", "cost": 30, "skill": "Chase: +25% boost tank and the Ward loses you faster.", "crew": "lowlight", "line": "I don't do slow. I don't do 'careful'. I do 'there'." },
+    "diver": { "name": "Dockmother Ree", "role": "diver", "cost": 25, "skill": "Dives: the Ward can't see you underwater for 30% longer.", "crew": "brokers", "line": "I've been under more than I've been over. Let's go down." },
+    "forger": { "name": "Silent Mo", "role": "forger", "cost": 35, "skill": "Inspections: forged papers. Contraband found less often.", "crew": "lowlight", "line": "…" },
+    "muscle": { "name": "Bruno Tack", "role": "muscle", "cost": 20, "skill": "Boarding: crews back off; brawls go your way.", "crew": "brokers", "line": "You point. I lean on it." },
+    "hacker": { "name": "Teagan Moss", "role": "hacker", "cost": 30, "skill": "Radio: jam the Ward band for a minute (lose a star faster).", "crew": "tideholders", "line": "I wrote their jingles. I can write over them." }
+  },
+  "heists": {
+    "barge": {
+      "name": "The Highmark Supply Barge", "crew": "lowlight", "needs": "heist_lead",
+      "pitch": "Every fifth night a Highmark supply barge runs the east channel: two guards, a captain who drinks, and a crate of real ration seals. Take the crate, and the Drift eats for a month.",
+      "stages": [
+        { "id": "scout", "goal": "reach", "at": [180, 330], "radius": 40, "night": true, "text": "Scout the east channel at night. Count the guards. Watch the barge's lights." },
+        { "id": "captain", "goal": "talk", "bar": "brass_anchor", "text": "Find out the captain's drink. Haddie knows everyone's poison." },
+        { "id": "crew", "goal": "hire", "roles": ["pilot", "diver"], "text": "Hire a pilot and a diver. You can't do this alone." },
+        { "id": "hit", "goal": "reach", "at": [250, 160], "radius": 25, "night": true, "heat": 55, "text": "Hit the barge at the second bell. The diver cuts the anchor; you take the crate." },
+        { "id": "escape", "goal": "escape", "text": "Lose the Ward. Then lose them again." },
+        { "id": "fence", "goal": "deliver", "to": "lowlight", "text": "Get the crate to Lowlight. Fenn will know what to do with it." }
+      ],
+      "reward": 220, "fame": "legend", "after": "The ration boards are full for the first time in a year. Highmark says it was a clerical error. Everybody on the water knows whose error it was."
+    },
+    "harbor": {
+      "name": "The Harbor Escape", "crew": "syndicate", "needs": "ondine_trust1",
+      "pitch": "The Syndicate's hydrofoil is impounded in the Ward harbour. Get it out. Through the harbour mouth, past the boom, under the guns.",
+      "stages": [
+        { "id": "in", "goal": "reach", "at": [268, -300], "radius": 40, "night": true, "text": "Get into the Ward harbour by the old Calla Morrow wreck." },
+        { "id": "take", "goal": "swap", "type": "hydrofoil", "heat": 65, "text": "Take the hydrofoil." },
+        { "id": "out", "goal": "escape", "text": "Run the harbour mouth. Use the ramps." }
+      ],
+      "reward": 160, "fame": "legend", "after": "Rustbelt Radio plays the hydrofoil's engine noise for a full minute without comment."
+    }
+  }
+}

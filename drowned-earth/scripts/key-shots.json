@@ -1,0 +1,60 @@
+[
+ {
+  "name": "k1-brass-anchor",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "21.5",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 30,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx;const r=c.state.communities.portage.rafts.get('anchor');const V=c.player.position.constructor;const up=c.player.update.bind(c.player);let hold=null;c.player.update=(dt)=>{up(dt);if(hold){c.player.position.copy(hold);c.player.velocity.set(0,0,0);c.player.mode='foot';}};for(let i=0;i<40;i++){const p=new V(-3,1.0,7.5).applyMatrix4(r.root.matrixWorld);hold=p;c.player.teleport(p);c.player.yaw=r.root.rotation.y+-0.25;c.player.pitch=0.12;g.step(1);await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "k2-club-bar",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "23.5",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 30,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,cl=c.club;for(const f of ['lamp_map','has_pin','coded_lamp']) c.story.setFlag(f);cl.enter();cl.state.admitted=true;const V=c.player.position.constructor;const up=c.player.update.bind(c.player);let hold=null,hm='foot';c.player.update=(dt)=>{up(dt);if(hold){c.player.position.copy(hold);c.player.velocity.set(0,0,0);c.player.mode=hm;}};for(let i=0;i<60;i++){const p=new V(11,0,1.2).add(cl.origin);hold=p;hm='foot';c.player.teleport(p);c.player.yaw=1.75;c.player.pitch=-0.04;g.step(1);await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "k3-club-stage",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "23.5",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 30,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,cl=c.club;for(const f of ['lamp_map','has_pin','coded_lamp']) c.story.setFlag(f);cl.enter();cl.state.admitted=true;const V=c.player.position.constructor;const up=c.player.update.bind(c.player);let hold=null,hm='foot';c.player.update=(dt)=>{up(dt);if(hold){c.player.position.copy(hold);c.player.velocity.set(0,0,0);c.player.mode=hm;}};for(let i=0;i<60;i++){const p=new V(2,0,2.4).add(cl.origin);hold=p;hm='foot';c.player.teleport(p);c.player.yaw=1.35;c.player.pitch=-0.02;g.step(1);await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "k4-ward-chase",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "22.5",
+   "freeze": "1",
+   "boat": "320,180,0.4",
+   "agegate": "off"
+  },
+  "frames": 20,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx;c.player.mode='boat';c.boat.setType('speedboat');c.heat.add(75,'test');for(let i=0;i<150;i++){g.step(1);if(i%20==0)await new Promise(r=>setTimeout(r,0));}const b=c.ward.boats.find(x=>x.engaged);if(b){b.pos.copy(c.boat.pos).add(new c.boat.pos.constructor(10,0,-18));b.setState('chase');}for(let i=0;i<20;i++){g.step(1);}c.player.yaw=c.boat.heading+0.5;})()"
+ }
+]

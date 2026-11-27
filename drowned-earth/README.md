@@ -105,6 +105,25 @@ Inspect them in the character viewer: `?viewer=1&who=bram&light=dusk&shot=close&
 close, mid, full; `row=1` for a crowd lineup). `node scripts/viewer-shots.mjs out/` renders a gallery.
 Rebuild the kit with `MH_DATA=/path/to/makehuman/data node scripts/humans/build.mjs`.
 
+### Nightlife, the underworld and attitude
+
+The surface is loud: neon-and-lantern bars on every raft city, a wanted level, fast boats, eight radio stations, rival crews and one very hidden club. Everything is data-driven:
+`src/data/nightlife.json` (bars, bartenders, regulars, drinks, games, jobs), `boats.json` (boat types, parked boats, ramps, safehouses, Heat tiers and crimes), `radio.json` (stations, hosts, ads, news, songs, call-ins, the coded channel), `club.json` (the Gentleman's Club and the *Under the Lamp* quest), `crews.json` (crews, the city feed, property, crew roles, heists).
+
+- **Bars** (`src/night/`): The Brass Anchor (Portage), The Fermentary (Greentide), The Hot Rivet (Rusthold), The Quiet Cup (the Vigil — tea only), The Drowned Rat (Lowlight, hidden in fog). Bartenders remember visits, tabs and favours; regulars, a procedural live band (`audio/Band.js`), crowds that peak at the busy hour, house games (Tide Cards, Bones, Last Rope, the Bargaining Pit, arm-wrestling, Seed Count, confession), shifts and smuggling jobs. Drinking spends rations and has consequences: a drunk wobble, hangovers, brawls, pickpockets, recruiters, and a slowly building habit shown with care — the Vigil's circle is the way back.
+- **Heat** (`society/Heat.js`, `crime/Ward.js`): 0–5 stars. ★ a warning boat, ★★ searchlight patrols, ★★★ boarding crews that ram, ★★★★ a blockade across your heading, ★★★★★ a drone hunt. Lose them by breaking line of sight, hiding under bridges or in fog, diving, swapping hulls unseen, bribing a stop (≤3★), or lying low in a safehouse.
+- **Boats** (`vehicles/`): lofted hulls for a skiff, runabout, jet-ski, tug, hydrofoil, Lowlight runner and the Ward interceptor, each with its own speed, acceleration, turning, boost tank and hull; boost (Shift), collapsed-tower ramps, damage that slows you, a smuggler's hidden hold. Swap into parked boats (theft is a crime).
+- **Radio**: Highmark Official, Raft Free Voice, Night Songs, Brass & Salt, Rustbelt Radio, The Evensong, Tide Talk, and the coded channel. Procedural songs and jingles, call-ins, fake ads, and news that reports what you did.
+- **The Gentleman's Club** ("the Club", "the Gill"): a masked cabaret in the air-filled saloon of a sunken ferry, under the drowned Cape Orrin lighthouse. Most players will never find it. (No spoilers here: the quest data is in `club.json`.)
+- **Crews and heists** (`crime/Crews.js`, Journal → Underworld): Lowlight Smugglers, the Welders' Syndicate, Portage Brokers, the Tideholders and the Sundials; wars and alliances, hiring a pilot/diver/forger/muscle/hacker, property income and risk, the Highmark barge heist and the harbour escape. The city feed (chalk, pamphlets, radio) makes you a legend, a villain or a ghost.
+- Toggles: `?nightlife=off`, `?club=off`, `?creatures=off`.
+
+### Mature content (18+, opt-in)
+
+The first launch asks whether you are 18 or older. Mature content (alcohol, gambling, violence, brief non-explicit artistic nudity) is opt-in and can be switched in Options; declining swaps every flagged item for its clean version (data entries marked `"mature": true` carry a `"clean"` alternative). There are no sexual acts, nothing explicit, nothing interactive or rewarded, and the only artistic nudity is classical art in one deeply hidden late-game place.
+
+**Publishing note:** app stores and platforms require an 18+ (or equivalent) age rating and review of mature content such as alcohol, gambling themes and nudity. Check each store's current rules and complete its rating questionnaire before publishing.
+
 ### Debug URL parameters
 
 `?skipintro=1&time=21.5&freeze=1&weather=storm&quality=ultra&stats=1&pause=1&touch=1&debug=1&noassets=1&dynres=0`

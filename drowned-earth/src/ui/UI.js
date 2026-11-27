@@ -253,7 +253,7 @@ export class UI {
   }
   openJournal(tab = 'mind') {
     const { story, data, state } = this.ctx;
-    const tabs = { mind: 'On your mind', map: 'Chart', writing: 'Writing', photos: 'Photos', people: 'People', rumours: 'Rumours', bestiary: 'Bestiary', help: 'Help' };
+    const tabs = { mind: 'On your mind', map: 'Chart', writing: 'Writing', photos: 'Photos', people: 'People', rumours: 'Rumours', bestiary: 'Bestiary', underworld: 'Underworld', help: 'Help' };
     let body = '';
     if (tab === 'mind') {
       const objs = story.objectives();
@@ -269,6 +269,7 @@ export class UI {
     else if (tab === 'photos') { const ph = this.ctx.photo.list(); body = ph.length ? `<div class="photos">${ph.map((p) => `<figure><img src="${p.url}"><figcaption class="hand">Day ${p.day}, ${esc(p.time)} — ${esc(p.where)}</figcaption></figure>`).join('')}</div>` : '<div class="sub">No photographs yet. Press K (or the Photo button) to take one.</div>'; }
     else if (tab === 'people') body = Object.entries(state.met || {}).map(([id, n]) => { const d = data.npcs.npcs.find((x) => x.id === id); return d ? `<div class="row"><div class="name hand">${esc(d.name)}<small>${esc(d.role)} · spoken to ${n}×${d.respect ? ' · treats you as an equal' : ''}</small></div></div>` : ''; }).join('') || '<div class="sub">You have kept to yourself.</div>';
     else if (tab === 'rumours') body = (this.ctx.economy.rumours || []).map((r) => `<div class="row"><div class="name hand">${esc(r.text)}<small>day ${r.day}</small></div></div>`).join('') || '<div class="sub">No rumours yet. Ration boards and Raft Free Voice carry them.</div>';
+    else if (tab === 'underworld') { setTimeout(() => this.ctx.crews?.openBoard(), 0); body = ''; }
     else if (tab === 'bestiary') {
       const sp = data.creatures?.species || {}, cr = this.ctx.creatures;
       body = Object.entries(sp).map(([k, s]) => {

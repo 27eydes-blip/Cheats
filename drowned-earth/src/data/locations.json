@@ -168,6 +168,17 @@
    ],
    "clear": 60,
    "rot": 0
+  },
+  {
+   "id": "cape_orrin",
+   "name": "Cape Orrin Light",
+   "kind": "club_site",
+   "pos": [
+    -626,
+    -178
+   ],
+   "clear": 48,
+   "rot": 0
   }
  ],
  "farLandmarks": [

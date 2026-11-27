@@ -87,6 +87,16 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 - **Character viewer**: `?viewer=1` (`&who=bram&light=dusk&shot=close&emotion=angry&talk=1&row=1&pose=rest`), and `node scripts/viewer-shots.mjs` for galleries.
 - **Honest limits**: no hair-strand physics (sway is a vertex shader), no cloth simulation on coats/scarves (MakeHuman clothes are skinned meshes), no IK foot placement (raft decks are flat; walk speed is matched instead), no hats or head wraps (the one CC0 hat fitted badly), no locs, wet-skin droplets are a shading change rather than geometry. The source skins are 2K albedo only; detail normals and roughness are procedural.
 
+## K. Nightlife, underworld and attitude
+- Bars and night economy: five bars with personalities, bartender memory and dialogue trees, regulars, crowds and bands on schedules, drinks economy (homebrew = smuggling product, Highmark-banned drinks), tabs, house games, shifts and courier jobs, drunk/hangover/habit with the Vigil as the way back, brawls/pickpockets/recruiters. Two new raft cities: Lowlight (fog bank) and the Vigil.
+- Heat as 0–5 stars with escalating Ward response (boats, ramming and boarding, blockade, drone), escape routes (line of sight, hiding, diving, hull swaps, bribes, safehouses).
+- Boats: lofted hulls and seven types with arcade-readable handling, boost, ramps, damage, hidden hold; parked boats to steal/swap.
+- Radio: eight stations with hosts, segments, procedural songs/jingles, call-ins and the coded channel.
+- The Gentleman's Club: drowned-lighthouse hatch, amber lanternfish signal, the Under the Lamp quest, door check, masks, eavesdropping minigame, Ondine's favours, Club jobs, the raid-and-flood escape, the overheard Cathedral scene, the vault (mature-flagged art with clean versions).
+- Crews, feed, property and heists (Highmark barge, harbour escape).
+- Age gate + Mature toggle. "Gilded Gill" appears nowhere in the codebase; the Club's nickname is "the Gill".
+- Honest limits: the Club's sea view is a painted window shader; raid guests are counted through the tunnel rather than individually animated; heists are stage-based objectives, not scripted cinematics; boat chases use the existing physics plus ramps and boost.
+
 ## Verification (final run)
 - `npm run test:shots` — 12 scripted views (title dawn, dawn, midday, dusk festival, fog patrol, Dark Shelf dive, Portage from the Crow, Ward 9 basement, Beacon at night, midnight storm, phone 390×780 on low quality, third-person dusk): **0 console errors**. Images in `screenshots/`.
 - `npm run test:smoke` — drives the story loop end to end (tie-up, loot, craft, logs, swim/dive, radio, docking at the red lamp, dialogue, trade, workbench, patrol inspection, Standing step, Listener hunt, journal + photo, life-sim ageing, sleep, save/load, the Keeper's decoding, storm, finale): **passes, 0 errors**.

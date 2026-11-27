@@ -1,0 +1,62 @@
+[
+ {
+  "name": "g1-club-bar",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "23.5",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 30,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,cl=c.club;for(const f of ['lamp_map','has_pin','coded_lamp']) c.story.setFlag(f);cl.enter();cl.state.admitted=true;const V=c.player.position.constructor;const up=c.player.update.bind(c.player);let hold=null,hm='foot';c.player.update=(dt)=>{up(dt);if(hold){c.player.position.copy(hold);c.player.velocity.set(0,0,0);c.player.mode=hm;}};for(let i=0;i<60;i++){const p=new V(11,0,1.2).add(cl.origin);hold=p;hm='foot';c.player.teleport(p);c.player.yaw=1.75;c.player.pitch=-0.04;g.step(1);await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "g2-club-stage",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "23.5",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 30,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,cl=c.club;for(const f of ['lamp_map','has_pin','coded_lamp']) c.story.setFlag(f);cl.enter();cl.state.admitted=true;const V=c.player.position.constructor;const up=c.player.update.bind(c.player);let hold=null,hm='foot';c.player.update=(dt)=>{up(dt);if(hold){c.player.position.copy(hold);c.player.velocity.set(0,0,0);c.player.mode=hm;}};for(let i=0;i<60;i++){const p=new V(2,0,2.4).add(cl.origin);hold=p;hm='foot';c.player.teleport(p);c.player.yaw=1.35;c.player.pitch=-0.02;g.step(1);await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "g3-club-booths",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "23.5",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 30,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,cl=c.club;for(const f of ['lamp_map','has_pin','coded_lamp']) c.story.setFlag(f);cl.enter();cl.state.admitted=true;const V=c.player.position.constructor;const up=c.player.update.bind(c.player);let hold=null,hm='foot';c.player.update=(dt)=>{up(dt);if(hold){c.player.position.copy(hold);c.player.velocity.set(0,0,0);c.player.mode=hm;}};for(let i=0;i<60;i++){const p=new V(-3,0,-2.5).add(cl.origin);hold=p;hm='foot';c.player.teleport(p);c.player.yaw=-2.5;c.player.pitch=-0.05;g.step(1);await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "g4-lighthouse-signal",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "23.5",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 30,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,cl=c.club;for(const f of ['lamp_map','has_pin','coded_lamp']) c.story.setFlag(f);;const V=c.player.position.constructor;const up=c.player.update.bind(c.player);let hold=null,hm='foot';c.player.update=(dt)=>{up(dt);if(hold){c.player.position.copy(hold);c.player.velocity.set(0,0,0);c.player.mode=hm;}};for(let i=0;i<60;i++){const p=new V(18,-5,6).add(cl.lh);hold=p;hm='swim';c.player.teleport(p);c.player.yaw=-1.9;c.player.pitch=0.05;g.step(1);await new Promise(q=>setTimeout(q,0));}})()"
+ }
+]

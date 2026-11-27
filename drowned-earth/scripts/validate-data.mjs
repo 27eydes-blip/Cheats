@@ -34,7 +34,7 @@ const src = fs.readdirSync('src', { recursive: true }).filter((f) => f.endsWith(
 for (const m of src.matchAll(/logItem\(b, '([a-z_0-9]+)'/g)) if (!logs[m[1]]) err(`log ${m[1]} placed in code but missing from logs.json`);
 for (const m of src.matchAll(/openLog\('([a-z_0-9]+)'\)/g)) if (!logs[m[1]]) err(`log ${m[1]} opened in code but missing from logs.json`);
 for (const m of src.matchAll(/container\(b, [^,]+, '([a-z]+)'/g)) if (!loot[m[1]]) err(`container type ${m[1]} missing from loot.json`);
-for (const s of radio) if (!s.lines?.length) err(`radio ${s.id}: no lines`);
+for (const s of radio) if (!(s.lines || s.talk || s.coded || s.songs)?.length) err(`radio ${s.id}: no lines`);
 for (const o of story.objectives) if (!o.text) err(`objective ${o.id}: no text`);
 if (!locations.landmarks.some((l) => l.kind === 'start_tower')) err('no start_tower landmark');
 if (errors.length) { console.error(errors.join('\n')); process.exit(1); }
