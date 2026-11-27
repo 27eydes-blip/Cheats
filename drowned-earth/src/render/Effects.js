@@ -19,7 +19,7 @@ export class Effects {
     this.ctx = ctx;
     const q = ctx.settings.q;
     this.soft = radialTexture();
-    this.glowMaterial = new THREE.SpriteMaterial({ map: radialTexture('rgba(255,190,110,0.9)', 'rgba(255,140,60,0)'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
+    this.glowMaterial = new THREE.SpriteMaterial({ map: radialTexture('rgba(255,190,110,0.55)', 'rgba(255,140,60,0)'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false, opacity: 0.8 });
     this.smokes = new Set();
     // smoke particle pool (shared)
     this.smokeN = 260;

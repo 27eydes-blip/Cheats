@@ -48,7 +48,28 @@ const defs = {
   antenna: () => merge([part(new THREE.CylinderGeometry(0.04, 0.06, 7, 4), [0.4, 0.4, 0.4], { y: 3.5 }), part(box(1.2, 0.04, 0.04), [0.4, 0.4, 0.4], { y: 5.5 }), part(box(0.8, 0.04, 0.04), [0.4, 0.4, 0.4], { y: 6.3 })]),
   trunk: () => part(new THREE.CylinderGeometry(0.14, 0.3, 1, 6), [0.32, 0.26, 0.2], { y: 0.5 }),
   branch: () => part(new THREE.CylinderGeometry(0.02, 0.07, 1, 4), [0.3, 0.25, 0.2], { y: 0.5 }),
-  foliage: () => { const g = new THREE.IcosahedronGeometry(1, 1); g.scale(1, 0.7, 1); return part(g, [1, 1, 1]); },
+  // lumpy canopy: several displaced blobs, darker and cooler underneath (baked AO)
+  foliage: () => {
+    const parts = [];
+    const blobs = [[0, 0, 0, 0.75], [0.55, 0.15, 0.2, 0.55], [-0.5, 0.1, -0.25, 0.6], [0.1, 0.35, -0.5, 0.5], [-0.2, 0.3, 0.5, 0.5], [0.3, -0.2, -0.3, 0.45]];
+    let seed = 1; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (const [x, y, z, r] of blobs) {
+      const g = new THREE.IcosahedronGeometry(r, 1);
+      const p = g.attributes.position;
+      const col = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) {
+        const vx = p.getX(i), vy = p.getY(i), vz = p.getZ(i);
+        const n = 0.82 + 0.3 * Math.sin(vx * 9.1 + vz * 7.3) * Math.cos(vy * 8.7 + vx * 3.1) + rnd() * 0.12;
+        p.setXYZ(i, vx * n + x, vy * n * 0.8 + y, vz * n + z);
+        const ao = 0.45 + 0.55 * Math.min(1, Math.max(0, (vy / r) * 0.5 + 0.5 + y * 0.6));
+        col.set([ao * 0.9, ao, ao * 0.85], i * 3);
+      }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      g.computeVertexNormals();
+      parts.push(prepGeometry(g));
+    }
+    return merge(parts);
+  },
   nest: () => { const g = new THREE.TorusGeometry(0.3, 0.12, 5, 8); return part(g, [0.45, 0.38, 0.25], { rx: Math.PI / 2 }); },
   rubble: () => { const g = new THREE.DodecahedronGeometry(1, 0); return part(g, [0.7, 0.7, 0.68]); },
   busShelter: () => merge([

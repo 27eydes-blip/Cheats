@@ -222,7 +222,7 @@ function setupFestival(ctx, cdef, main, group, interactables) {
   group.add(boats);
   const halos = [];
   for (let i = 0; i <= n; i++) {
-    const h = new THREE.Sprite(ctx.fx.glowMaterial); h.scale.setScalar(2.4); h.layers.set(LAYER_FX); h.visible = false; group.add(h); halos.push(h);
+    const h = new THREE.Sprite(ctx.fx.glowMaterial); h.scale.setScalar(1.5); h.layers.set(LAYER_FX); h.visible = false; group.add(h); halos.push(h);
   }
   const state = Array.from({ length: n + 1 }, (_, i) => ({ born: null, a: -Math.PI * 0.5 + ((i / n) - 0.5) * Math.PI * 1.4 + Math.random() * 0.3, sp: 0.07 + Math.random() * 0.12, pos: new THREE.Vector3() }));
   let released = 0, mine = false;
@@ -265,8 +265,8 @@ function setupFestival(ctx, cdef, main, group, interactables) {
         st.pos.y = ctx.waves.height(st.pos.x, st.pos.z) + 0.02;
         m.compose(st.pos, q.setFromAxisAngle(s.set(0, 1, 0), st.a), s.set(1, 1, 1));
         boats.setMatrixAt(i, m);
-        halos[i].position.copy(st.pos).setY(st.pos.y + 0.3);
-        halos[i].material.opacity = Math.min(1, ctx.time.out.night * 1.5);
+        halos[i].position.copy(st.pos).setY(st.pos.y + 0.75);
+        
       });
       boats.instanceMatrix.needsUpdate = true;
       paper.color.setRGB(1, 0.62, 0.32).multiplyScalar(0.3 + ctx.time.out.night * 0.8);

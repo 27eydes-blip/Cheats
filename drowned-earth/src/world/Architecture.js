@@ -26,9 +26,38 @@ export function tower(b, rng, s, near, inst) {
   const faces = ['px', 'nx', 'pz', 'nz', 'py'];
   if (s.enterable && near) {
     enterableFloors(b, rng, s, style);
+  } else if (h > 45 && (x1 - x0) > 14 && (z1 - z0) > 14 && rng.chance(0.55)) {
+    // stepped tower: a podium, a setback shaft, sometimes a second setback and a crown
+    const y1 = Math.round((h * rng.range(0.35, 0.55)) / FLOOR_H) * FLOOR_H + 0.45;
+    const inset = rng.range(2, 4.5);
+    b.box(x0, base, z0, x1, y1, z1, 'facade', { color: style.color, meta: style.meta, faces });
+    b.box(x0 - 0.3, y1, z0 - 0.3, x1 + 0.3, y1 + 0.5, z1 + 0.3, 'concrete', { color: style.color.map((c) => c * 0.8), collide: false });
+    const sx0 = x0 + inset, sx1 = x1 - inset, sz0 = z0 + inset, sz1 = z1 - inset;
+    if (rng.chance(0.4) && h > 75) {
+      const y2 = Math.round((h * 0.78) / FLOOR_H) * FLOOR_H + 0.45;
+      b.box(sx0, y1, sz0, sx1, y2, sz1, 'facade', { color: style.color, meta: style.meta, faces });
+      const i2 = rng.range(1.5, 3);
+      b.box(sx0 + i2, y2, sz0 + i2, sx1 - i2, top, sz1 - i2, 'facade', { color: style.color, meta: style.meta, faces });
+      s.x0 = sx0 + i2; s.x1 = sx1 - i2; s.z0 = sz0 + i2; s.z1 = sz1 - i2;
+    } else {
+      b.box(sx0, y1, sz0, sx1, top, sz1, 'facade', { color: style.color, meta: style.meta, faces });
+      s.x0 = sx0; s.x1 = sx1; s.z0 = sz0; s.z1 = sz1;
+    }
+    if (near) for (let k = 0; k < 6; k++) inst.add('acUnit', 'metal', rng.range(x0 + 1, x1 - 1), y1 + 0.5, rng.range(z0 + 1, z0 + inset - 0.5), { ry: rng.pick([0, 1.57]) });
+    if (rng.chance(0.5)) { // crown: mast + plant room
+      const cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2;
+      b.box(cx - 3, top, cz - 3, cx + 3, top + 4, cz + 3, 'concrete', { color: style.color.map((c) => c * 0.75) });
+      b.box(cx - 0.2, top + 4, cz - 0.2, cx + 0.2, top + 4 + rng.range(6, 18), cz + 0.2, 'metal', { color: [0.35, 0.35, 0.35], collide: false });
+    }
+    return finishTower(b, rng, s, style, near, inst, top);
   } else {
     b.box(x0, base, z0, x1, top, z1, 'facade', { color: style.color, meta: style.meta, faces, uvWorld: false });
   }
+  return finishTower(b, rng, s, style, near, inst, top);
+}
+
+function finishTower(b, rng, s, style, near, inst, top) {
+  const { x0, z0, x1, z1, h } = s;
   if (!near) return top;
   // cornices every few floors
   const every = rng.int(3, 6) * FLOOR_H;

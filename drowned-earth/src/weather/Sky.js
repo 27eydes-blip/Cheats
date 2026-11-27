@@ -22,6 +22,42 @@ vec3 skyBase(vec3 d) {
   c = mix(c, uHorizon * 1.05, exp(-y * 18.0) * (0.5 + uHaze));
   return c;
 }
+float skh(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 45758.5453); }
+float skn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(skh(i), skh(i + vec2(1, 0)), f.x), mix(skh(i + vec2(0, 1)), skh(i + vec2(1, 1)), f.x), f.y); }
+float skfbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * skn(p); p = p * 2.03 + 17.1; a *= 0.5; } return s; }
+// Lit cumulus/stratus deck + high cirrus, projected on a dome. 'cheap' skips the self-shadow sample.
+vec3 skyClouds(vec3 d, vec3 base, bool cheap) {
+  if (d.y <= 0.0) return base;
+  vec2 uv = d.xz / (d.y + 0.1) * 0.55;
+  float t = uSkyTime * 0.004;
+  vec2 w = vec2(skfbm(uv * 0.8 + t), skfbm(uv * 0.8 - t + 5.2));
+  vec2 p = uv * 1.25 + w * 0.9 + vec2(t * 1.3, t * 0.5);
+  float cov = mix(0.7, 0.3, uCloud);
+  float n = skfbm(p) * 0.8 + skfbm(p * 2.7) * 0.32;
+  float dens = smoothstep(cov, cov + 0.32, n);
+  float sd = max(dot(d, uSkySun), 0.0);
+  // self-shadowing: density a little way toward the sun
+  float shade = 1.0;
+  if (!cheap) {
+    vec2 ps = p + normalize(uSkySun.xz + 1e-4) * 0.09;
+    float ns = skfbm(ps) * 0.8 + skfbm(ps * 2.7) * 0.32;
+    shade = 1.0 - smoothstep(cov, cov + 0.5, ns) * 0.65;
+  }
+  vec3 sunLit = uSkySunColor * 0.85 + uHorizon * 0.55;
+  vec3 dark = mix(uZenith * 0.55 + uHorizon * 0.35, uHorizon * 0.45, uCloudDark);
+  vec3 cc = mix(dark, sunLit, shade * (1.0 - uCloudDark * 0.7));
+  // bright silver edges when looking toward the sun, thin parts glowing
+  cc += uSkySunColor * pow(sd, 6.0) * (1.0 - dens) * 1.6 * (1.0 - uCloudDark);
+  cc *= mix(1.0, 0.18, uNightK);
+  float a = dens * smoothstep(0.0, 0.14, d.y) * (0.75 + uCloud * 0.25);
+  vec3 c = mix(base, cc, a);
+  // cirrus: thin, streaky, high
+  float ci = skfbm(vec2(uv.x * 0.6, uv.y * 3.5) * 1.4 + t * 2.0);
+  c += (uSkySunColor * 0.25 + uHorizon * 0.3) * smoothstep(0.55, 0.85, ci) * 0.25 * (1.0 - uCloud) * smoothstep(0.05, 0.4, d.y) * (1.0 - uNightK * 0.8);
+  // distance haze over the cloud deck
+  return mix(c, uHorizon, exp(-d.y * 9.0) * 0.6);
+}
 `;
 
 const vs = /* glsl */`
@@ -55,19 +91,7 @@ void main() {
   float md = dot(d, uMoon);
   c += vec3(0.75, 0.8, 0.9) * smoothstep(0.9994, 0.9997, md) * uNightK * (1.0 - uCloud * 0.8) * 1.4;
   c += vec3(0.2, 0.25, 0.35) * pow(max(md, 0.0), 60.0) * uNightK * 0.3;
-  // clouds on a virtual plane
-  if (d.y > 0.0) {
-    vec2 uv = d.xz / (d.y + 0.08) * 0.6;
-    float t = uSkyTime * 0.004;
-    float n = fbm(uv * 1.3 + vec2(t, t * 0.4));
-    float n2b = fbm(uv * 3.1 - vec2(t * 1.7, 0.0));
-    float cov = mix(0.72, 0.28, uCloud);
-    float cl = smoothstep(cov, cov + 0.28, n * 0.75 + n2b * 0.35);
-    vec3 lit = mix(uHorizon * 1.1, uSkySunColor * 0.9 + uHorizon * 0.4, pow(max(sdot, 0.0), 3.0) * 0.6);
-    vec3 cloudCol = mix(lit, uZenith * 0.6 + uHorizon * 0.25, uCloudDark);
-    cloudCol *= mix(1.0, 0.25, uNightK);
-    c = mix(c, cloudCol, cl * smoothstep(0.0, 0.12, d.y) * (0.6 + uCloud * 0.4));
-  }
+  c = skyClouds(d, c, false);
   c += vec3(0.6, 0.65, 0.8) * uFlashSky;
   // below horizon: blend to the haze color (far ocean covers most of it)
   c = mix(c, uHorizon * 0.8, smoothstep(0.0, -0.05, d.y));

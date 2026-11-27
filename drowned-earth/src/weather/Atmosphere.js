@@ -17,7 +17,7 @@ export class Atmosphere {
     if (settings.q.shadows) {
       this.sun.shadow.mapSize.set(settings.q.shadowMapSize, settings.q.shadowMapSize);
       const c = this.sun.shadow.camera;
-      c.left = -70; c.right = 70; c.top = 70; c.bottom = -70; c.near = 1; c.far = 400;
+      const R = settings.q.shadowRange || 70; c.left = -R; c.right = R; c.top = R; c.bottom = -R; c.near = 1; c.far = 600;
       this.sun.shadow.bias = -0.0008;
       this.sun.shadow.normalBias = 0.04;
     }
@@ -78,7 +78,7 @@ export class Atmosphere {
     this.sun.color.copy(isMoon ? tmp.setHex(0x8fa6d6) : o.sunColor);
     this.sun.intensity = (isMoon ? 0.7 * (1 - w.cloud * 0.6) : o.sunI * Math.max(0.15, cloudDim)) * (1 - this.indoor * 0.3);
     const target = this.ctx.player.position;
-    this.sun.position.copy(target).addScaledVector(ld, 200);
+    this.sun.position.copy(target).addScaledVector(ld, 300);
     this.sun.target.position.copy(target);
     // snap shadow camera to texels to avoid shimmering
     this.hemi.color.copy(o.hemiSky).lerp(tmp.setRGB(0.55, 0.58, 0.6), w.cloud * 0.4 * (1 - night));
@@ -105,6 +105,7 @@ export class Atmosphere {
     G.uSunDir.value.copy(ld);
     G.uSunColor.value.copy(this.sun.color).multiplyScalar(this.sun.intensity * 0.5);
     G.uNight.value = night;
+    G.uAmbient.value.copy(this.hemi.color).multiplyScalar(this.hemi.intensity * 0.9).add(tmp.copy(this.sun.color).multiplyScalar(this.sun.intensity * 0.12 * (1 - night)));
     G.uWet.value += (Math.min(1, w.rain * 1.4) - G.uWet.value) * Math.min(1, dt * 0.05);
     G.uCaustics.value = cloudDim * (1 - night);
     this.ctx.renderer.toneMappingExposure = o.exposure * (this.underwater ? 1.0 : 1);

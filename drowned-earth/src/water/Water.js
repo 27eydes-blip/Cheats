@@ -111,7 +111,7 @@ void main() {
   if (!below) {
     float F = 0.02 + 0.98 * pow(1.0 - NdV, 5.0);
     vec3 R = reflect(-V, N); R.y = abs(R.y);
-    vec3 refl = skyBase(R) * (1.0 - uCloud * 0.2);
+    vec3 refl = skyClouds(R, skyBase(R), true) * (1.0 - uCloud * 0.2);
     if (uHasRefl > 0.5) {
       vec4 rc = uReflMatrix * vec4(vW.x, 0.0, vW.z, 1.0);
       vec2 ruv = rc.xy / rc.w + N.xz * 0.06 * clamp(1.0 - vDist / 400.0, 0.2, 1.0);

@@ -65,21 +65,25 @@ function normalFromHeight(hfn, size, strength = 2) {
 }
 
 const defs = {
-  concrete: () => paint(256, (x, y) => {
-    const n = tileNoise(x, y, 256, 8, 11, 5), s = tileNoise(x, y, 256, 32, 12, 2);
-    const v = 150 + n * 70 - s * 25;
-    return [v, v * 0.98, v * 0.94];
+  // cast concrete: blotchy cure marks, aggregate speckle, formwork lines, pitting
+  concrete: () => paint(512, (x, y) => {
+    const n = tileNoise(x, y, 512, 6, 11, 6), s = tileNoise(x, y, 512, 40, 12, 3);
+    const speck = valueNoise2(x * 0.9, y * 0.9, 5) > 0.93 ? -28 : valueNoise2(x * 0.7, y * 0.7, 6) > 0.95 ? 18 : 0;
+    const form = (y % 128 < 2 ? -18 : 0) + (x % 256 < 1 ? -10 : 0);
+    const pit = tileNoise(x, y, 512, 64, 14, 2) > 0.78 ? -22 : 0;
+    const v = 142 + n * 78 - s * 22 + speck + form + pit;
+    return [v, v * 0.985, v * 0.95];
   }).tex(),
-  concreteN: () => normalFromHeight((x, y) => tileNoise(x, y, 256, 16, 13, 4), 256, 3).tex(),
+  concreteN: () => normalFromHeight((x, y) => tileNoise(x, y, 512, 24, 13, 5) + (valueNoise2(x * 0.9, y * 0.9, 5) > 0.93 ? -0.15 : 0) + (y % 128 < 2 ? -0.2 : 0), 512, 4).tex(),
   rust: () => paint(256, (x, y) => {
     const n = tileNoise(x, y, 256, 6, 21, 5), m = tileNoise(x, y, 256, 24, 22, 3);
     const t = Math.min(1, Math.max(0, (n - 0.35) * 2.2));
     return [90 + 90 * t + m * 30, 70 + 35 * t + m * 15, 60 + 10 * t];
   }).tex(),
-  wood: () => paint(256, (x, y) => {
-    const plank = Math.floor(y / 32);
-    const grain = Math.sin((x / 256) * 40 + tileNoise(x, y, 256, 4, 31 + plank) * 12) * 0.5 + 0.5;
-    const seam = y % 32 < 2 ? 0.45 : 1;
+  wood: () => paint(512, (x, y) => {
+    const plank = Math.floor(y / 64);
+    const grain = Math.sin((x / 512) * 70 + tileNoise(x, y, 512, 4, 31 + plank) * 14) * 0.5 + 0.5;
+    const seam = y % 64 < 3 ? 0.4 : 1;
     const base = 0.55 + 0.25 * valueNoise2(plank, 3, 7);
     const v = (0.7 + grain * 0.3) * base * seam;
     return [150 * v + 20, 112 * v + 12, 80 * v + 8];
@@ -103,9 +107,9 @@ const defs = {
     const v = 70 + n * 60 + r * 20;
     return [v * 0.82, v * 0.85, v * 0.7];
   }).tex(),
-  asphalt: () => paint(256, (x, y) => {
-    const n = tileNoise(x, y, 256, 32, 71, 3), c = tileNoise(x, y, 256, 6, 72, 4);
-    const crack = Math.abs(tileNoise(x, y, 256, 4, 73, 3) - 0.5) < 0.01 ? 0.6 : 1;
+  asphalt: () => paint(512, (x, y) => {
+    const n = tileNoise(x, y, 512, 64, 71, 3), c = tileNoise(x, y, 512, 6, 72, 5);
+    const crack = Math.abs(tileNoise(x, y, 512, 4, 73, 4) - 0.5) < 0.006 ? 0.55 : 1;
     const v = (60 + n * 40 + c * 25) * crack;
     return [v, v, v * 1.02];
   }).tex(),

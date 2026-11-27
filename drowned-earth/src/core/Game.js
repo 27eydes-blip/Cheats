@@ -353,6 +353,20 @@ export class Game {
     u.uUnder.value = ctx.atmosphere.underwater ? 1 : 0;
     u.uCamDepth.value = Math.max(0, -cam.position.y);
     u.uIndoor.value = ctx.atmosphere.indoor;
+    // sun shafts + water mist
+    const sunDir = ctx.time.sunDir;
+    u.uSunDir.value.copy(sunDir);
+    const sunUp = Math.max(0, sunDir.y);
+    u.uSunCol.value.copy(ctx.atmosphere.sun.color).multiplyScalar(ctx.atmosphere.sun.intensity * (1 - ctx.time.out.night));
+    const sp = sunDir.clone().multiplyScalar(1000).add(cam.position).project(cam);
+    const inFront = sp.z < 1 && Math.abs(sp.x) < 1.6 && Math.abs(sp.y) < 1.6;
+    u.uSunUV.value.set(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5);
+    u.uShaft.value = inFront && sunDir.y > -0.02 ? (0.55 - Math.min(0.4, sunUp * 0.9)) * (1 - ctx.weather.cur.cloud * 0.75) * (1 - ctx.atmosphere.indoor) : 0;
+    const w = ctx.weather.cur, h = ctx.time.hour;
+    const dawnDusk = Math.max(Math.exp(-((h - 6.2) ** 2) / 2), Math.exp(-((h - 19.2) ** 2) / 1.5), ctx.time.out.night * 0.6);
+    u.uMist.value = (0.0012 + w.fog * 0.28 + dawnDusk * 0.0032 + w.rain * 0.0025) * (ctx.mode === 'play' || ctx.mode === 'title' || ctx.mode === 'life' ? 1 : 1);
+    u.uMistCol.value.copy(ctx.atmosphere.fog.color).lerp(ctx.atmosphere.hemi.color, 0.25).multiplyScalar(0.95);
+    u.uLens.value = ctx.settings.lensFx ? 1 : 0;
     const lens = ctx.settings.lensFx && ctx.mode === 'play';
     this.wasUnder = this.wasUnder ?? false;
     if (this.wasUnder && !ctx.atmosphere.underwater) this.wet = 1;

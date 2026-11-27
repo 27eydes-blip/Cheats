@@ -8,13 +8,13 @@ const PRESETS = {
     maxLights: 3, npcDetail: 0, birdCount: 10, renderScale: 1, reflections: 0,
   },
   medium: {
-    pixelRatio: 1.5, postPipeline: true, shadows: true, shadowMapSize: 1024,
+    pixelRatio: 1.5, postPipeline: true, shadows: true, shadowMapSize: 2048, shadowRange: 110,
     chunkNearRadius: 260, chunkFarRadius: 1200, waterRings: 72, waterSegments: 96,
     debrisDensity: 0.75, particleCount: 600, rainCount: 3500, envMapUpdates: true,
     maxLights: 6, npcDetail: 1, birdCount: 18, renderScale: 1, reflections: 0.35,
   },
   high: {
-    pixelRatio: 2, postPipeline: true, shadows: true, shadowMapSize: 2048,
+    pixelRatio: 2, postPipeline: true, shadows: true, shadowMapSize: 4096, shadowRange: 180,
     chunkNearRadius: 320, chunkFarRadius: 1500, waterRings: 96, waterSegments: 128,
     debrisDensity: 1, particleCount: 1200, rainCount: 6000, envMapUpdates: true,
     maxLights: 10, npcDetail: 2, birdCount: 28, renderScale: 1, reflections: 0.5,
