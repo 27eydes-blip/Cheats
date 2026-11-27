@@ -14,6 +14,7 @@ import { AssetLibrary } from '../assets/AssetLibrary.js';
 import { setPropAssets } from '../world/Props.js';
 import { ScanInstancer } from '../world/ScanInstancer.js';
 import { showLoading } from '../ui/Loading.js';
+import { HumanKit } from '../humans/HumanKit.js';
 import { G, bindWaveUniforms } from '../world/WorldShader.js';
 import { getTexture } from '../world/Textures.js';
 import { cityChunk } from '../world/generators/city.js';
@@ -104,6 +105,21 @@ export class Game {
     const loading = showLoading(document.getElementById('ui'));
     ctx.assets = new AssetLibrary(renderer, ctx.settings);
     if (!ctx.params.has('noassets')) await ctx.assets.load((p, what) => loading.set(p, what));
+    // people: the MakeHuman-based kit (falls back to the simpler rigged characters if missing)
+    if (!ctx.params.has('noassets') && !ctx.params.has('nohumans')) {
+      loading.phase('Waking the raft-folk…');
+      try { ctx.humans = await new HumanKit(ctx.assets).load(); } catch (e) { console.warn('[humans] kit unavailable:', e.message); ctx.humans = null; }
+    }
+    if (ctx.params.has('viewer') && ctx.humans) {
+      const { Viewer } = await import('../humans/Viewer.js');
+      const v = new Viewer(ctx);
+      loading.done();
+      const clock = new THREE.Clock();
+      window.__viewer = v; window.__game = this; this.frame = 0; this.running = true; this.fps = 60;
+      renderer.setAnimationLoop(() => { v.update(Math.min(0.05, clock.getDelta())); this.frame++; });
+      addEventListener('resize', () => ctx.pipeline.resize());
+      return;
+    }
     loading.phase('Raising the district…');
     await new Promise((r) => setTimeout(r, 30));
 
@@ -423,10 +439,10 @@ export class Game {
     // depth of field focus pull: on the speaker during dialogue, otherwise centre-screen
     const talkTo = ctx.dialogue?.target?.();
     if (talkTo && ctx.settings.q.postPipeline) {
-      u.uDof.value = 1;
+      u.uDof.value = 1; u.uDofAmt.value = 0.45;
       u.uFocus.value = talkTo.distanceTo(cam.position);
       this.dofTalk = true;
-    } else if (this.dofTalk) { u.uDof.value = 0; u.uFocus.value = 0; this.dofTalk = false; }
+    } else if (this.dofTalk) { u.uDof.value = 0; u.uFocus.value = 0; u.uDofAmt.value = 1; this.dofTalk = false; }
     // mip bias: preset base, sharper still when dynamic resolution renders below native
     G.uMipBias.value = (ctx.settings.q.mipBias || 0) + Math.log2(Math.max(0.5, ctx.pipeline.scale));
     ctx.renderer.info.reset();

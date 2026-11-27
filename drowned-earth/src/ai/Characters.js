@@ -10,7 +10,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 // body: a look-at on the head and neck, blinking (eye scale) and the
 // talking/idle clips.
 
-const CLIP_FOR = {
+export const CLIP_FOR = {
   idle: 'Idle_Loop', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop', talk: 'Idle_Talking_Loop',
   hammer: 'Fixing_Kneeling', repair: 'Fixing_Kneeling', garden: 'Fixing_Kneeling', pray: 'Crouch_Idle_Loop',
   cook: 'PickUp_Table', stir: 'PickUp_Table', laundry: 'Interact', haul: 'Push_Loop', row: 'Driving_Loop',

@@ -235,7 +235,7 @@ uniform float uCamDepth; uniform float uIndoor;
 uniform float uWetLens; uniform float uTunnel; uniform float uDof; uniform float uBloom; uniform vec2 uTexel; uniform float uCondense; uniform float uSharp;
 uniform mat4 uInvProj; uniform mat4 uCamWorld; uniform vec3 uCamPos; uniform vec3 uSunDir; uniform vec3 uSunCol;
 uniform float uMist; uniform vec3 uMistCol; uniform vec2 uSunUV; uniform float uShaft; uniform float uLens;
-uniform float uFXAA; uniform float uMotion; uniform mat4 uInvViewProj; uniform mat4 uPrevViewProj; uniform sampler2D tVol; uniform float uVol; uniform float uFocus;
+uniform float uDofAmt; uniform float uFXAA; uniform float uMotion; uniform mat4 uInvViewProj; uniform mat4 uPrevViewProj; uniform sampler2D tVol; uniform float uVol; uniform float uFocus;
 varying vec2 vUv;
 float lumaT(vec3 c) { float l = dot(c, vec3(0.299, 0.587, 0.114)); return l / (1.0 + l); }
 // FXAA (quality-lite), on the HDR input with tonemapped luma
@@ -291,7 +291,7 @@ void main() {
   if (uDof > 0.5) {
     float fz = uFocus > 0.0 ? uFocus : -perspectiveDepthToViewZ(texture2D(tDepth, vec2(0.5)).x, uNear, uFar);
     float vz = -perspectiveDepthToViewZ(d, uNear, uFar);
-    float coc = clamp(abs(vz - fz) / max(fz, 1.0), 0.0, 1.0);
+    float coc = clamp(abs(vz - fz) / max(fz, 1.0), 0.0, 1.0) * uDofAmt;
     vec3 acc = col; float wsum = 1.0;
     for (int i = 0; i < 16; i++) { float a = float(i) * 2.399; float rr = sqrt(float(i) + 0.5) * 2.2 * coc; vec2 o = vec2(cos(a), sin(a)) * rr * uTexel * 2.0; acc += texture2D(tColor, uv + o).rgb; wsum += 1.0; }
     col = acc / wsum;
@@ -390,7 +390,7 @@ export class Pipeline {
       uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunCol: { value: new THREE.Color() }, uMist: { value: 0 }, uMistCol: { value: new THREE.Color() },
       uSunUV: { value: new THREE.Vector2(0.5, 0.5) }, uShaft: { value: 0 }, uLens: { value: 1 },
       uFXAA: { value: 0 }, uMotion: { value: 0 }, uInvViewProj: { value: new THREE.Matrix4() }, uPrevViewProj: { value: new THREE.Matrix4() },
-      tVol: { value: null }, uVol: { value: 0 }, uFocus: { value: 0 }, uSharp: { value: 0.5 },
+      tVol: { value: null }, uVol: { value: 0 }, uFocus: { value: 0 }, uSharp: { value: 0.5 }, uDofAmt: { value: 1 },
     };
     this.scale = 1;          // dynamic resolution multiplier (set by the frame governor)
     this.frameIndex = 0;
