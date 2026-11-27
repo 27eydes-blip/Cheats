@@ -186,6 +186,8 @@ export class AudioEngine {
     const rpm = piloting && !boat.paddling && !boat.engineOff ? 0.2 + Math.abs(boat.throttle) : 0;
     this.engine.setRpm(rpm, boat.pos.distanceTo(cam.position));
     if (piloting && (boat.paddling || boat.engineOff) && Math.abs(boat.throttle) > 0.2) { this.paddleT = (this.paddleT || 0) - dt; if (this.paddleT <= 0) { this.paddleT = 1.1; this.synth.splash(this.panner(boat.pos.clone(), 2, 1), 0.3); } }
+    // the hull creaks harder the faster you push it
+    if (piloting && boat.speed > 2.5) { this.hullT = (this.hullT || 0) - dt * boat.speed * 0.15; if (this.hullT <= 0) { this.hullT = 2 + Math.random() * 3; this.synth.ropeCreak(this.panner(boat.pos.clone(), 2, 1.5)); } }
     // occasional far sounds
     const T = this.timers;
     T.foghorn -= dt; T.moan -= dt; T.gull -= dt;
@@ -219,6 +221,14 @@ export class AudioEngine {
     if (C[type] && d < 120) this.game.ctx.events.emit('caption', C[type]);
   }
   loudspeaker(pos, dur) { if (this.started) { this.synth.voice(this.panner(pos.clone().setY(3), 30, 0.6), dur, 0.75, true); this.cap('loudspeaker'); } }
+  // Drop everything but the deepest sounds for a moment before something big.
+  silence(sec = 3) {
+    if (!this.started) return;
+    const t = this.ac.currentTime;
+    this.world.gain.cancelScheduledValues(t);
+    this.world.gain.setTargetAtTime(0.08, t, 0.4);
+    this.world.gain.setTargetAtTime(1, t + sec, 1.5);
+  }
   // ---- one-shots ----
   play(name, opts = {}) {
     if (!this.started) return;

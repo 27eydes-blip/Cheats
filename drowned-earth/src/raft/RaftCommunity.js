@@ -224,7 +224,7 @@ function setupFestival(ctx, cdef, main, group, interactables) {
   for (let i = 0; i <= n; i++) {
     const h = new THREE.Sprite(ctx.fx.glowMaterial); h.scale.setScalar(2.4); h.layers.set(LAYER_FX); h.visible = false; group.add(h); halos.push(h);
   }
-  const state = Array.from({ length: n + 1 }, (_, i) => ({ born: -1, a: -Math.PI * 0.5 + ((i / n) - 0.5) * Math.PI * 1.4 + Math.random() * 0.3, sp: 0.07 + Math.random() * 0.12, pos: new THREE.Vector3() }));
+  const state = Array.from({ length: n + 1 }, (_, i) => ({ born: null, a: -Math.PI * 0.5 + ((i / n) - 0.5) * Math.PI * 1.4 + Math.random() * 0.3, sp: 0.07 + Math.random() * 0.12, pos: new THREE.Vector3() }));
   let released = 0, mine = false;
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
   const active = () => { const h = ctx.time.hour; return h >= f.from && h < f.to; };
@@ -254,9 +254,9 @@ function setupFestival(ctx, cdef, main, group, interactables) {
       const center = _v.set(f.center[0], 0, f.center[1]).applyMatrix4(main.root.matrixWorld).clone();
       if (on && released === 0) { const into = Math.min(1, (ctx.time.hour - f.from) / 0.6); const k = Math.floor(n * 0.8 * into); for (; released < k; released++) { state[released].born = now - Math.random() * 140; state[released].pos.copy(center); } }
       if (on && released < n && Math.random() < dt * 0.9) { const st = state[released++]; st.born = now; st.pos.copy(center); }
-      if (!on && released > 0 && ctx.time.hour > f.to) { released = 0; mine = false; state.forEach((st) => (st.born = -1)); }
+      if (!on && released > 0 && ctx.time.hour > f.to) { released = 0; mine = false; state.forEach((st) => (st.born = null)); }
       state.forEach((st, i) => {
-        const alive = st.born >= 0 && now - st.born < 900;
+        const alive = st.born !== null && now - st.born < 900;
         halos[i].visible = alive && ctx.time.out.night > 0.1;
         if (!alive) { m.makeScale(0, 0, 0); boats.setMatrixAt(i, m); return; }
         const age = now - st.born;
@@ -269,7 +269,7 @@ function setupFestival(ctx, cdef, main, group, interactables) {
         halos[i].material.opacity = Math.min(1, ctx.time.out.night * 1.5);
       });
       boats.instanceMatrix.needsUpdate = true;
-      paper.color.setRGB(1, 0.62, 0.32).multiplyScalar(0.4 + ctx.time.out.night * 1.6);
+      paper.color.setRGB(1, 0.62, 0.32).multiplyScalar(0.3 + ctx.time.out.night * 0.8);
     },
     dispose: () => {},
   };

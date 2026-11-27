@@ -219,6 +219,7 @@ export class Synth {
   }
   step(dest, surface, speed) {
     const ac = this.ac, t = ac.currentTime;
+    if (surface === 'water') { this.splash(dest, 0.18 + speed * 0.03); return; }
     const s = this.src(surface === 'metal' ? 'white' : 'pink', t, 0.15);
     const conf = { metal: ['bandpass', 2400, 6, 0.25], wood: ['bandpass', 400, 2, 0.35], concrete: ['bandpass', 1100, 1, 0.2], solid: ['bandpass', 1100, 1, 0.2] }[surface] || ['bandpass', 900, 1, 0.2];
     const g = this.gain(); this.env(g, t, 0.004, conf[3] * (0.6 + speed * 0.12), surface === 'metal' ? 0.12 : 0.07);

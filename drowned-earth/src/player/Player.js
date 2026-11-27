@@ -83,7 +83,7 @@ export class Player {
         const hs = Math.hypot(this.velocity.x, this.velocity.z);
         this.stepDist += hs * dt;
         this.bobPhase += hs * dt * 2.1;
-        if (this.stepDist > (sprint ? 1.6 : 1.25)) { this.stepDist = 0; this.ctx.events.emit('footstep', { pos: this.position, surface: this.groundTag, speed: hs }); }
+        if (this.stepDist > (sprint ? 1.6 : 1.25)) { this.stepDist = 0; this.ctx.events.emit('footstep', { pos: this.position, surface: this.position.y < surface + 0.12 ? 'water' : this.groundTag, speed: hs }); }
         if (this.position.y > surface + 0.2 && !this.groundBody) this.lastSafe.copy(this.position);
       }
       if (this.position.y < -200) this.teleport(this.lastSafe);

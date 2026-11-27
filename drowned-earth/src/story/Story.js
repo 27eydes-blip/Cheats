@@ -87,6 +87,7 @@ export class Story {
     if (this.finale || this.flag('finale_done')) return;
     const ctx = this.ctx;
     this.finale = { t: 0 };
+    ctx.audio?.silence(3);
     ctx.events.emit('gulls:silence');
     ctx.ui.whisper(ctx.player.headUnder ? 'Far below you, in the black, something begins to click.' : 'You lower the hydrophone into the black water. The cable runs out and keeps going.');
     ctx.audio?.play('hydrophone');
