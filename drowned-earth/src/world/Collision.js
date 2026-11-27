@@ -136,8 +136,13 @@ export class Collision {
       const cx = Math.max(b.minX, Math.min(p.x, b.maxX)), cz = Math.max(b.minZ, Math.min(p.z, b.maxZ));
       let dx = p.x - cx, dz = p.z - cz; const d2 = dx * dx + dz * dz;
       if (d2 >= radius * radius) return null;
-      const d = Math.sqrt(d2) || 1e-4;
-      if (d2 < 1e-8) { dx = 1; dz = 0; }
+      if (d2 < 1e-8) {
+        // center inside the box: leave along the axis of least penetration
+        const pen = [p.x - b.minX, b.maxX - p.x, p.z - b.minZ, b.maxZ - p.z];
+        const i = pen.indexOf(Math.min(...pen));
+        return { nx: i === 0 ? -1 : i === 1 ? 1 : 0, nz: i === 2 ? -1 : i === 3 ? 1 : 0, push: pen[i] + radius };
+      }
+      const d = Math.sqrt(d2);
       return { nx: dx / d, nz: dz / d, push: radius - d };
     };
     for (const b of boxes) {

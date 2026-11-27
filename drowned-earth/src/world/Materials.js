@@ -14,11 +14,11 @@ function std(params, patch = {}) {
 export function initMaterials() {
   const T = getTexture;
   const rep = (name, x, y = x) => { const t = T(name).clone(); t.needsUpdate = true; t.repeat.set(x, y); return t; };
-  lib.set('facade', std({ map: rep('concrete', 0.12), normalMap: rep('concreteN', 0.25), roughness: 0.9, metalness: 0.0 }, { facade: true }));
+  lib.set('facade', std({ map: rep('concrete', 0.12), normalMap: rep('concreteN', 0.25), normalScale: new THREE.Vector2(0.35, 0.35), roughness: 0.9, metalness: 0.0 }, { facade: true }));
   lib.set('concrete', std({ map: rep('concrete', 0.25), normalMap: rep('concreteN', 0.25), roughness: 0.92 }));
   lib.set('asphalt', std({ map: rep('asphalt', 0.08), roughness: 0.95 }));
   lib.set('mud', std({ map: rep('mud', 0.06), roughness: 1 }));
-  lib.set('tile', std({ map: rep('tile', 0.4), roughness: 0.5 }));
+  lib.set('tile', std({ map: rep('tile', 0.4), roughness: 0.75 }));
   lib.set('rust', std({ map: rep('rust', 0.3), roughness: 0.8, metalness: 0.35 }));
   lib.set('metal', std({ map: rep('rust', 0.15), roughness: 0.55, metalness: 0.6 }));
   lib.set('container', std({ map: rep('corrugated', 0.25), normalMap: rep('corrugatedN', 0.25), roughness: 0.7, metalness: 0.3 }));
@@ -44,16 +44,16 @@ export function mat(key) {
   return m;
 }
 
-export function setWetness(rain) {
-  // handled through G.uWet; kept for API symmetry
-  return rain;
+// Interiors: sky reflections fade out when you are inside
+export function setEnvIntensity(v) {
+  for (const m of lib.values()) if (m.isMeshStandardMaterial) m.envMapIntensity = v;
 }
 
 const signMats = new Map();
 export function signMaterial(def) {
   const key = JSON.stringify(def);
   if (!signMats.has(key)) {
-    const m = new THREE.MeshStandardMaterial({ map: signTexture(def), roughness: 0.85, transparent: !def.bg, alphaTest: def.bg ? 0 : 0.3, side: THREE.DoubleSide });
+    const m = new THREE.MeshStandardMaterial({ map: signTexture(def), roughness: 0.85, transparent: !def.bg, alphaTest: def.bg ? 0 : 0.3, side: THREE.FrontSide });
     patchMaterial(m);
     signMats.set(key, m);
   }

@@ -92,7 +92,7 @@ export class Effects {
     this.flash.target = this.flashTarget;
     ctx.scene.add(this.flash, this.flashTarget);
     // splash bursts
-    ctx.events.on('splash', (e) => this.burst(e.pos, e.big ? 18 : 8));
+    ctx.events.on('splash', (e) => { ctx.water.ripple(e.pos.x, e.pos.z, e.big ? 1.4 : 0.8, 1.8); ctx.water.ripple(e.pos.x, e.pos.z, e.big ? 0.8 : 0.4, 1.0); });
   }
   addSmoke(src) { const s = { ...src, acc: Math.random() }; this.smokes.add(s); return s; }
   removeSmoke(s) { this.smokes.delete(s); }

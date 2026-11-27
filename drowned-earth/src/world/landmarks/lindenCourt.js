@@ -22,7 +22,7 @@ export function buildLindenCourt(ctx, def) {
   // floor 1 (lobby): breach on the south side
   const hole = [cx - 8, cz - 3, cx - 5.5, cz - 0.5];
   storey(b, x0, z0, x1, z1, 0.45, 3.75, {
-    color: wall, hole, floorColor: [0.5, 0.47, 0.43],
+    color: [0.42, 0.4, 0.36], hole, floorColor: [0.3, 0.29, 0.26],
     openings: { pz: [{ at: cx, w: 2.6, h: 2.6, bottom: 0 }, ...windowsAlong(x0, x1, 4.4, 1.6, 1.4, 1, [cx])], nz: windowsAlong(x0, x1, 4.4), nx: windowsAlong(z0, z1, 4.4), px: windowsAlong(z0, z1, 4.4) },
   });
   // stairwell NE corner: up along +z from floor 1 to floor 2
@@ -54,7 +54,7 @@ export function buildLindenCourt(ctx, def) {
 
   // lobby contents
   b.box(x0 + 0.4, 0.45, cz + 2, x0 + 0.8, 2.2, cz + 7, 'metal', { color: [0.45, 0.42, 0.35] }); // mailboxes
-  sign(b, cx + 2, 2.2, z1 - 0.37, 2.6, 1.1, Math.PI, { lines: ['LINDEN COURT', 'RESIDENTS — PLEASE', 'REGISTER WITH HEALTH WARDEN'], bg: '#e5ddcc', fg: '#2a2a2a', font: 'bold 34px serif', border: '#2a2a2a', seed: 4 }, { signMaterial });
+  sign(b, cx + 6, 2.2, z1 - 0.37, 2.6, 1.1, Math.PI, { lines: ['LINDEN COURT', 'RESIDENTS — PLEASE', 'REGISTER WITH HEALTH WARDEN'], bg: '#e5ddcc', fg: '#2a2a2a', font: 'bold 34px serif', border: '#2a2a2a', seed: 4 }, { signMaterial });
   sign(b, cx - 6, 1.9, z0 + 0.37, 1.6, 1.6, 0, { lines: ['X', '6 / 2'], bg: null, fg: '#c43e22', font: 'bold 96px sans-serif', spray: true, w: 256, h: 256, seed: 9 }, { signMaterial });
   b.boxR(cx + 3, 0.45 + 0.4, cz - 4, 2.2, 0.8, 0.9, 0.3, 'fabric', { color: [0.35, 0.3, 0.27], collide: true }); // sofa
   container(b, 'c:linden:lobby', 'gobag', cx - 7, 0.45, cz + 6, 0.4, [0.6, 0.45, 0.35], 'fabric', [0.3, 0.35, 0.3]);
@@ -75,11 +75,14 @@ export function buildLindenCourt(ctx, def) {
     const a = i * 0.7, r = 15 + (i % 3) * 3;
     inst.add(i % 3 ? 'plank' : 'barrelFloat', i % 3 ? 'woodFloat' : 'plasticFloat', cx + Math.cos(a) * r, 0, cz + Math.sin(a) * r, { ry: a * 2, color: [0.6, 0.55, 0.5] });
   }
-  // dim interior: a cold light leaking into the stairwell
+  // clutter: what people left when the water came
+  const junk = [[cx - 3, 0.47, cz + 3, 'plank'], [cx - 2, 0.47, cz + 4, 'plank'], [cx + 1, 0.47, cz - 7, 'pallet'], [cx + 6, 0.47, cz - 2, 'mattress'], [cx - 8, 0.47, cz + 1, 'crate'], [cx + 4, 0.47, cz + 7, 'barrel'], [cx - 4, 3.87, cz + 6, 'chairFloat'], [cx + 2, 3.87, cz + 4, 'plank'], [cx - 6, 3.87, cz - 3, 'crate']];
+  junk.forEach(([x, y, z, k], i) => inst.add(k, k === 'mattress' ? 'fabric' : k === 'barrel' ? 'plastic' : 'wood', x, y + (k === 'barrel' ? 0.45 : 0), z, { ry: i * 1.3, rz: k === 'chairFloat' ? 1.4 : 0, color: k === 'mattress' ? [0.45, 0.4, 0.33] : [0.45, 0.4, 0.34] }));
+  for (let i = 0; i < 14; i++) b.boxR(cx - 8 + (i * 37 % 16), 0.455, cz - 8 + (i * 53 % 16), 0.21, 0.005, 0.29, i, 'fabric', { color: [0.7, 0.68, 0.6], collide: false }); // papers
   for (const im of inst.build(origin)) b.object(im);
 
   // mooring at the south breach — the boat starts here
-  const moor = { pos: new THREE.Vector3(cx, 0, z1 + 2.7), step: new THREE.Vector3(cx, 0.46, z1 - 1.3), facing: 0 };
+  const moor = { pos: new THREE.Vector3(cx, 0, z1 + 3.6), step: new THREE.Vector3(cx, 0.46, z1 - 1.3), facing: 0 };
   b.interact({ kind: 'mooring', mode: 'boat', pos: moor.pos.clone().setY(0.8), radius: 9, requireLook: false, prompt: 'Tie up and climb in', onUse: (c) => c.boat.tieUp(moor) });
   ctx.state.startMooring = moor;
   return {

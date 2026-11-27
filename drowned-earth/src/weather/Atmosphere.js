@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { skyUniforms, createSky } from './Sky.js';
 import { G } from '../world/WorldShader.js';
+import { setEnvIntensity } from '../world/Materials.js';
 
 // Combines time of day + weather + underwater state into lights, fog, sky and
 // the shared shader uniforms. The only place that touches global lighting.
@@ -42,7 +43,7 @@ export class Atmosphere {
     this.envTimer = 0;
     this.envRT = null;
     this.underwater = false;
-    this.underColor = new THREE.Color(0.05, 0.22, 0.22);
+    this.underColor = new THREE.Color(0.024, 0.085, 0.075);
     this.indoor = 0;
     this.updateEnv();
   }
@@ -75,14 +76,14 @@ export class Atmosphere {
     const ld = time.lightDir;
     const isMoon = time.sunDir.y <= -0.02;
     this.sun.color.copy(isMoon ? tmp.setHex(0x8fa6d6) : o.sunColor);
-    this.sun.intensity = (isMoon ? 0.45 * (1 - w.cloud * 0.7) : o.sunI * Math.max(0.15, cloudDim)) * (1 - this.indoor * 0.5);
+    this.sun.intensity = (isMoon ? 0.7 * (1 - w.cloud * 0.6) : o.sunI * Math.max(0.15, cloudDim)) * (1 - this.indoor * 0.3);
     const target = this.ctx.player.position;
     this.sun.position.copy(target).addScaledVector(ld, 200);
     this.sun.target.position.copy(target);
     // snap shadow camera to texels to avoid shimmering
     this.hemi.color.copy(o.hemiSky).lerp(tmp.setRGB(0.55, 0.58, 0.6), w.cloud * 0.4 * (1 - night));
     this.hemi.groundColor.copy(o.hemiGround);
-    this.hemi.intensity = (o.hemiI * (1 + w.cloud * 0.2) + weather.flash * 2.5) * (1 - this.indoor * 0.6);
+    this.hemi.intensity = (o.hemiI * (1 + w.cloud * 0.2) + weather.flash * 2.5) * (1 - this.indoor * 0.82);
     this.farSun.color.copy(this.sun.color); this.farSun.intensity = this.sun.intensity; this.farSun.position.copy(ld).multiplyScalar(1000);
     this.farHemi.color.copy(this.hemi.color); this.farHemi.groundColor.copy(this.hemi.groundColor); this.farHemi.intensity = this.hemi.intensity;
     // fog
@@ -91,7 +92,7 @@ export class Atmosphere {
       const depth = Math.max(0, -camera.position.y);
       const daylight = Math.max(0.03, (1 - night) * cloudDim);
       this.fog.color.copy(this.underColor).multiplyScalar(daylight * Math.exp(-depth * 0.05) + 0.004);
-      this.fog.near = 0.075 + depth * 0.0015 + w.rain * 0.02;
+      this.fog.near = 0.07 + depth * 0.0025 + w.rain * 0.02 + this.indoor * 0.04;
     } else {
       this.fog.color.copy(fogCol);
       this.fog.near = w.fog * (1 + w.rain * 0.4);
@@ -104,7 +105,9 @@ export class Atmosphere {
     G.uNight.value = night;
     G.uWet.value += (Math.min(1, w.rain * 1.4) - G.uWet.value) * Math.min(1, dt * 0.05);
     G.uCaustics.value = cloudDim * (1 - night);
-    this.ctx.renderer.toneMappingExposure = o.exposure * (this.underwater ? 1.15 : 1);
+    this.ctx.renderer.toneMappingExposure = o.exposure * (this.underwater ? 1.0 : 1);
+    const envI = (1 - this.indoor * 0.85) * (0.25 + (1 - night) * 0.75);
+    if (Math.abs(envI - (this.envI ?? -1)) > 0.02) { this.envI = envI; setEnvIntensity(envI); }
     // environment reflections refresh
     this.envTimer -= dt;
     if (this.envTimer <= 0) {

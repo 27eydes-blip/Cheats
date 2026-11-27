@@ -74,14 +74,19 @@ export function patchMaterial(mat, opts = {}) {
         vec2 cellId = floor(vUvM / sp);
         vec2 f = fract(vUvM / sp);
         float h = deHash(cellId + vMeta.w * 17.0);
-        float mx = mix(0.17, 0.04, curtain), myb = mix(0.26, 0.05, curtain), myt = mix(0.85, 0.97, curtain);
+        float mx = mix(mix(0.12, 0.26, fract(vMeta.y * 7.3)), 0.04, curtain), myb = mix(mix(0.22, 0.34, fract(vMeta.y * 3.1)), 0.05, curtain), myt = mix(0.85, 0.97, curtain);
         deWinMask = step(mx, f.x) * step(f.x, 1.0 - mx) * step(myb, f.y) * step(f.y, myt);
+        // recess shadow around each opening + a darker spandrel band per floor
+        float rim = (smoothstep(mx - 0.05, mx, f.x) - smoothstep(1.0 - mx, 1.0 - mx + 0.05, f.x)) * (smoothstep(myb - 0.06, myb, f.y) - smoothstep(myt, myt + 0.04, f.y));
+        diffuseColor.rgb *= 1.0 - 0.35 * clamp(rim - deWinMask, 0.0, 1.0);
+        diffuseColor.rgb *= mix(1.0, 0.82, (1.0 - curtain) * step(f.y, 0.12));
+        float floorTint = deHash(vec2(cellId.y, vMeta.w * 31.0));
         deBroken = step(0.86, h) * deWinMask;
         deLit = step(0.9985, deHash(cellId * 1.7 + 3.1)) * deWinMask * (1.0 - deBroken);
         // grime streaks below windows
         float streak = texture2D(uNoiseTex, vec2(vUvM.x * 0.35, vUvM.y * 0.02)).r;
         diffuseColor.rgb *= mix(1.0, 0.62 + 0.38 * streak, 0.7);
-        vec3 glassCol = mix(vec3(0.05, 0.065, 0.07), vec3(0.09, 0.1, 0.1), h);
+        vec3 glassCol = mix(vec3(0.035, 0.045, 0.05), vec3(0.08, 0.085, 0.085), h) * mix(0.7, 1.2, floorTint);
         // curtains / blinds in some windows
         float curtainIn = step(0.55, h) * step(h, 0.7) * step(0.5, f.y);
         glassCol = mix(glassCol, vec3(0.18, 0.16, 0.13), curtainIn * 0.6);

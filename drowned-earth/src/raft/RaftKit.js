@@ -78,7 +78,7 @@ export function buildStructure(b, st, deck, rng, out) {
       for (const [px, pz] of [[-1.4, -0.9], [1.4, -0.9], [-1.4, 0.9], [1.4, 0.9]]) b.box(x + px - 0.05, y, z + pz - 0.05, x + px + 0.05, y + 2.3, z + pz + 0.05, 'wood', { color: [0.4, 0.33, 0.25], collide: false });
       b.boxR(x, y + 2.35, z, 3.2, 0.06, 2.2, ry, 'fabric', { color: col, rx: 0.12 });
       b.boxR(x, y + 0.45, z - 0.5, 2.8, 0.9, 0.8, ry, 'wood', { color: [0.45, 0.36, 0.27], collide: true });
-      for (let i = 0; i < 5; i++) b.box(x - 1.1 + i * 0.5, y + 0.9, z - 0.7, x - 0.8 + i * 0.5, y + 1.1 + rng.next() * 0.2, z - 0.4, 'plastic', { color: rng.pick([[0.6, 0.6, 0.55], [0.3, 0.5, 0.3], [0.7, 0.4, 0.2], [0.3, 0.35, 0.55]]), collide: false });
+      for (let i = 0; i < 7; i++) { const gx = x - 1.15 + i * 0.36; const h = 0.12 + rng.next() * 0.16; b.box(gx, y + 0.9, z - 0.68, gx + 0.2, y + 0.9 + h, z - 0.48, rng.chance(0.5) ? 'fabric' : 'plastic', { color: rng.pick([[0.42, 0.38, 0.3], [0.25, 0.32, 0.22], [0.45, 0.3, 0.18], [0.3, 0.32, 0.36], [0.5, 0.48, 0.42]]), collide: false }); }
       out.spots.push({ x, z: z + 0.6, kind: 'stall' });
       out.stalls.push({ x, z: z + 0.6 });
       break;

@@ -93,7 +93,7 @@ const defs = {
   }).tex(),
   corrugatedN: () => normalFromHeight((x) => Math.sin((x / 256) * Math.PI * 2 * 16), 256, 1.5).tex(),
   fabric: () => paint(128, (x, y) => {
-    const w = ((x % 4 < 2) !== (y % 4 < 2)) ? 1 : 0.88;
+    const w = ((x % 4 < 2) !== (y % 4 < 2)) ? 1 : 0.95;
     const n = tileNoise(x, y, 128, 8, 51, 3);
     const v = (180 + n * 50) * w;
     return [v, v, v];

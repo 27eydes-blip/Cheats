@@ -10,7 +10,7 @@ import fs from 'node:fs';
 
 const SHOTS = JSON.parse(fs.readFileSync(new URL('./shots.json', import.meta.url)));
 const only = process.argv[2];
-const server = await createServer({ server: { port: 5199, strictPort: false }, logLevel: 'error' });
+const server = await createServer({ server: { port: 5199, strictPort: false, hmr: false, watch: { ignored: ['**/*'] } }, logLevel: 'error' });
 await server.listen();
 const url = server.resolvedUrls.local[0];
 fs.mkdirSync('shots', { recursive: true });

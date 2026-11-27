@@ -53,6 +53,11 @@ export class Survival {
     this.warn('oxygen', player.headUnder && this.oxygen < 30, 'Lungs burning. Up. Go up.');
     this.warn('battery', player.flashlight && this.battery < 10, 'The flashlight dims to orange.');
     if (this.thirst <= 0 || this.hunger <= 0) { this.starve = (this.starve || 0) + dt; if (this.starve > 90 && !this.blackout) this.blackOut('collapse'); } else this.starve = 0;
+    // rain fills empty bottles when you're out in it
+    if (weather.cur.rain > 0.35 && atmosphere.indoor < 0.5 && !player.headUnder && inventory.has('bottle')) {
+      this.rainFill = (this.rainFill || 0) + dt * weather.cur.rain;
+      if (this.rainFill > 40) { this.rainFill = 0; inventory.remove('bottle'); inventory.add('clean_water', 1, true); this.ctx.ui.toast('Rain filled a bottle.'); }
+    }
     // fire warmth (raft stoves)
     this.nearFire = false;
   }

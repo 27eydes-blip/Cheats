@@ -71,21 +71,21 @@ export class Boat {
     });
   }
   build() {
-    const parts = [];
-    const add = (g, color, m) => { if (m) g.applyMatrix4(m); parts.push(prepGeometry(g, color)); };
+    const parts = [], paint = [];
+    const add = (g, color, m, list = parts) => { if (m) g.applyMatrix4(m); list.push(prepGeometry(g, color)); };
     const M = (x, y, z, rx = 0, ry = 0, rz = 0) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(1, 1, 1));
-    add(hullGeometry(), [0.32, 0.5, 0.5]);
+    add(hullGeometry(), [0.2, 0.36, 0.36], null, paint);
     // gunwale trim + white stripe
-    add(boxGeometry(0.08, 0.1, 3.6), [0.85, 0.84, 0.78], M(0.92, 0.62, 0.6));
-    add(boxGeometry(0.08, 0.1, 3.6), [0.85, 0.84, 0.78], M(-0.92, 0.62, 0.6));
+    add(boxGeometry(0.08, 0.1, 3.6), [0.85, 0.84, 0.78], M(0.92, 0.62, 0.6), paint);
+    add(boxGeometry(0.08, 0.1, 3.6), [0.85, 0.84, 0.78], M(-0.92, 0.62, 0.6), paint);
     // floor boards
     add(boxGeometry(1.4, 0.05, 3.8), [0.45, 0.36, 0.26], M(0, 0.05, 0.5));
     // benches
     add(boxGeometry(1.7, 0.06, 0.4), [0.5, 0.4, 0.3], M(0, 0.42, 1.6));
     add(boxGeometry(1.6, 0.06, 0.4), [0.5, 0.4, 0.3], M(0, 0.42, -0.4));
     // canopy frame + roof (patched tarp)
-    for (const [x, z] of [[-0.8, -0.6], [0.8, -0.6], [-0.8, 0.5], [0.8, 0.5]]) add(boxGeometry(0.05, 1.75, 0.05), [0.5, 0.5, 0.48], M(x, 1.42, z));
-    const roof = boxGeometry(1.8, 0.04, 1.4); add(roof, [0.55, 0.47, 0.32], M(0, 2.3, -0.05, 0.05));
+    for (const [x, z] of [[-0.8, -0.6], [0.8, -0.6], [-0.8, 0.5], [0.8, 0.5]]) add(boxGeometry(0.05, 2.2, 0.05), [0.5, 0.5, 0.48], M(x, 1.6, z));
+    const roof = boxGeometry(1.8, 0.04, 1.4); add(roof, [0.55, 0.47, 0.32], M(0, 2.72, -0.05, 0.05));
     // outboard
     add(boxGeometry(0.45, 0.55, 0.5), [0.25, 0.26, 0.27], M(0, 0.85, 2.75));
     add(boxGeometry(0.1, 0.9, 0.14), [0.2, 0.2, 0.2], M(0, 0.25, 2.85));
@@ -103,6 +103,11 @@ export class Boat {
     this.mesh.castShadow = true; this.mesh.receiveShadow = true;
     // hull uses painted metal: separate material for the main body would cost a draw; vertex colors carry it
     this.group.add(this.mesh);
+    const paintMat = mat('metal').clone();
+    paintMat.roughness = 0.55; paintMat.metalness = 0.2;
+    this.hullMesh = new THREE.Mesh(mergeGeometries(paint, false), paintMat);
+    this.hullMesh.castShadow = true; this.hullMesh.receiveShadow = true;
+    this.group.add(this.hullMesh);
     // lantern
     this.lanternMesh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc070 }));
     this.lanternMesh.position.set(-0.6, 1.8, -1.6);

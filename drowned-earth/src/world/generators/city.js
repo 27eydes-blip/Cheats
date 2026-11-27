@@ -229,7 +229,7 @@ function drownedPark(b, rng, x0, z0, x1, z1, base, inst) {
     b.collider(x - 0.3, bot, z - 0.3, x + 0.3, bot + h, z + 0.3);
     const top = bot + h;
     for (let j = 0; j < 5; j++) inst.add('branch', 'wood', x, top - rng.range(0.5, 3), z, { sy: rng.range(1.5, 3.5), rz: rng.range(0.5, 1.2) * rng.sign(), ry: rng.range(0, 6), color: [0.45, 0.4, 0.33] });
-    if (!dead) for (let j = 0; j < 4; j++) inst.add('foliage', 'foliage', x + rng.range(-1.5, 1.5), top + rng.range(-1, 1), z + rng.range(-1.5, 1.5), { s: rng.range(1.4, 2.6), ry: rng.range(0, 6), color: [rng.range(0.6, 0.9), rng.range(0.75, 1), 0.6] });
+    if (!dead) for (let j = 0; j < 4; j++) inst.add('foliage', 'foliage', x + rng.range(-1.5, 1.5), top + rng.range(-1, 1), z + rng.range(-1.5, 1.5), { s: rng.range(1.4, 2.6), ry: rng.range(0, 6), color: [rng.range(0.32, 0.5), rng.range(0.42, 0.6), 0.3] });
   }
   // park railing sticking out of the water
   for (let x = x0; x < x1; x += 2) inst.add('railing', 'metal', x, base + 1.2 + 6.2, z0, { ry: Math.PI / 2, color: [0.3, 0.32, 0.3], sy: 0.9 });

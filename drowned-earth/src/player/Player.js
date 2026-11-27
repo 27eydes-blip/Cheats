@@ -102,7 +102,7 @@ export class Player {
     this.headUnder = this.eye.y < surfEye - 0.05;
     this.depth = Math.max(0, surfEye - this.eye.y);
     this.wet = this.mode === 'swim' ? 1 : Math.max(0, this.wet - dt * 0.004);
-    if (input.pressed('light')) { this.flashlight = !this.flashlight; this.ctx.events.emit('flashlight', this.flashlight); }
+    if (input.pressed('light') && !(this.mode === 'boat' && this.ctx.boat.hasLanternRig)) { this.flashlight = !this.flashlight; this.ctx.events.emit('flashlight', this.flashlight); }
   }
 
   setGround(body) {
@@ -179,10 +179,10 @@ export class Player {
     }
     // also climb onto rafts (dynamic bodies)
     if (!under && input.move.y > 0.3) {
-      const test = ahead.clone(); test.y = surface + 1.4;
+      const test = ahead.clone(); test.y = surface - 0.3;
       const v0 = new THREE.Vector3(0, -1, 0);
-      const r = collision.resolveCylinder(test, 0.2, 0.2, v0, 1.6, {});
-      if (r.groundBody && test.y > surface - 0.4) {
+      const r = collision.resolveCylinder(test, 0.2, 0.2, v0, 2.0, {});
+      if (r.groundBody && test.y > surface - 0.2 && test.y < surface + 1.9) {
         this.mode = 'foot'; this.position.copy(test); this.velocity.set(0, 0, 0); this.setGround(r.groundBody);
         this.ctx.events.emit('climbout', {});
       }

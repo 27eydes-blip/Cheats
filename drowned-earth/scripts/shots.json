@@ -1,12 +1,120 @@
 [
-  { "name": "01-dawn-start", "params": { "time": "6.0" } },
-  { "name": "02-midday-boat", "params": { "time": "12.5", "weather": "clear", "boat": "-150,140,-0.9" } },
-  { "name": "03-dusk", "params": { "time": "18.7", "weather": "clear", "boat": "40,180,0.9" } },
-  { "name": "04-night-rafts", "params": { "time": "22.5", "weather": "clear", "boat": "240,262,-1.4" } },
-  { "name": "05-underwater", "params": { "time": "12", "weather": "clear", "pos": "48,-9,58", "mode": "swim", "yaw": "3.1", "pitch": "-0.35" } },
-  { "name": "06-rafts-day", "params": { "time": "16.5", "weather": "clear", "pos": "318,1.0,250", "mode": "foot", "yaw": "2.6" } },
-  { "name": "07-storm", "params": { "time": "15", "weather": "storm", "boat": "-100,40,0.3" } },
-  { "name": "08-interior", "params": { "time": "10", "weather": "clear", "pos": "-262,0.5,228", "mode": "foot", "yaw": "0.2", "flashlight": "1" } },
-  { "name": "09-highmark-night", "params": { "time": "23", "weather": "clear", "boat": "-200,-470,-0.15" } },
-  { "name": "10-tp-boat", "params": { "time": "9", "weather": "clear", "boat": "-60,180,-0.6", "tp": "1" } }
+ {
+  "name": "01-dawn-start",
+  "params": {
+   "time": "6.0"
+  }
+ },
+ {
+  "name": "02-midday-boat",
+  "params": {
+   "time": "12.5",
+   "weather": "clear",
+   "boat": "-128,150,-0.3",
+   "yaw": "0.4"
+  }
+ },
+ {
+  "name": "03-dusk",
+  "params": {
+   "time": "18.75",
+   "weather": "clear",
+   "boat": "90,192,1.57",
+   "yaw": "1.57"
+  }
+ },
+ {
+  "name": "04-night-rafts",
+  "params": {
+   "time": "22.5",
+   "weather": "clear",
+   "boat": "240,262,-1.4"
+  }
+ },
+ {
+  "name": "05-underwater",
+  "params": {
+   "time": "12",
+   "weather": "clear",
+   "pos": "-128,-3.5,170",
+   "mode": "swim",
+   "yaw": "0.2",
+   "pitch": "-0.25"
+  }
+ },
+ {
+  "name": "05b-subway-dive",
+  "params": {
+   "time": "12",
+   "weather": "clear",
+   "pos": "36,-13.2,91.2",
+   "mode": "swim",
+   "yaw": "3.14",
+   "pitch": "-0.2",
+   "flashlight": "1"
+  }
+ },
+ {
+  "name": "06-rafts-day",
+  "params": {
+   "time": "16.5",
+   "weather": "clear",
+   "pos": "318,1.0,250",
+   "mode": "foot",
+   "yaw": "2.6"
+  }
+ },
+ {
+  "name": "07-storm",
+  "params": {
+   "time": "15",
+   "weather": "storm",
+   "boat": "-64,40,0.3",
+   "yaw": "0.3"
+  }
+ },
+ {
+  "name": "08-interior",
+  "params": {
+   "time": "10",
+   "weather": "clear",
+   "pos": "-262,0.5,228",
+   "mode": "foot",
+   "yaw": "0.2",
+   "flashlight": "1"
+  }
+ },
+ {
+  "name": "09-highmark-night",
+  "params": {
+   "time": "23",
+   "weather": "clear",
+   "boat": "-200,-640,0.12",
+   "yaw": "0.12"
+  }
+ },
+ {
+  "name": "10-tp-boat",
+  "params": {
+   "time": "9",
+   "weather": "clear",
+   "boat": "-60,180,-0.6",
+   "tp": "1"
+  }
+ },
+ {
+  "name": "11-phone-low",
+  "viewport": {
+   "width": 844,
+   "height": 390
+  },
+  "params": {
+   "time": "7.5",
+   "quality": "low",
+   "touch": "1",
+   "pos": "-262,0.5,229",
+   "mode": "foot",
+   "yaw": "3.1"
+  }
+ }
 ]

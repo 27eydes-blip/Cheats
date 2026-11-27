@@ -37,6 +37,7 @@ ${SKY_GLSL}
 uniform float uTime; uniform vec3 uSunDir; uniform vec3 uSunColor; uniform float uNight;
 uniform sampler2D tNormal; uniform sampler2D tNoise;
 uniform sampler2D tScene; uniform sampler2D tDepth; uniform float uHasScene;
+uniform sampler2D tRefl; uniform mat4 uReflMatrix; uniform float uHasRefl;
 uniform vec2 uResolution; uniform float uNear; uniform float uFar;
 uniform vec3 uScatter; uniform vec3 uDeep; uniform float uWind; uniform vec2 uWindDir; uniform float uRain;
 uniform vec4 uRip[${MAX_RIPPLES}]; uniform float uRipStr[${MAX_RIPPLES}];
@@ -101,8 +102,8 @@ void main() {
     vec3 sceneCol = texture2D(tScene, ruv).rgb;
     // Beer-Lambert along the in-water path, plus in-scatter toward the water color
     float pathK = below ? 0.0 : 1.0;
-    vec3 trans = exp(-vec3(0.45, 0.12, 0.09) * thick * pathK);
-    float scatterAmt = 1.0 - exp(-thick * 0.16 * pathK);
+    vec3 trans = exp(-vec3(0.55, 0.3, 0.36) * thick * pathK);
+    float scatterAmt = 1.0 - exp(-thick * 0.35 * pathK);
     refr = sceneCol * trans + uScatter * scatterAmt;
   } else {
     refr = mix(uScatter, uDeep, 0.4 + 0.6 * (1.0 - NdV));
@@ -111,24 +112,30 @@ void main() {
     float F = 0.02 + 0.98 * pow(1.0 - NdV, 5.0);
     vec3 R = reflect(-V, N); R.y = abs(R.y);
     vec3 refl = skyBase(R) * (1.0 - uCloud * 0.2);
+    if (uHasRefl > 0.5) {
+      vec4 rc = uReflMatrix * vec4(vW.x, 0.0, vW.z, 1.0);
+      vec2 ruv = rc.xy / rc.w + N.xz * 0.06 * clamp(1.0 - vDist / 400.0, 0.2, 1.0);
+      vec4 rf = texture2D(tRefl, clamp(ruv, 0.001, 0.999));
+      refl = mix(refl, rf.rgb, rf.a * 0.92);
+    }
     // sun glitter / moon path
     float spec = pow(max(dot(R, uSunDir), 0.0), 700.0) * 30.0 + pow(max(dot(R, uSunDir), 0.0), 60.0) * 0.6;
     refl += uSunColor * spec * (1.0 - uCloud * 0.85);
     // point lights (lanterns, searchlights) streak on the water
     for (int i = 0; i < 4; i++) {
       vec3 L = uLightPos[i] - vW; float ld = length(L); L /= ld;
-      float s = pow(max(dot(R, L), 0.0), 120.0) * 12.0 / (1.0 + ld * 0.05);
+      float s = pow(max(dot(R, L), 0.0), 900.0) * 5.0 / (1.0 + ld * 0.08);
       refl += uLightCol[i] * s;
     }
     col = mix(refr, refl, F);
     // foam: contact with walls, crests in wind, wake
     float fn = texture2D(tNoise, vW.xz * 0.21 + wind * 0.02).r * 0.6 + texture2D(tNoise, vW.xz * 0.7 - wind * 0.03).g * 0.4;
-    float contact = (uHasScene > 0.5) ? smoothstep(0.9, 0.0, thick) * smoothstep(0.25, 0.55, fn + 0.25) : 0.0;
+    float contact = (uHasScene > 0.5) ? smoothstep(0.45, 0.0, thick) * smoothstep(0.35, 0.65, fn + 0.15) * 0.6 : 0.0;
     float crest = smoothstep(0.35, 0.9, vCrest / max(0.2, 0.3 + uWind * 0.5)) * smoothstep(0.45, 0.75, fn) * smoothstep(0.45, 1.0, uWind);
     float wake = smoothstep(0.1, 0.8, ripFoam * fn * 1.6);
     float foam = clamp(contact + crest + wake, 0.0, 1.0);
     vec3 foamCol = (skyBase(vec3(0.0, 1.0, 0.0)) * 0.6 + uSunColor * max(uSunDir.y, 0.0) * 0.5) * 0.9 + 0.04;
-    col = mix(col, foamCol, foam * 0.85);
+    col = mix(col, foamCol * 0.8, foam * 0.7);
   } else {
     // seen from beneath: Snell's window, total internal reflection outside it
     vec3 T = refract(-V, N, 1.0 / 1.333);
@@ -180,8 +187,9 @@ export class Water {
       uTime: G.uTime, uSunDir: G.uSunDir, uSunColor: G.uSunColor, uNight: G.uNight, uGlow: G.uGlow,
       tNormal: { value: getTexture('waterN') }, tNoise: { value: getTexture('noise') },
       tScene: { value: null }, tDepth: { value: null }, uHasScene: { value: 0 },
+      tRefl: { value: null }, uReflMatrix: { value: new THREE.Matrix4() }, uHasRefl: { value: 0 },
       uResolution: { value: new THREE.Vector2(1, 1) }, uNear: { value: 0.1 }, uFar: { value: 2000 },
-      uScatter: { value: new THREE.Color(0.03, 0.09, 0.085) }, uDeep: { value: new THREE.Color(0.01, 0.03, 0.035) },
+      uScatter: { value: new THREE.Color(0.022, 0.045, 0.035) }, uDeep: { value: new THREE.Color(0.008, 0.02, 0.02) },
       uWind: { value: 0.3 }, uWindDir: { value: new THREE.Vector2(1, 0) }, uRain: { value: 0 },
       uRip: { value: Array.from({ length: MAX_RIPPLES }, () => new THREE.Vector4(0, 0, -100, 1)) },
       uRipStr: { value: new Array(MAX_RIPPLES).fill(0) },
@@ -241,12 +249,14 @@ export class Water {
     u.uRain.value = w.cur.rain;
     u.uHasScene.value = pipeline.usePost && pipeline.target ? 1 : 0;
     if (pipeline.target) { u.tScene.value = pipeline.target.texture; u.tDepth.value = pipeline.target.depthTexture; }
+    u.uHasRefl.value = pipeline.reflTarget && !this.ctx.atmosphere.underwater ? 1 : 0;
+    if (pipeline.reflTarget) { u.tRefl.value = pipeline.reflTarget.texture; u.uReflMatrix.value = pipeline.reflMatrix; }
     u.uResolution.value.copy(pipeline.size);
     u.uNear.value = camera.near; u.uFar.value = camera.far;
     const night = this.ctx.time.out.night;
     const day = Math.max(0.04, 1 - night) * (1 - w.cur.cloud * 0.4);
-    u.uScatter.value.setRGB(0.03, 0.085, 0.08).multiplyScalar(day);
-    u.uDeep.value.setRGB(0.008, 0.025, 0.03).multiplyScalar(day + 0.1);
+    u.uScatter.value.setRGB(0.024, 0.05, 0.04).multiplyScalar(day);
+    u.uDeep.value.setRGB(0.006, 0.016, 0.017).multiplyScalar(day + 0.1);
     u.uUnder.value = this.ctx.atmosphere.underwater ? 1 : 0;
     u.uUnderColor.value.copy(this.ctx.atmosphere.fog.color);
   }

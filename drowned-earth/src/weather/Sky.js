@@ -39,13 +39,15 @@ void main() {
   vec3 d = normalize(vDir);
   vec3 c = skyBase(d);
   float y = max(d.y, 0.0);
-  // stars
+  // stars: hashed 3D cells, point-like
   if (uNightK > 0.01 && d.y > 0.0) {
-    vec3 sd = d * 300.0;
-    vec2 cell = floor(sd.xz / (1.0 + sd.y * 0.0) );
-    float s = h21(floor(d.xz * 420.0 / (0.3 + y)) + floor(d.y * 300.0));
-    float star = step(0.9975, s) * (0.5 + 0.5 * sin(uSkyTime * 2.0 + s * 100.0));
-    c += vec3(0.8, 0.85, 1.0) * star * uNightK * (1.0 - uCloud) * smoothstep(0.0, 0.2, y);
+    vec3 sp = d * 220.0;
+    vec3 cell = floor(sp);
+    float s = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+    vec3 jitter = vec3(fract(s * 13.7), fract(s * 71.3), fract(s * 29.1));
+    float dd = length(fract(sp) - jitter);
+    float star = step(0.985, s) * smoothstep(0.12, 0.0, dd) * (0.6 + 0.4 * sin(uSkyTime * 1.5 + s * 90.0));
+    c += vec3(0.8, 0.85, 1.0) * star * uNightK * (1.0 - uCloud) * smoothstep(0.0, 0.25, y) * 1.4;
   }
   // sun disc / moon disc
   float sdot = dot(d, uSkySun);

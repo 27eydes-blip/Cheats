@@ -31,7 +31,7 @@ export class TouchControls {
     });
     const enable = () => { input.usingTouch = true; root.classList.add('on'); };
     addEventListener('touchstart', enable, { once: true, passive: true });
-    if (ctx.settings.isMobile) enable();
+    if (ctx.settings.isMobile || ctx.params.has('touch')) enable();
   }
   moveStick(e, cx, cy, knob) {
     const dx = e.clientX - cx, dy = e.clientY - cy, r = 55;

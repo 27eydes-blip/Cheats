@@ -104,6 +104,7 @@ export class Game {
     ctx.ui = new UI(ctx);
     ctx.fx = new Effects(ctx);
     ctx.inventory = new Inventory(ctx);
+    ctx.boatStorage = new Inventory(ctx, 80);
     ctx.loot = new Loot(ctx);
     ctx.crafting = new Crafting(ctx);
     ctx.trade = new Trade(ctx);
@@ -131,9 +132,10 @@ export class Game {
     this.wireEvents();
     this.newGame();
     applyDebugParams(ctx);
+    ctx.story.checkObjectives();
     ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z);
     ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
-    ctx.paused = false;
+    ctx.paused = ctx.params.has('pause');
     if (!ctx.params.has('skipintro')) {
       ctx.input.enabled = false;
       ctx.ui.titleScreen(ctx.save.has(), (cont) => {
@@ -157,6 +159,9 @@ export class Game {
     ctx.events.emit('booted');
   }
 
+  // test helper: advance the simulation n fixed steps
+  step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { this.ctx.input.poll(); this.update(dt); this.ctx.input.endFrame(); } }
+
   isIndoors(p) {
     for (const l of this.ctx.landmarks.loaded.values()) for (const b of l.interiors || []) if (p.x > b[0] && p.y > b[1] && p.z > b[2] && p.x < b[3] && p.y < b[4] && p.z < b[5]) return true;
     return false;
@@ -166,15 +171,16 @@ export class Game {
     const ctx = this.ctx;
     const def = ctx.data.locations.landmarks.find((l) => l.kind === 'start_tower');
     const [cx, cz] = def.pos;
-    const moor = { pos: new THREE.Vector3(cx, 0, cz + 11 + 2.7), step: new THREE.Vector3(cx, 0.46, cz + 11 - 1.3), facing: 0 };
+    const moor = { pos: new THREE.Vector3(cx, 0, cz + 11 + 3.6), step: new THREE.Vector3(cx, 0.46, cz + 11 - 1.3), facing: 0 };
     ctx.boat.pos.copy(moor.pos);
     ctx.boat.heading = -Math.PI / 2;
     ctx.boat.tied = moor;
     ctx.player.mode = 'boat';
-    ctx.player.yaw = -Math.PI / 2 + 0.25; ctx.player.pitch = 0.03;
+    ctx.player.yaw = -Math.PI / 2 - 0.35; ctx.player.pitch = 0.03;
     ctx.time.hour = 5.75;
     const inv = ctx.inventory;
     inv.add('scrap', 4, true); inv.add('dirty_water', 1, true); inv.add('kelp', 1, true); inv.add('fibre', 2, true);
+    ctx.boatStorage.add('bottle', 2, true); ctx.boatStorage.add('fibre', 1, true); ctx.boatStorage.add('tape', 1, true);
     ctx.boat.update(0);
   }
 
@@ -262,8 +268,9 @@ export class Game {
     u.uCamDepth.value = Math.max(0, -cam.position.y);
     u.uUnderColor.value.copy(ctx.atmosphere.fog.color).multiplyScalar(4);
     u.uFlash.value = ctx.weather.flash * 0.25;
-    const sp = ctx.time.sunDir.clone().multiplyScalar(1000).add(cam.position).project(cam);
-    u.uSunScreen.value.set(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5);
+    // underwater shafts fan down from the surface above, leaning toward the sun
+    const sv = ctx.time.sunDir.clone().applyQuaternion(cam.quaternion.clone().invert());
+    u.uSunScreen.value.set(0.5 + THREE.MathUtils.clamp(sv.x, -1, 1) * 0.45, 1.25);
     u.uSunVis.value = Math.max(0, ctx.time.sunDir.y) * (1 - ctx.weather.cur.cloud * 0.6);
     ctx.renderer.info.reset();
     ctx.renderer.shadowMap.needsUpdate = ctx.settings.q.shadows;

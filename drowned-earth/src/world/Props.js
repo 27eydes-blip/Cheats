@@ -69,6 +69,8 @@ export function propGeometry(name) {
   return cache.get(name);
 }
 
+const CASTERS = new Set(['waterTank', 'acUnit', 'trunk', 'foliage', 'busShelter']);
+
 // Batch of instances of one prop type → InstancedMesh (local to `origin`).
 export class InstanceBatch {
   constructor() { this.map = new Map(); }
@@ -90,7 +92,7 @@ export class InstanceBatch {
       });
       if (im.instanceColor) im.instanceColor.needsUpdate = true;
       im.computeBoundingSphere();
-      im.castShadow = shadows; im.receiveShadow = shadows;
+      im.castShadow = shadows && CASTERS.has(prop); im.receiveShadow = shadows;
       im.name = 'inst:' + prop;
       out.push(im);
     }

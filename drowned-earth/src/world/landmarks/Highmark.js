@@ -103,12 +103,22 @@ export class Highmark {
       this.beam.add(cone);
     }
     lh.add(this.beam);
+    // lamp flare: always readable on the horizon at night
+    const fc = document.createElement('canvas'); fc.width = fc.height = 64;
+    const fg = fc.getContext('2d'); const gr = fg.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,248,225,1)'); gr.addColorStop(0.25, 'rgba(255,230,180,0.5)'); gr.addColorStop(1, 'rgba(255,220,160,0)');
+    fg.fillStyle = gr; fg.fillRect(0, 0, 64, 64);
+    this.flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(fc), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false, sizeAttenuation: false }));
+    this.flare.scale.setScalar(0.035);
+    this.flare.position.y = 210;
+    lh.add(this.flare);
     this.group.add(lh);
     this.lighthouseWorld = new THREE.Vector3(px + lhx, 210, pz + lhz);
+    this.toDistrictAngle = Math.atan2(-(0 - (pz + lhz)), 0 - (px + lhx));
     // night lights
     const lg = new THREE.BufferGeometry();
     lg.setAttribute('position', new THREE.Float32BufferAttribute(lightPos, 3));
-    this.lightsMat = new THREE.PointsMaterial({ color: 0xffd9a0, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false });
+    this.lightsMat = new THREE.PointsMaterial({ color: 0xffc98a, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false });
     this.group.add(new THREE.Points(lg, this.lightsMat));
     // patrol lights on the sea lanes
     const pg = new THREE.BufferGeometry();
@@ -125,10 +135,15 @@ export class Highmark {
     this.t += dt;
     const night = G.uNight.value;
     const fogK = Math.exp(-((this.ctx.atmosphere.farFog.density * 13500) ** 2));
-    this.beam.rotation.y = this.t * 0.42;
-    this.beamMat.uniforms.uI.value = (0.12 + night * 1.2) * fogK * (1 + this.ctx.weather.cur.fog * 30);
+    if (!this.ctx.state.flags.lighthouseStopped) this.beam.rotation.y += dt * 0.42;
+    else this.beamMat.uniforms.uI.value *= 0.98;
+    if (!this.ctx.state.flags.lighthouseStopped) this.beamMat.uniforms.uI.value = (0.12 + night * 1.2) * fogK * (1 + this.ctx.weather.cur.fog * 30);
     this.lamp.material.color.setScalar(0.4 + night * 3);
-    this.lightsMat.opacity = Math.min(1, night * 1.3) * fogK;
+    this.lightsMat.opacity = Math.min(0.85, night * 1.1) * fogK;
+    // the flare pulses as the beam sweeps past the district
+    const facing = Math.abs(Math.cos(this.beam.rotation.y - this.toDistrictAngle));
+    this.flare.material.opacity = (0.25 + night * 0.75) * fogK * (0.35 + 0.65 * Math.pow(facing, 8)) * (this.ctx.state.flags.lighthouseStopped ? 0.1 : 1);
+    this.flare.scale.setScalar(0.02 + 0.05 * Math.pow(facing, 8) * night);
     this.patrolMat.opacity = night * fogK;
     const pos = this.patrolPts.geometry.attributes.position;
     this.patrols.forEach((p, i) => { p.a += p.s * dt; pos.setXYZ(i, Math.cos(p.a) * p.r, 4, Math.sin(p.a) * p.r / 1.3); });

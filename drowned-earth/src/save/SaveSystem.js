@@ -17,7 +17,7 @@ export class SaveSystem {
     return {
       version: SAVE_VERSION, savedAt: Date.now(), seed: c.worldMap.seed,
       player: { pos: c.player.position.toArray(), yaw: c.player.yaw, pitch: c.player.pitch, mode: c.player.mode === 'climb' ? 'foot' : c.player.mode },
-      boat: { pos: c.boat.pos.toArray(), heading: c.boat.heading, fuel: c.boat.fuel, hull: c.boat.hull, lantern: c.boat.hasLanternRig, tied: c.boat.tied ? { pos: c.boat.tied.pos.toArray(), step: c.boat.tied.step.toArray(), facing: c.boat.tied.facing } : null, storage: {} },
+      boat: { pos: c.boat.pos.toArray(), heading: c.boat.heading, fuel: c.boat.fuel, hull: c.boat.hull, lantern: c.boat.hasLanternRig, tied: c.boat.tied ? { pos: c.boat.tied.pos.toArray(), step: c.boat.tied.step.toArray(), facing: c.boat.tied.facing } : null, storage: c.boatStorage.toJSON() },
       time: { hour: c.time.hour, day: c.time.day }, weather: { state: c.weather.state, hoursLeft: c.weather.hoursLeft, idx: c.weather.scheduleIdx },
       survival: c.survival.toJSON(), inventory: c.inventory.toJSON(),
       flags: c.state.flags, looted: [...c.state.looted], logs: [...c.state.logs], playTime: c.state.playTime, seen: c.state.seenLines,
@@ -46,7 +46,7 @@ export class SaveSystem {
     c.boat.tied = s.boat.tied ? { pos: V(s.boat.tied.pos), step: V(s.boat.tied.step), facing: s.boat.tied.facing } : null;
     c.time.hour = s.time.hour; c.time.day = s.time.day;
     c.weather.set(s.weather.state, true); c.weather.hoursLeft = s.weather.hoursLeft; c.weather.scheduleIdx = s.weather.idx;
-    c.survival.load(s.survival); c.inventory.load(s.inventory);
+    c.survival.load(s.survival); c.inventory.load(s.inventory); c.boatStorage.load(s.boat.storage);
     Object.keys(c.state.flags).forEach((k) => delete c.state.flags[k]); Object.assign(c.state.flags, s.flags);
     c.state.looted = new Set(s.looted); c.state.logs = new Set(s.logs); c.state.playTime = s.playTime; c.state.seenLines = s.seen || {};
     c.story.load(s.story); c.trade.stock = s.trade || {}; c.radio.index = s.radio?.index ?? -1;

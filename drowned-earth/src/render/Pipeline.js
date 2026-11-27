@@ -34,7 +34,7 @@ void main() {
     float rays = sin(ang * 23.0 + uTime * 0.3) * sin(ang * 41.0 - uTime * 0.21) * 0.5 + 0.5;
     rays = pow(rays, 3.0) * smoothstep(1.2, 0.0, length(dir)) * uSunVis;
     float distFade = 1.0 - exp(-viewZ * 0.09);
-    col += uUnderColor * rays * 1.6 * distFade * exp(-uCamDepth * 0.07);
+    col += uUnderColor * rays * 2.4 * distFade * exp(-uCamDepth * 0.06);
     // drifting murk
     float murk = rnd(floor(vUv * 180.0 + uTime * 0.6)) * 0.02;
     col += uUnderColor * murk;
@@ -53,6 +53,10 @@ void main() {
   gl_FragColor.rgb *= 1.0 - uFade;
   gl_FragDepth = d;
 }`;
+
+// Planar reflection camera for the water (adapted from the standard oblique-clip reflector).
+const _n = new THREE.Vector3(0, 1, 0), _rp = new THREE.Vector3(), _cp = new THREE.Vector3(), _rot = new THREE.Matrix4();
+const _look = new THREE.Vector3(), _tgt = new THREE.Vector3(), _view = new THREE.Vector3(), _plane = new THREE.Plane(), _clip = new THREE.Vector4(), _q = new THREE.Vector4();
 
 export class Pipeline {
   constructor(renderer, settings) {
@@ -74,7 +78,40 @@ export class Pipeline {
     this.quadScene = new THREE.Scene();
     this.quadScene.add(this.quad);
     this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.reflCam = new THREE.PerspectiveCamera();
+    this.reflMatrix = new THREE.Matrix4();
+    this.reflTarget = null;
     this.configure();
+  }
+  updateReflection(world) {
+    const { camera, scene, renderer } = { ...world, renderer: this.renderer };
+    const vc = this.reflCam;
+    _cp.setFromMatrixPosition(camera.matrixWorld);
+    _rp.set(_cp.x, 0, _cp.z);
+    _rot.extractRotation(camera.matrixWorld);
+    _view.subVectors(_rp, _cp).reflect(_n).negate().add(_rp);
+    _look.set(0, 0, -1).applyMatrix4(_rot).add(_cp);
+    _tgt.subVectors(_rp, _look).reflect(_n).negate().add(_rp);
+    vc.position.copy(_view);
+    vc.up.set(0, 1, 0).applyMatrix4(_rot).reflect(_n);
+    vc.lookAt(_tgt);
+    vc.far = camera.far; vc.near = camera.near;
+    vc.updateMatrixWorld();
+    vc.projectionMatrix.copy(camera.projectionMatrix);
+    this.reflMatrix.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1).multiply(vc.projectionMatrix).multiply(vc.matrixWorldInverse);
+    _plane.setFromNormalAndCoplanarPoint(_n, _rp).applyMatrix4(vc.matrixWorldInverse);
+    _clip.set(_plane.normal.x, _plane.normal.y, _plane.normal.z, _plane.constant);
+    const pm = vc.projectionMatrix.elements;
+    _q.set((Math.sign(_clip.x) + pm[8]) / pm[0], (Math.sign(_clip.y) + pm[9]) / pm[5], -1, (1 + pm[10]) / pm[14]);
+    _clip.multiplyScalar(2 / _clip.dot(_q));
+    pm[2] = _clip.x; pm[6] = _clip.y; pm[10] = _clip.z + 1 - 0.003; pm[14] = _clip.w;
+    vc.layers.set(LAYER_WORLD);
+    const prevAlpha = renderer.getClearAlpha();
+    renderer.setRenderTarget(this.reflTarget);
+    renderer.setClearAlpha(0);
+    renderer.clear(true, true, true);
+    renderer.render(scene, vc);
+    renderer.setClearAlpha(prevAlpha);
   }
   get usePost() { return this.settings.q.postPipeline; }
   configure() {
@@ -98,6 +135,12 @@ export class Pipeline {
       this.uniforms.tColor.value = this.target.texture;
       this.uniforms.tDepth.value = this.target.depthTexture;
     } else if (this.target) { this.target.dispose(); this.target = null; }
+    const rs = this.settings.q.reflections;
+    if (rs && this.usePost) {
+      const w2 = Math.max(64, Math.floor(this.size.x * rs)), h2 = Math.max(64, Math.floor(this.size.y * rs));
+      if (!this.reflTarget) { this.reflTarget = new THREE.WebGLRenderTarget(w2, h2, { type: THREE.HalfFloatType }); this.reflTarget.texture.generateMipmaps = false; }
+      else this.reflTarget.setSize(w2, h2);
+    }
   }
 
   render(world) {
@@ -105,6 +148,7 @@ export class Pipeline {
     const r = this.renderer;
     r.autoClear = false;
     if (this.usePost && this.target) {
+      if (this.reflTarget && !world.atmosphere.underwater) { this.updateReflection(world); this.reflActive = true; } else this.reflActive = false;
       r.setRenderTarget(this.target);
       r.clear(true, true, true);
       r.render(farScene, farCamera);

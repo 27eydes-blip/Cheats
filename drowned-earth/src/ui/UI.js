@@ -123,15 +123,20 @@ export class UI {
     const s = survival;
     const word = (v) => (v > 75 ? 'fine' : v > 50 ? 'okay' : v > 25 ? 'low' : 'bad');
     const render = () => {
-      const rows = inventory.list().map(({ id, n, def }) => this.itemRow(id, n, def.use ? `<button class="btn" data-use="${id}">Use</button>` : '')).join('') || '<div class="sub">Empty pockets.</div>';
+      const atBoat = this.ctx.player.mode === 'boat' || this.ctx.survival.nearBoat();
+      const locker = this.ctx.boatStorage;
+      const rows = inventory.list().map(({ id, n, def }) => this.itemRow(id, n, (def.use ? `<button class="btn" data-use="${id}">Use</button>` : '') + (atBoat ? `<button class="btn" data-stow="${id}">Stow</button>` : ''))).join('') || '<div class="sub">Empty pockets.</div>';
+      const lockerRows = atBoat ? (locker.list().map(({ id, n }) => this.itemRow(id, n, `<button class="btn" data-take="${id}">Take</button>`)).join('') || '<div class="sub">The boat locker is empty.</div>') : '';
       return `<button class="btn close" data-close>Close</button><h2>Pack</h2>
         <div class="sub">${inventory.weight().toFixed(1)} / ${inventory.capacity} kg · ${inventory.count('scrap')} scrap</div>
         <div class="stats"><span>Thirst <b>${word(s.thirst)}</b></span><span>Hunger <b>${word(s.hunger)}</b></span><span>Warmth <b>${word(s.warmth)}</b></span><span>Rest <b>${word(s.rest)}</b></span><span>Torch <b>${Math.round(s.battery)}%</b></span><span>Boat hull <b>${Math.round(boat.hull)}%</b></span><span>Fuel <b>${boat.fuel.toFixed(1)} L</b></span></div>
         <div class="tabs"><button class="btn" data-go="craft">Craft</button><button class="btn" data-go="journal">Journal</button></div>
-        <h3>Carried</h3>${rows}`;
+        <h3>Carried</h3>${rows}${atBoat ? '<h3>Boat locker</h3>' + lockerRows : ''}`;
     };
     const bind = (p) => {
       p.querySelectorAll('[data-use]').forEach((b) => b.addEventListener('click', () => { if (this.ctx.survival.useItem(b.dataset.use)) this.toast('Used ' + inventory.def(b.dataset.use).name); p.innerHTML = render(); bind(p); }));
+      p.querySelectorAll('[data-stow]').forEach((b) => b.addEventListener('click', () => { const id = b.dataset.stow; inventory.remove(id); this.ctx.boatStorage.add(id, 1, true); p.innerHTML = render(); bind(p); }));
+      p.querySelectorAll('[data-take]').forEach((b) => b.addEventListener('click', () => { const id = b.dataset.take; this.ctx.boatStorage.remove(id); inventory.add(id, 1, true); p.innerHTML = render(); bind(p); }));
       p.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => (b.dataset.go === 'craft' ? this.openCraft(null) : this.openJournal())));
       p.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => this.close()));
     };
