@@ -7689,24 +7689,24 @@ function dramaPick(v){
 }
 
 // ===================== THE JUGGERNAUT AND THE FINAL BOSS =====================
-function jugSetup(){
+function jugSetup(){return "";
   if(!G19()||(S.jug&&S.jug.season===S.season))return;let pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]===2);if(!pool.length)pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]>=2);if(!pool.length)return;
   const t=pool[Math.floor(Math.random()*pool.length)];t.roster.slice().sort((a,b)=>b.ovr-a.ovr).slice(0,5).forEach(p=>{p.ovr=Math.min(90,Math.max(p.ovr+9,82+Math.floor(Math.random()*5)))});
   S.jug={season:S.season,id:t.id,boss:null};RK.key=null;
   news(`🧨 Nobody's talking about ${t.name}. They should be. Their starting five is loaded.`);
   post({h:"@TheBubbleBoy",n:"",v:true,txt:`Mark it down: ${t.name} (${CONFS[t.conf]}) is this year's juggernaut. Nobody wants them in March. 🧨`,tag:"Juggernaut",likes:clout(2)});
 }
-function jugGame(gm){
+function jugGame(gm){return "";
   const J=S.jug;if(!G19()||!J||J.season!==S.season||gm.winner!==S.user)return;const o=gm.h===S.user?gm.a:gm.h;
   if(o===J.id&&!J.beatJ){J.beatJ=1;addXP(150);gtoast("🧨","Juggernaut slayer",`You took down ${T(o).name}`,"#ff8a3c");news(`🧨 You slayed the juggernaut: ${T(o).name}. (+150 XP)`)}
   if(false){addXP(200);gtoast("👹","Final Boss defeated",`You beat ${T(o).name}`,"#ffd34d");news(`👹 You beat the Final Boss, ${T(o).name}. (+200 XP)`)}
 }
-function bossBanner(){
+function bossBanner(){return "";
   const J=S.jug,ug=G19()&&S.phase!=="offseason"?userGame():null;if(!J||J.season!==S.season||!ug)return "";const o=ug.h===S.user?ug.a:ug.h;
   if(false)return `<div class="bossb boss">👹 <b>FINAL BOSS:</b> ${esc(T(o).name)} is next. Win for +200 XP.</div>`;
   if(o===J.id&&!J.beatJ)return `<div class="bossb jug">🧨 <b>JUGGERNAUT:</b> ${esc(T(o).name)} is next. Win for +150 XP.</div>`;return "";
 }
-function jugTile(){const J=S.jug;if(!G19()||!J||J.season!==S.season)return "";const a=T(J.id),b=J.boss!=null?T(J.boss):null;
+function jugTile(){return "";const J=S.jug;if(!G19()||!J||J.season!==S.season)return "";const a=T(J.id),b=J.boss!=null?T(J.boss):null;
   return `<div class="jugrow"><button class="jt" data-act="tab" data-t="standings"><small>🧨 Juggernaut</small><b>${esc(a.name)}</b><span>${recStr(a.id)}${rankOf(a.id)<=25?` · No. ${rankOf(a.id)}`:""}${J.beatJ?" · ✅ slain":""}</span></button>${false?`<button class="jt boss" data-act="tab" data-t="top25"><small>👹 Final Boss</small><b>${esc(b.name)}</b><span>${recStr(b.id)}${rankOf(b.id)<=25?` · No. ${rankOf(b.id)}`:""}${J.beatB?" · ✅ beaten":""}</span></button>`:""}</div>`}
 
 function patch20(){
