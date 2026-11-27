@@ -60,9 +60,9 @@ export const HEROES = {
   marlow: {
     name: 'Captain Marlow', sex: 0.95, age: 46, muscle: 0.6, weight: 0.48, race: { african: 0.45, caucasian: 0.55 }, height: 1.04,
     dials: { 'chin/chin-cleft-incr': 0.4, 'cheek/l-cheek-bones-incr': 0.4, 'cheek/r-cheek-bones-incr': 0.4, 'eyebrows/eyebrows-angle-up': 0.3, 'mouth/mouth-scale-horiz-incr': 0.2 },
-    skin: 'middleage_african_male', eyes: 'brownlight', brow: 'brow4', lash: 'lash1', hair: 'short03',
+    skin: 'middleage_african_male', eyes: 'brownlight', brow: 'brow4', lash: 'lash1', hair: 'short02',
     look: { hairColor: H.black, stubble: 1, beard: 0.25, weathered: 0.5, underEye: 0.7, scar: [[0.05, 0.034], [0.056, -0.012]], salt: 0.5, wear: 0.4 },
-    clothes: ['male_casualsuit02', 'shoes02', 'fedora01'], clothTints: [[0.12, 0.15, 0.24], [0.1, 0.09, 0.08], [0.2, 0.19, 0.17]], emotion: 'amused', tier: 3,
+    clothes: ['male_casualsuit02', 'shoes02'], clothTints: [[0.12, 0.15, 0.24], [0.1, 0.09, 0.08]], emotion: 'amused', tier: 3,
   },
   ondine: {
     name: 'Madame Ondine', sex: 0.02, age: 41, muscle: 0.4, weight: 0.45, race: { caucasian: 0.5, asian: 0.5 }, height: 1.02,
@@ -159,12 +159,11 @@ export function generatePerson(seed, hints = {}) {
   const grey = age > 70 ? H.white : age > 55 ? (r() < 0.6 ? H.grey : H.ash) : null;
   const natural = raceKey === 'african' ? (r() < 0.8 ? H.black : H.darkBrown) : raceKey === 'asian' ? (r() < 0.85 ? H.black : H.darkBrown) : pick(r, [H.darkBrown, H.brown, H.brown, H.auburn, H.blond, H.ash, H.black]);
   const hairColor = grey ? grey.map((c, i) => c * 0.85 + natural[i] * 0.15) : natural;
-  const styles = male ? ['short01', 'short02', 'short03', 'short04', 'short02', 'afro01', 'long01', null] : ['bob01', 'bob02', 'braid01', 'long01', 'ponytail01', 'afro01', 'short02', 'ponytail01'];
+  const styles = male ? ['short01', 'short02', 'short04', 'short02', 'short01', 'afro01', 'long01', null] : ['bob01', 'bob02', 'braid01', 'long01', 'ponytail01', 'afro01', 'short02', 'ponytail01'];
   let hair = hints.hair !== undefined ? hints.hair : pick(r, styles);
   if (raceKey === 'african' && r() < 0.45) hair = male ? (r() < 0.5 ? 'afro01' : null) : pick(r, ['afro01', 'braid01', 'ponytail01']);
   const pal = PALETTES[hints.palette] || PALETTES.default;
   const clothes = [pick(r, male ? MALE_CLOTHES : FEMALE_CLOTHES), pick(r, SHOES)];
-  if (r() < 0.07) clothes.push('fedora01');
   const outdoors = hints.outdoors ?? 0.7;
   return {
     seed, name: hints.name, sex, age, muscle: 0.25 + r() * 0.6 + (hints.labour || 0) * 0.15, weight: 0.2 + r() * 0.6 + (age > 45 ? 0.1 : 0),
