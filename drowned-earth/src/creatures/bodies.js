@@ -89,6 +89,14 @@ function siltwolf(mgr, c) {
         const [clip, sp] = quadClip(cc.state, w.speed, near);
         w.anim.play(clip, 0.35, { speed: sp });
         w.anim.update(dt * (cc.state === 'warning' ? 0.85 : 1));
+        // when it watches you, the head follows you
+        if (cc.state !== 'idle' && cc.state !== 'return') {
+          const want = Math.max(-0.9, Math.min(0.9, angTo(w.h, Math.atan2(p.x - w.p.x, p.z - w.p.z))));
+          w.look = (w.look || 0) + (want - (w.look || 0)) * Math.min(1, dt * 5);
+          w.root.updateMatrixWorld(true);
+          w.anim.turnBone(w.neck ||= w.skeleton.bones.find((b) => b.name === 'Neck2'), w.look * 0.45);
+          w.anim.turnBone(w.headB ||= w.skeleton.bones.find((b) => b.name === 'Head'), w.look * 0.55);
+        } else w.look = 0;
         // warning: crouch, head low; the glow comes up in its veins
         w.root.position.y -= cc.state === 'warning' ? 0.05 : 0;
         w.setGlow(cc.state === 'attack' ? 1 : cc.state === 'warning' ? 0.6 : cc.state === 'alert' ? 0.2 : 0);

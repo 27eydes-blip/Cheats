@@ -19,6 +19,7 @@ export async function loadCreatureModels(ctx) {
 }
 
 const geoCache = new Map();
+const _pq = new THREE.Quaternion(), _rq = new THREE.Quaternion(), _upv = new THREE.Vector3(0, 1, 0);
 
 // ---------------------------------------------------------------- quadrupeds (siltwolf, gullrat)
 // spec: { model, levels, shells, look, scale, mutate(skinned, geo), boneScale:{name:[x,y,z]}, bare:[bone names] }
@@ -101,6 +102,14 @@ export class Animator {
     this.cur = a; this.curName = n;
   }
   update(dt) { this.mixer.update(dt); for (const b of this.fix) b.scale.copy(b.userData.fixScale); }
+  // turn a bone (and its children) about world-up by an angle, after the clip
+  turnBone(bone, ang) {
+    if (!bone || !ang) return;
+    bone.parent.updateWorldMatrix(true, false);
+    const pq = bone.parent.getWorldQuaternion(_pq);
+    _rq.setFromAxisAngle(_upv, ang);
+    bone.quaternion.premultiply(pq).premultiply(_rq).premultiply(pq.invert());
+  }
 }
 
 // ---------------------------------------------------------------- looks

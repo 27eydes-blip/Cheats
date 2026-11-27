@@ -107,6 +107,25 @@ Sources: the core data from `github.com/makehumancommunity/makehuman` and the sy
 
 Animation for the people is the Quaternius Universal Animation Library (above), retargeted at runtime onto the MakeHuman rig.
 
+## Creatures (the territorial bestiary)
+
+Base models, mutated at load time (smoothed, re-skinned, grown spikes, barnacles, weed and glowing eyes; see `src/creatures/Mutate.js`):
+
+| Species | Base | Author | Licence |
+|---|---|---|---|
+| Siltwolves (and pups) | `Wolf` — Ultimate Animated Animals | Quaternius | CC0 |
+| Gullrats (rats) | `Fox` — Ultimate Animated Animals, re-proportioned into a rat | Quaternius | CC0 |
+| Gullrats (gulls) | "Turkey vulture" (rigged and animated by the JGengine authors, Apache-2.0) | Poly by Google, via poly.pizza | CC-BY 3.0 |
+| Needlefish, ambient fish | `Fish1` — Animated Fish | Quaternius | CC0 |
+| Listeners, Bloomwalkers | MakeHuman base mesh and assets (see below) | MakeHuman team | CC0 |
+| Net-Weaver | Procedural (no CC0 jellyfish model exists) | — | — |
+
+The Quaternius and vulture files were taken from the public mirrors in the JGengine
+repository (github.com/Noisemaker111/jgengine) and the goblo repository
+(github.com/Dustyluc123/goblo); the originals are distributed by Quaternius and poly.pizza.
+"Turkey vulture" by Poly by Google is licensed under CC-BY 3.0
+(https://creativecommons.org/licenses/by/3.0/); it was recoloured and reshaped into a gull.
+
 ## Libraries
 
 - three.js (MIT) — rendering, glTF/KTX2 loaders, Basis transcoder, meshopt decoder
