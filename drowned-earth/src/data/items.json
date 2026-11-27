@@ -602,6 +602,15 @@
    "tags": [
     "material"
    ]
+  },
+  "brass_fish_pin": {
+   "name": "Brass fish pin",
+   "desc": "A little brass fish with an amber glass eye. The door opens for the fish.",
+   "value": 0,
+   "weight": 0.02,
+   "tags": [
+    "key"
+   ]
   }
  }
 }

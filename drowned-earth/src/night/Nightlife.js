@@ -173,11 +173,24 @@ export class Nightlife {
     if (kind === 'game') return runGame(this, bar, arg, (msg) => this.say(bar, msg));
     if (kind === 'job') return this.offerJob(bar, arg);
     if (kind === 'deliver') return this.deliver(bar);
-    if (kind === 'door') { this.ctx.story.setFlag('rat_backroom'); this.ctx.events.emit('night:door', bar.id); return this.say(bar, 'Fenn looks at you for a long moment, then sets down a glass with no ice in it. Behind you, the bookcase clicks. "Back room. Don\'t touch the maps."'); }
+    if (kind === 'door') return this.backRoom(bar);
     if (kind === 'counsel') { this.state.counsel = Math.min(2, this.state.counsel + 1); this.state.habit = Math.max(0, this.state.habit - 0.25); this.ctx.story.setFlag('vigil_circle'); ui.close(); ui.whisper('You sit in the circle at the second bell. Nobody makes a speech. Someone pours you tea and leaves the pot. It helps more than you expected.'); return; }
     return this.say(bar, '…');
   }
 
+  // the Drowned Rat's back room: charts, a password, and (for those who've run for Lowlight) a brass fish
+  backRoom(bar) {
+    const st = this.ctx.story;
+    st.setFlag('rat_backroom');
+    this.ctx.events.emit('night:door', bar.id);
+    let msg = 'Fenn looks at you for a long moment, then sets down a glass with no ice in it. Behind you, the bookcase clicks. "Back room. Don\'t touch the maps."';
+    if (st.flag('lamp_rumour') && !st.flag('lamp_map')) { st.setFlag('lamp_map'); msg += ' — On the wall, a sea chart of the old coast. Cape Orrin Light is circled in amber ink. In the margin someone has drawn a small brass fish.'; (this.ctx.state.notes ||= []).push({ text: 'The Rat\'s back room: Cape Orrin Light circled in amber. A brass fish in the margin.', day: this.ctx.time.day }); }
+    else if (st.flag('lamp_map') && st.flag('coded_pin') && !st.flag('has_pin')) {
+      if (this.state.jobsDone >= 1) { st.setFlag('has_pin'); this.ctx.inventory.add('brass_fish_pin', 1, true); msg = 'Fenn takes something from his waistcoat and puts it in your hand: a brass fish, warm from his pocket. "You\'ve carried for us. The fish chooses who carries. Don\'t lose it, and don\'t tell me where it takes you."'; }
+      else msg += ' — "The fish is for people who carry. Carry something for Lowlight first."';
+    }
+    return this.say(bar, msg);
+  }
   // ---------------------------------------------------------------- drinks
   price(id) { const d = this.data.drinks[id]; let p = d.price; if (d.banned && (this.ctx.heat?.value || 0) > 40) p += 1; return p; }
   menu(bar) {

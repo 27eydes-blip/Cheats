@@ -25,6 +25,7 @@ export function loadData() {
     standing: get('standing') || { tiers: {}, steps: {} },
     nightlife: get('nightlife'),
   boats: get('boats'),
+  club: get('club'),
   creatures: get('creatures') || { species: {}, placements: [], encounters: {} },
     life: loadLife(optional),
   };

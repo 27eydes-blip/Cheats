@@ -77,6 +77,9 @@ export class Settings {
     this.music = stored.music ?? 1;
     this.sharpness = params.has('sharp') ? +params.get('sharp') : stored.sharpness ?? 0.5;     // CAS-style sharpen, 0 = off
     this.motionBlur = stored.motionBlur ?? false; // camera motion blur (Standard/Ultra)
+    // mature content: decided at the first-launch age gate; null = not asked yet
+    this.ageConfirmed = stored.ageConfirmed ?? null;
+    this.mature = stored.mature ?? false;
   }
   get q() { return PRESETS[this.quality]; }
   get label() { return PRESETS[this.quality].label + (this.auto ? ' (auto)' : ''); }
@@ -88,7 +91,7 @@ export class Settings {
       localStorage.setItem(KEY, JSON.stringify({
         quality: this.auto ? 'auto' : this.quality, volume: this.volume, invertY: this.invertY,
         lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
-        reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur,
+        reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur, ageConfirmed: this.ageConfirmed, mature: this.mature,
       }));
     } catch { /* storage may be unavailable */ }
   }

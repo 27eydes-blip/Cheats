@@ -261,6 +261,7 @@ export class UI {
       const cur = main.filter((o) => !o.done).slice(0, 1).map((o) => `<div class="row"><div class="name hand">${esc(o.text)}</div></div>`).join('') || '<div class="sub">Nothing pressing. The water is patient.</div>';
       const done = main.filter((o) => o.done).map((o) => `<div class="row"><div class="name hand" style="opacity:.5"><s>${esc(o.text)}</s></div></div>`).join('');
       body = `<h3>Teo</h3>${cur}${done}${side.length ? '<h3>Threads</h3>' + side.map((o) => `<div class="row"><div class="name hand">${esc(o.text)}</div></div>`).join('') : ''}
+        ${(() => { const Q = data.club?.quest; if (!Q || !story.flag(Q.steps[0].flag)) return ''; const got = Q.steps.filter((st) => story.flag(st.flag)); return `<h3>${esc(Q.name)}</h3>` + got.map((st) => `<div class="row"><div class="name hand">${esc(st.text)}</div></div>`).join('') + (got.length < Q.steps.length ? '<div class="row"><div class="name hand" style="opacity:.5">…</div></div>' : ''); })()}
         <h3>Your notes</h3>${(state.notes || []).map((n) => `<div class="row"><div class="name hand">${esc(n.text)} <small>day ${n.day}</small></div></div>`).join('')}
         <div class="tabs"><input data-note placeholder="Write a note in your own hand…" maxlength="120" style="flex:1;min-width:200px;font:15px Georgia;padding:6px;background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--line);pointer-events:auto"><button class="btn" data-addnote>Write</button></div>`;
     } else if (tab === 'map') body = '<canvas class="chart" width="720" height="620"></canvas><div class="sub">Drawn as you go. Explore to fill it in.</div>';
@@ -350,6 +351,7 @@ export class UI {
       ${row('One-handed touch layout', 'oneHand', [['true', 'On'], ['false', 'Off']])}
       ${row('Film grain & lens effects', 'lensFx', [['true', 'On'], ['false', 'Off']])}
       ${row('Motion blur', 'motionBlur', [['false', 'Off'], ['true', 'On']])}
+      ${s.ageConfirmed ? row('Mature content (18+: alcohol, gambling, violence, brief artistic nudity)', 'mature', [['false', 'Off — clean versions'], ['true', 'On']]) : '<h3>Mature content</h3><div class="sub">Off. Only available after confirming you are 18 or older at the first-launch gate.</div>'}
       <h3>Sharpness <span class="dim" data-sharpv>${Math.round(s.sharpness * 100)}%</span></h3><input type="range" min="0" max="1" step="0.05" value="${s.sharpness}" data-sharp style="width:240px;pointer-events:auto">${s.q.postPipeline ? '' : '<div class="sub">Sharpen and motion blur need Standard or Ultra quality.</div>'}
       ${row('Music', 'music', [['1', 'On'], ['0.5', 'Quiet'], ['0', 'Off']])}
       ${row('Invert look', 'invertY', [['true', 'On'], ['false', 'Off']])}
