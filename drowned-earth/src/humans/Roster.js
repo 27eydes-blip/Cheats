@@ -123,7 +123,7 @@ const SYM = [
 ];
 const ASYM = ['asym/asym-nose-1-l', 'asym/asym-nose-1-r', 'asym/asym-mouth-1-l', 'asym/asym-mouth-1-r', 'asym/asym-eye-1-l', 'asym/asym-eye-1-r', 'asym/asym-brown-1-l', 'asym/asym-brown-1-r', 'asym/asym-cheek-1-l', 'asym/asym-cheek-1-r', 'asym/asym-ear-1-l', 'asym/asym-ear-1-r'];
 const MALE_CLOTHES = ['male_casualsuit01', 'male_casualsuit02', 'male_casualsuit03', 'male_casualsuit04', 'male_casualsuit05', 'male_worksuit01'];
-const FEMALE_CLOTHES = ['female_casualsuit01', 'female_casualsuit02', 'female_sportsuit01', 'male_casualsuit04', 'male_worksuit01'];
+const FEMALE_CLOTHES = ['female_casualsuit01', 'female_casualsuit02', 'male_casualsuit04', 'male_worksuit01', 'male_casualsuit01', 'female_casualsuit01'];
 const SHOES = ['shoes01', 'shoes02', 'shoes03', 'shoes05', 'shoes06'];
 // cloth palettes per community (the rafts dye with what they have)
 const PALETTES = {

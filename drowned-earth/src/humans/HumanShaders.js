@@ -278,8 +278,8 @@ export function clothMaterial(tint, opts = {}) {
           float n = hNoise(vRestC * 22.0 + uSeed) * 0.6 + hNoise(vRestC * 90.0 + uSeed) * 0.4;
           c *= mix(1.0, 0.9 + 0.16 * n, uWear);                    // fading, grime (subtle)
           // salt: dried white tide-lines, mostly low on the garment and at the cuffs
-          float tide = smoothstep(0.62, 0.8, hNoise(vRestC * vec3(30.0, 90.0, 30.0) + uSeed * 3.0)) * smoothstep(0.55, 0.15, vRestC.y) * smoothstep(0.35, 0.7, hNoise(vRestC * 6.0 + uSeed));
-          c = mix(c, c * 0.6 + vec3(0.32, 0.31, 0.29), tide * uSalt * 0.35);
+          float tide = smoothstep(0.62, 0.8, hNoise(vRestC * vec3(30.0, 90.0, 30.0) + uSeed * 3.0)) * smoothstep(0.55, 0.15, vRestC.y) * smoothstep(0.45, 0.75, hNoise(vRestC * 14.0 + uSeed));
+          c = mix(c, c * 0.75 + vec3(0.2, 0.2, 0.19), tide * uSalt * 0.25);
           // a patch sewn over a worn spot
           if (uPatch > 0.5) {
             vec3 pc = vec3(0.09 * sign(sin(uSeed * 7.0)), 0.55, 0.1);
