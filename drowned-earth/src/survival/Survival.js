@@ -39,7 +39,7 @@ export class Survival {
     if (player.flashlight) this.battery = Math.max(0, this.battery - dt * 0.12);
     // oxygen
     if (player.headUnder) {
-      this.oxygen = Math.max(0, this.oxygen - (100 / this.oxygenSeconds) * dt * (this.ctx.input.held.sprint ? 1.4 : 1) * (this.pressureDrain || 1));
+      this.oxygen = Math.max(0, this.oxygen - (100 / this.oxygenSeconds) * dt * (this.ctx.input.held.sprint ? 1.4 : 1) * (this.pressureDrain || 1) * (this.ctx.injury ? this.ctx.injury.oxygenMul() : 1));
       if (this.oxygen <= 0) this.drowning += dt; else this.drowning = 0;
     } else { this.oxygen = Math.min(this.maxOxygen, this.oxygen + dt * 35); this.drowning = 0; }
     if (this.drowning > 4 && !this.blackout) this.blackOut('water');
@@ -88,6 +88,9 @@ export class Survival {
       else this.ctx.ui.whisper('The ping comes back soft and empty. Something else heard it.');
       return true;
     }
+    if (d.use.treat) return this.ctx.injury ? this.ctx.injury.treat(d.use.treat) : false;
+    if (d.use.tool) return this.ctx.creatures ? this.ctx.creatures.useTool(id) : false;
+    if (id === 'medicine' && this.ctx.injury) this.ctx.injury.infection = 0;
     if (d.use.log) { this.ctx.story.openLog(d.use.log); return true; }
     if (d.use.forge) { if (this.ctx.standing.forged != null) { this.ctx.ui.toast('Already wearing it.'); return false; } this.ctx.standing.wearForged(d.use.forge); return true; }
     if (d.use.tank) { if (this.tanks) { this.ctx.ui.toast('The spare bottle is already rigged.'); return false; } this.tanks = 1; this.oxygenSeconds = 95; inv.remove(id); this.ctx.ui.whisper('You strap the spare bottle to your back. Twice the breath. It knocks against your ribs when you swim fast.'); return true; }
@@ -101,6 +104,9 @@ export class Survival {
   nearBoat() { return this.ctx.player.position.distanceTo(this.ctx.boat.pos) < 5; }
   sleep(raft) {
     const { time, ui } = this.ctx;
+    if (this.ctx.creatures?.interruptSleep()) return;
+    const p = this.ctx.player.position;
+    this.ctx.state.checkpoint = { x: p.x, y: p.y + 0.2, z: p.z, mode: this.ctx.player.mode === 'boat' ? 'boat' : 'foot' };
     ui.fade(1.2, () => {
       const h = time.hour;
       const add = h >= 19 || h < 5 ? (6.2 - h + 24) % 24 : 5;

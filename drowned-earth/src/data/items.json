@@ -115,7 +115,7 @@
   },
   "hm_water": {
    "name": "Highmark water",
-   "desc": "A sealed bottle. 'SUPPLY AUTHORITY \u2014 RATION 1 OF 7'.",
+   "desc": "A sealed bottle. 'SUPPLY AUTHORITY — RATION 1 OF 7'.",
    "value": 6,
    "weight": 1,
    "tags": [
@@ -221,14 +221,14 @@
   },
   "bandage": {
    "name": "Bandage",
-   "desc": "Boiled cloth strips.",
+   "desc": "Boiled cloth strips. Use to stop bleeding.",
    "value": 2,
    "weight": 0.1,
    "tags": [
     "medical"
    ],
    "use": {
-    "fatigue": 5
+    "treat": "bandage"
    }
   },
   "hull_patch": {
@@ -338,13 +338,16 @@
   },
   "salt": {
    "name": "Salt",
-   "desc": "Raft barter. Dried in trays on every deck in the Drift.",
+   "desc": "Raft barter. Dried in trays on every deck in the Drift. Also breaks a Bloomwalker's hold (Use).",
    "value": 2,
    "weight": 0.2,
    "tags": [
     "currency",
     "food"
-   ]
+   ],
+   "use": {
+    "tool": "salt"
+   }
   },
   "glass": {
    "name": "Glass",
@@ -421,7 +424,7 @@
   },
   "teo_tag": {
    "name": "Teo's dive tag",
-   "desc": "Stamped steel. T. CALLOWAY-ASHE \u00b7 DEEP-BORN \u00b7 212 DIVES. Found in Ward 9's flooded basement.",
+   "desc": "Stamped steel. T. CALLOWAY-ASHE · DEEP-BORN · 212 DIVES. Found in Ward 9's flooded basement.",
    "value": 0,
    "weight": 0.01,
    "tags": [
@@ -458,6 +461,89 @@
    "use": {
     "ping": 1
    }
+  },
+  "splint": {
+   "name": "Splint",
+   "desc": "Two slats and cloth. Use to set a broken limb.",
+   "value": 4,
+   "weight": 0.4,
+   "tags": [
+    "medical"
+   ],
+   "use": {
+    "treat": "splint"
+   }
+  },
+  "flare": {
+   "name": "Flare",
+   "desc": "Red road flare. Use to throw. Light-shy things keep away; light-drawn things go to it.",
+   "value": 5,
+   "weight": 0.2,
+   "tags": [
+    "gear",
+    "tool"
+   ],
+   "use": {
+    "tool": "flare"
+   }
+  },
+  "noisemaker": {
+   "name": "Noise-maker",
+   "desc": "A tin of bolts on a clock spring. Throw it, and anything that hunts by sound goes there instead.",
+   "value": 4,
+   "weight": 0.3,
+   "tags": [
+    "gear",
+    "tool"
+   ],
+   "use": {
+    "tool": "noisemaker"
+   }
+  },
+  "bait": {
+   "name": "Bait",
+   "desc": "Fish guts in a rag. Throw it to draw scavengers off.",
+   "value": 1,
+   "weight": 0.2,
+   "tags": [
+    "tool"
+   ],
+   "use": {
+    "tool": "bait"
+   }
+  },
+  "spear": {
+   "name": "Fishing spear",
+   "desc": "Rebar, sharpened. Use to strike something in reach. You keep it.",
+   "value": 6,
+   "weight": 1.2,
+   "tags": [
+    "gear",
+    "tool"
+   ],
+   "use": {
+    "tool": "spear"
+   }
+  },
+  "pelt": {
+   "name": "Siltwolf pelt",
+   "desc": "Grey, oily, warm. Portage pays for these.",
+   "value": 9,
+   "weight": 0.9,
+   "tags": [
+    "material",
+    "creature"
+   ]
+  },
+  "feathers": {
+   "name": "Gull feathers",
+   "desc": "For fletching and stuffing. Smells of the deck.",
+   "value": 1,
+   "weight": 0.05,
+   "tags": [
+    "material",
+    "creature"
+   ]
   }
  }
 }

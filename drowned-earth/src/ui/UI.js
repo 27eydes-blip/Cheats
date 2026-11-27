@@ -250,7 +250,7 @@ export class UI {
   }
   openJournal(tab = 'mind') {
     const { story, data, state } = this.ctx;
-    const tabs = { mind: 'On your mind', map: 'Chart', writing: 'Writing', photos: 'Photos', people: 'People', rumours: 'Rumours', help: 'Help' };
+    const tabs = { mind: 'On your mind', map: 'Chart', writing: 'Writing', photos: 'Photos', people: 'People', rumours: 'Rumours', bestiary: 'Bestiary', help: 'Help' };
     let body = '';
     if (tab === 'mind') {
       const objs = story.objectives();
@@ -265,6 +265,17 @@ export class UI {
     else if (tab === 'photos') { const ph = this.ctx.photo.list(); body = ph.length ? `<div class="photos">${ph.map((p) => `<figure><img src="${p.url}"><figcaption class="hand">Day ${p.day}, ${esc(p.time)} — ${esc(p.where)}</figcaption></figure>`).join('')}</div>` : '<div class="sub">No photographs yet. Press K (or the Photo button) to take one.</div>'; }
     else if (tab === 'people') body = Object.entries(state.met || {}).map(([id, n]) => { const d = data.npcs.npcs.find((x) => x.id === id); return d ? `<div class="row"><div class="name hand">${esc(d.name)}<small>${esc(d.role)} · spoken to ${n}×${d.respect ? ' · treats you as an equal' : ''}</small></div></div>` : ''; }).join('') || '<div class="sub">You have kept to yourself.</div>';
     else if (tab === 'rumours') body = (this.ctx.economy.rumours || []).map((r) => `<div class="row"><div class="name hand">${esc(r.text)}<small>day ${r.day}</small></div></div>`).join('') || '<div class="sub">No rumours yet. Ration boards and Raft Free Voice carry them.</div>';
+    else if (tab === 'bestiary') {
+      const sp = data.creatures?.species || {}, cr = this.ctx.creatures;
+      body = Object.entries(sp).map(([k, s]) => {
+        const n = cr ? cr.known(k) : 0, e = state.bestiary?.[k];
+        if (!n) return `<div class="row"><div class="name hand" style="opacity:.45">${s.stub ? '???' : '— unseen —'}<small>${esc(s.habitat || '')}</small></div></div>`;
+        return `<div class="row" style="display:block"><div class="name hand">${esc(s.name)}<small>${esc(s.habitat || '')} · ${esc(s.temperament || '')}${e ? ` · seen ${e.seen}× · hurt you ${e.hurt}×` : ''}</small></div>
+          ${(s.notes || []).slice(0, n).map((t) => `<p class="hand" style="margin:4px 0 0;opacity:.85">${esc(t)}</p>`).join('')}
+          ${n >= 2 && s.signs ? `<p style="margin:6px 0 0;font-size:13px;opacity:.7"><b>Signs:</b> ${s.signs.map(esc).join(' · ')}</p>` : ''}
+          ${n >= 3 && s.weak ? `<p style="margin:2px 0 0;font-size:13px;opacity:.7"><b>What works:</b> ${s.weak.map(esc).join(' · ')}</p>` : ''}</div>`;
+      }).join('') + `<h3>Wounds</h3><div class="sub">${this.ctx.injury ? this.ctx.injury.describe() : ''}</div>`;
+    }
     else body = HELP_HTML;
     this.openPanel('journal', `<button class="btn close" data-close>Close</button><h2>Journal</h2><div class="sub">${esc(this.ctx.life?.s?.name || 'Wren Calloway-Ashe')} · Day ${this.ctx.time.day}, ${this.ctx.time.clockString()} · ${this.ctx.weather.state}</div>
       <div class="tabs">${Object.entries(tabs).map(([k, v]) => `<button class="btn ${k === tab ? 'on' : ''}" data-jt="${k}">${v}</button>`).join('')}</div>${body}`, (p) => {

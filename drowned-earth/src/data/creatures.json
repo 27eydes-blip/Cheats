@@ -1,0 +1,442 @@
+{
+ "_doc": "Territorial bestiary. Creatures ignore you until provoked. Radii in metres. senses: hearing/vision/light/blood/food/vibration weights (light < 0 = repelled by light). temperament: shy (flees if you back off), protective (guards until you leave), ambusher (hidden until you are very close), skittish (strikes when surprised). warnTime = seconds of threat display before an attack. leash = how far past its territory it will follow. damage per hit; bleed adds to the bleeding rate. lethal: contact can kill outright (after the first hour). stub: data only, not yet in the world.",
+ "species": {
+  "gullrat": {
+   "name": "Gullrats",
+   "kind": "swarm",
+   "count": 16,
+   "temperament": "skittish",
+   "habitat": "raft decks at night",
+   "territoryR": 7,
+   "alertR": 9,
+   "warnR": 4.5,
+   "leash": 10,
+   "warnTime": 2.5,
+   "senses": {
+    "hearing": 0.5,
+    "vision": 0.7,
+    "light": -1.0,
+    "blood": 0.4,
+    "food": 1.0,
+    "vibration": 0.2
+   },
+   "damage": 3,
+   "bleed": 0.08,
+   "rate": 0.45,
+   "speed": 4.5,
+   "active": "night",
+   "signs": [
+    "Droppings and feathers on deck rails",
+    "Gnawed food crates",
+    "A high chittering under the planks after dark"
+   ],
+   "weak": [
+    "Lamplight scatters them",
+    "Sealed storage gives them nothing to want",
+    "Traps and noise-baits on the edge of the deck"
+   ],
+   "notes": [
+    "Gulls and rats, nesting together under the rafts. A swarm, not an animal.",
+    "They come for open food and for eggs. They do not care about you unless you smell of either.",
+    "A swarm can strip a sleeping body of its rations and skin in minutes. Keep a lamp lit."
+   ]
+  },
+  "siltwolf": {
+   "name": "Siltwolves",
+   "kind": "pack",
+   "count": 3,
+   "temperament": "shy",
+   "habitat": "rooftops and breakwaters",
+   "territoryR": 16,
+   "alertR": 30,
+   "warnR": 12,
+   "leash": 22,
+   "warnTime": 4.0,
+   "senses": {
+    "hearing": 0.8,
+    "vision": 1.0,
+    "light": -0.5,
+    "blood": 0.9,
+    "food": 0.4,
+    "vibration": 0.3
+   },
+   "damage": 16,
+   "bleed": 0.25,
+   "rate": 1.2,
+   "speed": 7.0,
+   "active": "any",
+   "pups": true,
+   "signs": [
+    "Claw scratches on parapets",
+    "A ring of picked bones",
+    "Watching shapes on a far roof"
+   ],
+   "weak": [
+    "Lights and noise make them keep their distance",
+    "High ground; they will not climb ladders",
+    "Never run: running is what prey does"
+   ],
+   "notes": [
+    "Dogs once. Webbed feet now, grey with silt. They swim between roofs in the evening.",
+    "They watch. They growl if you come near the den. They come for you only if you corner them, come between them and the pups, or run.",
+    "A pack will follow a runner a long way. Back away slowly, face them, keep a light on them."
+   ]
+  },
+  "needlefish": {
+   "name": "Needlefish",
+   "kind": "shoal",
+   "count": 40,
+   "temperament": "skittish",
+   "habitat": "warm shallows",
+   "territoryR": 9,
+   "alertR": 12,
+   "warnR": 4,
+   "leash": 12,
+   "warnTime": 1.2,
+   "senses": {
+    "hearing": 0.6,
+    "vision": 0.6,
+    "light": 0.2,
+    "blood": 1.4,
+    "food": 0.2,
+    "vibration": 1.2
+   },
+   "damage": 2,
+   "bleed": 0.15,
+   "rate": 0.25,
+   "speed": 6.0,
+   "active": "any",
+   "signs": [
+    "Silver flickers just under the surface",
+    "Small cuts on floating fish",
+    "Water that 'boils' when you splash"
+   ],
+   "weak": [
+    "Move slowly and they scatter",
+    "Stay out of the water while bleeding",
+    "Fire on the water drives them deep"
+   ],
+   "notes": [
+    "Hand-long fish with jaws like a sewing needle. Thousands of them in the warm shallows.",
+    "A slow swimmer is just another shape. A splasher is a wounded thing. Blood in the water is an invitation.",
+    "A shoal in a frenzy draws worse things up from below."
+   ]
+  },
+  "netweaver": {
+   "name": "Net-Weavers",
+   "kind": "drifter",
+   "count": 1,
+   "temperament": "protective",
+   "habitat": "flooded streets",
+   "territoryR": 8,
+   "alertR": 10,
+   "warnR": 5,
+   "leash": 4,
+   "warnTime": 2.5,
+   "senses": {
+    "hearing": 0.2,
+    "vision": 0.0,
+    "light": 1.6,
+    "blood": 0.0,
+    "food": 0.0,
+    "vibration": 1.4
+   },
+   "damage": 22,
+   "bleed": 0.0,
+   "rate": 1.6,
+   "speed": 0.9,
+   "active": "any",
+   "threads": 6,
+   "signs": [
+    "Pale threads hanging in still water",
+    "Dead fish caught at head height",
+    "A faint bell-shape against the dark"
+   ],
+   "weak": [
+    "Touch nothing: they only sting what brushes the threads",
+    "Keep the light off them",
+    "A blade cuts a path through the threads"
+   ],
+   "notes": [
+    "A drifting bell the size of a car, trailing threads that sting like boiling water.",
+    "It does not hunt. Threads that are touched, or a light shone into the bell, make it flare and lash.",
+    "The sting stops the breath for a moment. Divers drown from the panic, not the venom."
+   ]
+  },
+  "listener": {
+   "name": "Listeners",
+   "kind": "hunter",
+   "count": 1,
+   "temperament": "ambusher",
+   "habitat": "the dark: stations, the Shelf, the Sounding",
+   "territoryR": 34,
+   "alertR": 34,
+   "warnR": 14,
+   "leash": 10,
+   "warnTime": 3.0,
+   "senses": {
+    "hearing": 1.6,
+    "vision": 0.0,
+    "light": 0.0,
+    "blood": 0.3,
+    "food": 0.0,
+    "vibration": 1.0
+   },
+   "damage": 100,
+   "bleed": 0.0,
+   "rate": 2.5,
+   "speed": 3.6,
+   "active": "any",
+   "lethal": true,
+   "signs": [
+    "Lanternfish going dark all at once",
+    "Scraping on metal that is not you",
+    "Breathing that is not yours"
+   ],
+   "weak": [
+    "Silence and stillness",
+    "A noise-maker thrown elsewhere",
+    "Air pockets: they will not surface"
+   ],
+   "notes": [
+    "Pale, tall, many-limbed. Blind. They hold the dark places and wait.",
+    "They hear everything: engines, splashes, a dropped tool, running feet, a sonar ping. They hunt the sound.",
+    "Contact is death. Stay slow. Stay quiet. Let them pass."
+   ]
+  },
+  "bloomwalker": {
+   "name": "Bloomwalkers",
+   "kind": "drifter",
+   "count": 1,
+   "temperament": "protective",
+   "habitat": "submerged streets and wards",
+   "territoryR": 10,
+   "alertR": 9,
+   "warnR": 3.5,
+   "leash": 6,
+   "warnTime": 3.0,
+   "senses": {
+    "hearing": 0.2,
+    "vision": 0.2,
+    "light": 1.8,
+    "blood": 0.0,
+    "food": 0.0,
+    "vibration": 0.3,
+    "warmth": 1.0
+   },
+   "damage": 8,
+   "bleed": 0.0,
+   "rate": 1.0,
+   "speed": 0.7,
+   "active": "any",
+   "grab": true,
+   "signs": [
+    "Soft green light in drowned windows",
+    "Clothes still on, drifting upright",
+    "The growth thickening on a doorway"
+   ],
+   "weak": [
+    "Keep the light off them and keep moving",
+    "Salt or cold makes the glow let go",
+    "If one holds you: struggle, then swim up"
+   ],
+   "notes": [
+    "People. Were people. The growth took them under and keeps them drifting.",
+    "They turn toward light and warmth. If you stand still near one, or light it up, it holds on.",
+    "They are slow, and they are sad, and they will drown you without meaning to."
+   ]
+  },
+  "tide_crab": {
+   "name": "Tide Crabs",
+   "kind": "stub",
+   "temperament": "protective",
+   "habitat": "drowned lobbies",
+   "notes": [
+    "Armoured scavengers the size of a car. Slow. They only fight what steps on them."
+   ],
+   "stub": true
+  },
+  "spore_heron": {
+   "name": "Spore Herons",
+   "kind": "stub",
+   "temperament": "shy",
+   "habitat": "the glow edges",
+   "notes": [
+    "Tall birds with lit eyes. Their spores make the water look like it is breathing."
+   ],
+   "stub": true
+  },
+  "cable_eel": {
+   "name": "Cable Eels",
+   "kind": "stub",
+   "temperament": "ambusher",
+   "habitat": "flooded substations",
+   "notes": [
+    "They live in dead cables that are not quite dead. Test the water with a rod."
+   ],
+   "stub": true
+  },
+  "hullbiter": {
+   "name": "Hullbiters",
+   "kind": "stub",
+   "temperament": "skittish",
+   "habitat": "under rafts and hulls",
+   "notes": [
+    "Barnacle-armoured. They eat wood from below. A leak that wasn't there yesterday."
+   ],
+   "stub": true
+  },
+  "drowned_pack": {
+   "name": "Drowned Packs",
+   "kind": "stub",
+   "temperament": "skittish",
+   "habitat": "deep streets",
+   "notes": [
+    "Blind white fish that turn on sound like one animal."
+   ],
+   "stub": true
+  },
+  "choir": {
+   "name": "The Choir",
+   "kind": "stub",
+   "temperament": "shy",
+   "habitat": "the Abyss",
+   "notes": [
+    "Their songs move the water. Rafts above them tip and break."
+   ],
+   "stub": true
+  },
+  "warden": {
+   "name": "The Warden of the Cathedral",
+   "kind": "stub",
+   "temperament": "protective",
+   "habitat": "the Cathedral",
+   "notes": [
+    "Something guards the Cathedral. Teo's last recording is mostly its sound."
+   ],
+   "stub": true
+  }
+ },
+ "placements": [
+  {
+   "species": "gullrat",
+   "id": "gr_portage",
+   "community": "portage",
+   "offset": [
+    6,
+    0,
+    -4
+   ],
+   "night": true
+  },
+  {
+   "species": "siltwolf",
+   "id": "sw_court",
+   "x": -205,
+   "z": 288,
+   "roof": true
+  },
+  {
+   "species": "siltwolf",
+   "id": "sw_cask",
+   "x": 92,
+   "z": 150,
+   "roof": true
+  },
+  {
+   "species": "needlefish",
+   "id": "nf_court",
+   "x": -250,
+   "z": 262,
+   "depth": 1.6
+  },
+  {
+   "species": "needlefish",
+   "id": "nf_portage",
+   "x": 300,
+   "z": 286,
+   "depth": 1.8
+  },
+  {
+   "species": "netweaver",
+   "id": "nw_street",
+   "x": -232,
+   "z": 186,
+   "depth": 7.5,
+   "encounter": "street_dive"
+  },
+  {
+   "species": "netweaver",
+   "id": "nw_ward",
+   "x": -186,
+   "z": -236,
+   "depth": 8
+  },
+  {
+   "species": "listener",
+   "id": "ls_cask",
+   "x": 48,
+   "z": 94,
+   "depth": 12,
+   "encounter": "listener_crawl"
+  },
+  {
+   "species": "listener",
+   "id": "ls_sounding",
+   "x": 96,
+   "z": -128,
+   "depth": 40
+  },
+  {
+   "species": "bloomwalker",
+   "id": "bw_street",
+   "x": -160,
+   "z": 150,
+   "depth": 9
+  },
+  {
+   "species": "bloomwalker",
+   "id": "bw_ward",
+   "x": -202,
+   "z": -232,
+   "depth": 5
+  },
+  {
+   "species": "bloomwalker",
+   "id": "bw_court",
+   "x": -238,
+   "z": 198,
+   "depth": 8
+  }
+ ],
+ "encounters": {
+  "raft_raid": {
+   "community": "portage",
+   "text": "Scratching. Wings. Something on the deck, right by your pack. It smells the food."
+  },
+  "street_dive": {
+   "cache": [
+    -224,
+    180
+   ],
+   "loot": {
+    "bandage": 2,
+    "medicine": 1,
+    "rope": 1
+   },
+   "hint": "Ahead, pale threads hang in the still water, moving with no current. Something big and soft drifts above them."
+  },
+  "listener_crawl": {
+   "hint": "The station is too quiet. Something here is listening. Do not make a sound.",
+   "cache": [
+    60,
+    104
+   ],
+   "loot": {
+    "battery": 2,
+    "noisemaker": 1,
+    "medicine": 1
+   }
+  }
+ }
+}

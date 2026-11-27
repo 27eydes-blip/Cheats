@@ -54,13 +54,14 @@ export class Player {
     _f.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     _r.set(-_f.z, 0, _f.x);
     const surface = waves.height(this.position.x, this.position.z);
-    const slow = survival ? survival.moveFactor() : 1;
+    const inj = this.ctx.injury;
+    const slow = (survival ? survival.moveFactor() : 1) * (inj ? inj.speedMul(this.mode) : 1);
 
     if (this.mode === 'climb') this.updateClimb(dt);
     else if (this.mode === 'foot') {
       const crouching = input.held.crouch;
       this.crouch = damp(this.crouch, crouching ? 1 : 0, 10, dt);
-      const sprint = input.held.sprint && !crouching && input.move.y > 0 && (survival ? survival.canSprint() : true);
+      const sprint = input.held.sprint && !crouching && input.move.y > 0 && (survival ? survival.canSprint() : true) && (inj ? inj.canSprint() : true);
       this.sprintTime = sprint ? this.sprintTime + dt : 0;
       const speed = (crouching ? 1.6 : sprint ? 5.6 : 3.1) * slow;
       _w.set(0, 0, 0).addScaledVector(_f, input.move.y).addScaledVector(_r, input.move.x);

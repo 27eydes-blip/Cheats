@@ -51,6 +51,14 @@
     "lantern_parts": {
      "price": 4,
      "stock": 1
+    },
+    "flare": {
+     "price": 7,
+     "stock": 3
+    },
+    "splint": {
+     "price": 5,
+     "stock": 2
     }
    },
    "buys": [
@@ -61,7 +69,9 @@
     "clothing",
     "keepsake",
     "relic",
-    "contraband"
+    "contraband",
+    "pelt",
+    "feathers"
    ]
   },
   "odile_stall": {
@@ -274,17 +284,17 @@
      "price": 6
     },
     "engine_quiet": {
-     "name": "Baffled engine \u2014 quieter, slightly slower",
+     "name": "Baffled engine — quieter, slightly slower",
      "price": 16,
      "upgrade": "engine_quiet"
     },
     "engine_strong": {
-     "name": "Rebored engine \u2014 faster, louder, thirstier",
+     "name": "Rebored engine — faster, louder, thirstier",
      "price": 16,
      "upgrade": "engine_strong"
     },
     "hull_plate": {
-     "name": "Plate the hull \u2014 fewer leaks, heavier",
+     "name": "Plate the hull — fewer leaks, heavier",
      "price": 14,
      "upgrade": "hull_plate"
     },

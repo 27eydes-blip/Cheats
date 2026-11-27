@@ -1,12 +1,160 @@
 {
-  "_doc": "Crafting recipes. station: null = anywhere, 'workbench' = Patchwork raft bench, 'boat' = while aboard. in/out are item id → count.",
-  "recipes": [
-    { "id": "rope", "name": "Twist rope", "in": { "fibre": 3 }, "out": { "rope": 1 }, "station": null, "time": 2 },
-    { "id": "rope_hook", "name": "Rope and hook", "in": { "rope": 1, "scrap": 2 }, "out": { "rope_hook": 1 }, "station": "workbench", "time": 3 },
-    { "id": "water_filter", "name": "Water filter", "in": { "bottle": 1, "cloth": 1, "charcoal": 1 }, "out": { "water_filter": 1 }, "station": null, "time": 2 },
-    { "id": "filter_water", "name": "Filter water", "in": { "dirty_water": 1 }, "tool": "water_filter", "out": { "clean_water": 1 }, "station": null, "time": 1 },
-    { "id": "hull_patch", "name": "Hull patch", "in": { "scrap": 3, "tape": 1 }, "out": { "hull_patch": 1 }, "station": null, "time": 2 },
-    { "id": "lantern", "name": "Rig a lantern", "in": { "lantern_parts": 1, "oil": 1, "glass_jar": 1 }, "out": { "lantern": 1 }, "station": null, "time": 3 },
-    { "id": "bandage", "name": "Bandage", "in": { "cloth": 2 }, "out": { "bandage": 1 }, "station": null, "time": 1 }
-  ]
+ "_doc": "Crafting recipes. station: null = anywhere, 'workbench' = Patchwork raft bench, 'boat' = while aboard. in/out are item id → count.",
+ "recipes": [
+  {
+   "id": "rope",
+   "name": "Twist rope",
+   "in": {
+    "fibre": 3
+   },
+   "out": {
+    "rope": 1
+   },
+   "station": null,
+   "time": 2
+  },
+  {
+   "id": "rope_hook",
+   "name": "Rope and hook",
+   "in": {
+    "rope": 1,
+    "scrap": 2
+   },
+   "out": {
+    "rope_hook": 1
+   },
+   "station": "workbench",
+   "time": 3
+  },
+  {
+   "id": "water_filter",
+   "name": "Water filter",
+   "in": {
+    "bottle": 1,
+    "cloth": 1,
+    "charcoal": 1
+   },
+   "out": {
+    "water_filter": 1
+   },
+   "station": null,
+   "time": 2
+  },
+  {
+   "id": "filter_water",
+   "name": "Filter water",
+   "in": {
+    "dirty_water": 1
+   },
+   "tool": "water_filter",
+   "out": {
+    "clean_water": 1
+   },
+   "station": null,
+   "time": 1
+  },
+  {
+   "id": "hull_patch",
+   "name": "Hull patch",
+   "in": {
+    "scrap": 3,
+    "tape": 1
+   },
+   "out": {
+    "hull_patch": 1
+   },
+   "station": null,
+   "time": 2
+  },
+  {
+   "id": "lantern",
+   "name": "Rig a lantern",
+   "in": {
+    "lantern_parts": 1,
+    "oil": 1,
+    "glass_jar": 1
+   },
+   "out": {
+    "lantern": 1
+   },
+   "station": null,
+   "time": 3
+  },
+  {
+   "id": "bandage",
+   "name": "Bandage",
+   "in": {
+    "cloth": 2
+   },
+   "out": {
+    "bandage": 1
+   },
+   "station": null,
+   "time": 1
+  },
+  {
+   "id": "splint",
+   "name": "Splint",
+   "in": {
+    "scrap": 1,
+    "cloth": 1
+   },
+   "out": {
+    "splint": 1
+   },
+   "station": null,
+   "time": 2
+  },
+  {
+   "id": "flare",
+   "name": "Flare",
+   "in": {
+    "scrap": 1,
+    "charcoal": 1,
+    "tape": 1
+   },
+   "out": {
+    "flare": 1
+   },
+   "station": "workbench",
+   "time": 3
+  },
+  {
+   "id": "noisemaker",
+   "name": "Noise-maker",
+   "in": {
+    "scrap": 3
+   },
+   "out": {
+    "noisemaker": 1
+   },
+   "station": null,
+   "time": 2
+  },
+  {
+   "id": "bait",
+   "name": "Bait",
+   "in": {
+    "canned_fish": 1
+   },
+   "out": {
+    "bait": 2
+   },
+   "station": null,
+   "time": 1
+  },
+  {
+   "id": "spear",
+   "name": "Fishing spear",
+   "in": {
+    "scrap": 4,
+    "tape": 1
+   },
+   "out": {
+    "spear": 1
+   },
+   "station": "workbench",
+   "time": 4
+  }
+ ]
 }

@@ -168,19 +168,19 @@ export class Deep {
       // contact: dread, then it lets you go
       if (under && dP < 6 && this.noise > 0.2 && L.cool <= 0) {
         L.cool = 25; L.state = 'drift';
-        survival.oxygen = Math.max(5, survival.oxygen - 35);
-        this.ctx.events.emit('shake', 1.2);
         audio?.play('deepMoan');
-        ui.whisper('Something brushes past you in the dark. Many-limbed. Pale. It stops, as if listening. You do not breathe. It goes.');
-        player.velocity.y += 3;
         this.ctx.story.setFlag('met_listener');
+        if (this.ctx.injury) this.ctx.injury.hit(100, { source: 'listener', what: 'a listener', lethal: true });
+        else { survival.oxygen = Math.max(5, survival.oxygen - 35); this.ctx.events.emit('shake', 1.2); }
+        if (!this.ctx.injury?.dead) { ui.whisper('Something brushes past you in the dark. Many-limbed. Pale. It stops, as if listening. You do not breathe. It goes.'); player.velocity.y += 3; }
       }
     }
-    if (audio) audio.listenerNear = under ? Math.max(0, 1 - (nearest - 8) / 25) : 0;
+    if (audio) audio.listenerNear = Math.max(audio.listenerNear || 0, under ? Math.max(0, 1 - (nearest - 8) / 25) : 0);
     // lanternfish go dark when a Listener passes near the swarm
     this.swarms.forEach((s, i) => {
       let d = Infinity;
       for (const L of this.listeners) d = Math.min(d, L.pos.distanceTo(s.c));
+      for (const L of this.ctx.creatures?.byKind('listener') || []) if (L.active) d = Math.min(d, L.pos.distanceTo(s.c));
       const want = d < 28 ? 1 : 0;
       this.swarmDark[i] += (want - this.swarmDark[i]) * Math.min(1, dt * (want ? 4 : 0.5));
     });

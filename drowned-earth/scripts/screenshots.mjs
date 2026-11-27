@@ -8,7 +8,7 @@ let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = await import('playwright')); }
 import fs from 'node:fs';
 
-const SHOTS = JSON.parse(fs.readFileSync(new URL('./shots.json', import.meta.url)));
+const SHOTS = JSON.parse(fs.readFileSync(process.env.SHOTS_FILE || new URL('./shots.json', import.meta.url)));
 const only = process.argv[2];
 const server = await createServer({ server: { port: 5199, strictPort: false, hmr: false, watch: { ignored: ['**/*'] } }, logLevel: 'error' });
 await server.listen();

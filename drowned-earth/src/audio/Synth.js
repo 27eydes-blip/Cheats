@@ -153,6 +153,34 @@ export class Synth {
     s.connect(this.filt('highpass', 3000 + Math.random() * 4000, 1)).connect(g).connect(dest);
     this.done([g], 0.1);
   }
+  // creature voices, all synthesized: growl, huff, screech, chitter, sting, scrape, moanSoft, clicks
+  creature(dest, name, k = 1) {
+    const ac = this.ac, t = ac.currentTime;
+    const out = this.gain(0.5 * k); out.connect(dest);
+    const tone = (type, f0, f1, dur, peak, filt) => {
+      const o = ac.createOscillator(); o.type = type;
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      const g = this.gain(); this.env(g, t, Math.min(0.08, dur * 0.2), peak, dur * 0.8);
+      (filt ? o.connect(filt) : o).connect(g).connect(out); o.start(t); o.stop(t + dur + 0.1);
+    };
+    const hiss = (type, f, q, dur, peak, a = 0.02) => { const s = this.src(type, t, dur); const g = this.gain(); this.env(g, t, a, peak, dur); s.connect(this.filt('bandpass', f, q)).connect(g).connect(out); };
+    let dur = 1;
+    if (name === 'growl') {
+      dur = 1.4 + Math.random() * 0.6;
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 70 + Math.random() * 20;
+      const am = ac.createOscillator(); am.frequency.value = 22 + Math.random() * 8; const ag = this.gain(0.5); am.connect(ag);
+      const g = this.gain(); this.env(g, t, 0.25, 0.9, dur); ag.connect(g.gain);
+      o.connect(this.filt('lowpass', 420, 2)).connect(g).connect(out); o.start(t); o.stop(t + dur + 0.2); am.start(t); am.stop(t + dur + 0.2);
+      hiss('brown', 300, 1.5, dur, 0.4, 0.2);
+    } else if (name === 'huff') { dur = 0.4; hiss('pink', 700, 1.2, dur, 0.7, 0.01); }
+    else if (name === 'screech') { dur = 0.6; tone('sawtooth', 2400, 1500, dur, 0.35, this.filt('bandpass', 2600, 3)); hiss('white', 4500, 2, dur, 0.3); }
+    else if (name === 'chitter') { dur = 0.8; for (let i = 0; i < 10; i++) this.click(out, 3000 + Math.random() * 2500, i * 0.06 + Math.random() * 0.03); }
+    else if (name === 'sting') { dur = 0.5; hiss('white', 6000, 1, 0.35, 0.8, 0.002); tone('sine', 900, 200, 0.4, 0.3); }
+    else if (name === 'scrape') { dur = 2.5; const s = this.src('white', t, dur); const f = this.filt('bandpass', 1400, 9); f.frequency.setValueAtTime(900, t); f.frequency.linearRampToValueAtTime(2100, t + dur); const g = this.gain(); this.env(g, t, 0.6, 0.5, dur * 0.7); s.connect(f).connect(g).connect(out); }
+    else if (name === 'moanSoft') { dur = 3; tone('triangle', 180, 120, dur, 0.25, this.filt('bandpass', 400, 3)); }
+    else if (name === 'clicks') { dur = 4; this.clicks(out, dur); }
+    this.done([out], dur + 1);
+  }
   heartbeat(dest) {
     const ac = this.ac, t = ac.currentTime;
     for (const [dt, v] of [[0, 0.5], [0.16, 0.35]]) {
