@@ -363,12 +363,30 @@ var RF = (function () {
       p.sal = salaryFor(p.o, p.age);
     }
   }
+  // starters: the manager's picks (L.teams[t].st) when set and healthy, otherwise the best player at each role
   function lineup(L, tid) {
-    const av = L.teams[tid].ro.map((id) => L.P[id]).filter((p) => !p.inj).sort((a, b) => b.o - a.o);
+    const t = L.teams[tid];
+    const av = t.ro.map((id) => L.P[id]).filter((p) => p && !p.inj).sort((a, b) => b.o - a.o);
     const st = [];
-    for (const ro of ROLES) { const i = av.findIndex((p) => p.ro === ro); if (i >= 0) st.push(av.splice(i, 1)[0]); }
+    if (t.st) for (const id of t.st) { const i = av.findIndex((p) => p.id === id); if (i >= 0 && st.length < 5) st.push(av.splice(i, 1)[0]); }
+    for (const ro of ROLES) { if (st.length >= 5) break; if (st.some((p) => p.ro === ro)) continue; const i = av.findIndex((p) => p.ro === ro); if (i >= 0) st.push(av.splice(i, 1)[0]); }
     while (st.length < 5 && av.length) st.push(av.shift());
     return st.concat(av.slice(0, 8));
+  }
+  function setStarters(L, ids) { const t = L.teams[L.user]; t.st = ids.filter((id) => t.ro.indexOf(id) >= 0).slice(0, 5); return lineup(L, L.user).slice(0, 5).map((p) => p.id); }
+  // jersey numbers: unique per roster, kept for a player's whole stay
+  function ensureNumbers(L, tid) {
+    const t = L.teams[tid], used = {};
+    for (const id of t.ro) { const p = L.P[id]; if (p.no != null && !used[p.no]) used[p.no] = 1; else p.no = null; }
+    for (const id of t.ro) { const p = L.P[id]; if (p.no != null) continue; let n = ((p.id * 37) % 98) + 1; while (used[n]) n = (n % 99) + 1; p.no = n; used[n] = 1; }
+  }
+  function setNumber(L, pid, n) {
+    const p = L.P[pid]; n = Math.round(n);
+    if (!p || p.tm !== L.user || !(n >= 0 && n <= 99)) return { ok: false, msg: 'Numbers run 0 to 99.' };
+    const other = L.teams[L.user].ro.map((id) => L.P[id]).find((q) => q.no === n && q.id !== pid);
+    if (other) other.no = p.no;
+    p.no = n;
+    return { ok: true, msg: p.n + ' now wears #' + n + (other ? '. ' + other.n + ' takes #' + other.no + '.' : '.') };
   }
 
   // ---------------------------------------------------------------- 4. MATCH SIM
@@ -1572,7 +1590,7 @@ var RF = (function () {
     TUNE, W, H, HOOPS, DUNK_R, DEEP_R, SIN_BIN, HOLD_MAX, DT, ROLES, ROLE_NAME, RATS, RAT_NAME, DISTRICTS, TEAMS, STAGES, PO_NAMES, QS, SAVE_KEY, OLD_KEY,
     mulberry, hashStr, clamp, createMatch, step, simMatch, chainN, possTeam, shotProb, teamMods, modsFor, refOf, lineup, standings, stageOf, userGame,
     newLeague, advanceWeek, advancePlayoffs, startDraft, draftAI, draftPick, finishDraft, signFA, releasePlayer, finishFA, continueOffseason,
-    createCustom, killPlayer, fall, shoot, payroll, capOf, salaryFor, ovrOf, playerValue, quickSim, teamRating, applyMatchStats, serialize, deserialize, migrateV1, makePlayer,
+    createCustom, killPlayer, fall, shoot, setStarters, ensureNumbers, setNumber, payroll, capOf, salaryFor, ovrOf, playerValue, quickSim, teamRating, applyMatchStats, serialize, deserialize, migrateV1, makePlayer,
   };
 })();
 if (typeof module !== 'undefined') module.exports = RF;
@@ -2046,7 +2064,7 @@ if (typeof module !== 'undefined') module.exports = RF;
       bannerTimer = setInterval(() => { bc.style.opacity = 0; setTimeout(() => { bc.textContent = broadcastLine(); bc.style.opacity = 1; }, 400); }, 4200);
     }
   }
-  tabs.addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; SND.play('tap'); curTab = b.dataset.tab; showHub(); });
+  tabs.addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; SND.play('tap'); curTab = b.dataset.tab; lockerView = 'roster'; showHub(); });
   function openModal(html, center) {
     modal.className = center ? 'center' : '';
     modal.innerHTML = '<div class="sheet">' + html + '</div>';
@@ -2340,32 +2358,120 @@ if (typeof module !== 'undefined') module.exports = RF;
   ACT.newdyn = () => confirmBox('START A NEW DYNASTY?', 'Your current dynasty will be erased.', 'ERASE', () => { try { localStorage.removeItem(RF.SAVE_KEY); } catch (e) { /* ignore */ } L = null; selTeam = -1; showSelect(); });
   ACT.play = () => startGame();
 
-  function hubRoster() {
-    const t = L.teams[L.user], pay = RF.payroll(L, L.user), cap = RF.capOf(L, L.user);
-    const lu = RF.lineup(L, L.user), starters = new Set(lu.slice(0, 5).map((p) => p.id));
-    const order = { S: 0, D: 1, K: 2, W: 3, E: 4 };
-    const ps = t.ro.map((id) => L.P[id]).sort((a, b) => (starters.has(b.id) - starters.has(a.id)) || order[a.ro] - order[b.ro] || b.o - a.o);
-    let h = '<div class="row" style="margin-top:6px">' + emb(L.user, 'm') + '<div class="col grow"><span class="mid ell">' + esc(TEAMS[L.user].name) + ' ROSTER</span><span class="tiny dim">' + t.ro.length + ' / 18 PLAYERS · 5 START, THE REST ROTATE ON STAMINA</span></div></div>';
-    h += '<div class="card" style="margin-top:10px"><div class="rbar"><span>Payroll</span><div class="bar ' + (pay > cap ? '' : 'steel') + '"><i style="width:' + Math.min(100, (pay / cap) * 100) + '%"></i></div><b style="width:auto;font-size:13px">' + fmt1(pay) + ' / ' + cap + 'M</b></div>' + (pay > cap ? '<div class="small red">Over the cap: you cannot sign free agents until you shed salary.</div>' : '<div class="tiny dim">Cap space ' + fmt1(cap - pay) + 'M</div>') + '</div>';
-    h += '<div class="list" style="margin-top:10px">' + ps.map((p) => '<button class="li" data-act="player" data-id="' + p.id + '">' + roleTag(p.ro) + '<div class="col grow"><span class="n ell">' + (starters.has(p.id) ? '<span class="gold">★</span> ' : '') + esc(p.n) + (p.cus ? ' <span class="chip">CUSTOM</span>' : '') + (p.inj ? ' <span class="chip d5">INJ ' + p.inj + 'W</span>' : '') + '</span><span class="tiny dim">' + RF.ROLE_NAME[p.ro] + ' · ' + p.age + ' yrs · ' + fmt1(p.sal) + 'M x' + Math.max(0, p.yrs) + '</span></div><div class="col" style="align-items:flex-end"><span class="num">' + p.o + '</span><span class="tiny dim">POT ' + potGrade(p) + '</span></div></button>').join('') + '</div>';
-    if (L.created !== L.year) h += '<div style="margin-top:12px"><button class="btn alt slim" data-act="creator">CREATE A PLAYER (1 PER YEAR)</button></div>';
-    return h;
-  }
   function ratingBars(p) {
     return RF.RATS.map((k) => '<div class="rbar"><span>' + RF.RAT_NAME[k] + '</span><div class="bar ' + (p.r[k] >= 75 ? 'gold' : 'steel') + '"><i style="width:' + p.r[k] + '%"></i></div><b>' + p.r[k] + '</b></div>').join('');
   }
+  // ---- THE LOCKER ROOM: starting five, bench, player cards, numbers, jerseys
+  let lockerView = 'roster';
+  const portraitCache = {};
+  function portraitURL(p, w, h, view) {
+    const K = kitFrom(kitSpec(p.tm >= 0 ? p.tm : L.user), false);
+    const key = p.id + ':' + w + 'x' + h + ':' + (view || 'front') + ':' + p.no + ':' + JSON.stringify(kitSpec(p.tm >= 0 ? p.tm : L.user));
+    if (!portraitCache[key]) portraitCache[key] = portrait(p, K, w, h, view).toDataURL();
+    return portraitCache[key];
+  }
+  function hubRoster() {
+    if (lockerView === 'jersey') return jerseyEditor();
+    RF.ensureNumbers(L, L.user);
+    const t = L.teams[L.user], pay = RF.payroll(L, L.user), cap = RF.capOf(L, L.user);
+    const lu = RF.lineup(L, L.user), five = lu.slice(0, 5), starters = new Set(five.map((p) => p.id));
+    const order = { S: 0, D: 1, K: 2, W: 3, E: 4 };
+    const bench = t.ro.map((id) => L.P[id]).filter((p) => !starters.has(p.id)).sort((a, b) => order[a.ro] - order[b.ro] || b.o - a.o);
+    let h = '<div class="row" style="margin-top:6px">' + emb(L.user, 'm') + '<div class="col grow"><span class="kicker" style="font-size:10px">THE LOCKER ROOM</span><span class="mid ell">' + esc(tname(L.user)) + '</span></div></div>';
+    h += '<div class="btns" style="margin-top:10px"><button class="btn alt slim" data-act="jersey">EDIT JERSEYS</button><button class="btn alt slim" data-act="autolu">AUTO LINEUP</button></div>';
+    h += '<div class="card" style="margin-top:10px"><div class="rbar"><span>Payroll</span><div class="bar ' + (pay > cap ? '' : 'steel') + '"><i style="width:' + Math.min(100, (pay / cap) * 100) + '%"></i></div><b style="width:auto;font-size:13px">' + fmt1(pay) + ' / ' + cap + 'M</b></div><div class="row tiny dim" style="justify-content:space-between;margin-top:4px"><span>' + (pay > cap ? '<span class="red">OVER THE CAP</span>' : 'SPACE ' + fmt1(cap - pay) + 'M') + '</span><span>' + t.ro.length + ' / 18 PLAYERS</span></div></div>';
+    h += '<h2 class="sec">STARTING FIVE' + (t.st && t.st.length ? '' : ' <span class="tiny dim" style="font-family:Arial;letter-spacing:.1em">AUTO</span>') + '</h2>';
+    h += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">' + five.map((p) => '<button data-act="player" data-id="' + p.id + '" style="background:#0d0e11;border:1px solid var(--line2);border-radius:8px;padding:0 0 6px;cursor:pointer;overflow:hidden;color:inherit;min-width:0"><img src="' + portraitURL(p, 70, 104) + '" style="width:100%;display:block" alt=""><div class="num" style="text-align:center;font-size:16px;min-width:0;margin-top:2px">#' + p.no + '</div><div class="tiny ell" style="padding:0 3px;text-align:center;font-weight:700">' + esc(p.n.split(' ').slice(-1)[0]) + '</div><div class="tiny dim" style="text-align:center">' + p.ro + ' · ' + p.o + '</div></button>').join('') + '</div>';
+    h += '<div class="tiny dim" style="margin-top:6px">Tap a player to bench him, start him, change his number or release him. Starters play first; the bench rotates in as legs tire.</div>';
+    h += '<h2 class="sec">BENCH (' + bench.length + ')</h2><div class="list">' + bench.map((p) => rosterRow(p)).join('') + '</div>';
+    if (L.created !== L.year) h += '<div style="margin-top:12px"><button class="btn alt slim" data-act="creator">CREATE A PLAYER (1 PER YEAR)</button></div>';
+    return h;
+  }
+  function rosterRow(p) {
+    return '<button class="li" data-act="player" data-id="' + p.id + '" style="padding:4px 10px 4px 4px"><img src="' + portraitURL(p, 40, 56) + '" style="width:40px;height:56px;border-radius:6px;flex:none" alt=""><span class="num" style="min-width:34px;text-align:left;font-size:17px">#' + p.no + '</span><div class="col grow"><span class="n ell small">' + esc(p.n) + (p.cus ? ' <span class="chip">CUSTOM</span>' : '') + (p.inj ? ' <span class="chip d5">INJ ' + p.inj + 'W</span>' : '') + '</span><span class="tiny dim">' + RF.ROLE_NAME[p.ro] + ' · ' + ftin(p.ht) + ' · ' + lbs(p.wt) + ' lb · ' + p.age + ' yrs</span></div><div class="col" style="align-items:flex-end"><span class="num">' + p.o + '</span><span class="tiny dim">POT ' + potGrade(p) + '</span></div></button>';
+  }
+  ACT.autolu = () => { RF.setStarters(L, []); delete L.teams[L.user].st; save(); toast('Lineup set to the best player at each role.'); showHub(); };
   ACT.player = (d) => {
     const p = L.P[d.id]; if (!p) return;
+    if (p.tm >= 0) RF.ensureNumbers(L, p.tm);
     const mine = p.tm === L.user, s = p.st;
-    let h = '<div class="row">' + roleTag(p.ro) + '<div class="col grow"><span class="big ell">' + esc(p.n) + '</span><span class="small dim">' + RF.ROLE_NAME[p.ro] + ' · age ' + p.age + ' · ' + p.ht + ' cm · ' + p.wt + ' kg</span></div><div class="col" style="align-items:flex-end"><span class="big">' + p.o + '</span><span class="tiny dim">OVR</span></div></div>';
-    h += '<div class="stats"><div class="stat"><b>' + potGrade(p) + '</b><span>POTENTIAL</span></div><div class="stat"><b>' + fmt1(p.sal) + 'M</b><span>SALARY</span></div><div class="stat"><b>' + Math.max(0, p.yrs) + '</b><span>YEARS LEFT</span></div></div>';
+    const starting = mine && RF.lineup(L, L.user).slice(0, 5).some((q) => q.id === p.id);
+    let h = '<div class="row" style="gap:8px;align-items:stretch">';
+    h += '<div style="display:flex;gap:4px;flex:none">' + ['front', 'back'].map((v) => '<img src="' + portraitURL(p, 92, 150, v) + '" style="width:92px;height:150px;border-radius:8px;border:1px solid var(--line2)" alt="">').join('') + '</div>';
+    h += '<div class="col grow" style="justify-content:space-between"><div><div class="row" style="gap:6px">' + roleTag(p.ro) + (p.tm >= 0 ? emb(p.tm, 's') : '') + '</div><div class="big" style="margin-top:6px;font-size:22px">' + esc(p.n) + '</div><div class="small dim">' + RF.ROLE_NAME[p.ro] + (p.no != null && p.tm >= 0 ? ' · #' + p.no : '') + '</div></div>';
+    h += '<div class="row" style="gap:12px"><div class="col"><span class="big">' + p.o + '</span><span class="tiny dim">OVR</span></div><div class="col"><span class="big gold">' + potGrade(p) + '</span><span class="tiny dim">POT</span></div><div class="col"><span class="big">' + p.age + '</span><span class="tiny dim">AGE</span></div></div></div></div>';
+    h += '<div class="stats"><div class="stat"><b>' + ftin(p.ht) + '</b><span>' + p.ht + ' CM</span></div><div class="stat"><b>' + lbs(p.wt) + '</b><span>LB · ' + p.wt + ' KG</span></div><div class="stat"><b>' + fmt1(p.sal) + 'M</b><span>' + Math.max(0, p.yrs) + ' YRS LEFT</span></div></div>';
     h += '<div style="margin-top:12px">' + ratingBars(p) + '</div>';
-    h += '<div class="stats"><div class="stat"><b>' + s.gp + '</b><span>GP</span></div><div class="stat"><b>' + s.pts + '</b><span>PTS</span></div><div class="stat"><b>' + s.dk + '</b><span>DUNKS</span></div><div class="stat"><b>' + s.chk + '</b><span>CHECKS</span></div><div class="stat"><b>' + s.fl + '</b><span>FOULS</span></div></div>';
+    h += '<div class="stats"><div class="stat"><b>' + s.gp + '</b><span>GP</span></div><div class="stat"><b>' + s.pts + '</b><span>PTS</span></div><div class="stat"><b>' + s.dk + '</b><span>SLAMS</span></div><div class="stat"><b>' + s.chk + '</b><span>CHECKS</span></div><div class="stat"><b>' + s.fl + '</b><span>FOULS</span></div></div>';
     if (p.cr.gp) h += '<div class="tiny dim" style="margin-top:8px;text-align:center">CAREER: ' + (p.cr.gp + s.gp) + ' GP · ' + (p.cr.pts + s.pts) + ' PTS</div>';
     if (p.dr) h += '<div class="tiny dim" style="text-align:center">Drafted Year ' + p.dr.yr + ', pick ' + p.dr.pk + '</div>';
-    h += '<div class="btns" style="margin-top:14px"><button class="btn alt slim" data-act="close">CLOSE</button>' + (mine ? '<button class="btn slim" data-act="release" data-id="' + p.id + '">RELEASE</button>' : '') + '</div>';
+    if (mine) {
+      h += '<div class="btns" style="margin-top:14px">' + (starting ? '<button class="btn alt slim" data-act="bench" data-id="' + p.id + '">SEND TO BENCH</button>' : '<button class="btn gold slim" data-act="start" data-id="' + p.id + '">START HIM</button>') + '<button class="btn alt slim" data-act="numpick" data-id="' + p.id + '">#' + p.no + ' NUMBER</button></div>';
+      h += '<div class="btns" style="margin-top:8px"><button class="btn alt slim" data-act="close">CLOSE</button><button class="btn slim" data-act="release" data-id="' + p.id + '">RELEASE</button></div>';
+    } else h += '<div class="btns" style="margin-top:14px"><button class="btn alt slim" data-act="close">CLOSE</button></div>';
     openModal(h);
   };
+  ACT.start = (d) => {
+    const p = L.P[d.id], five = RF.lineup(L, L.user).slice(0, 5);
+    let h = '<div class="mid">START ' + esc(p.n.toUpperCase()) + '</div><p class="small dim">Who sits down? Same-role swaps keep the floor balanced.</p><div class="list">';
+    h += five.map((q) => '<button class="li" data-act="swapin" data-in="' + p.id + '" data-out="' + q.id + '"' + (q.ro === p.ro ? ' style="box-shadow:inset 3px 0 0 var(--gold2)"' : '') + '><img src="' + portraitURL(q, 40, 56) + '" style="width:40px;height:56px;border-radius:6px" alt=""><div class="col grow"><span class="small"><b>#' + q.no + ' ' + esc(q.n) + '</b></span><span class="tiny dim">' + RF.ROLE_NAME[q.ro] + ' · OVR ' + q.o + '</span></div>' + roleTag(q.ro) + '</button>').join('');
+    h += '</div><div style="margin-top:12px"><button class="btn alt slim" data-act="close">CANCEL</button></div>';
+    openModal(h);
+  };
+  ACT.swapin = (d) => {
+    const five = RF.lineup(L, L.user).slice(0, 5).map((q) => q.id), i = five.indexOf(+d.out);
+    five[i] = +d.in;
+    RF.setStarters(L, five); save(); closeModal();
+    toast(L.P[d.in].n + ' starts. ' + L.P[d.out].n + ' to the bench.'); showHub();
+  };
+  ACT.bench = (d) => {
+    const five = RF.lineup(L, L.user).slice(0, 5).map((q) => q.id).filter((id) => id !== +d.id);
+    RF.setStarters(L, five);
+    const now = RF.lineup(L, L.user).slice(0, 5).find((q) => five.indexOf(q.id) < 0);
+    if (now) L.teams[L.user].st = five.concat([now.id]);
+    save(); closeModal(); toast(L.P[d.id].n + ' to the bench' + (now ? '. ' + now.n + ' starts.' : '.')); showHub();
+  };
+  ACT.numpick = (d) => {
+    const p = L.P[d.id], taken = {};
+    L.teams[L.user].ro.forEach((id) => { const q = L.P[id]; if (q.id !== p.id) taken[q.no] = q.n; });
+    let h = '<div class="mid">#' + p.no + ' · ' + esc(p.n.toUpperCase()) + '</div><p class="small dim">Pick a number. Taking a teammate\'s number swaps them.</p><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:5px">';
+    for (let n = 0; n <= 99; n++) h += '<button data-act="numset" data-id="' + p.id + '" data-n="' + n + '" style="min-height:40px;border-radius:6px;border:1px solid ' + (n === p.no ? 'var(--gold2)' : 'var(--line2)') + ';background:' + (n === p.no ? '#3a2c10' : taken[n] ? '#1a0b0d' : '#101115') + ';color:' + (taken[n] ? '#ff6a75' : '#e2e4e8') + ';font-weight:700;cursor:pointer" title="' + esc(taken[n] || '') + '">' + n + '</button>';
+    h += '</div><div class="tiny dim" style="margin-top:6px">Red numbers are taken.</div><div style="margin-top:12px"><button class="btn alt slim" data-act="close">CANCEL</button></div>';
+    openModal(h);
+  };
+  ACT.numset = (d) => { const r = RF.setNumber(L, +d.id, +d.n); toast(r.msg); save(); closeModal(); showHub(); };
+
+  // ---- jersey editor
+  const SWATCHES = ['#f4f4f6', '#c9ccd3', '#7d838c', '#2a2c31', '#0b0b0d', '#b3121e', '#ff2a3a', '#7a1230', '#ff6a00', '#f2b705', '#d4af37', '#7d5a1e', '#0f6b3a', '#2fd18b', '#00a7a0', '#0b3d91', '#2b6cdf', '#3ad1ff', '#5b2a86', '#ff2d95'];
+  let JE = null;
+  ACT.jersey = () => { JE = Object.assign({}, kitSpec(L.user)); lockerView = 'jersey'; showHub(); };
+  function jerseyEditor() {
+    const T = TEAMS[L.user], mine = RF.lineup(L, L.user), p0 = mine.find((p) => p.ro === 'D') || mine[0], p1 = mine.find((p) => p.ro === 'W') || mine[1] || p0;
+    RF.ensureNumbers(L, L.user);
+    let h = '<div class="row" style="margin-top:6px">' + emb(L.user, 'm') + '<div class="col grow"><span class="kicker" style="font-size:10px">THE LOCKER ROOM</span><span class="mid">JERSEY DESIGN</span></div></div>';
+    h += '<div id="jePrev" style="display:flex;gap:6px;justify-content:center;margin-top:10px;background:#09090b;border:1px solid var(--line);border-radius:10px;padding:8px"></div>';
+    const swatchRow = (key, label) => '<div class="kicker" style="margin:14px 0 6px;font-size:10px">' + label + '</div><div style="display:grid;grid-template-columns:repeat(11,1fr);gap:5px">' + [T.c1, T.c2].concat(SWATCHES).slice(0, 22).map((col) => '<button data-act="jeset" data-k="' + key + '" data-v="' + col + '" aria-label="' + col + '" style="aspect-ratio:1;min-height:28px;border-radius:6px;cursor:pointer;background:' + col + ';border:2px solid ' + (JE[key].toLowerCase() === col.toLowerCase() ? '#e3c991' : '#000') + ';box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)"></button>').join('') + '</div>';
+    const seg = (key, label, opts) => '<div class="kicker" style="margin:14px 0 6px;font-size:10px">' + label + '</div><div class="seg">' + opts.map(([v, n]) => '<button data-act="jeset" data-k="' + key + '" data-v="' + v + '" class="' + (JE[key] === v ? 'on' : '') + '">' + n + '</button>').join('') + '</div>';
+    h += swatchRow('c1', 'PRIMARY (JERSEY + HELMET)') + swatchRow('c2', 'SECONDARY (PADS + SOCKS)') + swatchRow('c3', 'ACCENT (PATTERN + STRIPES)');
+    h += seg('pat', 'PATTERN', [['solid', 'SOLID'], ['stripes', 'STRIPES'], ['hoops', 'HOOPS'], ['sash', 'SASH'], ['chevron', 'CHEV'], ['split', 'SPLIT']]);
+    h += seg('fin', 'HELMET FINISH', [['gloss', 'GLOSS'], ['matte', 'MATTE'], ['chrome', 'CHROME']]);
+    h += seg('visor', 'VISOR', [['smoke', 'SMOKE'], ['gold', 'GOLD'], ['red', 'RED'], ['ice', 'ICE']]);
+    h += seg('num', 'NUMBERS', [['trim', 'SECOND'], ['white', 'WHITE'], ['black', 'BLACK'], ['gold', 'GOLD']]);
+    h += '<div class="btns" style="margin-top:16px"><button class="btn alt slim" data-act="jecancel">CANCEL</button><button class="btn gold slim" data-act="jesave">SAVE KIT</button></div>';
+    h += '<div style="text-align:center"><button class="lnk" data-act="jereset">Reset to club colours</button></div>';
+    setTimeout(() => jePreview(p0, p1), 0);
+    return h;
+  }
+  function jePreview(p0, p1) {
+    const box = $('#jePrev'); if (!box || !JE) return;
+    const K = kitFrom(JE, false);
+    box.innerHTML = '';
+    [[p0, 'front'], [p0, 'back'], [p1, 'side']].forEach(([p, v]) => { const e = portrait(p, K, 104, 170, v); e.style.width = '104px'; e.style.height = '170px'; e.style.borderRadius = '6px'; box.appendChild(e); });
+  }
+  ACT.jeset = (d) => { JE[d.k] = d.v; const st = ui.scrollTop; showHub(); ui.scrollTop = st; };
+  ACT.jesave = () => { if (!L.kits) L.kits = {}; L.kits[L.user] = Object.assign({}, JE); save(); lockerView = 'roster'; toast('New kit saved. It debuts next game.'); showHub(); };
+  ACT.jecancel = () => { lockerView = 'roster'; showHub(); };
+  ACT.jereset = () => { if (L.kits) delete L.kits[L.user]; JE = Object.assign({}, kitSpec(L.user)); save(); toast('Back to club colours.'); showHub(); };
   ACT.release = (d) => {
     const p = L.P[d.id];
     confirmBox('RELEASE ' + p.n.toUpperCase() + '?', L.phase === 'fa' ? 'He joins the free-agent pool.' : 'He is gone for good. His salary comes off your books.', 'RELEASE', () => {
@@ -2489,12 +2595,6 @@ if (typeof module !== 'undefined') module.exports = RF;
   const W = RF.W, H = RF.H, HOOPS = RF.HOOPS;
   let G = null, CW = 390, CH = 780, DPR = 1, SAFE_T = 0, SAFE_B = 0;
   function colorDist(a, b) { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16); return Math.hypot((x >> 16) - (y >> 16), ((x >> 8) & 255) - ((y >> 8) & 255), (x & 255) - (y & 255)); }
-  function kit(i, away, other) {
-    const T = TEAMS[i];
-    let body = T.c1, trim = T.c2;
-    if (away && colorDist(T.c1, TEAMS[other].c1) < 110) { body = T.c2; trim = T.c1; }
-    return { body, trim, hi: shade(body, 35), lo: shade(body, -45), txt: lum(body) > 0.55 ? '#0a0a0c' : '#f6f6f8' };
-  }
   function buildField(homeId, t0, t1) {
     const S = 2, f = document.createElement('canvas');
     f.width = W * S; f.height = H * S;
@@ -2564,6 +2664,7 @@ if (typeof module !== 'undefined') module.exports = RF;
   function startGame() {
     const g = RF.userGame(L); if (!g) return;
     const opp = g.opp, home = g.home ? L.user : opp;
+    RF.ensureNumbers(L, L.user); RF.ensureNumbers(L, opp);
     const m = RF.createMatch({ rosters: [RF.lineup(L, L.user), RF.lineup(L, opp)], mods: [RF.teamMods(L, L.user), RF.teamMods(L, opp)], qlen: L.set.qlen, seed: (Math.random() * 1e9) | 0, human: -1, teamIds: [L.user, opp] });
     G = {
       m, ids: [L.user, opp], g, kits: [kit(L.user, false, opp), kit(opp, true, L.user)], arena: buildArena(home, L.user, opp), panels: buildPanels(), bodies: [], phase: {},
@@ -2625,7 +2726,7 @@ if (typeof module !== 'undefined') module.exports = RF;
         burst(e.x, e.y, ['#8a8d93', '#3a3d44', '#5e0a10'], 26, 120, 1.4);
         ring(e.x, e.y, 70, '#5e0a10');
         G.marks.push({ x: e.x, y: e.y, n: e.vic, team: e.vt });
-        G.bodies.push({ x: e.x, y: e.y, t: 1.2, a: { K: G.kits[e.vt], fx: 1, fy: 1, ro: e.ro, num: 0, carry: false, skin: SKINS[(e.x | 0) % SKINS.length] } });
+        G.bodies.push({ x: e.x, y: e.y, t: 1.2, a: { K: G.kits[e.vt], fx: 1, fy: 1, ro: e.ro, num: 0, carry: false, skin: SKINS[(e.x | 0) % SKINS.length], hs: 1, ws: 1 } });
         bigText('FALLEN', '#ff2a3a', e.vic.toUpperCase());
         SND.play('check'); SND.play('toll');
         setTicker(voice('death', vars(e)));
@@ -2844,7 +2945,7 @@ if (typeof module !== 'undefined') module.exports = RF;
     const m = G.m, V = G.view, b = V.ball;
     let fx = b.x, fy = b.y;
     if (!G.replay && m.ball.own) { fx += m.ball.own.vx * 0.25; fy += m.ball.own.vy * 0.35; }
-    let back = 400, hgt = 285;
+    let back = 350, hgt = 330;
     if (G.replay) { back = 290; hgt = 190; }
     if (G.zoomT > 0 && G.zoomP && !G.replay) { fx = G.zoomP.x; fy = G.zoomP.y; back = 260; hgt = 170; }
     const k = Math.min(1, dt * (G.zoomT > 0 || G.replay ? 4 : 2.2));
@@ -2853,8 +2954,8 @@ if (typeof module !== 'undefined') module.exports = RF;
     CAM.x = 200 + (CAM.fxp - 200) * 0.55;
     CAM.y = CAM.fy + CAM.back;
     CAM.th = Math.atan2(CAM.h, CAM.back);
-    CAM.cx = CW / 2 + (Math.random() - 0.5) * G.shake; CAM.cy = CH * 0.54 + (Math.random() - 0.5) * G.shake;
-    CAM.f = (CW * 1.62) * Math.hypot(CAM.back, CAM.h) / 600;
+    CAM.cx = CW / 2 + (Math.random() - 0.5) * G.shake; CAM.cy = CH * 0.6 + (Math.random() - 0.5) * G.shake;
+    CAM.f = (CW * 1.55) * Math.hypot(CAM.back, CAM.h) / 600;
   }
   function drawFloor(c) {
     const cs = Math.cos(CAM.th), sn = Math.sin(CAM.th), Hc = CAM.h;
@@ -2943,65 +3044,134 @@ if (typeof module !== 'undefined') module.exports = RF;
     c.strokeStyle = '#ff5a1f'; c.lineWidth = Math.max(1.5, 1.6 * rc.s); c.beginPath(); c.ellipse(rc.x, rc.y, rx, ry, 0, 0, 7); c.stroke();
   }
   // ---- athletes: armoured SLAM players, helmet, pads, jersey number; animated run, jump, knockdown
-  const SKINS = ['#e6c3a4', '#c8987a', '#a9744f', '#7b4e33', '#5b3a27', '#f0d0b6'];
   function athlete(c, P, a, refl) {
-    // P: screen pos of feet, a: { s, K, ph, sp, fx, fy, jump, stun, ro, num, carry, fury, fire, skin }
-    const s = a.s * (PH / 34), K = a.K;
+    // P: screen pos of feet. a: { s, K, ph, sp, fx, fy, jz, down, ro, num, carry, skin, hs, ws }
+    // hs/ws come from the player's real height and weight, so every body on the floor is his own
+    const K = a.K, hs = a.hs || 1, ws = a.ws || 1, s = a.s;
     const prof = Math.min(1, Math.abs(a.fx) * 1.3), away = a.fy < 0, run = Math.min(1, a.sp / 90);
-    const sw = Math.sin(a.ph) * run, lift = Math.max(0, Math.cos(a.ph)) * run;
-    const big = a.ro === 'D' ? 1.12 : a.ro === 'E' ? 1.08 : a.ro === 'W' ? 0.95 : 1;
-    c.save(); c.translate(P.x, P.y - a.jz * a.s); c.scale(s * big * (a.fx < -0.2 ? -1 : 1), s * big);
+    const flip = a.fx < -0.2 ? -1 : 1;
+    c.save(); c.translate(P.x, P.y - a.jz * s); c.scale(s * ws * flip, s * hs);
     if (refl) c.scale(1, -0.55);
     if (a.down > 0) c.rotate(-Math.min(1.35, a.down * 2.2));
-    const lean = a.fx * run * 0.18 * (a.fx < -0.2 ? -1 : 1) + (a.down > 0 ? 0 : 0);
-    const shorts = K.lo, sock = K.trim, boot = '#0b0b0d';
-    // legs
+    c.rotate(a.fx * run * 0.18 * flip);
+    const shorts = K.shorts || K.lo, sock = K.trim, boot = '#0b0b0d';
+    c.lineCap = 'round'; c.lineJoin = 'round';
     const leg = (side, ph) => {
       const hx = side * 2.6, hy = -15;
       const ang = prof * Math.sin(ph) * 0.75 * run, up = (1 - prof) * Math.max(0, Math.sin(ph)) * 3.2 * run;
       const kx = hx + Math.sin(ang) * 7.5, ky = hy + Math.cos(ang) * 7.5 - up * 0.6;
       const fxp = kx + Math.sin(ang * 0.4) * 7.5, fyp = ky + 7.5 - up;
-      c.strokeStyle = shorts; c.lineWidth = 3.4; c.beginPath(); c.moveTo(hx, hy); c.lineTo(kx, ky); c.stroke();
-      c.strokeStyle = sock; c.lineWidth = 2.6; c.beginPath(); c.moveTo(kx, ky); c.lineTo(fxp, fyp - 1); c.stroke();
+      c.strokeStyle = shorts; c.lineWidth = 3.5; c.beginPath(); c.moveTo(hx, hy); c.lineTo(kx, ky); c.stroke();
+      c.strokeStyle = a.skin; c.lineWidth = 2.5; c.beginPath(); c.moveTo(kx, ky + 1.2); c.lineTo(kx + (fxp - kx) * 0.35, ky + (fyp - ky) * 0.35); c.stroke();
+      c.strokeStyle = sock; c.lineWidth = 2.6; c.beginPath(); c.moveTo(kx + (fxp - kx) * 0.35, ky + (fyp - ky) * 0.35); c.lineTo(fxp, fyp - 1); c.stroke();
+      if (a.tape) { c.strokeStyle = a.tape; c.lineWidth = 2.9; c.beginPath(); c.moveTo(fxp - (fxp - kx) * 0.16, fyp - 1 - (fyp - ky) * 0.16); c.lineTo(fxp, fyp - 1.2); c.stroke(); }
       c.strokeStyle = boot; c.lineWidth = 2.8; c.beginPath(); c.moveTo(fxp - 0.6, fyp - 0.6); c.lineTo(fxp + 1.6 * (prof > 0.4 ? 1 : 0.2), fyp); c.stroke();
     };
-    c.lineCap = 'round'; c.lineJoin = 'round';
-    c.rotate(lean);
     leg(-1, a.ph); leg(1, a.ph + Math.PI);
-    // torso: jersey with lighting
-    const tg = c.createLinearGradient(-7, -28, 7, -14); tg.addColorStop(0, K.hi); tg.addColorStop(0.55, K.body); tg.addColorStop(1, K.lo);
-    c.fillStyle = tg;
-    c.beginPath(); c.moveTo(-6.4, -27); c.lineTo(6.4, -27); c.lineTo(4.8, -14); c.lineTo(-4.8, -14); c.closePath(); c.fill();
+    // torso with the kit's pattern, then lighting on top
+    const torso = () => { c.beginPath(); c.moveTo(-6.4, -27); c.lineTo(6.4, -27); c.lineTo(4.8, -14); c.lineTo(-4.8, -14); c.closePath(); };
+    torso(); c.fillStyle = K.body; c.fill();
+    c.save(); torso(); c.clip(); c.fillStyle = K.alt;
+    switch (K.pat) {
+      case 'stripes': for (let x = -6; x <= 6; x += 3.2) c.fillRect(x, -28, 1.3, 15); break;
+      case 'hoops': c.fillRect(-7, -24.5, 14, 2.2); c.fillRect(-7, -19.5, 14, 2.2); break;
+      case 'sash': c.beginPath(); c.moveTo(-7, -27); c.lineTo(-3.5, -27); c.lineTo(7, -16); c.lineTo(7, -12.5); c.closePath(); c.fill(); break;
+      case 'chevron': c.beginPath(); c.moveTo(-7, -27); c.lineTo(0, -21); c.lineTo(7, -27); c.lineTo(7, -24.4); c.lineTo(0, -18.4); c.lineTo(-7, -24.4); c.closePath(); c.fill(); break;
+      case 'split': c.fillRect(0, -28, 7, 15); break;
+    }
+    const tg = c.createLinearGradient(-7, -28, 7, -14);
+    tg.addColorStop(0, 'rgba(255,255,255,.28)'); tg.addColorStop(0.5, 'rgba(255,255,255,0)'); tg.addColorStop(1, 'rgba(0,0,0,.45)');
+    c.fillStyle = tg; c.fillRect(-7, -28, 14, 15);
+    c.restore();
     c.fillStyle = shorts; c.fillRect(-4.9, -15.5, 9.8, 3);
-    // number (back) or crest stripe (front)
-    c.fillStyle = K.trim; c.font = 'bold 6px "Helvetica Neue", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    if (away || prof > 0.6) c.fillText(String(a.num), prof > 0.6 ? 0.8 : 0, -20.5);
-    else { c.fillRect(-0.8, -26, 1.6, 10); }
-    // arms
+    c.fillStyle = K.alt; c.fillRect(-4.9, -15.5, 9.8, 0.7);
+    // numbers: big on the back, small on the chest
+    c.fillStyle = K.numc; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = 0.5;
+    if (away || prof > 0.6) { c.font = 'bold 6.4px "Helvetica Neue", Arial, sans-serif'; c.strokeText(String(a.num), prof > 0.6 ? 0.8 : 0, -20.3); c.fillText(String(a.num), prof > 0.6 ? 0.8 : 0, -20.3); }
+    else { c.font = 'bold 2.8px "Helvetica Neue", Arial, sans-serif'; c.fillText(String(a.num), 2.6, -23.6); }
     const arm = (side, ph) => {
       const sx = side * 6.2, sy = -25.5;
       let ex, ey, hx, hy;
       if (a.jz > 2 && a.carry) { ex = sx + side * 1; ey = sy - 7; hx = sx * 0.3; hy = sy - 14; }
       else if (a.carry) { ex = sx + side * 1.5; ey = sy + 5; hx = side * 2.2; hy = -21; }
+      else if (a.pose === 'stand') { ex = sx + side * 1.4; ey = sy + 5.2; hx = ex + side * 0.4; hy = ey + 5; }
       else { const ang = -Math.sin(ph) * 0.8 * run * (0.4 + prof); ex = sx + Math.sin(ang) * 5.5 + side * 0.8; ey = sy + Math.cos(ang) * 5.5; hx = ex + Math.sin(ang * 1.4) * 5; hy = ey + 4.5 - Math.abs(ang) * 1.5; }
-      c.strokeStyle = K.body; c.lineWidth = 2.6; c.beginPath(); c.moveTo(sx, sy); c.lineTo(ex, ey); c.stroke();
-      c.strokeStyle = a.skin; c.lineWidth = 2.1; c.beginPath(); c.moveTo(ex, ey); c.lineTo(hx, hy); c.stroke();
-      c.fillStyle = '#16161a'; c.beginPath(); c.arc(hx, hy, 1.2, 0, 7); c.fill();
+      c.strokeStyle = K.body; c.lineWidth = 2.7; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx + (ex - sx) * 0.55, sy + (ey - sy) * 0.55); c.stroke();
+      c.strokeStyle = K.alt; c.lineWidth = 2.8; c.beginPath(); c.moveTo(sx + (ex - sx) * 0.5, sy + (ey - sy) * 0.5); c.lineTo(sx + (ex - sx) * 0.62, sy + (ey - sy) * 0.62); c.stroke();
+      const sl = (a.sleeve === 'L' && side < 0) || (a.sleeve === 'R' && side > 0);
+      c.strokeStyle = sl ? '#111114' : a.skin; c.lineWidth = 2.2; c.beginPath(); c.moveTo(sx + (ex - sx) * 0.62, sy + (ey - sy) * 0.62); c.lineTo(ex, ey); c.lineTo(hx, hy); c.stroke();
+      c.fillStyle = '#16161a'; c.beginPath(); c.arc(hx, hy, 1.25, 0, 7); c.fill();
     };
     arm(-1, a.ph + Math.PI); arm(1, a.ph);
-    // shoulder pads
-    const pg = c.createLinearGradient(0, -30, 0, -24); pg.addColorStop(0, shade(K.trim, 30)); pg.addColorStop(1, shade(K.trim, -40));
+    const pg = c.createLinearGradient(0, -30, 0, -24); pg.addColorStop(0, shade(K.trim, 35)); pg.addColorStop(1, shade(K.trim, -45));
     c.fillStyle = pg;
-    c.beginPath(); c.ellipse(-5.6, -26.4, 3.2, 2.1, -0.25, 0, 7); c.fill();
-    c.beginPath(); c.ellipse(5.6, -26.4, 3.2, 2.1, 0.25, 0, 7); c.fill();
-    // neck + helmet
+    c.beginPath(); c.ellipse(-5.6, -26.4, 3.3, 2.1, -0.25, 0, 7); c.fill();
+    c.beginPath(); c.ellipse(5.6, -26.4, 3.3, 2.1, 0.25, 0, 7); c.fill();
     c.fillStyle = a.skin; c.fillRect(-1.3, -29.4, 2.6, 2.2);
-    const hg = c.createRadialGradient(-1.2, -33.4, 0.4, 0, -31.8, 4.4); hg.addColorStop(0, shade(K.body, 55)); hg.addColorStop(0.5, K.body); hg.addColorStop(1, shade(K.body, -55));
+    // helmet: finish, centre stripe, visor
+    const fin = K.finish || 'gloss';
+    const hg = c.createRadialGradient(-1.3, -33.6, 0.3, 0, -31.8, 4.4);
+    if (fin === 'chrome') { hg.addColorStop(0, '#ffffff'); hg.addColorStop(0.25, shade(K.helm, 50)); hg.addColorStop(0.6, shade(K.helm, -30)); hg.addColorStop(1, shade(K.helm, 25)); }
+    else if (fin === 'matte') { hg.addColorStop(0, shade(K.helm, 12)); hg.addColorStop(1, shade(K.helm, -30)); }
+    else { hg.addColorStop(0, shade(K.helm, 60)); hg.addColorStop(0.45, K.helm); hg.addColorStop(1, shade(K.helm, -55)); }
+    if (a.hair) { c.fillStyle = a.hair; if (away) { c.fillRect(-2.6, -30.4, 5.2, 2.2); } else if (prof > 0.6) c.fillRect(-4.2, -31.6, 2, 2.6); }
     c.fillStyle = hg; c.beginPath(); c.arc(0, -32, 3.9, 0, 7); c.fill();
-    c.fillStyle = K.trim; c.fillRect(-0.6, -35.9, 1.2, 7.6);
-    if (!away || prof > 0.6) { c.fillStyle = '#060607'; c.beginPath(); if (prof > 0.6) c.ellipse(2.4, -32, 1.6, 1.4, 0, 0, 7); else c.ellipse(0, -31.6, 2.8, 1.3, 0, 0, 7); c.fill(); c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(prof > 0.6 ? 1.5 : -1.8, -32.4, 1.2, 0.5); }
+    c.fillStyle = K.alt; c.fillRect(-0.6, -35.9, 1.2, 7.4);
+    if (!away && prof <= 0.6) { c.fillStyle = a.skin; c.beginPath(); c.ellipse(0, -29.4, 2.4, 1.5, 0, 0, Math.PI); c.fill(); if (a.beard) { c.fillStyle = a.hair || '#1a1410'; c.beginPath(); c.ellipse(0, -28.9, 2.1, 1.1, 0, 0, Math.PI); c.fill(); } }
+    if (!away || prof > 0.6) {
+      const vg = c.createLinearGradient(0, -33, 0, -30); vg.addColorStop(0, shade(K.visor, 35)); vg.addColorStop(1, shade(K.visor, -40));
+      c.fillStyle = vg; c.beginPath(); if (prof > 0.6) c.ellipse(2.4, -32, 1.6, 1.4, 0, 0, 7); else c.ellipse(0, -31.6, 2.9, 1.35, 0, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.4)'; c.fillRect(prof > 0.6 ? 1.5 : -1.9, -32.5, 1.3, 0.45);
+    }
     c.restore();
   }
+  // ---- kits: club colours, or the manager's custom jersey for his team
+  const PATTERNS = ['solid', 'stripes', 'hoops', 'sash', 'chevron', 'split'];
+  const VISORS = { smoke: '#0a0b0d', gold: '#c99b45', red: '#9e101b', ice: '#7fd6ff' };
+  function kitSpec(i) {
+    const T = TEAMS[i], C = L && L.kits && L.kits[i];
+    if (C) return C;
+    const h = RF.hashStr(T.name);
+    return { c1: T.c1, c2: T.c2, c3: lum(T.c1) > 0.5 ? '#141418' : shade(T.c2, -10), pat: PATTERNS[h % PATTERNS.length], fin: h % 7 === 0 ? 'chrome' : h % 3 === 0 ? 'matte' : 'gloss', visor: ['smoke', 'smoke', 'gold', 'red', 'ice'][h % 5], num: 'trim' };
+  }
+  function kitFrom(C, swap) {
+    let body = C.c1, trim = C.c2;
+    if (swap) { body = C.c2; trim = C.c1; }
+    const numc = C.num === 'white' ? '#f4f4f6' : C.num === 'black' ? '#0b0b0d' : C.num === 'gold' ? '#e3c991' : trim;
+    return { body, trim, alt: C.c3, helm: body, pat: C.pat, finish: C.fin, visor: VISORS[C.visor] || VISORS.smoke, numc, shorts: shade(body, -45), hi: shade(body, 35), lo: shade(body, -45), txt: lum(body) > 0.55 ? '#0a0a0c' : '#f6f6f8' };
+  }
+  function kit(i, away, other) {
+    const C = kitSpec(i), O = kitSpec(other);
+    return kitFrom(C, away && colorDist(C.c1, O.c1) < 110);
+  }
+  const SKINS = ['#f2d4bb', '#e6c3a4', '#c8987a', '#a9744f', '#7b4e33', '#5b3a27'];
+  const SKIN_RANGE = { jpn: [0, 2], kor: [0, 1], chn: [0, 2], deu: [0, 2], rom: [0, 2], fra: [0, 4], ita: [0, 3], gre: [1, 3], tur: [1, 3], eng: [0, 5], lat: [1, 4], arab: [1, 4], ind: [2, 4], sea: [2, 4], pac: [3, 5], afr: [4, 5], hai: [4, 5] };
+  function skinOf(p) { const r = SKIN_RANGE[p.rg] || [0, 5]; return SKINS[r[0] + (RF.hashStr(p.n + p.id) % (r[1] - r[0] + 1))]; }
+  function bodyOf(p) {
+    const ht = p.ht || 196, wt = p.wt || 95, h = RF.hashStr(p.n + ':' + p.id);
+    return {
+      hs: 1 + (ht / 196 - 1) * 1.9, ws: Math.max(0.8, Math.min(1.4, 0.92 + (wt / ht - 0.46) * 3)),
+      hair: ['', '', '#141010', '#2a1a10', '#5a3a1c', '#c9a45a', '#8a2a14', '#0b0b0b'][h % 8], sleeve: h % 5 === 0 ? 'L' : h % 5 === 1 ? 'R' : '',
+      tape: ['#f4f4f6', '#0b0b0d', '', '#b3121e'][(h >> 3) % 4], beard: (h >> 5) % 3 === 0,
+    };
+  }
+  // a lit studio portrait of one player (front, back or side), sized from his real height
+  function portrait(p, K, w, h, view) {
+    const e = document.createElement('canvas'), k = 2; e.width = w * k; e.height = h * k;
+    const c = e.getContext('2d'); c.scale(k, k);
+    const g = c.createRadialGradient(w / 2, h * 0.38, 4, w / 2, h * 0.5, h * 0.75); g.addColorStop(0, '#2a2b31'); g.addColorStop(1, '#09090b');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    const fg = c.createRadialGradient(w / 2, h * 0.93, 2, w / 2, h * 0.93, w * 0.5); fg.addColorStop(0, 'rgba(0,0,0,.65)'); fg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = fg; c.beginPath(); c.ellipse(w / 2, h * 0.93, w * 0.42, h * 0.035, 0, 0, 7); c.fill();
+    const B = bodyOf(p), s = (h * 0.84) / (PH * 1.2);
+    athlete(c, { x: w / 2, y: h * 0.93 }, Object.assign({ s, K, ph: 0, sp: 0, fx: view === 'side' ? 0.9 : 0, fy: view === 'back' ? -1 : 1, jz: 0, down: 0, ro: p.ro, num: p.no != null ? p.no : 0, carry: false, skin: skinOf(p), pose: 'stand' }, B));
+    const rim = c.createLinearGradient(0, 0, w, 0); rim.addColorStop(0, 'rgba(179,18,30,.18)'); rim.addColorStop(0.3, 'rgba(0,0,0,0)'); rim.addColorStop(0.7, 'rgba(0,0,0,0)'); rim.addColorStop(1, 'rgba(227,201,145,.12)');
+    c.fillStyle = rim; c.fillRect(0, 0, w, h);
+    return e;
+  }
+  const ftin = (cm) => { const i = Math.round(cm / 2.54); return Math.floor(i / 12) + "'" + (i % 12) + '"'; };
+  const lbs = (kg) => Math.round(kg * 2.2046);
   function render(dt) {
     const c = ctx, m = G.m, V = G.view;
     camUpdate(dt);
@@ -3021,7 +3191,7 @@ if (typeof module !== 'undefined') module.exports = RF;
       const sp = Math.hypot(p.vx || 0, p.vy || 0);
       const ph = (G.phase[p.id] = (G.phase[p.id] || p.k) + (G.paused ? 0 : dt) * (2 + sp / 9));
       const jz = p.jump > 0 ? Math.sin(Math.min(1, (0.55 - p.jump) / 0.55) * Math.PI) * 26 : 0;
-      const a = { s: P.s, K: G.kits[p.team], ph, sp, fx: p.fx, fy: p.fy, jz, down: p.stun > 0.3 ? p.stun : 0, ro: p.ro, num: ((p.id * 37) % 98) + 1, carry: b.ownId === p.id, skin: SKINS[p.id % SKINS.length], team: p.team };
+      const B = bodyOf(p.p), a = Object.assign({ s: P.s, K: G.kits[p.team], ph, sp, fx: p.fx, fy: p.fy, jz, down: p.stun > 0.3 ? p.stun : 0, ro: p.ro, num: p.p.no != null ? p.p.no : ((p.id * 37) % 98) + 1, carry: b.ownId === p.id, skin: skinOf(p.p), team: p.team }, B);
       items.push({ z: P.zc, f: () => {
         // floor shadow + glossy reflection
         c.fillStyle = 'rgba(0,0,0,.5)'; c.beginPath(); c.ellipse(P.x + 2 * P.s, P.y, 9 * P.s, 3.2 * P.s, 0, 0, 7); c.fill();
