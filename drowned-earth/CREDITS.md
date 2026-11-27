@@ -93,6 +93,20 @@ Quaternius distributes these through Google Drive, which this build environment 
 - `outfitFemaleRanger`: https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-assets/HEAD/CC0-packs/Quaternius/Modular%20Character%20Outfits%20-%20Fantasy%5BStandard%5D/Exports/glTF%20(Godot-Unreal)/Outfits/Female_Ranger.gltf
 - `animations`: https://media.githubusercontent.com/media/series-ai/jam-ready-assets/HEAD/quaternius-universal-animation-library/3D/characters/UAL1_Standard.glb
 
+## MakeHuman — https://www.makehumancommunity.org (CC0)
+
+The people are built from MakeHuman's system assets, **explicitly released as CC0 by the MakeHuman team in September 2020** (the licence header is in every source file):
+
+- base mesh `hm08`, 454 morph targets (macro age/sex/muscle/weight/ancestry, face and head dials, asymmetry, 34 expression units)
+- the default 163-bone skeleton and its skin weights
+- skins (21 sets across ages, sexes and ancestries), iris textures (10 colours), eyes (high/low poly)
+- eyebrows (12), eyelashes (4), teeth, tongue, hair (afro01, bob01, bob02, braid01, long01, ponytail01, short01–04)
+- clothes (male_casualsuit01–06, male_worksuit01, female_casualsuit01–02, female_sportsuit01, shoes01–03/05/06, fedora01), proxy741 (LOD body)
+
+Sources: the core data from `github.com/makehumancommunity/makehuman` and the system assets from the public mirror `github.com/vidya-hub/makehuman-core` (unmodified MakeHuman data). `scripts/humans/build.mjs` packs them into `public/assets/humans/`.
+
+Animation for the people is the Quaternius Universal Animation Library (above), retargeted at runtime onto the MakeHuman rig.
+
 ## Libraries
 
 - three.js (MIT) — rendering, glTF/KTX2 loaders, Basis transcoder, meshopt decoder

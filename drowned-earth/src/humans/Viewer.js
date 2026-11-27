@@ -148,7 +148,7 @@ export class Viewer {
     // depth of field focused on the face for close-ups
     const u = this.ctx.pipeline.uniforms;
     u.uDof.value = this.shot === 'close' && this.ctx.settings.q.postPipeline ? 1 : 0;
-    u.uDofAmt.value = 0.35; // portrait lens: a soft background, not a smear
+    u.uDofAmt.value = 0.18; // portrait lens: a soft background, not a smear
     u.uFocus.value = head.distanceTo(eye);
     G.uTime.value += dt;
     u.uTime.value = G.uTime.value;

@@ -31,6 +31,7 @@ export class Dialogue {
     ctx.audio?.speak(npc.worldPos(), dur, d.scale || 1);
     // the speaker turns, talks with their hands; the camera pulls focus to them
     npc.talkT = dur;
+    npc.rig?.say?.(line.text, dur);
     this.active = { npc, until: performance.now() + dur * 1000 };
     ctx.events.emit('talk', { npc: d.id, respect: !!d.respect });
     if (d.respect && ctx.standing.shown === 7) ctx.story.setFlag('respected');

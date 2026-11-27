@@ -75,7 +75,7 @@ export class Settings {
     this.oneHand = stored.oneHand ?? false;
     this.lensFx = stored.lensFx ?? true;
     this.music = stored.music ?? 1;
-    this.sharpness = stored.sharpness ?? 0.5;     // CAS-style sharpen, 0 = off
+    this.sharpness = params.has('sharp') ? +params.get('sharp') : stored.sharpness ?? 0.5;     // CAS-style sharpen, 0 = off
     this.motionBlur = stored.motionBlur ?? false; // camera motion blur (Standard/Ultra)
   }
   get q() { return PRESETS[this.quality]; }

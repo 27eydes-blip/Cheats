@@ -47,8 +47,11 @@ export function retargetClips(gltf, human, keep) {
   for (const [s, t] of Object.entries(MAP)) {
     const i = tIndex(t);
     if (i === undefined || !restDirs[s]) { align[s] = new THREE.Quaternion(); continue; }
-    const head = human.restHeads[i], tail = human.tails[i];
-    const td = _v.set(tail.x - head[0], tail.y - head[1], tail.z - head[2]).normalize();
+    // direction toward the next *mapped* joint (MakeHuman splits limbs into twist segments)
+    const head = human.restHeads[i];
+    const nextT = MAP[SRC_CHILD[s]] !== undefined ? tIndex(MAP[SRC_CHILD[s]]) : undefined;
+    const end = nextT !== undefined ? human.restHeads[nextT] : [human.tails[i].x, human.tails[i].y, human.tails[i].z];
+    const td = _v.set(end[0] - head[0], end[1] - head[1], end[2] - head[2]).normalize();
     align[s] = new THREE.Quaternion().setFromUnitVectors(td, restDirs[s]);
   }
   const srcHipH = restP.pelvis ? restP.pelvis.y : 1;

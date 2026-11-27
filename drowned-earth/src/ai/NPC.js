@@ -4,6 +4,8 @@ import { prepGeometry, boxGeometry } from '../world/Builder.js';
 import { mat } from '../world/Materials.js';
 import { damp } from '../core/rng.js';
 import { Character, charactersAvailable } from './Characters.js';
+import { Person } from '../humans/Person.js';
+import { personFor } from '../humans/Roster.js';
 
 // Raft-folk. Low-poly figures with procedural animation, living on a raft
 // (they are children of the raft so they ride its motion). Each follows a
@@ -31,8 +33,10 @@ export class NPC {
     this.raft = raft;
     this.root = new THREE.Group();
     this.root.name = 'npc:' + def.id;
-    if (charactersAvailable(ctx.assets)) this.buildRigged(ctx, def);
-    else this.buildBlocky(def);
+    // realistic people are built lazily, one per frame, as the player comes near
+    this.wantsHuman = !!ctx.humans;
+    if (!this.wantsHuman && charactersAvailable(ctx.assets)) this.buildRigged(ctx, def);
+    else if (!this.wantsHuman) this.buildBlocky(def);
     raft.root.add(this.root);
     this.local = new THREE.Vector3(def.spawn?.[0] ?? 0, raft.deckAt(def.spawn?.[0] ?? 0, def.spawn?.[1] ?? 0), def.spawn?.[1] ?? 0);
     this.target = this.local.clone();
@@ -44,6 +48,13 @@ export class NPC {
     this.backoff = 0;
     this.taskTimer = 0;
     this.root.position.copy(this.local);
+  }
+  buildHuman(ctx, def) {
+    const community = { market: 'portage', dock: 'portage', chapel: 'portage', lookout: 'portage', gt_plots: 'greentide', rh_rig: 'rusthold' }[def.raft] || 'default';
+    const tier = def.role === 'leader' ? 4 : def.role === 'trader' || def.role === 'fixer' ? 5 : 6;
+    this.rig = new Person(ctx, ctx.humans, personFor(def.id, { palette: community, tier, labour: /mechanic|dock|water/.test(def.role) ? 1 : 0, name: def.name }));
+    this.root.add(this.rig.root);
+    this.root.scale.setScalar(1);
   }
   buildRigged(ctx, def) {
     let seed = 0;
@@ -133,6 +144,12 @@ export class NPC {
     this.root.rotation.y = this.heading;
   }
   animate(dt, moving) {
+    if (this.wantsHuman && !this.rig) {
+      const d2 = this.worldPos(_w).distanceToSquared(this.ctx.player.position);
+      const frame = this.ctx.game.frame;
+      if (d2 < 75 * 75 && NPC.lastBuild !== frame) { NPC.lastBuild = frame; this.buildHuman(this.ctx, this.def); }
+      else return;
+    }
     if (this.rig) {
       const p = this.ctx.player.position;
       const near = this.worldPos(_w).distanceToSquared(p) < 36;
@@ -148,6 +165,19 @@ export class NPC {
       if (!this.rig.root.visible) return;
       this.animAcc = (this.animAcc || 0) + dt;
       if (far && this.animAcc < 0.1) return;
+      if (this.rig.human) {
+        // realistic people: LOD by distance, rain soaks them, walking speed matches the feet
+        const phone = this.ctx.settings.q.npcDetail === 0;
+        this.rig.human.setLod(d2 > (phone ? 64 : 400) ? 1 : 0);
+        this.rig.human.setWet(Math.min(1, this.ctx.weather.cur.rain * 1.3), this.ctx.time.out.sunI > 2 && /hammer|repair|haul/.test(this.activity) ? 0.5 : 0);
+        this.rig.setSpeed(moving ? (this.backoff > 0 ? 1.4 : 1.0) : 0);
+        // they read your wristband: how far apart you stand in the Order shows on their face
+        if (near && !this.faceSet) {
+          const gap = (this.rig.p.tier ?? 6) - (this.ctx.standing?.shown ?? 7);
+          this.rig.human.face.setEmotion(this.def.respect ? 'calm' : gap <= -2 ? 'suspicious' : gap < 0 ? 'worried' : 'calm', 0.8);
+          this.faceSet = true;
+        } else if (!near && this.faceSet) { this.rig.human.face.setEmotion(this.rig.p.emotion || 'calm'); this.faceSet = false; }
+      }
       this.rig.update(this.animAcc, near && this.activity !== 'sleep' ? _e.copy(this.ctx.camera.position) : null);
       this.animAcc = 0;
       return;

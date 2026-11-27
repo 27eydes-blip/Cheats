@@ -154,18 +154,33 @@ export class Human {
     }
     // hair
     if (p.hair && kit.proxies['hair:' + p.hair]) {
-      this.hairMat = hairMaterial(hairCol, { sway: /long|ponytail|braid/.test(p.hair) ? 1.4 : /afro/.test(p.hair) ? 0.25 : 0.6 });
+      this.hairMat = hairMaterial(hairCol, { alphaTest: 0.55, sway: /long|ponytail|braid/.test(p.hair) ? 1.4 : /afro/.test(p.hair) ? 0.25 : 0.6 });
       const hp = kit.proxies['hair:' + p.hair];
       if (hp.tex.map) kit.bind(this.hairMat, 'map', hp.tex.map, true);
       if (hp.tex.normalMap) kit.bind(this.hairMat, 'normalMap', hp.tex.normalMap, false);
-      add('hair:' + p.hair, this.hairMat, { sway: true });
+      const core = add('hair:' + p.hair, this.hairMat, { sway: true });
+      // soft fringe: the same cards again, alpha-blended, drawn after the opaque core
+      if (core && !phone) {
+        const fringe = this.hairMat.clone();
+        fringe.userData.u = this.hairMat.userData.u;
+        fringe.onBeforeCompile = this.hairMat.onBeforeCompile;
+        fringe.customProgramCacheKey = this.hairMat.customProgramCacheKey;
+        fringe.alphaTest = 0.04; fringe.transparent = true; fringe.depthWrite = false;
+        const soft = new THREE.SkinnedMesh(core.geometry, fringe);
+        soft.bind(this.skeleton, new THREE.Matrix4()); soft.frustumCulled = false; soft.renderOrder = 2;
+        this.root.add(soft); this.meshes.push(soft);
+        const sync = () => { fringe.map = this.hairMat.map; fringe.normalMap = this.hairMat.normalMap; fringe.needsUpdate = true; };
+        const h = kit.texture(kit.proxies['hair:' + p.hair].tex.map, true);
+        if (h?.texture) sync(); else h?.waiting.push(sync);
+      }
     }
     // clothes, shoes, hat
     this.clothMats = [];
     (p.clothes || []).forEach((c, i) => {
       const cp = kit.proxies['cloth:' + c];
       if (!cp) return;
-      const tint = srgb((p.clothTints || [])[i] || [0.7, 0.66, 0.6]);
+      // sun-faded: dyes out here never stay bright
+      const tint = fade(srgb((p.clothTints || [])[i] || [0.7, 0.66, 0.6]), 0.4);
       const cm = clothMaterial(tint, { salt: p.look?.salt ?? 0.5, wear: p.look?.wear ?? 0.5, patch: (p.look?.patches || 0) > i ? 1 : 0, seed: (p.seed || 1) * 0.37 + i, double: /fedora/.test(c) });
       if (cp.tex.map) kit.bind(cm, 'map', cp.tex.map, true);
       if (cp.tex.normalMap) kit.bind(cm, 'normalMap', cp.tex.normalMap, false);
@@ -253,7 +268,17 @@ export class Human {
     if (face) g.setAttribute('aFace', new THREE.BufferAttribute(face, 1));
     if (swayA) g.setAttribute('aSway', new THREE.BufferAttribute(swayA, 1));
     g.setIndex(new THREE.BufferAttribute(px.idx, 1));
-    g.computeVertexNormals();
+    if (sway) {
+      // hair cards: light them like the volume they form, not as separate flat cards
+      const hc = this.restHeads[kit.boneIndex.head];
+      const c = [hc[0], hc[1] + 0.06, hc[2] - 0.01];
+      const N = new Float32Array(nr * 3);
+      for (let r = 0; r < nr; r++) {
+        const x = P[r * 3] - c[0], y = (P[r * 3 + 1] - c[1]) * 0.8, z = P[r * 3 + 2] - c[2];
+        const l = Math.hypot(x, y, z) || 1; N[r * 3] = x / l; N[r * 3 + 1] = y / l; N[r * 3 + 2] = z / l;
+      }
+      g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+    } else g.computeVertexNormals();
     g.computeBoundingSphere();
     return g;
   }
@@ -279,6 +304,7 @@ export class Human {
 
 // colours in the roster are authored as sRGB; shaders work in linear
 const _c = new THREE.Color();
+function fade(rgb, k) { const l = rgb[0] * 0.3 + rgb[1] * 0.59 + rgb[2] * 0.11; return rgb.map((c) => (c * (1 - k) + l * k) * 0.82 + 0.015); }
 function srgb(rgb) { _c.setRGB(rgb[0], rgb[1], rgb[2], THREE.SRGBColorSpace); return [_c.r, _c.g, _c.b]; }
 
 // add expression deltas to any material (brows, lashes, teeth, tongue)

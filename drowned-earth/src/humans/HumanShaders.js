@@ -191,7 +191,10 @@ export function eyeMaterial() {
           vec3 Nw = inverseTransformDirection(normalize(vNormal), viewMatrix);
           float lid = smoothstep(0.1, 0.75, Nw.y);
           float inIris = 1.0 - smoothstep(uIrisR * 0.95, uIrisR * 1.05, r);
-          vec3 ec = eyeTex.rgb * mix(vec3(0.74, 0.71, 0.68), vec3(0.85), inIris); // sclera: warm, never paper-white
+          // iris: deeper and less saturated than the source art, with a dark limbal ring
+          vec3 irisC = mix(vec3(dot(eyeTex.rgb, vec3(0.3, 0.59, 0.11))), eyeTex.rgb, 0.7) * 0.62;
+          irisC *= 1.0 - 0.55 * smoothstep(uIrisR * 0.72, uIrisR * 0.98, r);
+          vec3 ec = mix(eyeTex.rgb * vec3(0.74, 0.71, 0.68), irisC, inIris); // sclera: warm, never paper-white
           ec *= mix(1.0, 0.55, lid);
           diffuseColor *= vec4(ec, 1.0);
         #endif`);
@@ -202,7 +205,7 @@ export function eyeMaterial() {
 
 // ---------------------------------------------------------------- hair
 export function hairMaterial(color, opts = {}) {
-  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62, alphaTest: 0.42, side: THREE.DoubleSide, transparent: false });
+  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62, alphaTest: opts.alphaTest ?? 0.42, side: THREE.DoubleSide, transparent: false });
   const u = m.userData.u = {
     uHairCol: { value: new THREE.Color(...color) }, uWetHair: { value: 0 }, uWind: { value: new THREE.Vector3(0.4, 0, 0.2) },
     uTime: G.uTime, uSunDir: G.uSunDir, uSunColor: G.uSunColor, uSway: { value: opts.sway ?? 1 },
@@ -221,14 +224,16 @@ export function hairMaterial(color, opts = {}) {
       .replace('#include <map_fragment>', `#include <map_fragment>
         // keep the texture's strand detail, take the colour from the person
         float hl = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
-        diffuseColor.rgb = uHairCol * (0.45 + hl * 1.6) * (1.0 - uWetHair * 0.35);`)
+        float bright = dot(uHairCol, vec3(0.3, 0.59, 0.11));
+        diffuseColor.rgb = uHairCol * mix(0.45 + hl * 1.6, 0.55 + hl * 0.75, smoothstep(0.15, 0.5, bright)) * (1.0 - uWetHair * 0.35);`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.32, uWetHair);')
       .replace('#include <opaque_fragment>', `
         {
           // Kajiya-Kay: two shifted highlights along the strand direction (cards run along v)
-          vec3 dpx = dFdx(vViewPosition), dpy = dFdy(vViewPosition);
-          vec2 dux = dFdx(vMapUv), duy = dFdy(vMapUv);
-          vec3 T = normalize(dpx * duy.x - dpy * dux.x);
+          // strands run down the head: tangent = world-down projected onto the surface (smooth, no facets)
+          vec3 dn = normalize((viewMatrix * vec4(0.0, -1.0, 0.0, 0.0)).xyz);
+          vec3 Ns = normalize(normal);
+          vec3 T = normalize(dn - Ns * dot(Ns, dn) + 1e-4);
           vec3 L = normalize((viewMatrix * vec4(uSunDir, 0.0)).xyz);
           vec3 V = normalize(vViewPosition) * -1.0;
           vec3 H = normalize(L + V);
@@ -263,7 +268,10 @@ export function clothMaterial(tint, opts = {}) {
         {
           vec3 c = diffuseColor.rgb;
           float l = dot(c, vec3(0.3, 0.59, 0.11));
-          c = mix(c, uTint * (0.35 + l * 1.3), 0.78);            // re-dyed by whoever wears it
+          // re-dyed by whoever wears it: keep only the texture's large-scale shading
+          // (folds, seams) and lose printed graphics/logos — those don't exist out here
+          float lowL = clamp(l * 1.4, 0.55, 1.05);
+          c = uTint * (0.72 + 0.36 * lowL) * (0.92 + 0.16 * hNoise(vRestC * 160.0 + uSeed));
           float n = hNoise(vRestC * 22.0 + uSeed) * 0.6 + hNoise(vRestC * 90.0 + uSeed) * 0.4;
           c *= mix(1.0, 0.9 + 0.16 * n, uWear);                    // fading, grime (subtle)
           // salt: dried white tide-lines, mostly low on the garment and at the cuffs
