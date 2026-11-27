@@ -124,7 +124,7 @@ void main() {
     // foam: contact with walls, crests in wind, wake
     float fn = texture2D(tNoise, vW.xz * 0.21 + wind * 0.02).r * 0.6 + texture2D(tNoise, vW.xz * 0.7 - wind * 0.03).g * 0.4;
     float contact = (uHasScene > 0.5) ? smoothstep(0.9, 0.0, thick) * smoothstep(0.25, 0.55, fn + 0.25) : 0.0;
-    float crest = smoothstep(0.35, 0.9, vCrest / max(0.2, 0.3 + uWind * 0.5)) * smoothstep(0.45, 0.75, fn) * uWind;
+    float crest = smoothstep(0.35, 0.9, vCrest / max(0.2, 0.3 + uWind * 0.5)) * smoothstep(0.45, 0.75, fn) * smoothstep(0.45, 1.0, uWind);
     float wake = smoothstep(0.1, 0.8, ripFoam * fn * 1.6);
     float foam = clamp(contact + crest + wake, 0.0, 1.0);
     vec3 foamCol = (skyBase(vec3(0.0, 1.0, 0.0)) * 0.6 + uSunColor * max(uSunDir.y, 0.0) * 0.5) * 0.9 + 0.04;

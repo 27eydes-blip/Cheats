@@ -178,3 +178,27 @@ export function sign(b, x, y, z, w, h, ry, def, inst) {
 }
 
 export { boxGeometry };
+
+// Hollow storey: perimeter walls with openings per side, optional floor slab.
+// openings: { nz:[{at,w,h,bottom}], pz:[], nx:[], px:[] } — `at` is the world coordinate along the wall.
+export function storey(b, x0, z0, x1, z1, y0, y1, o = {}) {
+  const t = o.t ?? 0.35, key = o.wallKey || 'concrete', color = o.color || [0.6, 0.6, 0.58];
+  const op = o.openings || {};
+  if (o.floor !== false) {
+    if (o.hole) slabWithHole(b, x0, z0, x1, z1, y0 - 0.3, y0, ...o.hole, o.floorKey || 'tile', o.floorColor || [0.45, 0.44, 0.42]);
+    else b.box(x0, y0 - 0.3, z0, x1, y0, z1, o.floorKey || 'tile', { color: o.floorColor || [0.45, 0.44, 0.42] });
+  }
+  b.wall('x', x0, x1, z0 + t / 2, y0, y1, t, key, op.nz || [], { color });
+  b.wall('x', x0, x1, z1 - t / 2, y0, y1, t, key, op.pz || [], { color });
+  b.wall('z', z0 + t, z1 - t, x0 + t / 2, y0, y1, t, key, op.nx || [], { color });
+  b.wall('z', z0 + t, z1 - t, x1 - t / 2, y0, y1, t, key, op.px || [], { color });
+}
+
+export function windowsAlong(a0, a1, every = 4, w = 1.6, h = 1.5, bottom = 0.95, skip = []) {
+  const out = [];
+  for (let a = a0 + every / 2; a < a1 - 1; a += every) {
+    if (skip.some((s) => Math.abs(s - a) < w + 0.6)) continue;
+    out.push({ at: a, w, h, bottom });
+  }
+  return out;
+}

@@ -1,0 +1,15 @@
+{
+  "_doc": "Shops. sells: item → price in scrap and stock. buys: tag or item ids the trader will take, at value * buyRate. Faction attitude can modify prices later.",
+  "shops": {
+    "market_general": { "name": "Odile's stall", "faction": "raftfolk", "buyRate": 0.8,
+      "sells": { "ration_bar": { "price": 6, "stock": 4 }, "canned_fish": { "price": 4, "stock": 3 }, "kelp": { "price": 2, "stock": 6 }, "stew": { "price": 4, "stock": 3 }, "tea": { "price": 2, "stock": 4 },
+                 "fibre": { "price": 1, "stock": 9 }, "tape": { "price": 4, "stock": 2 }, "oil": { "price": 3, "stock": 3 }, "lantern_parts": { "price": 4, "stock": 1 }, "glass_jar": { "price": 3, "stock": 2 }, "battery": { "price": 5, "stock": 2 } },
+      "buys": ["salvage", "food", "material", "medical", "contraband", "clothing", "keepsake"] },
+    "repair": { "name": "Bram's bench", "faction": "raftfolk", "buyRate": 0.7,
+      "sells": { "fuel": { "price": 9, "stock": 3 }, "hull_patch": { "price": 6, "stock": 2 }, "rope": { "price": 3, "stock": 3 }, "tape": { "price": 4, "stock": 2 } },
+      "buys": ["salvage", "material"], "services": { "repair_hull": { "name": "Repair hull (+40%)", "price": 8 } } },
+    "water": { "name": "Still House", "faction": "raftfolk", "buyRate": 0.6,
+      "sells": { "clean_water": { "price": 2, "stock": 8 }, "hm_water": { "price": 7, "stock": 2 }, "charcoal": { "price": 1, "stock": 5 }, "bottle": { "price": 1, "stock": 5 } },
+      "buys": ["container", "drink"] }
+  }
+}

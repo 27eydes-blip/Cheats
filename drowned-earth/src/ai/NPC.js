@@ -1,0 +1,138 @@
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { prepGeometry, boxGeometry } from '../world/Builder.js';
+import { mat } from '../world/Materials.js';
+import { damp } from '../core/rng.js';
+
+// Raft-folk. Low-poly figures with procedural animation, living on a raft
+// (they are children of the raft so they ride its motion). Each follows a
+// daily schedule of chores from data/npcs.json, keeps a polite distance from
+// the player, and can be talked to (or traded with).
+const geoCache = {};
+function part(name) {
+  if (geoCache[name]) return geoCache[name];
+  let g;
+  if (name === 'torso') { g = boxGeometry(0.42, 0.62, 0.24); g.translate(0, 0.31, 0); }
+  if (name === 'head') { g = new THREE.SphereGeometry(0.13, 8, 6); g.scale(1, 1.15, 1.05); g.translate(0, 0.14, 0); }
+  if (name === 'limbA') { g = boxGeometry(0.12, 0.62, 0.12); g.translate(0, -0.31, 0); }
+  if (name === 'limbL') { g = boxGeometry(0.15, 0.82, 0.15); g.translate(0, -0.41, 0); }
+  if (name === 'hood') { g = new THREE.SphereGeometry(0.16, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.6); g.translate(0, 0.16, -0.01); }
+  if (name === 'hat') { g = new THREE.CylinderGeometry(0.28, 0.28, 0.03, 10); const t = new THREE.CylinderGeometry(0.13, 0.15, 0.14, 8); t.translate(0, 0.08, 0); g = mergeGeometries([g.toNonIndexed(), t.toNonIndexed()]); g.translate(0, 0.24, 0); }
+  if (name === 'mask') { g = boxGeometry(0.2, 0.1, 0.06); g.translate(0, 0.1, 0.12); }
+  geoCache[name] = prepGeometry(g, [1, 1, 1]);
+  return geoCache[name];
+}
+
+export class NPC {
+  constructor(ctx, def, raft) {
+    this.ctx = ctx;
+    this.def = def;
+    this.raft = raft;
+    this.root = new THREE.Group();
+    this.root.name = 'npc:' + def.id;
+    const fabric = mat('fabric');
+    const skin = new THREE.MeshStandardMaterial({ color: new THREE.Color(...(def.skin || [0.62, 0.46, 0.36])), roughness: 0.8 });
+    const coat = fabric.clone(); coat.color = new THREE.Color(...(def.coat || [0.4, 0.38, 0.32]));
+    const pants = fabric.clone(); pants.color = new THREE.Color(...(def.pants || [0.25, 0.25, 0.27]));
+    const mk = (g, m) => { const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; return mesh; };
+    this.hips = new THREE.Group(); this.hips.position.y = 0.88;
+    this.torso = mk(part('torso'), coat); this.hips.add(this.torso);
+    this.head = mk(part('head'), skin); this.head.position.y = 0.66; this.torso.add(this.head);
+    if (def.headwear === 'hood') this.head.add(mk(part('hood'), coat));
+    if (def.headwear === 'hat') this.head.add(mk(part('hat'), pants));
+    if (def.mask) this.head.add(mk(part('mask'), new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 1 })));
+    this.armL = mk(part('limbA'), coat); this.armL.position.set(-0.27, 0.58, 0); this.torso.add(this.armL);
+    this.armR = mk(part('limbA'), coat); this.armR.position.set(0.27, 0.58, 0); this.torso.add(this.armR);
+    this.legL = mk(part('limbL'), pants); this.legL.position.set(-0.11, 0, 0); this.hips.add(this.legL);
+    this.legR = mk(part('limbL'), pants); this.legR.position.set(0.11, 0, 0); this.hips.add(this.legR);
+    this.root.add(this.hips);
+    this.root.scale.setScalar(def.scale || 1);
+    raft.root.add(this.root);
+    this.local = new THREE.Vector3(def.spawn?.[0] ?? 0, raft.deckAt(def.spawn?.[0] ?? 0, def.spawn?.[1] ?? 0), def.spawn?.[1] ?? 0);
+    this.target = this.local.clone();
+    this.heading = 0;
+    this.activity = 'idle';
+    this.phase = Math.random() * 10;
+    this.walk = 0;
+    this.speech = null;
+    this.backoff = 0;
+    this.taskTimer = 0;
+    this.root.position.copy(this.local);
+  }
+  currentTask() {
+    const h = this.ctx.time.hour;
+    let best = this.def.schedule[0];
+    for (const s of this.def.schedule) if (h >= s.from && h < s.to) best = s;
+    // wrap-around night entries
+    for (const s of this.def.schedule) if (s.from > s.to && (h >= s.from || h < s.to)) best = s;
+    return best;
+  }
+  update(dt, playerLocal, playerNear) {
+    this.phase += dt;
+    const task = this.currentTask();
+    if (task !== this.task) {
+      this.task = task;
+      const spot = this.raft.info.spots.find((s) => s.kind === task.at) || null;
+      const [x, z] = task.pos || (spot ? [spot.x, spot.z] : [this.local.x, this.local.z]);
+      this.target.set(x, this.raft.deckAt(x, z), z);
+      this.activity = task.do;
+    }
+    // keep a polite distance
+    let tx = this.target.x, tz = this.target.z;
+    if (playerNear && playerLocal) {
+      const dx = this.local.x - playerLocal.x, dz = this.local.z - playerLocal.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 1.5 && d > 0.01) { tx = this.local.x + (dx / d) * 1.2; tz = this.local.z + (dz / d) * 1.2; this.backoff = 1.2; }
+    }
+    this.backoff = Math.max(0, this.backoff - dt);
+    const dx = tx - this.local.x, dz = tz - this.local.z;
+    const dist = Math.hypot(dx, dz);
+    let moving = false;
+    if (dist > 0.15) {
+      const sp = this.backoff > 0 ? 1.4 : 1.0;
+      const step = Math.min(dist, sp * dt);
+      this.local.x += (dx / dist) * step; this.local.z += (dz / dist) * step;
+      // stay on deck
+      const r = this.raft.rects;
+      let inside = r.some((q) => this.local.x > q.x0 + 0.3 && this.local.x < q.x1 - 0.3 && this.local.z > q.z0 + 0.3 && this.local.z < q.z1 - 0.3);
+      if (!inside) { this.local.x -= (dx / dist) * step; this.local.z -= (dz / dist) * step; }
+      this.local.y = this.raft.deckAt(this.local.x, this.local.z);
+      this.heading = damp(this.heading, Math.atan2(dx, dz), 8, dt);
+      moving = true;
+    } else if (playerNear && playerLocal && this.activity !== 'sleep') {
+      // turn to face the player when they are close
+      const fx = playerLocal.x - this.local.x, fz = playerLocal.z - this.local.z;
+      if (Math.hypot(fx, fz) < 5) this.heading = damp(this.heading, Math.atan2(fx, fz), 3, dt);
+    }
+    this.walk = damp(this.walk, moving ? 1 : 0, 6, dt);
+    this.animate(dt, moving);
+    this.root.position.copy(this.local);
+    this.root.rotation.y = this.heading;
+  }
+  animate(dt, moving) {
+    const t = this.phase;
+    const w = this.walk;
+    const s = Math.sin(t * 7) * w;
+    this.legL.rotation.x = s * 0.6; this.legR.rotation.x = -s * 0.6;
+    this.armL.rotation.x = -s * 0.5; this.armR.rotation.x = s * 0.5;
+    this.hips.position.y = 0.88 + Math.abs(Math.cos(t * 7)) * 0.03 * w;
+    this.torso.rotation.set(0, 0, 0); this.head.rotation.set(0, 0, 0);
+    this.armL.rotation.z = 0; this.armR.rotation.z = 0;
+    if (moving) return;
+    const a = this.activity;
+    const breathe = Math.sin(t * 1.6) * 0.015;
+    this.torso.rotation.x = breathe;
+    if (a === 'hammer' || a === 'repair') { this.torso.rotation.x = 0.35; this.armR.rotation.x = -1.2 + Math.abs(Math.sin(t * 5)) * 1.1; }
+    else if (a === 'cook' || a === 'stir') { this.torso.rotation.x = 0.25; this.armR.rotation.x = -0.9; this.armR.rotation.z = Math.sin(t * 3) * 0.3; }
+    else if (a === 'garden') { this.torso.rotation.x = 0.9; this.hips.position.y = 0.7; this.armL.rotation.x = -0.6 + Math.sin(t * 2) * 0.3; this.armR.rotation.x = -0.6 - Math.sin(t * 2) * 0.3; }
+    else if (a === 'watch') { this.head.rotation.y = Math.sin(t * 0.3) * 0.8; this.armR.rotation.x = -2.2; }
+    else if (a === 'sell') { this.armR.rotation.x = -0.4 + Math.sin(t * 0.8) * 0.2; this.head.rotation.y = Math.sin(t * 0.5) * 0.4; }
+    else if (a === 'laundry') { this.armL.rotation.x = -2.4 + Math.sin(t * 2) * 0.2; this.armR.rotation.x = -2.4 - Math.sin(t * 2) * 0.2; }
+    else if (a === 'sit') { this.hips.position.y = 0.45; this.legL.rotation.x = -1.4; this.legR.rotation.x = -1.4; }
+    else if (a === 'sleep') { this.hips.position.y = 0.2; this.torso.rotation.x = -1.45; this.legL.rotation.x = -1.5; this.legR.rotation.x = -1.5; }
+    else if (a === 'pray') { this.torso.rotation.x = 0.15; this.head.rotation.x = 0.4; this.armL.rotation.x = -0.8; this.armR.rotation.x = -0.8; }
+    else if (a === 'fish') { this.armR.rotation.x = -1.0 + Math.sin(t * 0.7) * 0.1; this.armL.rotation.x = -0.9; }
+    else { this.head.rotation.y = Math.sin(t * 0.4 + 1) * 0.5; }
+  }
+  worldPos(out = new THREE.Vector3()) { return this.root.getWorldPosition(out); }
+}

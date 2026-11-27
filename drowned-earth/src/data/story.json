@@ -1,0 +1,18 @@
+{
+  "_doc": "Stage 1 story beats. Objectives are shown as quiet journal notes (never waypoints). Triggers run actions when conditions are met: flags (all), logsRead (min count), near [x,z,r], time [from,to], once.",
+  "objectives": [
+    { "id": "wake", "text": "The boat is tied to Linden Court. Search the building.", "doneWhen": { "logs": ["linden_01"] } },
+    { "id": "kettle", "text": "There is smoke to the south-east. Raft-folk. Trade there.", "doneWhen": { "flags": ["visited_kettle"] } },
+    { "id": "radio", "text": "Listen to the boat radio (R). Not every voice is Highmark's.", "doneWhen": { "flags": ["heard_signal"] } },
+    { "id": "ansel", "text": "Someone at Kettle Drift might know what the numbers mean.", "doneWhen": { "flags": ["signal_decoded"] }, "after": "heard_signal" },
+    { "id": "sounding", "text": "The Sounding. Lower the Unmoored hydrophone. At night, if you must.", "doneWhen": { "flags": ["finale_done"] }, "after": "signal_decoded" }
+  ],
+  "triggers": [
+    { "id": "first_dawn_whisper", "once": true, "when": { "playTime": 4 }, "do": [ { "whisper": "Cold. The boat rocks. The tower is silent above you." } ] },
+    { "id": "see_highmark", "once": true, "when": { "playTime": 40 }, "do": [ { "whisper": "To the north, on the horizon: Highmark. Still dry. Still lit." } ] },
+    { "id": "kettle_smoke", "once": true, "when": { "near": [318, 250, 140] }, "do": [ { "whisper": "Voices. Hammering. Somebody is cooking." } ] },
+    { "id": "sounding_near", "once": true, "when": { "near": [96, -128, 60] }, "do": [ { "whisper": "The water here is black. The seabed simply stops." }, { "audio": "deepMoan" } ] },
+    { "id": "night_one", "once": true, "when": { "hourFrom": 20.5 }, "do": [ { "whisper": "Night. Lights on the raft. One lamp in a far tower window." } ] },
+    { "id": "gulls_quiet", "once": false, "cooldown": 300, "when": { "night": true, "chance": 0.002 }, "do": [ { "event": "gulls:silence" }, { "delay": 8, "audio": "deepMoan" } ] }
+  ]
+}

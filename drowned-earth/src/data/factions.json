@@ -1,0 +1,9 @@
+{
+  "_doc": "Factions. attitude -100..100 toward the player. Later stages use these for permits, prices, patrol behaviour and raft politics.",
+  "factions": {
+    "highmark":    { "name": "Highmark Supply Authority", "short": "Highmark", "attitude": 0, "desc": "The last dry land. Rations, permits, radio, shipping lanes." },
+    "tide_wardens":{ "name": "Tide Wardens", "short": "Wardens", "attitude": -10, "parent": "highmark", "desc": "Highmark's armed patrol boats." },
+    "raftfolk":    { "name": "Kettle Drift", "short": "Raft-folk", "attitude": 10, "desc": "Lashed-together raft district led by Mother Ansel." },
+    "unmoored":    { "name": "The Unmoored", "short": "Unmoored", "attitude": 0, "desc": "A hidden raft group. Broadcasts coordinates. Listens to the deep." }
+  }
+}

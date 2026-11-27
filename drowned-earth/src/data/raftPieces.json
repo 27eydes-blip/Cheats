@@ -1,0 +1,28 @@
+{
+  "_doc": "Modular raft pieces. Each piece is a float with a walkable deck. size = [x, z] meters, deck = deck height above the waterline, draft = depth below. 'look' selects the hull/float builder; colors are linear RGB. New pieces can be added here and referenced from rafts.json or by future player-built rafts.",
+  "pieces": {
+    "barge":     { "size": [18, 8],  "deck": 0.95, "draft": 1.6, "look": "steelHull", "hullColor": [0.22, 0.2, 0.18], "deckKey": "rust", "deckColor": [0.42, 0.38, 0.33], "mass": 9 },
+    "cardeck":   { "size": [14, 10], "deck": 1.15, "draft": 1.4, "look": "steelHull", "hullColor": [0.5, 0.48, 0.44], "deckKey": "asphalt", "deckColor": [0.55, 0.55, 0.52], "mass": 8 },
+    "rigdeck":   { "size": [10, 10], "deck": 1.6,  "draft": 2.2, "look": "rig",       "hullColor": [0.6, 0.45, 0.15], "deckKey": "metal", "deckColor": [0.4, 0.42, 0.4], "mass": 7 },
+    "pontoon":   { "size": [6, 6],   "deck": 0.6,  "draft": 0.7, "look": "drums",     "hullColor": [0.2, 0.32, 0.6], "deckKey": "wood", "deckColor": [0.62, 0.52, 0.4], "mass": 2 },
+    "plankdeck": { "size": [8, 5],   "deck": 0.55, "draft": 0.6, "look": "drums",     "hullColor": [0.65, 0.62, 0.55], "deckKey": "wood", "deckColor": [0.55, 0.46, 0.36], "mass": 2 },
+    "hulldeck":  { "size": [9, 4],   "deck": 0.8,  "draft": 1.0, "look": "boatHull",  "hullColor": [0.75, 0.74, 0.7], "deckKey": "wood", "deckColor": [0.5, 0.42, 0.33], "mass": 3 }
+  },
+  "structures": {
+    "_doc": "Things built on decks. footprint [x, z], height.",
+    "shack":      { "footprint": [5, 2.5], "height": 2.6 },
+    "container":  { "footprint": [6, 2.5], "height": 2.6 },
+    "stall":      { "footprint": [3, 2],   "height": 2.4 },
+    "garden":     { "footprint": [4, 1.6], "height": 0.6 },
+    "rain":       { "footprint": [2, 2],   "height": 2.2 },
+    "generator":  { "footprint": [1.6, 1], "height": 1.2 },
+    "tower":      { "footprint": [3, 3],   "height": 9 },
+    "mast":       { "footprint": [1, 1],   "height": 8 },
+    "stove":      { "footprint": [1, 1],   "height": 1.1 },
+    "laundry":    { "footprint": [5, 0.2], "height": 2.2 },
+    "lantern":    { "footprint": [0.3, 0.3], "height": 2.4 },
+    "bed":        { "footprint": [2, 1],   "height": 0.5 },
+    "workbench":  { "footprint": [2.4, 1], "height": 1 },
+    "tank":       { "footprint": [2, 2],   "height": 2 }
+  }
+}

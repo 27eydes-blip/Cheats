@@ -75,7 +75,7 @@ export class Atmosphere {
     const ld = time.lightDir;
     const isMoon = time.sunDir.y <= -0.02;
     this.sun.color.copy(isMoon ? tmp.setHex(0x8fa6d6) : o.sunColor);
-    this.sun.intensity = (isMoon ? 0.18 * (1 - w.cloud * 0.7) : o.sunI * Math.max(0.15, cloudDim)) * (1 - this.indoor * 0.5);
+    this.sun.intensity = (isMoon ? 0.45 * (1 - w.cloud * 0.7) : o.sunI * Math.max(0.15, cloudDim)) * (1 - this.indoor * 0.5);
     const target = this.ctx.player.position;
     this.sun.position.copy(target).addScaledVector(ld, 200);
     this.sun.target.position.copy(target);

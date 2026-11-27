@@ -189,6 +189,11 @@ export class Boat {
     } else {
       this.vel.set(0, 0, 0);
       this.speed = 0;
+      if (this.tied.follow) {
+        const f = this.tied.follow();
+        this.pos.x = f.pos.x; this.pos.z = f.pos.z;
+        this.heading = f.facing + Math.PI / 2;
+      }
     }
     // buoyancy from 4 samples
     const L = 2.4, B = 0.85;

@@ -1,0 +1,25 @@
+{
+  "_doc": "Radio stations. The boat radio scans stations with R. A station broadcasts its lines in order on a loop; gap = seconds between lines. 'night' stations only come in after dark. Lines can set a story flag the first time they are heard.",
+  "stations": [
+    { "id": "highmark", "name": "88.1 — Highmark Supply Authority", "voice": "calm", "gap": 9,
+      "lines": [
+        "This is the Highmark Supply Authority. The time is now. The tide is steady.",
+        "Ration collection for the Orrin Bay districts will take place on the third day. Please have your tally ready.",
+        "Citizens are reminded that work permits are available to those who demonstrate reliable labour.",
+        "Tide Warden vessels operate for your protection. Please comply with all instructions.",
+        "There is no evidence of renewed illness. Keep two arms apart as a courtesy.",
+        "Reports of sounds or lights in the deep water are the result of settling structures. There is no cause for concern.",
+        "Order and supply. Supply and order. Highmark is with you.",
+        "[a soft chime] This has been the Highmark Supply Authority."
+      ] },
+    { "id": "unmoored", "name": "3.3 — (unregistered)", "voice": "numbers", "gap": 6, "nightBoost": true,
+      "lines": [
+        "[static] ...the Unmoored. If you can hear this, you are not alone on the water.",
+        "Numbers follow. Write them down.",
+        "Nine six. One two eight. Minus. Nine six. One two eight. Minus.",
+        "The place where the plaza fell. Lower the ear at night. Listen to what Highmark listens to.",
+        "Nine six. One two eight. Minus. [static] ...counting down. It is counting down.",
+        "Do not trust the Wardens. Do not trust the seal. Trust the water. It does not lie about how deep it is."
+      ], "sets": { "2": "heard_signal" } }
+  ]
+}

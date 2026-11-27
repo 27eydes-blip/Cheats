@@ -1,0 +1,62 @@
+{
+  "_doc": "Readable notes and audio recordings. form: note | recording | plaque | board. era: hush (the illness), rise (the flood), now. A recording is played as synthesized murmur with these lines as subtitles. 'sets' raises a story flag when read.",
+  "logs": {
+    "linden_01": { "title": "Recorder on the kitchen table", "form": "recording", "era": "rise", "speaker": "Imre Vass, flat 2C",
+      "lines": [
+        "Ned, if you find this, it's Dad. The water's on the second step now.",
+        "Your mum and I are going up to the roof with the Okafors. The Highmark boats said roofs.",
+        "They said they'd come for the roofs.",
+        "I'm leaving the boat tied at the front. It's yours. You always wanted it.",
+        "Don't come looking. Go where the lights are. Go where it's dry."
+      ] },
+    "linden_02": { "title": "Note in a sealed bag", "form": "note", "era": "hush",
+      "text": "HEALTH WARDEN NOTICE — LINDEN COURT\n\nThe following flats have reported the Hush: 1A, 3D, 4B, 6F.\n\nSymptoms: hoarseness, then loss of voice, then fever. Residents who cannot speak must not leave their flat. Doors will be marked. Food will be left at the door.\n\nDo not open the door to anyone who does not answer when spoken to.\n\nIn pencil, underneath: 4B still knocks at night. Two knocks. Nobody answers it." },
+    "aldren_01": { "title": "Waiting room notice", "form": "board", "era": "hush",
+      "text": "ST. ALDREN GENERAL — PUBLIC NOTICE\n\nThe Hush is not airborne at distances greater than two arms. Keep two arms apart.\n\nIf a family member has lost their voice, do not bring them here. Call the Health Authority line. A team will collect them.\n\nWard 9 is closed to visitors.\n\nThank you for your patience. We are doing everything we can." },
+    "aldren_02": { "title": "Dr. Feyrer's recorder, Ward 9", "form": "recording", "era": "hush", "speaker": "Dr. Lise Feyrer",
+      "lines": [
+        "Day forty-one. Eleven patients. None of them have spoken in weeks, but they're not unconscious.",
+        "They turn their heads together. All of them. Toward the window. Toward the sea.",
+        "The H.H.A. took blood again today. They didn't ask for my notes. They had their own.",
+        "They knew what it was before we did. I'm sure of that now.",
+        "The order came at six. Seal the ward. Staff inside to remain inside.",
+        "I'm going to keep recording. Someone should be listening."
+      ], "sets": "read_feyrer" },
+    "aldren_03": { "title": "Directive on the reception desk", "form": "note", "era": "hush",
+      "text": "HIGHMARK HEALTH AUTHORITY — DIRECTIVE 114\nTO: ALL MAINLAND FACILITIES\n\nEffective immediately, samples from Hush patients exhibiting synchronised orientation behaviour are to be transferred to Highmark under seal.\n\nThis behaviour is not to be recorded in patient files. Staff observing it are to be reassigned.\n\nShipments will be collected by Tide Warden vessels. Do not discuss shipment contents.\n\nOrder and supply." },
+    "aldren_04": { "title": "Letter tucked under a pillow", "form": "note", "era": "hush",
+      "text": "Mira —\n\nI can't talk any more, so I'm writing. Don't be frightened. It doesn't hurt.\n\nAt night I hear something. Not with my ears. Like when you put your head under the bath water and hear the pipes. Low. Very far down.\n\nAll of us hear it. We point at it without meaning to.\n\nThey've closed the doors. I'm not angry. Tell Mum the soup was good.\n\n— T." },
+    "cask_01": { "title": "Transit worker's recorder", "form": "recording", "era": "rise", "speaker": "Station supervisor, Cask Street",
+      "lines": [
+        "Last evacuation train left at four. Highmark permit holders only. I checked the papers myself.",
+        "Three hundred people on the platform without papers. I checked those too.",
+        "The water came up the tunnel at six. Not from the street. From the tunnel. From below.",
+        "There's a light down the line now. Green. Like the growths in the old service shafts.",
+        "I'm going to walk down and see. If I don't come back, the station is closed."
+      ] },
+    "cask_02": { "title": "Evacuation transcript, laminated", "form": "note", "era": "rise",
+      "text": "ANNOUNCEMENT — REPEAT EVERY 10 MINUTES\n\nThe Ferrow Line is now operating evacuation services to the Highmark ferry terminal.\n\nPlease have your permit ready for inspection. Passengers without permits should proceed to high ground and await collection.\n\nCollection is not guaranteed.\n\n[The last line has been scratched out with a key.]" },
+    "calla_01": { "title": "Captain's log, MV Calla Morrow", "form": "note", "era": "rise",
+      "text": "Day 9 of contract. Cargo: Highmark Supply Authority, sealed. Destination: Highmark north pier.\n\nDay 11. Engine trouble off Orrin Bay. Wardens refuse tow. Told to wait.\n\nDay 12. The sonar shows a structure on the bottom that isn't on any chart. Round. Regular. Very large. Wardens say it's a wreck.\n\nDay 14. It made a sound. The whole hull rang with it. Two of the crew haven't spoken since.\n\nDay 15. Anchor chain parted. We are drifting into the city. God help us, I'm almost relieved." },
+    "calla_02": { "title": "Cargo manifest", "form": "note", "era": "rise",
+      "text": "MANIFEST — HIGHMARK SUPPLY AUTHORITY (SEALED)\n\nContainer HMSA-0442: ration grain, 18t\nContainer HMSA-0443: medical (H.H.A.), refrigerated\nContainer HMSA-0447: \"acoustic survey equipment\" — DO NOT OPEN\nContainer HMSA-0448: \"specimens, Orrin Bay\" — DO NOT OPEN\n\nRecipient signature: [stamped] OFFICE OF THE DEEP SURVEY, HIGHMARK" },
+    "calla_03": { "title": "Recorder in the hold", "form": "recording", "era": "rise", "speaker": "Deckhand, unnamed",
+      "lines": [
+        "It's quieter down here. You'd think it'd be louder, in the hold, but it's quieter.",
+        "Survey crate's open. It's a hydrophone. A big one. Highmark wanted to listen to something.",
+        "I put the headphones on. I shouldn't have. It's... it's not an animal.",
+        "It's counting. I think it's counting.",
+        "When it gets to the end, I don't think we'll need to worry about the water any more."
+      ], "sets": "read_hold" },
+    "sounding_01": { "title": "Plaque on the red buoy", "form": "plaque", "era": "now",
+      "text": "THE UNMOORED WERE HERE.\n\nThis is the Sounding. It goes further down than the city did.\n\nThere is a hydrophone on this buoy. It is not for you yet.\n\nListen to 3.3 at night. Write down the numbers. Find someone who remembers what they mean.\n\nDo not tell Highmark. Highmark already knows." },
+    "kettle_01": { "title": "Kettle Drift notice board", "form": "board", "era": "now",
+      "text": "KETTLE DRIFT — NOTICES\n\n• Rations: third day. Show your tally. Highmark seal must be intact.\n• Fresh water at the Still House. Pay Hollis, not the tank.\n• Wardens pass the south lane at night. Be civil. Be dry. Be somewhere else.\n• NO DIVING AFTER DARK. This is not superstition. Ask Pell.\n• Lost: the Morrow girl's dog. Brown. Answers to Pip.\n• Work permits for Highmark: apply in person. Two arms apart. Bring proof of labour.\n\nIn chalk, small: the Unmoored are listening on 3.3" },
+    "kettle_02": { "title": "Lookout's logbook", "form": "note", "era": "now",
+      "text": "PELL — THE CROW — WATCH LOG\n\n03:10 Warden patrol, south lane, 2 boats, searchlight. Passed.\n03:55 Lighthouse 40s. Same as always.\n04:20 Gulls quiet. All of them. 6 minutes.\n04:26 The low sound. Felt it in the tower legs. Water went flat for a second, like glass.\n04:27 Green light under the Sounding. Then nothing.\n04:40 Gulls back.\n\nThird time this month. Tighter each time. Something is counting down." },
+    "vesper_01": { "title": "Words scratched into the wall", "form": "note", "era": "now",
+      "text": "SOMEONE KEEPS THE LAMP LIT ON NINE.\n\nI have knocked. I have called up the stairwell.\n\nNobody answers.\n\nThe lamp comes on every night at the same time anyway." },
+    "ambient_01": { "title": "Note in a bottle", "form": "note", "era": "rise", "text": "We are on the roof of the Kessler building. Eleven of us. Two children. If anyone finds this — we waited." },
+    "ambient_02": { "title": "Scrap of a ration wrapper", "form": "note", "era": "now", "text": "ORDER AND SUPPLY. ONE BAR PER CITIZEN PER DAY. RESALE PROHIBITED.\n\nOn the back, in pencil: they gave us the same number of bars as last year. There are fewer of us. Think about that." }
+  }
+}

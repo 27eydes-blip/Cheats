@@ -46,6 +46,14 @@ export class WorldMap {
       const pit = 1 - smoothstep(14, s.clear, ds);
       y = y * (1 - pit) + -78 * pit;
     }
+    // Cask Street: the street caved into the station below
+    const sub = this.landmarks.find((l) => l.kind === 'subway');
+    if (sub) {
+      const dx = x - sub.pos[0], dz = z - (sub.pos[1] + 8);
+      const d = Math.hypot(dx * 0.8, dz * 0.6);
+      const k = 1 - smoothstep(14, 30, d);
+      y = Math.min(y, y * (1 - k) + -16 * k);
+    }
     return y;
   }
   landmarkClaim(x, z, pad = 0) {

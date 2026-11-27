@@ -23,6 +23,30 @@ import { Player } from '../player/Player.js';
 import { Boat } from '../player/Boat.js';
 import { CameraRig } from '../player/CameraRig.js';
 import { applyDebugParams } from './Debug.js';
+import { Effects } from '../render/Effects.js';
+import { LandmarkManager } from '../world/LandmarkManager.js';
+import { buildLindenCourt } from '../world/landmarks/lindenCourt.js';
+import { buildHospital } from '../world/landmarks/hospital.js';
+import { buildSubway } from '../world/landmarks/subway.js';
+import { buildCargoShip } from '../world/landmarks/cargoShip.js';
+import { buildSounding, buildVesper } from '../world/landmarks/sounding.js';
+import { Highmark } from '../world/landmarks/Highmark.js';
+import { buildRaftCommunity } from '../raft/RaftCommunity.js';
+import { Inventory } from '../survival/Inventory.js';
+import { Loot } from '../survival/Loot.js';
+import { Crafting } from '../survival/Crafting.js';
+import { Trade } from '../survival/Trade.js';
+import { Survival } from '../survival/Survival.js';
+import { Story } from '../story/Story.js';
+import { Radio } from '../story/Radio.js';
+import { Dialogue } from '../story/Dialogue.js';
+import { UI } from '../ui/UI.js';
+import { TouchControls } from '../ui/TouchControls.js';
+import { AudioEngine } from '../audio/AudioEngine.js';
+import { SaveSystem } from '../save/SaveSystem.js';
+import { Birds } from '../ai/Birds.js';
+import { Patrol } from '../ai/Patrol.js';
+import { DeepShapes } from '../ai/DeepShapes.js';
 
 // The game: owns the renderer, scenes and every system, and runs the loop.
 // Systems receive a shared `ctx` so they can find each other without imports
@@ -48,6 +72,7 @@ export class Game {
     renderer.shadowMap.enabled = ctx.settings.q.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.shadowMap.autoUpdate = false;
+    renderer.info.autoReset = false;
     this.container.appendChild(renderer.domElement);
     ctx.renderer = renderer;
     ctx.canvas = renderer.domElement;
@@ -75,13 +100,52 @@ export class Game {
     ctx.chunks.registerGenerator('drowned_city', cityChunk);
     ctx.chunks.registerGenerator('sunken_ruins', ruinsChunk);
     ctx.chunks.registerGenerator('open_ocean', oceanChunk);
+    ctx.audio = new AudioEngine(this);
+    ctx.ui = new UI(ctx);
+    ctx.fx = new Effects(ctx);
+    ctx.inventory = new Inventory(ctx);
+    ctx.loot = new Loot(ctx);
+    ctx.crafting = new Crafting(ctx);
+    ctx.trade = new Trade(ctx);
+    ctx.survival = new Survival(ctx);
+    ctx.story = new Story(ctx);
+    ctx.radio = new Radio(ctx);
+    ctx.dialogue = new Dialogue(ctx);
     ctx.boat = new Boat(ctx);
     ctx.rig = new CameraRig(ctx, ctx.camera);
-
-    this.systems = [];
-    ctx.boat.pos.set(-262, 0, 250); ctx.boat.heading = 0.4;
+    ctx.landmarks = new LandmarkManager(ctx);
+    ctx.landmarks.register('start_tower', buildLindenCourt);
+    ctx.landmarks.register('hospital', buildHospital);
+    ctx.landmarks.register('subway', buildSubway);
+    ctx.landmarks.register('cargo_ship', buildCargoShip);
+    ctx.landmarks.register('sinkhole', buildSounding);
+    ctx.landmarks.register('lone_window', buildVesper);
+    ctx.landmarks.register('raft_community', buildRaftCommunity);
+    ctx.highmark = new Highmark(ctx, ctx.data.locations.farLandmarks[0]);
+    ctx.birds = new Birds(ctx);
+    ctx.patrol = new Patrol(ctx);
+    ctx.deep = new DeepShapes(ctx);
+    ctx.save = new SaveSystem(ctx);
+    ctx.touch = new TouchControls(ctx);
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.patrol, ctx.deep, ctx.highmark, ctx.save];
+    this.wireEvents();
+    this.newGame();
     applyDebugParams(ctx);
+    ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z);
     ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
+    ctx.paused = false;
+    if (!ctx.params.has('skipintro')) {
+      ctx.input.enabled = false;
+      ctx.ui.titleScreen(ctx.save.has(), (cont) => {
+        if (cont) ctx.save.load();
+        ctx.input.enabled = true;
+        ctx.ui.fade(0.01, null, 0.2);
+        ctx.story.checkObjectives();
+      });
+    }
+    const unlock = () => ctx.audio.start();
+    addEventListener('pointerdown', unlock, { once: true });
+    addEventListener('keydown', unlock, { once: true });
     addEventListener('resize', () => this.onResize());
     this.onResize();
     this.clock = new THREE.Clock();
@@ -91,6 +155,42 @@ export class Game {
     renderer.setAnimationLoop(() => this.loop());
     window.__game = this;
     ctx.events.emit('booted');
+  }
+
+  isIndoors(p) {
+    for (const l of this.ctx.landmarks.loaded.values()) for (const b of l.interiors || []) if (p.x > b[0] && p.y > b[1] && p.z > b[2] && p.x < b[3] && p.y < b[4] && p.z < b[5]) return true;
+    return false;
+  }
+
+  newGame() {
+    const ctx = this.ctx;
+    const def = ctx.data.locations.landmarks.find((l) => l.kind === 'start_tower');
+    const [cx, cz] = def.pos;
+    const moor = { pos: new THREE.Vector3(cx, 0, cz + 11 + 2.7), step: new THREE.Vector3(cx, 0.46, cz + 11 - 1.3), facing: 0 };
+    ctx.boat.pos.copy(moor.pos);
+    ctx.boat.heading = -Math.PI / 2;
+    ctx.boat.tied = moor;
+    ctx.player.mode = 'boat';
+    ctx.player.yaw = -Math.PI / 2 + 0.25; ctx.player.pitch = 0.03;
+    ctx.time.hour = 5.75;
+    const inv = ctx.inventory;
+    inv.add('scrap', 4, true); inv.add('dirty_water', 1, true); inv.add('kelp', 1, true); inv.add('fibre', 2, true);
+    ctx.boat.update(0);
+  }
+
+  wireEvents() {
+    const { events, audio, story, ui } = this.ctx;
+    events.on('footstep', (e) => audio.footstep(e));
+    events.on('splash', (e) => audio.splash(e.pos, e.big ? 1 : 0.5));
+    events.on('swimstroke', (e) => (e.under ? audio.play('bubbles', { n: 3 }) : audio.splash(e.pos, 0.25)));
+    events.on('boat:impact', (e) => audio.impact(e.pos, e.speed));
+    events.on('lightning', (e) => audio.play('thunder', { dist: e.dist }));
+    events.on('boat:tie', () => audio.play('ui'));
+    events.on('climbout', () => audio.splash(this.ctx.player.position.clone(), 0.4));
+    events.on('craft', (r) => { if (r.id === 'lantern') { this.ctx.boat.hasLanternRig = true; ui.whisper('You rig the lantern on the boat pole. F lights it while piloting.'); } });
+    events.on('flashlight', (on) => audio.play('ui'));
+    events.on('objective:done', () => story.checkObjectives());
+    events.on('log:read', () => audio.play('page'));
   }
 
   onResize() {
@@ -109,6 +209,7 @@ export class Game {
     const paused = ctx.paused;
     ctx.input.poll();
     if (!paused) this.update(dt);
+    ctx.ui.update(dt);
     this.render(dt);
     ctx.input.endFrame();
     this.frame++;
@@ -127,18 +228,25 @@ export class Game {
     if (ctx.input.pressed('view')) ctx.rig.toggleView();
     ctx.player.update(dt);
     ctx.boat.update(dt);
+    ctx.landmarks.tick(dt);
+    ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z);
     for (const s of this.systems) s.update?.(dt);
     ctx.rig.update(dt);
     const cam = ctx.camera;
     ctx.atmosphere.underwater = ctx.waves.height(cam.position.x, cam.position.z) > cam.position.y + 0.02;
+    ctx.atmosphere.indoor += ((this.isIndoors(cam.position) ? 1 : 0) - ctx.atmosphere.indoor) * Math.min(1, dt * 2);
     ctx.atmosphere.update(dt, cam);
     ctx.chunks.update(cam.position.x, cam.position.z);
     ctx.chunks.tick(dt);
     ctx.water.update(dt, cam, ctx.pipeline);
+    ctx.audio.update(dt);
     const mode = ctx.player.mode === 'boat' ? 'boat' : 'foot';
-    ctx.interact.update(ctx.player.eye, ctx.player.forward, mode);
+    if (ctx.player.mode !== 'climb') ctx.interact.update(ctx.player.eye, ctx.player.forward, mode);
+    else ctx.interact.focus = null;
     if (ctx.input.pressed('use')) ctx.interact.use();
-    for (const s of this.systems) s.lateUpdate?.(dt);
+    // warmth near raft fires
+    const comm = ctx.state.community;
+    if (comm) for (const r of comm.rafts.values()) if (r.fireLight && r.fireLight.getWorldPosition(this._fv || (this._fv = new THREE.Vector3())).distanceTo(ctx.player.position) < 3) ctx.survival.nearFire = true;
   }
 
   render() {
@@ -157,6 +265,7 @@ export class Game {
     const sp = ctx.time.sunDir.clone().multiplyScalar(1000).add(cam.position).project(cam);
     u.uSunScreen.value.set(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5);
     u.uSunVis.value = Math.max(0, ctx.time.sunDir.y) * (1 - ctx.weather.cur.cloud * 0.6);
+    ctx.renderer.info.reset();
     ctx.renderer.shadowMap.needsUpdate = ctx.settings.q.shadows;
     ctx.pipeline.render(ctx);
   }
