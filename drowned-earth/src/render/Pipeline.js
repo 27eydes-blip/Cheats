@@ -232,7 +232,7 @@ uniform float uNear; uniform float uFar; uniform float uTime;
 uniform float uUnder; uniform vec2 uSunScreen; uniform float uSunVis; uniform vec3 uUnderColor;
 uniform float uVignette; uniform float uGrain; uniform float uSat; uniform float uFlash; uniform float uFade;
 uniform float uCamDepth; uniform float uIndoor;
-uniform float uWetLens; uniform float uTunnel; uniform float uDof; uniform float uBloom; uniform vec2 uTexel; uniform float uCondense;
+uniform float uWetLens; uniform float uTunnel; uniform float uDof; uniform float uBloom; uniform vec2 uTexel; uniform float uCondense; uniform float uSharp;
 uniform mat4 uInvProj; uniform mat4 uCamWorld; uniform vec3 uCamPos; uniform vec3 uSunDir; uniform vec3 uSunCol;
 uniform float uMist; uniform vec3 uMistCol; uniform vec2 uSunUV; uniform float uShaft; uniform float uLens;
 uniform float uFXAA; uniform float uMotion; uniform mat4 uInvViewProj; uniform mat4 uPrevViewProj; uniform sampler2D tVol; uniform float uVol; uniform float uFocus;
@@ -332,6 +332,20 @@ void main() {
       col += uSunCol * illum / 36.0 * uShaft * fall * (0.6 + 0.4 * step(d, 0.99999));
     }
   }
+  // contrast-adaptive sharpen (after AMD FidelityFX CAS): a cross of 5 taps,
+  // sharpening weight scaled down where local contrast is already high
+  if (uSharp > 0.001) {
+    vec3 n = texture2D(tColor, uv + vec2(0.0, uTexel.y)).rgb, s2 = texture2D(tColor, uv - vec2(0.0, uTexel.y)).rgb;
+    vec3 e = texture2D(tColor, uv + vec2(uTexel.x, 0.0)).rgb, w = texture2D(tColor, uv - vec2(uTexel.x, 0.0)).rgb;
+    // work on tonemapped values so bright HDR edges don't ring
+    vec3 cT = col / (1.0 + col), nT = n / (1.0 + n), sT = s2 / (1.0 + s2), eT = e / (1.0 + e), wT = w / (1.0 + w);
+    vec3 mn = min(cT, min(min(nT, sT), min(eT, wT))), mx = max(cT, max(max(nT, sT), max(eT, wT)));
+    vec3 amp = sqrt(clamp(min(mn, 1.0 - mx) / max(mx, 1e-4), 0.0, 1.0));
+    vec3 wgt = -amp / mix(8.0, 5.0, uSharp);
+    vec3 r = (cT + (nT + sT + eT + wT) * wgt) / (1.0 + 4.0 * wgt);
+    r = clamp(r, 0.0, 0.999);
+    col = r / (1.0 - r);
+  }
   // bloom: tight + wide
   col += (texture2D(tBloom, vUv).rgb * 0.7 + texture2D(tBloom2, vUv).rgb * 0.9) * uBloom * 0.22;
   float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
@@ -375,7 +389,7 @@ export class Pipeline {
       uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunCol: { value: new THREE.Color() }, uMist: { value: 0 }, uMistCol: { value: new THREE.Color() },
       uSunUV: { value: new THREE.Vector2(0.5, 0.5) }, uShaft: { value: 0 }, uLens: { value: 1 },
       uFXAA: { value: 0 }, uMotion: { value: 0 }, uInvViewProj: { value: new THREE.Matrix4() }, uPrevViewProj: { value: new THREE.Matrix4() },
-      tVol: { value: null }, uVol: { value: 0 }, uFocus: { value: 0 },
+      tVol: { value: null }, uVol: { value: 0 }, uFocus: { value: 0 }, uSharp: { value: 0.5 },
     };
     this.scale = 1;          // dynamic resolution multiplier (set by the frame governor)
     this.frameIndex = 0;
@@ -598,7 +612,9 @@ export class Pipeline {
       // --- final
       u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uCamWorld.value.copy(camera.matrixWorld); u.uCamPos.value.copy(camera.position);
       u.uFXAA.value = taa ? 0 : 1;
-      u.uMotion.value = q.motionBlur && !this.settings.reduceMotion && this.historyValid ? (world.motionBlur ?? 0.5) : 0;
+      u.uMotion.value = this.settings.motionBlur && !this.settings.reduceMotion && this.prevValid ? (world.motionBlur ?? 0.5) : 0;
+      // sharpen: user amount, a touch more when TAA softens or resolution drops
+      u.uSharp.value = this.settings.sharpness > 0 ? Math.min(1, this.settings.sharpness * (taa ? 1.15 : 1) + (1 - this.scale) * 0.6) : 0;
       u.uInvViewProj.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse).invert();
       u.uPrevViewProj.value.copy(this.prevViewProj);
       r.setRenderTarget(null);
@@ -607,6 +623,7 @@ export class Pipeline {
       // restore unjittered projections; remember this frame for reprojection
       if (taa) { camera.updateProjectionMatrix(); farCamera.updateProjectionMatrix(); }
       this.prevViewProj.copy(this.viewProj);
+      this.prevValid = true;
     } else {
       r.setRenderTarget(null);
       const under = world.atmosphere.underwater;

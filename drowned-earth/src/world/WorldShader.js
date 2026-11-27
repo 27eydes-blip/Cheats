@@ -13,13 +13,14 @@ export const G = {
   uGlow: { value: 0 },          // deep-structure pulse (finale)
   uNoiseTex: { value: null },
   uAmbient: { value: new THREE.Color(0.5, 0.5, 0.5) }, // light falling into rooms through windows
+  uMipBias: { value: 0 },       // negative on Ultra: crisper textures (TAA + sharpen keep it stable)
 };
 
 export function bindWaveUniforms(waves) { Object.assign(G, waves.uniforms); }
 
 const COMMON = /* glsl */`
 uniform float uTime; uniform vec3 uSunDir; uniform vec3 uSunColor; uniform float uCaustics;
-uniform float uNight; uniform float uWet; uniform sampler2D uNoiseTex; uniform float uGlow; uniform vec3 uAmbient;
+uniform float uNight; uniform float uWet; uniform sampler2D uNoiseTex; uniform float uGlow; uniform vec3 uAmbient; uniform float uMipBias;
 varying vec3 vWPos; varying vec4 vMeta; varying vec2 vUvM; varying vec3 vNW;
 float deHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float causticField(vec2 p, float t) {
@@ -88,7 +89,7 @@ export function patchMaterial(mat, opts = {}) {
       #ifdef USE_MAP
         float deTile = smoothstep(0.3, 0.7, texture2D(uNoiseTex, vMapUv * 0.031 + 0.17).r);
         vec2 deUv2 = mat2(0.8, -0.6, 0.6, 0.8) * vMapUv * 0.61 + vec2(0.37, 0.71);
-        vec4 deS = mix(texture2D(map, vMapUv), texture2D(map, deUv2), deTile);
+        vec4 deS = mix(texture2D(map, vMapUv, uMipBias), texture2D(map, deUv2, uMipBias), deTile);
         deS.rgb *= 0.88 + 0.24 * texture2D(uNoiseTex, vMapUv * 0.09 + 0.5).g;
         diffuseColor *= deS;
       #endif`);
@@ -243,6 +244,12 @@ export function patchMaterial(mat, opts = {}) {
       }
       outgoingLight += vec3(0.05, 0.5, 0.45) * uGlow * smoothstep(-30.0, -70.0, vWPos.y);
       #include <opaque_fragment>`);
+    }
+    // texture LOD bias on the material's own maps (fragment shader only)
+    const BIASED = ['map_fragment', 'normal_fragment_maps', 'roughnessmap_fragment', 'metalnessmap_fragment', 'aomap_fragment', 'emissivemap_fragment'];
+    for (const name of BIASED) {
+      const chunk = THREE.ShaderChunk[name].replace(/texture2D\(\s*(\w+),\s*(\w+)\s*\)/g, 'texture2D( $1, $2, uMipBias )');
+      fs = fs.replace(`#include <${name}>`, chunk);
     }
     shader.fragmentShader = fs;
   };

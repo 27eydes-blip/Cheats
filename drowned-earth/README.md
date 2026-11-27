@@ -70,13 +70,15 @@ the preset's minimum and 100 % to hold **30 fps on Phone, 60 on Standard/Ultra**
 
 | | Phone | Standard | Ultra |
 | --- | --- | --- | --- |
-| Pixel ratio cap / min dynamic scale | 1 / 60 % | 1.5 / 65 % | 2 / 70 % |
+| Pixel ratio cap / min dynamic scale | 1 / 60 % | 1.5 / 65 % | 2 / **85 %** |
 | Render path | single pass, MSAA | HDR, refraction, FXAA | HDR, refraction, **TAA** |
 | Sun shadows | off | 2048, 110 m | **2 cascades**: 2048 near (26 m) + 4096 wide (180 m) |
 | Ambient occlusion | – | SSAO, half res | SSAO, half res, temporal |
 | Reflections | sky + HDRI | planar water (35 %) | planar water (50 %) + **SSR** on wet ground |
 | Volumetric light | – | screen-space shafts | **shadow-mapped volumetric sun** + shafts |
-| Motion blur | – | – | camera motion blur (off with Reduce motion) |
+| Motion blur (Options toggle, **off by default**) | – | camera motion blur | camera motion blur |
+| Sharpen (Options slider, **on, 50 %** by default) | – | CAS-style | CAS-style, slightly stronger after TAA |
+| Texture mip bias | 0 | −0.25 | −0.6, plus log2(render scale) when dynamic res drops |
 | Scanned textures | 1k | 1k | 1k at boot, **2k streamed in** |
 | Lantern lights (pool) | 2 | 6 | 12 |
 | Prop density / draw distance | 50 % | 80 % | 100 % |

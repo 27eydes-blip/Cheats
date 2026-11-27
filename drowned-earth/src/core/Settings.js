@@ -6,7 +6,7 @@ const PRESETS = {
     chunkNearRadius: 200, chunkFarRadius: 900, waterRings: 48, waterSegments: 64,
     debrisDensity: 0.45, particleCount: 250, rainCount: 1500, envMapUpdates: false,
     maxLights: 3, npcDetail: 0, birdCount: 10, renderScale: 1, reflections: 0,
-    label: 'Phone', targetFps: 30, minScale: 0.6, textureTier: '1k', anisotropy: 2,
+    label: 'Phone', targetFps: 30, minScale: 0.6, mipBias: 0, textureTier: '1k', anisotropy: 2,
     ssao: false, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 2, propDensity: 0.5, characters: true,
   },
   medium: {
@@ -14,7 +14,7 @@ const PRESETS = {
     chunkNearRadius: 260, chunkFarRadius: 1200, waterRings: 72, waterSegments: 96,
     debrisDensity: 0.75, particleCount: 600, rainCount: 3500, envMapUpdates: true,
     maxLights: 6, npcDetail: 1, birdCount: 18, renderScale: 1, reflections: 0.35,
-    label: 'Standard', targetFps: 60, minScale: 0.65, textureTier: '1k', anisotropy: 8,
+    label: 'Standard', targetFps: 60, minScale: 0.65, mipBias: -0.25, textureTier: '1k', anisotropy: 8,
     ssao: true, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 6, propDensity: 0.8, characters: true,
   },
   high: {
@@ -22,7 +22,7 @@ const PRESETS = {
     chunkNearRadius: 320, chunkFarRadius: 1500, waterRings: 96, waterSegments: 128,
     debrisDensity: 1, particleCount: 1200, rainCount: 6000, envMapUpdates: true,
     maxLights: 10, npcDetail: 2, birdCount: 28, renderScale: 1, reflections: 0.5,
-    label: 'Ultra', targetFps: 60, minScale: 0.7, textureTier: '2k', anisotropy: 16,
+    label: 'Ultra', targetFps: 60, minScale: 0.85, mipBias: -0.6, textureTier: '2k', anisotropy: 16,
     ssao: true, taa: true, ssr: true, motionBlur: true, volumetric: true, csm: true, pointLights: 12, propDensity: 1, characters: true,
   },
 };
@@ -75,6 +75,8 @@ export class Settings {
     this.oneHand = stored.oneHand ?? false;
     this.lensFx = stored.lensFx ?? true;
     this.music = stored.music ?? 1;
+    this.sharpness = stored.sharpness ?? 0.5;     // CAS-style sharpen, 0 = off
+    this.motionBlur = stored.motionBlur ?? false; // camera motion blur (Standard/Ultra)
   }
   get q() { return PRESETS[this.quality]; }
   get label() { return PRESETS[this.quality].label + (this.auto ? ' (auto)' : ''); }
@@ -86,7 +88,7 @@ export class Settings {
       localStorage.setItem(KEY, JSON.stringify({
         quality: this.auto ? 'auto' : this.quality, volume: this.volume, invertY: this.invertY,
         lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
-        reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music,
+        reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur,
       }));
     } catch { /* storage may be unavailable */ }
   }

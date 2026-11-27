@@ -335,11 +335,14 @@ export class UI {
       ${row('High-contrast UI', 'highContrast', [['true', 'On'], ['false', 'Off']])}
       ${row('One-handed touch layout', 'oneHand', [['true', 'On'], ['false', 'Off']])}
       ${row('Film grain & lens effects', 'lensFx', [['true', 'On'], ['false', 'Off']])}
+      ${row('Motion blur', 'motionBlur', [['false', 'Off'], ['true', 'On']])}
+      <h3>Sharpness <span class="dim" data-sharpv>${Math.round(s.sharpness * 100)}%</span></h3><input type="range" min="0" max="1" step="0.05" value="${s.sharpness}" data-sharp style="width:240px;pointer-events:auto">${s.q.postPipeline ? '' : '<div class="sub">Sharpen and motion blur need Standard or Ultra quality.</div>'}
       ${row('Music', 'music', [['1', 'On'], ['0.5', 'Quiet'], ['0', 'Off']])}
       ${row('Invert look', 'invertY', [['true', 'On'], ['false', 'Off']])}
       <h3>Volume</h3><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-vol style="width:240px;pointer-events:auto">
       <h3>Controls</h3><div class="sub" style="font-style:normal;line-height:1.7">WASD move · mouse look · Shift sprint · C crouch / swim up / cut the boat engine · Space jump / dive · E use · F flashlight (lantern or spotlight on the boat) · V boat camera · R radio · Tab pack · Q craft · J journal & map · K photo mode · \` debug · Esc pause.<br>Touch: left stick, drag right to look, buttons for the rest.</div>`;
     const p = this.openPanel('options', html, (p) => {
+      p.querySelector('[data-sharp]')?.addEventListener('input', (e) => { s.set('sharpness', parseFloat(e.target.value)); p.querySelector('[data-sharpv]').textContent = Math.round(s.sharpness * 100) + '%'; });
       p.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
         const k = b.dataset.k; let v = b.dataset.v;
         if (v === 'true' || v === 'false') v = v === 'true'; else if (!isNaN(+v) && k !== 'quality') v = +v;

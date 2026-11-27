@@ -427,6 +427,8 @@ export class Game {
       u.uFocus.value = talkTo.distanceTo(cam.position);
       this.dofTalk = true;
     } else if (this.dofTalk) { u.uDof.value = 0; u.uFocus.value = 0; this.dofTalk = false; }
+    // mip bias: preset base, sharper still when dynamic resolution renders below native
+    G.uMipBias.value = (ctx.settings.q.mipBias || 0) + Math.log2(Math.max(0.5, ctx.pipeline.scale));
     ctx.renderer.info.reset();
     ctx.renderer.shadowMap.needsUpdate = ctx.settings.q.shadows;
     ctx.pipeline.render(ctx);

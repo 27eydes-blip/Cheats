@@ -36,10 +36,12 @@ for (const shot of SHOTS) {
     const g = window.__game;
     const start = g.frame;
     await new Promise((res) => { const t = () => (g.frame - start > frames ? res() : requestAnimationFrame(t)); t(); });
-  }, shot.frames || 40);
+  }, process.env.FRAMES ? +process.env.FRAMES : shot.frames || 40);
   if (shot.eval) await page.evaluate(shot.eval);
   if (shot.eval) await page.waitForTimeout(shot.wait || 1500);
-  await page.screenshot({ path: `shots/${shot.name}.png` });
+  // freeze the loop so the capture isn't racing a slow software-rendered frame
+  await page.evaluate(() => { const g = window.__game; g.ctx.renderer.setAnimationLoop(null); g.render(0); });
+  await page.screenshot({ path: `shots/${shot.name}.png`, timeout: 600000 });
   if (process.env.OUT) { fs.mkdirSync(process.env.OUT, { recursive: true }); fs.copyFileSync(`shots/${shot.name}.png`, `${process.env.OUT}/${shot.name}.png`); }
   const info = await page.evaluate(() => { const g = window.__game; const r = g.ctx.renderer.info; return { fps: g.fps.toFixed(1), calls: r.render.calls, tris: r.render.triangles, chunks: g.ctx.chunks.stats.loaded }; });
   console.log(`${shot.name}: ${JSON.stringify(info)}${errors.length ? ' ERRORS:\n  ' + errors.join('\n  ') : ''}`);
