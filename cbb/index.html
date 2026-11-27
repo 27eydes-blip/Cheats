@@ -1420,6 +1420,7 @@ button,.btn,.tab,[data-act]{touch-action:manipulation}
   /* Frosted blur behind cards is costly while scrolling on phones; cards are nearly opaque anyway */
   .panel,.chip,.glass,.navgroups,.dt,.gh-wk,.bwatch,.fpm,.fp-stats div{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 }
+.jugrow{grid-template-columns:1fr}
 /* ===== Ice Cold base (generated rules follow) ===== */
 body.ice{--amber:var(--ta);--night:#eaf4fb;--panel:#ffffff;--panel-2:#f3f8fc;--line:#c9dbe9;--chalk:#0d2236;--muted:#5d7891;--glass:rgba(255,255,255,.86);--hair:rgba(16,42,67,.1);--steel:#3d6d94;--good:#0a8a5c;--bad:#c0264a;--gold-soft:var(--ta-d);--neon:var(--ta);
   color:#0d2236;background:linear-gradient(180deg,color-mix(in srgb,var(--ta) 7%,#f3f9fd),color-mix(in srgb,var(--ta) 14%,#dcebf6)) fixed!important;background-color:#eaf4fb!important}
@@ -7691,23 +7692,22 @@ function dramaPick(v){
 function jugSetup(){
   if(!G19()||(S.jug&&S.jug.season===S.season))return;let pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]===2);if(!pool.length)pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]>=2);if(!pool.length)return;
   const t=pool[Math.floor(Math.random()*pool.length)];t.roster.slice().sort((a,b)=>b.ovr-a.ovr).slice(0,5).forEach(p=>{p.ovr=Math.min(90,Math.max(p.ovr+9,82+Math.floor(Math.random()*5)))});
-  const opps=new Set();for(const day of S.schedule||[])for(const g of day)if(g[0]===S.user||g[1]===S.user)opps.add(g[0]===S.user?g[1]:g[0]);const boss=rankIds().find(id=>id!==S.user&&opps.has(id))??rankIds().find(id=>id!==S.user);S.jug={season:S.season,id:t.id,boss};RK.key=null;
+  S.jug={season:S.season,id:t.id,boss:null};RK.key=null;
   news(`🧨 Nobody's talking about ${t.name}. They should be. Their starting five is loaded.`);
   post({h:"@TheBubbleBoy",n:"",v:true,txt:`Mark it down: ${t.name} (${CONFS[t.conf]}) is this year's juggernaut. Nobody wants them in March. 🧨`,tag:"Juggernaut",likes:clout(2)});
-  if(boss!=null)post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`${T(boss).name} is the toughest team on ${T(S.user).name}'s schedule. The Final Boss. 👹`,tag:"Final Boss",likes:clout(2)});
 }
 function jugGame(gm){
   const J=S.jug;if(!G19()||!J||J.season!==S.season||gm.winner!==S.user)return;const o=gm.h===S.user?gm.a:gm.h;
   if(o===J.id&&!J.beatJ){J.beatJ=1;addXP(150);gtoast("🧨","Juggernaut slayer",`You took down ${T(o).name}`,"#ff8a3c");news(`🧨 You slayed the juggernaut: ${T(o).name}. (+150 XP)`)}
-  if(o===J.boss&&!J.beatB){J.beatB=1;addXP(200);gtoast("👹","Final Boss defeated",`You beat ${T(o).name}`,"#ffd34d");news(`👹 You beat the Final Boss, ${T(o).name}. (+200 XP)`)}
+  if(false){addXP(200);gtoast("👹","Final Boss defeated",`You beat ${T(o).name}`,"#ffd34d");news(`👹 You beat the Final Boss, ${T(o).name}. (+200 XP)`)}
 }
 function bossBanner(){
   const J=S.jug,ug=G19()&&S.phase!=="offseason"?userGame():null;if(!J||J.season!==S.season||!ug)return "";const o=ug.h===S.user?ug.a:ug.h;
-  if(o===J.boss&&!J.beatB)return `<div class="bossb boss">👹 <b>FINAL BOSS:</b> ${esc(T(o).name)} is next. Win for +200 XP.</div>`;
+  if(false)return `<div class="bossb boss">👹 <b>FINAL BOSS:</b> ${esc(T(o).name)} is next. Win for +200 XP.</div>`;
   if(o===J.id&&!J.beatJ)return `<div class="bossb jug">🧨 <b>JUGGERNAUT:</b> ${esc(T(o).name)} is next. Win for +150 XP.</div>`;return "";
 }
 function jugTile(){const J=S.jug;if(!G19()||!J||J.season!==S.season)return "";const a=T(J.id),b=J.boss!=null?T(J.boss):null;
-  return `<div class="jugrow"><button class="jt" data-act="tab" data-t="standings"><small>🧨 Juggernaut</small><b>${esc(a.name)}</b><span>${recStr(a.id)}${rankOf(a.id)<=25?` · No. ${rankOf(a.id)}`:""}${J.beatJ?" · ✅ slain":""}</span></button>${b?`<button class="jt boss" data-act="tab" data-t="top25"><small>👹 Final Boss</small><b>${esc(b.name)}</b><span>${recStr(b.id)}${rankOf(b.id)<=25?` · No. ${rankOf(b.id)}`:""}${J.beatB?" · ✅ beaten":""}</span></button>`:""}</div>`}
+  return `<div class="jugrow"><button class="jt" data-act="tab" data-t="standings"><small>🧨 Juggernaut</small><b>${esc(a.name)}</b><span>${recStr(a.id)}${rankOf(a.id)<=25?` · No. ${rankOf(a.id)}`:""}${J.beatJ?" · ✅ slain":""}</span></button>${false?`<button class="jt boss" data-act="tab" data-t="top25"><small>👹 Final Boss</small><b>${esc(b.name)}</b><span>${recStr(b.id)}${rankOf(b.id)<=25?` · No. ${rankOf(b.id)}`:""}${J.beatB?" · ✅ beaten":""}</span></button>`:""}</div>`}
 
 function patch20(){
   const of0=offer;offer=function(si,ci){const c=S.off&&S.off.board[si]&&S.off.board[si].cands[ci],was=c&&c.status;of0(si,ci);try{if(c&&was==="open"&&c.status!=="open"&&c.st>=4&&G19())cereStart(c)}catch(e){}};
