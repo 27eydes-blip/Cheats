@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { prepGeometry, boxGeometry } from '../world/Builder.js';
 import { mat } from '../world/Materials.js';
 import { clamp, damp } from '../core/rng.js';
+import { buildBoat } from '../vehicles/Hulls.js';
 
 // The player's small repair boat: buoyancy from 4 wave samples, outboard
 // thrust or paddling, keel drag, collisions with hull damage, fuel, storage,
@@ -58,7 +59,11 @@ export class Boat {
     this.mods = { thrust: 1, noise: 1, fuel: 1, damage: 1 };
     this.spotOn = false;
     this.engineOff = false;
+    this.typeId = 'skiff';
+    this.boostLeft = 0;
+    this.air = null;        // airborne off a ramp: { vy }
     this.build();
+    this.setType('skiff');
     ctx.scene.add(this.group);
     // boarding prompt
     ctx.interact.add({
@@ -138,6 +143,23 @@ export class Boat {
     this.group.add(this.spot, this.spotTarget); this.spot.target = this.spotTarget;
   }
 
+  // swap the hull: lofted model + handling for a boat type from data/boats.json
+  setType(id) {
+    const def = this.ctx.data.boats?.types?.[id];
+    if (!def) return;
+    this.typeId = id; this.type = def;
+    if (this.body) { this.group.remove(this.body); this.body.traverse((o) => o.geometry?.dispose?.()); }
+    this.body = buildBoat(def);
+    this.group.add(this.body);
+    // the old box-built skiff parts stay hidden; upgrade plates/spot lamp only fit the skiff
+    this.mesh.visible = false; this.hullMesh.visible = false;
+    const sec = this.body.userData.section;
+    const s = sec(0.28);
+    this.seat.set(0, s.sheer - 0.05, s.z);
+    this.boostLeft = def.stats.boostTank;
+    this.platesMesh.visible = id === 'skiff' && !!this.upgrades.hull_plate;
+    this.ctx.events.emit('boat:type', id);
+  }
   applyUpgrade(id) {
     if (id === 'engine_quiet') delete this.upgrades.engine_strong;
     if (id === 'engine_strong') delete this.upgrades.engine_quiet;
@@ -155,7 +177,7 @@ export class Boat {
   noise() {
     if (this.tied) return 0;
     if (this.paddling || this.engineOff) return Math.abs(this.throttle) > 0.1 ? 14 : 0;
-    return (25 + Math.abs(this.throttle) * 120) * this.mods.noise;
+    return (25 + Math.abs(this.throttle) * 120) * this.mods.noise * ((this.type?.stats.noise ?? 0.55) / 0.55) * (this.boosting ? 1.4 : 1);
   }
   board() {
     const p = this.ctx.player;
@@ -194,7 +216,10 @@ export class Boat {
       const fwd = input.move.y, turn = -input.move.x;
       if (Math.abs(fwd) > 0.05 && this.tied) { this.tied = null; this.ctx.events.emit('boat:untie'); }
       this.paddling = this.fuel <= 0;
-      const boost = input.held.sprint && !this.paddling ? 1.5 : 1;
+      const st = this.type?.stats;
+      this.boosting = !!(input.held.sprint && !this.paddling && !this.engineOff && this.boostLeft > 0 && fwd > 0.1);
+      if (this.boosting) this.boostLeft = Math.max(0, this.boostLeft - dt); else this.boostLeft = Math.min(st?.boostTank ?? 5, this.boostLeft + dt * 0.25);
+      const boost = this.boosting ? 1.6 : 1;
       this.throttle = damp(this.throttle, fwd * boost, 2.5, dt);
       this.rudder = damp(this.rudder, turn, 4, dt);
       if (!this.paddling && !this.engineOff && Math.abs(this.throttle) > 0.05) this.fuel = Math.max(0, this.fuel - Math.abs(this.throttle) * dt * 0.012 * boost * this.mods.fuel);
@@ -210,28 +235,35 @@ export class Boat {
     }
     const fwdDir = new THREE.Vector3(-Math.sin(this.heading), 0, -Math.cos(this.heading));
     const side = new THREE.Vector3(-fwdDir.z, 0, fwdDir.x);
-    const maxThrust = this.paddling || this.engineOff ? 1.2 : 4.2 * this.mods.thrust; // m/s^2
+    const S = this.type?.stats || { top: 9, accel: 4.2, turn: 1.1, boost: 3.5 };
+    const hullK = 0.55 + 0.45 * Math.min(1, this.hull / 60);              // a holed boat is a slow boat
+    const top = ((this.paddling || this.engineOff) ? 2.2 : (S.top + (this.boosting ? S.boost : 0)) * this.mods.thrust) * hullK;
+    const maxThrust = this.paddling || this.engineOff ? 1.2 : S.accel * this.mods.thrust * (this.boosting ? 1.5 : 1); // m/s^2
     const leak = this.hull < 30 ? 0.7 : 1;
     if (!this.tied) {
       this.vel.addScaledVector(fwdDir, this.throttle * maxThrust * leak * dt);
       // drag: low along the keel, high sideways
       const vf = this.vel.dot(fwdDir), vs = this.vel.dot(side);
-      const dragF = 0.35 + Math.abs(vf) * 0.12, dragS = 2.6;
+      // quadratic drag tuned so full throttle settles at this hull's top speed
+      const kq = Math.max(0.004, (maxThrust * leak - 0.25 * top) / (top * top));
+      const foil = S.foil && Math.abs(vf) > S.foil ? 0.6 : 1;
+      const dragF = (0.25 + Math.abs(vf) * kq) * foil, dragS = 2.6;
       this.vel.addScaledVector(fwdDir, -vf * dragF * dt).addScaledVector(side, -vs * dragS * dt);
       // drift with the wind a little
       const w = this.ctx.weather.windVec;
       this.vel.x += w.x * this.ctx.weather.cur.wind * 0.08 * dt;
       this.vel.z += w.y * this.ctx.weather.cur.wind * 0.08 * dt;
       this.speed = this.vel.length();
-      const steer = this.rudder * (0.25 + Math.min(Math.abs(vf), 5) * 0.28) * Math.sign(vf || 1);
+      const steer = this.rudder * (0.25 + Math.min(Math.abs(vf), 5) * 0.28) * Math.sign(vf || 1) * (S.turn / 1.1) * (this.air ? 0.2 : 1);
       this.yawRate = damp(this.yawRate, steer + (this.paddling ? this.rudder * 0.25 : 0), 3, dt);
       this.heading += this.yawRate * dt;
       this.pos.addScaledVector(this.vel, dt);
       const impact = collision.resolveHull(this.pos, 1.3, this.vel);
       if (impact > 1.2) {
-        const dmg = (impact - 1.2) * 4 * this.mods.damage;
+        const dmg = (impact - 1.2) * 4 * this.mods.damage * 100 / (S.hull || 100);
         this.hull = Math.max(0, this.hull - dmg);
         this.ctx.events.emit('boat:impact', { speed: impact, pos: this.pos.clone() });
+        this.ctx.events.emit('shake', Math.min(1, impact / 8));
       }
     } else {
       this.vel.set(0, 0, 0);
@@ -250,9 +282,17 @@ export class Boat {
     const hq = waves.sample(this.pos.x - side.x * B, this.pos.z - side.z * B, _s)[0];
     const sink = this.hull < 15 ? 0.25 : 0;
     const ty = (hb + hs + hp + hq) / 4 - 0.18 - sink;
-    this.heave = damp(this.heave, ty, 5, dt);
+    // ramps: a collapsed slab under the bow at speed launches the boat
+    const ramp = this.ctx.fleet?.rampAt(this.pos, fwdDir);
+    if (!this.air && ramp && this.speed > 5) { this.air = { vy: Math.min(9, this.speed * 0.55 * ramp.k), y: this.heave + ramp.h }; this.ctx.events.emit('boat:jump', { speed: this.speed }); }
+    const foilLift = S.foil && this.speed > S.foil ? Math.min(0.55, (this.speed - S.foil) * 0.08) : 0;
+    if (this.air) {
+      this.air.vy -= 14 * dt; this.air.y += this.air.vy * dt;
+      if (this.air.y <= ty && this.air.vy < 0) { const hit = -this.air.vy; this.air = null; this.heave = ty; this.ctx.events.emit('splash', { pos: this.pos.clone(), big: true }); this.ctx.events.emit('shake', Math.min(1.2, hit / 8)); if (hit > 8) this.hull = Math.max(0, this.hull - (hit - 8) * 2 * 100 / (S.hull || 100)); }
+      else this.heave = this.air.y;
+    } else this.heave = damp(this.heave, ty + foilLift, 5, dt);
     this.pos.y = this.heave;
-    const tp = Math.atan2(hb - hs, L * 2) - this.throttle * 0.05 * (this.paddling ? 0 : 1);
+    const tp = (this.air ? Math.max(-0.35, Math.min(0.35, this.air.vy * 0.04)) : Math.atan2(hb - hs, L * 2)) - this.throttle * 0.05 * (this.paddling ? 0 : 1) * (S.top > 12 ? 1.6 : 1);
     const tr = Math.atan2(hp - hq, B * 2) + this.yawRate * 0.12;
     this.pitch = damp(this.pitch, tp, 4, dt);
     this.roll = damp(this.roll, tr, 4, dt);

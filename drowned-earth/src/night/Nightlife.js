@@ -49,7 +49,7 @@ export class Nightlife {
         const seat = r.seat === 'bar' ? `seat${i % 5}` : r.seat === 'corner' ? 'seat9' : r.seat === 'cards' || r.seat === 'table' ? `seat${5 + (i % 2)}` : r.seat === 'booth' ? 'seat8' : `seat${6 + (i % 4)}`;
         const arrive = (o + 1 + i * 0.7) % 24, leave = (c - 0.5 + 24) % 24;
         list.push({ id: 'rg_' + r.id, name: r.name, raft: bar.platform, role: r.role, regular: bar.id, lead: r.leads,
-          schedule: [{ from: arrive, to: leave, do: /seat[0-4]$/.test(seat) ? 'sitTalk' : 'sit', at: at(seat) }, { from: leave, to: arrive, do: 'away' }],
+          schedule: [{ from: arrive, to: leave, do: /seat[0-4]$/.test(seat) ? 'talk' : i % 2 ? 'sitTalk' : 'sit', at: at(seat) }, { from: leave, to: arrive, do: 'away' }],
           talk: r.lines.map((t) => ({ text: t })) });
       });
       // the band: two players on the riser
@@ -59,7 +59,7 @@ export class Nightlife {
       for (let k = 0; k < n; k++) {
         const arrive = (bar.busy - 2.5 + k * 0.6 + 24) % 24, leave = (bar.busy + 1.5 + k * 0.5) % 24;
         list.push({ id: `cr_${bar.id}_${k}`, name: CROWD_NAMES[(bar.id.length * 3 + k * 5) % CROWD_NAMES.length], raft: bar.platform, role: 'patron', crowd: bar.id,
-          schedule: [{ from: arrive, to: leave, do: k % 3 === 0 ? 'talk' : 'sitTalk', at: at(`seat${(k * 3 + 1) % 11}`) }, { from: leave, to: arrive, do: 'away' }],
+          schedule: [{ from: arrive, to: leave, do: ((k * 3 + 1) % 11) < 5 ? 'talk' : 'sitTalk', at: at(`seat${(k * 3 + 1) % 11}`) }, { from: leave, to: arrive, do: 'away' }],
           talk: [{ text: this.data.crowdLines[(k * 7) % this.data.crowdLines.length] }] });
       }
     }

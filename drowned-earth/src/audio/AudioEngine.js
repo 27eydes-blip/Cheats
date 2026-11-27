@@ -271,11 +271,11 @@ export class AudioEngine {
     this.radioStatic.g.gain.setTargetAtTime(voice ? 0.2 : 0, t, 0.02);
     if (voice) this.radioStatic.g.gain.setTargetAtTime(0.03, t + 0.6, 0.2);
   }
-  radioSpeak(voice, dur) {
+  radioSpeak(voice, dur, text, pitch = 0.85) {
     if (!this.started || !this.radioOn) return;
     if (voice === 'numbers') this.synth.numbersVoice(this.radioIn, dur);
     else if (voice === 'song') this.synth.sing(this.radioIn, dur);
     else if (voice === 'hymn') { this.synth.sing(this.radioIn, dur, 0.8); this.synth.sing(this.radioIn, dur, 1.2); }
-    else this.synth.voice(this.radioIn, dur, 0.85, true);
+    else this.synth.voice(this.radioIn, dur, pitch, true);
   }
 }

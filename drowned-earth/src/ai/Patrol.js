@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { prepGeometry, boxGeometry } from '../world/Builder.js';
 import { mat } from '../world/Materials.js';
 import { LAYER_FX } from '../render/Pipeline.js';
+import { buildBoat } from '../vehicles/Hulls.js';
 
 // Tide Warden patrol boat with a state machine:
 //   patrol → suspicious (heard an engine / saw a lamp) → search → chase → stop (boarding)
@@ -18,8 +19,9 @@ const LINES = {
 };
 
 export class Patrol {
-  constructor(ctx) {
+  constructor(ctx, opts = {}) {
     this.ctx = ctx;
+    this.response = !!opts.response;
     const parts = [];
     const add = (g, c, x, y, z) => { g.translate(x, y, z); parts.push(prepGeometry(g, c)); };
     add(boxGeometry(3, 1.6, 10), [0.16, 0.18, 0.24], 0, 0.3, 0);
@@ -28,9 +30,10 @@ export class Patrol {
     add(boxGeometry(3.1, 0.25, 10.1), [0.82, 0.82, 0.78], 0, 1.0, 0);
     add(boxGeometry(0.6, 0.5, 0.8), [0.12, 0.12, 0.14], 0, 2.9, -1.2);
     this.group = new THREE.Group();
-    const mesh = new THREE.Mesh(mergeGeometries(parts), mat('metal'));
-    mesh.castShadow = true;
-    this.group.add(mesh);
+    // the interceptor: a lofted Ward hull (falls back to the old box boat without data)
+    const wardDef = ctx.data.boats?.types?.ward;
+    if (wardDef) { this.hull = buildBoat(wardDef); this.hull.rotation.y = Math.PI; this.group.add(this.hull); this.bar = this.hull.userData.lights; }
+    else { const mesh = new THREE.Mesh(mergeGeometries(parts), mat('metal')); mesh.castShadow = true; this.group.add(mesh); }
     this.red = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2a1a }));
     this.red.position.set(0, 4.9, 1.5);
     this.group.add(this.red);
@@ -75,6 +78,7 @@ export class Patrol {
     this.lineT = 0;
   }
   get active() {
+    if (this.response) return this.engaged || this.leaving;
     if (this.ctx.settings.difficulty === 'calm') return false;
     const h = this.ctx.time.hour;
     return this.forceActive || h >= 21 || h < 4.5 || this.ctx.heat.hunted || this.ctx.params.has('patrol');
@@ -161,13 +165,27 @@ export class Patrol {
         break;
       case 'chase': {
         this.moveToward(seen ? player.position : this.lastSeen, 11, dt);
-        heat.add(dt * 2.2, null);
+        if (heat.stars < 1) heat.add(dt * 2.2, null);
         this.say('chase');
         if (!seen && this.awareness < 0.3) { this.target.copy(this.lastSeen); this.setState('search'); }
-        if (d < 16 && player.mode === 'boat' && boat.speed < 2.5) this.startStop();
+        const stars = heat.stars;
+        if (d < 16 && player.mode === 'boat' && boat.speed < (stars >= 3 ? 4.5 : 2.5)) this.startStop();
+        // boarding crews ram: a shove and a crunch
+        if (stars >= 3 && d < 6.5 && player.mode === 'boat' && (this.ramT = (this.ramT || 0) - dt) <= 0) {
+          this.ramT = 2.5;
+          const push = boat.pos.clone().sub(this.pos).setY(0).normalize().multiplyScalar(3.5);
+          boat.vel.add(push); boat.hull = Math.max(0, boat.hull - 6 * 100 / (boat.type?.stats.hull || 100));
+          this.ctx.events.emit('boat:impact', { speed: 6, pos: boat.pos.clone() }); this.ctx.events.emit('shake', 0.9);
+          if (boat.type?.stats.ram && boat.speed > 4) heat.crime('ram_ward', 'Rammed a Ward boat');
+        }
         if (d < 16 && player.mode !== 'boat' && !player.headUnder && this.stateT > 4) { ui.whisper('The searchlight pins you. A voice: "We know that boat. We\'ll find it." They leave a buoy marker and move on.'); heat.add(15, 'seen on foot'); this.setState('patrol'); this.cooldown = 60; }
         break;
       }
+      case 'blockade':
+        // hold the line broadside; anything that comes close gets chased
+        this.heading += ((this.blockHeading ?? this.heading) - this.heading) * Math.min(1, dt);
+        if (seen && d < 70) { this.setState('chase'); this.say('chase'); }
+        break;
       case 'stop':
         boat.vel.multiplyScalar(0.9);
         if (player.mode === 'boat' && boat.speed > 3.5 && this.stateT > 1.5 && !ui.open) { heat.add(30, 'fled an inspection'); ui.whisper('You open the throttle. Shouts behind you, then the searchlight swings after you.'); this.setState('chase'); }
@@ -187,7 +205,8 @@ export class Patrol {
     this.beam.lookAt(this.beam.position.clone().add(localDir)); this.beam.rotateY(Math.PI);
     const camIn = this.ctx.camera.position.distanceTo(this.pos) < 75 ? 0.35 : 1;
     this.beam.material.opacity = Math.min(0.09, 0.03 + this.ctx.atmosphere.fog.near * 6 + this.ctx.weather.cur.rain * 0.03) * camIn;
-    this.red.visible = Math.sin(waves.time * 3) > 0;
+    this.red.visible = !this.bar && Math.sin(waves.time * 3) > 0;
+    if (this.bar?.red) { const f = Math.sin(waves.time * 9) > 0; const hot = this.state === 'chase' || this.state === 'blockade'; this.bar.red.material.color.setHex(hot && f ? 0xff2020 : 0x330808); this.bar.blue.material.color.setHex(hot && !f ? 0x2050ff : 0x080818); }
     if (!this.emitter && this.ctx.audio?.started) this.emitter = this.ctx.audio.addEmitter({ type: 'patrolEngine', pos: (v) => v.copy(this.pos) });
     if (this.ctx.audio?.started) this.ctx.audio.danger = this.state === 'chase' ? 1 : this.state === 'search' || this.state === 'suspicious' ? 0.5 : 0;
   }
@@ -215,10 +234,13 @@ export class Patrol {
     for (const [id, n] of Object.entries(inventory.items)) {
       const d = data.items.items[id];
       if (!d) continue;
-      const contraband = d.tags.includes('contraband') || (mode === 'seize' && d.tags.includes('sealed') && id !== 'seal');
+      let contraband = d.tags.includes('contraband') || (mode === 'seize' && d.tags.includes('sealed') && id !== 'seal');
+      // a smuggler's hidden hold: they usually walk right over it
+      if (contraband && this.ctx.boat.type?.stats.hiddenHold && Math.random() < 0.8) { out.hidden = (out.hidden || 0) + 1; contraband = false; }
       if (contraband) { inventory.remove(id, n); out.seized.push(`${d.name}${n > 1 ? ' ×' + n : ''}`); }
     }
-    if (out.seized.length) { heat.add(15, 'contraband'); out.fine = Math.min(inventory.count('scrap'), 5 + Math.round(heat.value / 10)); if (out.fine) inventory.remove('scrap', out.fine); }
+    if (out.hidden) out.lines.push('A Warden stands on the false deck for a full minute, talking about his sister\'s wedding. He never looks down.');
+    if (out.seized.length) { heat.crime('contraband_found', 'Contraband found'); out.fine = Math.min(inventory.count('scrap'), 5 + Math.round(heat.value / 10)); if (out.fine) inventory.remove('scrap', out.fine); }
     out.lines.push(mode === 'seize' ? 'They search the boat like it owes them something. A conscript deckhand opens your locker, sees the dive tally on your sleeve, and quietly closes it again.' : 'They search the boat, unhurried, thorough.');
     if (out.seized.length) out.lines.push(`Seized: ${out.seized.join(', ')}.${out.fine ? ` Fined ${out.fine} scrap.` : ''}`);
     else out.lines.push('They find nothing worth taking. That is almost a disappointment to them.');

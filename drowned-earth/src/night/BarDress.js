@@ -138,6 +138,7 @@ export function dressBar(ctx, raft, anchors, bars) {
     }
     // ---- a warm fill light inside (the pooled lantern lights do the rest)
     const fill = new THREE.PointLight(a.style === 'smoke' ? 0x9fffe6 : a.style === 'forge' ? 0xff7a30 : 0xffb070, 0, 10, 1.6); fill.position.set(a.x, a.y + 2.2, a.z + 0.4); g.add(fill); out.lights.push({ l: fill, bar, base: a.style === 'forge' ? 6 : 4 });
+    styleDressing(ctx, g, a, out);
     raft.root.add(g);
     // ---- the band and the crowd, as positional sound
     const posFn = (v) => v.set(a.stage.x, a.y + 1.2, a.stage.z).applyMatrix4(raft.root.matrixWorld);
@@ -163,6 +164,87 @@ export function tickBars(ctx, nl, dt) {
     }
     for (const b of d.bulbs) { if (b.isSpriteMaterial) b.opacity = night * 0.55; else b.color.copy(b.userData.base).multiplyScalar(0.25 + night * 1.1); }
     for (const L of d.lights) L.l.intensity = nl.isOpen(L.bar) ? L.base * (0.3 + night * 0.9) * (0.92 + Math.sin(t * 7 + L.base) * 0.04) : 0;
-    for (const hz of d.hazes) hz.material.opacity = night * 0.08;
+    for (const hz of d.hazes) hz.material.opacity = night * 0.08 * (d.hazeK || 1);
+    d.tick?.(dt, night);
+  }
+}
+
+// ---------------------------------------------------------------- per-style identity
+let candleGeo, jarGeo, potGeo, linkGeo;
+function styleDressing(ctx, g, a, out) {
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3();
+  if (a.style === 'forge') {
+    // sparks raining from a grinder somewhere above, and chains hung from the beams
+    const N = 120, pos = new Float32Array(N * 3), vel = new Float32Array(N * 3), life = new Float32Array(N);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const sparks = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffa040, size: 0.05, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    sparks.frustumCulled = false; sparks.layers.set(LAYER_FX); g.add(sparks);
+    const src = [a.x - 2.5, a.y + a.H - 0.2, a.z - 0.8];
+    out.tick = (dt, night) => {
+      for (let i = 0; i < N; i++) {
+        life[i] -= dt;
+        if (life[i] <= 0) { life[i] = 0.6 + Math.random() * 0.9; pos.set([src[0] + (Math.random() - 0.5) * 0.3, src[1], src[2] + (Math.random() - 0.5) * 0.3], i * 3); vel.set([(Math.random() - 0.5) * 2.2, Math.random() * 1.2, (Math.random() - 0.5) * 2.2], i * 3); }
+        vel[i * 3 + 1] -= 9.8 * dt;
+        for (let k = 0; k < 3; k++) pos[i * 3 + k] += vel[i * 3 + k] * dt;
+        if (pos[i * 3 + 1] < a.y + 0.05) { pos[i * 3 + 1] = a.y + 0.05; vel[i * 3 + 1] *= -0.3; vel[i * 3] *= 0.5; vel[i * 3 + 2] *= 0.5; }
+      }
+      geo.attributes.position.needsUpdate = true;
+      sparks.material.opacity = 0.5 + night * 0.5;
+    };
+    linkGeo ||= new THREE.TorusGeometry(0.035, 0.009, 5, 10);
+    const linkM = new THREE.MeshStandardMaterial({ color: 0x3a3632, metalness: 0.8, roughness: 0.45 });
+    const n = 4 * 14; const links = new THREE.InstancedMesh(linkGeo, linkM, n); let k = 0;
+    for (let c = 0; c < 4; c++) { const cx = a.x - 4 + c * 2.6, cz2 = a.z + (c % 2 ? 0.6 : -0.4); for (let i = 0; i < 14; i++) { m4.compose(p.set(cx, a.y + a.H - 0.05 - i * 0.06 - Math.sin(i / 13 * Math.PI) * 0.0, cz2), q.setFromAxisAngle(_v.set(0, 1, 0), i % 2 ? Math.PI / 2 : 0), sc.set(1, 1, 1)); links.setMatrixAt(k++, m4); } }
+    g.add(links);
+  }
+  if (a.style === 'garden') {
+    // fermentation jars along the counter and hanging planters
+    jarGeo ||= new THREE.LatheGeometry([[0.001, 0], [0.12, 0], [0.14, 0.04], [0.15, 0.3], [0.1, 0.38], [0.08, 0.42], [0.09, 0.44], [0.001, 0.44]].map(([r, y]) => new THREE.Vector2(r, y)), 14);
+    const jarM = new THREE.MeshStandardMaterial({ color: 0xc8e8b0, roughness: 0.05, transparent: true, opacity: 0.55, depthWrite: false });
+    const liquidM = new THREE.MeshStandardMaterial({ color: 0x6a7a20, roughness: 0.3, transparent: true, opacity: 0.85 });
+    const liquid = new THREE.LatheGeometry([[0.001, 0.01], [0.13, 0.01], [0.14, 0.26], [0.001, 0.26]].map(([r, y]) => new THREE.Vector2(r, y)), 12);
+    const nj = 7; const jars = new THREE.InstancedMesh(jarGeo, jarM, nj), liq = new THREE.InstancedMesh(liquid, liquidM, nj);
+    for (let i = 0; i < nj; i++) { m4.compose(p.set(a.counter.x0 + 0.5 + i * ((a.counter.x1 - a.counter.x0 - 1) / (nj - 1)), a.counter.y, a.counter.z - 0.05), q.identity(), sc.setScalar(0.8 + (i % 3) * 0.15)); jars.setMatrixAt(i, m4); liq.setMatrixAt(i, m4); liq.setColorAt(i, new THREE.Color().setHSL(0.15 + Math.random() * 0.12, 0.6, 0.3)); }
+    g.add(liq, jars);
+    potGeo ||= new THREE.LatheGeometry([[0.001, 0], [0.12, 0], [0.18, 0.2], [0.19, 0.22], [0.001, 0.22]].map(([r, y]) => new THREE.Vector2(r, y)), 12);
+    const potM = new THREE.MeshStandardMaterial({ color: 0x8a5a3a, roughness: 0.85 });
+    const leafM = new THREE.MeshStandardMaterial({ color: 0x3f6a2a, roughness: 0.7, side: THREE.DoubleSide });
+    for (let i = 0; i < 5; i++) {
+      const px = a.x - a.W / 2 + 1.2 + i * (a.W - 2.4) / 4, py = a.y + a.H - 0.75, pz = a.z + (i % 2 ? 0.8 : -0.6);
+      const pot = new THREE.Mesh(potGeo, potM); pot.position.set(px, py, pz); g.add(pot);
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(px, py + 0.22, pz), new THREE.Vector3(px, a.y + a.H, pz)]), new THREE.LineBasicMaterial({ color: 0x3a3026 })));
+      // trailing leaves: a few curved strips hanging over the rim
+      for (let k = 0; k < 7; k++) {
+        const L = 0.3 + Math.random() * 0.5, strip = new THREE.PlaneGeometry(0.05, L, 1, 6); strip.translate(0, -L / 2, 0);
+        const P = strip.attributes.position; for (let j = 0; j < P.count; j++) P.setZ(j, Math.pow(-P.getY(j) / L, 2) * 0.12);
+        const leaf = new THREE.Mesh(strip, leafM); const ang = (k / 7) * 6.28; leaf.position.set(px + Math.cos(ang) * 0.17, py + 0.2, pz + Math.sin(ang) * 0.17); leaf.rotation.y = -ang + Math.PI / 2; g.add(leaf);
+      }
+    }
+  }
+  if (a.style === 'candle') {
+    // candles on every table and along the counter, each with a flame
+    candleGeo ||= new THREE.CylinderGeometry(0.022, 0.024, 0.14, 10);
+    const waxM = new THREE.MeshStandardMaterial({ color: 0xefe6d2, roughness: 0.6 });
+    const spots = [];
+    for (const tb of a.tables) for (let i = 0; i < 4; i++) spots.push([tb.x + (Math.random() - 0.5) * 0.5, tb.y, tb.z + (Math.random() - 0.5) * 0.4]);
+    for (let i = 0; i < 9; i++) spots.push([a.counter.x0 + 0.3 + i * (a.counter.x1 - a.counter.x0 - 0.6) / 8, a.counter.y, a.counter.z]);
+    const wax = new THREE.InstancedMesh(candleGeo, waxM, spots.length);
+    const flameM = ctx.fx.glowMaterial.clone(); flameM.color = new THREE.Color(0xffb050);
+    spots.forEach(([x, y, z], i) => { const h = 0.6 + Math.random() * 0.8; m4.compose(p.set(x, y + 0.07 * h, z), q.identity(), sc.set(1, h, 1)); wax.setMatrixAt(i, m4); const f = new THREE.Sprite(flameM); f.scale.set(0.07, 0.12, 1); f.position.set(x, y + 0.14 * h + 0.04, z); f.layers.set(LAYER_FX); g.add(f); });
+    g.add(wax);
+    const flicker = [];
+    for (const tb of a.tables) { const l = new THREE.PointLight(0xffa850, 0, 3.5, 2); l.position.set(tb.x, tb.y + 0.3, tb.z); g.add(l); flicker.push(l); }
+    out.tick = (dt, night) => { const t = performance.now() / 1000; flicker.forEach((l, i) => { l.intensity = (0.5 + night * 1.6) * (0.85 + Math.sin(t * 9 + i * 3) * 0.08 + Math.sin(t * 23 + i) * 0.05); }); };
+  }
+  if (a.style === 'smoke') {
+    // painted ships on the walls, and a thicker haze
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d');
+    const paintShip = (ox, oy, hue) => { x.fillStyle = `hsl(${hue},35%,22%)`; x.fillRect(ox, oy, 240, 230); x.strokeStyle = '#c9b48a'; x.lineWidth = 6; x.strokeRect(ox + 3, oy + 3, 234, 224); x.fillStyle = '#d8cfb8'; x.beginPath(); x.moveTo(ox + 40, oy + 150); x.lineTo(ox + 200, oy + 150); x.lineTo(ox + 180, oy + 180); x.lineTo(ox + 60, oy + 180); x.fill(); x.fillStyle = '#efe6d0'; x.beginPath(); x.moveTo(ox + 120, oy + 40); x.lineTo(ox + 120, oy + 145); x.lineTo(ox + 60, oy + 145); x.fill(); x.beginPath(); x.moveTo(ox + 128, oy + 60); x.lineTo(ox + 128, oy + 145); x.lineTo(ox + 180, oy + 145); x.fill(); x.strokeStyle = `hsl(${hue + 30},30%,55%)`; x.lineWidth = 3; for (let i = 0; i < 4; i++) { x.beginPath(); x.moveTo(ox + 10, oy + 190 + i * 9); for (let k = 0; k <= 22; k++) x.lineTo(ox + 10 + k * 10, oy + 190 + i * 9 + Math.sin(k + i) * 3); x.stroke(); } };
+    paintShip(8, 13, 200); paintShip(264, 13, 170);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const art = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.3), new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }));
+    art.position.set(a.x - a.W / 2 + 0.08, a.y + 1.8, a.z); art.rotation.y = Math.PI / 2; g.add(art);
+    for (const hz of out.hazes) hz.scale.set(5, 2.6, 1);
+    out.hazeK = 2.2;
   }
 }

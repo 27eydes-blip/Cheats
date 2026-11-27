@@ -61,7 +61,7 @@ export function buildBar(b, st, y, rng, out) {
   for (let i = 0; i < 5; i++) {
     const sx = cx0 + 0.6 + i * ((cx1 - cx0 - 1.2) / 4);
     stool(b, sx, y, cz + 0.85, S, st.style);
-    seats.push({ x: sx, z: cz + 1.0, face: Math.PI, kind: 'bar' });
+    seats.push({ x: sx + 0.3, z: cz + 0.75, face: Math.PI, kind: 'bar' }); // people lean at the counter
   }
   const tables = st.style === 'candle' ? [[-3, 1.6], [0, 1.9], [3, 1.6]] : [[-3.3, 1.5], [0.2, 2.0], [3.4, 1.3]];
   for (const [tx, tz] of tables) {
@@ -70,7 +70,7 @@ export function buildBar(b, st, y, rng, out) {
     for (const a of [0, Math.PI]) {
       const sx = X + Math.sin(a) * 0.8, sz = Z + Math.cos(a) * 0.8;
       if (st.style === 'candle') b.box(sx - 0.28, y, sz - 0.28, sx + 0.28, y + 0.14, sz + 0.28, 'fabric', { color: [0.55, 0.2, 0.16], collide: false });
-      else stool(b, sx, y, sz, S, st.style);
+      else stool(b, sx, y, sz, S, st.style, 0.46);
       seats.push({ x: sx, z: sz, face: a + Math.PI, kind: 'table' });
     }
   }
@@ -103,14 +103,14 @@ export function buildBar(b, st, y, rng, out) {
   b.interact({ kind: 'bar', id: 'bar:' + st.bar, radius: 2.6, pos: new THREE.Vector3(st.x, y + 1.3, cz + 0.6), prompt: (c) => c.nightlife?.prompt(st.bar) || 'The bar', onUse: (c) => c.nightlife?.open(st.bar) });
 }
 
-function stool(b, x, y, z, S, style) {
+function stool(b, x, y, z, S, style, h = 0.66) {
   if (style === 'forge') { // an upturned bucket on a pipe
-    b.box(x - 0.03, y, z - 0.03, x + 0.03, y + 0.6, z + 0.03, 'metal', { color: [0.3, 0.3, 0.3], collide: false });
-    b.box(x - 0.19, y + 0.6, z - 0.19, x + 0.19, y + 0.68, z + 0.19, 'rust', { color: [0.45, 0.3, 0.2], collide: false });
+    b.box(x - 0.03, y, z - 0.03, x + 0.03, y + h - 0.06, z + 0.03, 'metal', { color: [0.3, 0.3, 0.3], collide: false });
+    b.box(x - 0.19, y + h - 0.06, z - 0.19, x + 0.19, y + h + 0.02, z + 0.19, 'rust', { color: [0.45, 0.3, 0.2], collide: false });
     return;
   }
-  for (const [dx, dz] of [[-0.13, -0.13], [0.13, -0.13], [-0.13, 0.13], [0.13, 0.13]]) b.box(x + dx - 0.02, y, z + dz - 0.02, x + dx + 0.02, y + 0.66, z + dz + 0.02, 'wood', { color: [0.3, 0.2, 0.14], collide: false });
-  b.box(x - 0.18, y + 0.66, z - 0.18, x + 0.18, y + 0.72, z + 0.18, 'wood', { color: S.topC.map((c) => c * 0.8), collide: false });
+  for (const [dx, dz] of [[-0.13, -0.13], [0.13, -0.13], [-0.13, 0.13], [0.13, 0.13]]) b.box(x + dx - 0.02, y, z + dz - 0.02, x + dx + 0.02, y + h, z + dz + 0.02, 'wood', { color: [0.3, 0.2, 0.14], collide: false });
+  b.box(x - 0.18, y + h, z - 0.18, x + 0.18, y + h + 0.06, z + 0.18, 'wood', { color: S.topC.map((c) => c * 0.8), collide: false });
 }
 function table(b, x, y, z, S, style) {
   const h = style === 'candle' ? 0.38 : 0.76;

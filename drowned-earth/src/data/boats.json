@@ -1,0 +1,60 @@
+{
+  "_doc": "Boat types. hull: loft parameters for vehicles/Hulls.js (length, beam, depth, deadrise 0..1 = V-ness, flare, sheer = bow rise, transom = stern width 0..1, bow = bow sharpness). stats: top speed (m/s), accel (m/s^2), turn (rad/s at speed), boost (extra top speed while boosting, seconds of boost in the tank), hull (hit points), noise (how loud, 0..1), draft (m). colors: hull, deck, stripe. parts: cabin, windshield, seat, tires, foils, lightbar, searchlight, hiddenHold, outboard, inboard. theft heat when taken without being yours.",
+  "types": {
+    "skiff": { "name": "Teo's skiff", "hull": { "length": 5.6, "beam": 1.9, "depth": 0.75, "deadrise": 0.35, "flare": 0.15, "sheer": 0.25, "transom": 0.85, "bow": 0.6 },
+      "stats": { "top": 9, "accel": 4.2, "turn": 1.1, "boost": 3.5, "boostTank": 6, "hull": 100, "noise": 0.55, "draft": 0.35 },
+      "colors": { "hull": [0.2, 0.36, 0.36], "deck": [0.45, 0.36, 0.26], "stripe": [0.85, 0.84, 0.78] }, "parts": ["outboard", "canopy", "benches"], "heat": 0 },
+    "speedboat": { "name": "Runabout", "hull": { "length": 6.4, "beam": 2.1, "depth": 0.8, "deadrise": 0.75, "flare": 0.25, "sheer": 0.4, "transom": 0.9, "bow": 0.85 },
+      "stats": { "top": 17, "accel": 7.5, "turn": 1.25, "boost": 6, "boostTank": 5, "hull": 80, "noise": 0.85, "draft": 0.4 },
+      "colors": { "hull": [0.85, 0.83, 0.78], "deck": [0.5, 0.36, 0.24], "stripe": [0.75, 0.12, 0.1] }, "parts": ["inboard", "windshield", "seats"], "heat": 18 },
+    "jetski": { "name": "Jet-ski", "hull": { "length": 3.0, "beam": 1.1, "depth": 0.6, "deadrise": 0.7, "flare": 0.3, "sheer": 0.5, "transom": 0.8, "bow": 0.9 },
+      "stats": { "top": 15, "accel": 9, "turn": 2.1, "boost": 5, "boostTank": 4, "hull": 45, "noise": 0.8, "draft": 0.25 },
+      "colors": { "hull": [0.95, 0.75, 0.15], "deck": [0.12, 0.12, 0.13], "stripe": [0.1, 0.1, 0.1] }, "parts": ["seat", "handlebars"], "heat": 12 },
+    "tug": { "name": "Harbour tug", "hull": { "length": 9.0, "beam": 3.6, "depth": 1.6, "deadrise": 0.25, "flare": 0.1, "sheer": 0.35, "transom": 0.9, "bow": 0.35 },
+      "stats": { "top": 7, "accel": 2.2, "turn": 0.6, "boost": 1.5, "boostTank": 8, "hull": 260, "noise": 0.95, "draft": 1.2, "ram": 2.5 },
+      "colors": { "hull": [0.12, 0.13, 0.14], "deck": [0.55, 0.18, 0.12], "stripe": [0.85, 0.65, 0.15] }, "parts": ["cabin", "tires", "stack"], "heat": 14 },
+    "hydrofoil": { "name": "Syndicate hydrofoil", "hull": { "length": 7.2, "beam": 2.0, "depth": 0.9, "deadrise": 0.6, "flare": 0.2, "sheer": 0.3, "transom": 0.8, "bow": 0.8 },
+      "stats": { "top": 22, "accel": 6.5, "turn": 0.9, "boost": 7, "boostTank": 6, "hull": 90, "noise": 0.9, "draft": 0.5, "foil": 8 },
+      "colors": { "hull": [0.55, 0.5, 0.42], "deck": [0.25, 0.23, 0.2], "stripe": [0.85, 0.55, 0.15] }, "parts": ["foils", "cabin", "windshield"], "heat": 30 },
+    "smuggler": { "name": "Lowlight runner", "hull": { "length": 6.8, "beam": 2.0, "depth": 0.7, "deadrise": 0.6, "flare": 0.15, "sheer": 0.15, "transom": 0.9, "bow": 0.8 },
+      "stats": { "top": 16, "accel": 6.5, "turn": 1.3, "boost": 5, "boostTank": 7, "hull": 85, "noise": 0.4, "draft": 0.35, "hiddenHold": true },
+      "colors": { "hull": [0.08, 0.1, 0.11], "deck": [0.15, 0.14, 0.13], "stripe": [0.2, 0.55, 0.5] }, "parts": ["inboard", "windshield", "hiddenHold"], "heat": 16 },
+    "ward": { "name": "Ward interceptor", "hull": { "length": 9.5, "beam": 3.0, "depth": 1.1, "deadrise": 0.6, "flare": 0.2, "sheer": 0.35, "transom": 0.9, "bow": 0.75 },
+      "stats": { "top": 15, "accel": 5, "turn": 0.85, "boost": 3, "boostTank": 6, "hull": 220, "noise": 1, "draft": 0.7 },
+      "colors": { "hull": [0.16, 0.18, 0.24], "deck": [0.22, 0.24, 0.3], "stripe": [0.82, 0.82, 0.78] }, "parts": ["cabin", "lightbar", "searchlight", "inboard"], "heat": 60 }
+  },
+  "parked": [
+    { "type": "speedboat", "id": "pk_portage_runabout", "near": "portage", "at": [292, 228], "heading": 1.2, "owner": "Portage Brokers" },
+    { "type": "jetski", "id": "pk_portage_jet", "near": "portage", "at": [300, 286], "heading": -0.4, "owner": "a Highmark tourist" },
+    { "type": "tug", "id": "pk_rust_tug", "near": "rusthold_tender", "at": [452, 546], "heading": 2.6, "owner": "the Welders' Syndicate" },
+    { "type": "hydrofoil", "id": "pk_rust_foil", "near": "rusthold_tender", "at": [494, 584], "heading": 0.2, "owner": "the Welders' Syndicate", "locked": "syndicate_trust" },
+    { "type": "smuggler", "id": "pk_lowlight_runner", "near": "lowlight", "at": [-548, 382], "heading": 1.6, "owner": "Lowlight", "locked": "lowlight_trust" },
+    { "type": "speedboat", "id": "pk_greentide_launch", "near": "greentide_barge", "at": [622, 128], "heading": 3.0, "owner": "Greentide" }
+  ],
+  "ramps": [
+    { "id": "rp_collapse1", "at": [-60, 140], "heading": 0.0, "length": 9, "height": 2.2 },
+    { "id": "rp_collapse2", "at": [140, 20], "heading": 1.57, "length": 8, "height": 1.8 },
+    { "id": "rp_collapse3", "at": [210, 260], "heading": -0.8, "length": 10, "height": 2.6 },
+    { "id": "rp_collapse4", "at": [-180, -60], "heading": 2.4, "length": 9, "height": 2.0 }
+  ],
+  "safehouses": [
+    { "id": "sh_redlamp", "name": "The Red Lamp loft", "at": [352, 290], "radius": 10, "owned": true, "desc": "Above the Red Lamp. The Ward doesn't board Portage rafts without a warrant, and nobody gives them one." },
+    { "id": "sh_stilts", "name": "The Stilts", "at": [-518, 398], "radius": 12, "owned": false, "cost": 60, "desc": "A shack on drums in the Lowlight fog. You can't find it twice. Neither can they." },
+    { "id": "sh_court", "name": "Linden Court stairwell", "at": [-262, 222], "radius": 10, "owned": true, "desc": "Home. Or what's left of it." }
+  ],
+  "heat": {
+    "_doc": "stars 1..5 thresholds on the 0..100 Heat meter; response per star; cool = seconds unseen before the meter drains; drain per second once cooling",
+    "stars": [10, 28, 46, 66, 85],
+    "cool": [10, 14, 20, 26, 34],
+    "drain": 3.5,
+    "response": [
+      { "star": 1, "label": "A warning boat", "boats": 1, "lights": true },
+      { "star": 2, "label": "Searchlight patrols", "boats": 2, "lights": true },
+      { "star": 3, "label": "Boarding crews", "boats": 3, "board": true },
+      { "star": 4, "label": "Blockade", "boats": 4, "board": true, "blockade": true },
+      { "star": 5, "label": "Drone hunt", "boats": 4, "board": true, "blockade": true, "drone": true }
+    ],
+    "crimes": { "steal_boat": 18, "ram_ward": 22, "evade_stop": 15, "contraband_found": 30, "brawl": 3, "heist": 55, "assault_ward": 40 },
+    "bribe": { "perStar": 12, "maxStars": 3 }
+  }
+}

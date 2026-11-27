@@ -24,6 +24,7 @@ export function loadData() {
     deep: get('deep') || { zones: [], swarms: [], listeners: [], glow: {} },
     standing: get('standing') || { tiers: {}, steps: {} },
     nightlife: get('nightlife'),
+  boats: get('boats'),
   creatures: get('creatures') || { species: {}, placements: [], encounters: {} },
     life: loadLife(optional),
   };

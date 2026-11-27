@@ -1,57 +1,111 @@
 {
-  "_doc": "Boat radio stations (R cycles; off is after the last). hours = [from, to] when the station is on air (wraps midnight), otherwise you hear static. voice: calm | voice | hymn | numbers | song | static. Lines may require (if) or exclude (ifNot) a story flag, or require heat (minHeat), so broadcasts change as the world changes. sets: line index → flag raised when heard.",
+  "_doc": "Radio network (R cycles stations while aboard; off is after the last). Each station: name, host, voice (calm | voice | hymn | numbers | song | static), hours [from,to] (wraps midnight; off-air = static), music (Band style for songs), mix (weights of segment types), and segment pools: talk (host lines), ads, news (may use {feed} = latest story from the city feed), songs ({title, artist}), calls (arrays of [who, line] exchanges), coded (smuggler messages). Lines may be strings or {text, if, ifNot, minHeat, minStars, set}. Everything here is original to this world.",
   "stations": [
-    { "id": "highmark", "name": "88.1 — Highmark Official", "voice": "calm", "gap": 9,
-      "lines": [
-        { "text": "This is Highmark Official. Chancellor Idris Calloway wishes every vessel a safe and orderly day." },
-        { "text": "Ration collection for the Orrin Bay districts is on the third day. Have your tally and your wristband ready." },
-        { "text": "Work permits are available to raft-born who demonstrate reliable labour. Yellow is a colour of trust." },
-        { "text": "Tide Ward vessels operate for your protection. Please comply with inspections promptly." },
-        { "text": "There is no evidence of renewed illness. Keeping two arms apart remains a courtesy." },
+    {
+      "id": "highmark", "name": "88.1 — Highmark Official", "host": "Corinne Vasquez-Hale", "voice": "calm", "gap": 7, "music": "jingle",
+      "mix": { "talk": 3, "ad": 3, "news": 2, "jingle": 1, "song": 1 },
+      "talk": [
+        "This is Highmark Official. Chancellor Idris Calloway wishes every vessel a safe and orderly day.",
+        "Ration collection for the Orrin Bay districts is on the third day. Have your tally and your wristband ready.",
+        "Work permits are available to raft-born who demonstrate reliable labour. Yellow is a colour of trust.",
+        "Tide Ward vessels operate for your protection. Please comply with inspections promptly.",
+        "There is no evidence of renewed illness. Keeping two arms apart remains a courtesy.",
         { "text": "Reports of lights in the deep water are settling structures and marine phosphorescence. There is no cause for concern.", "ifNot": "finale_done" },
         { "text": "A brief fault interrupted the Beacon overnight. Engineers have resolved it. There is no cause for concern.", "if": "finale_done" },
         { "text": "Smuggling endangers supply for everyone. Report unregistered craft to any Ward vessel.", "minHeat": 30 },
-        { "text": "Order and supply. Supply and order. Highmark is with you." }
-      ] },
-    { "id": "freevoice", "name": "101.7 — Raft Free Voice", "voice": "voice", "gap": 8,
-      "lines": [
-        { "text": "Free Voice, broadcasting from a raft that isn't on any Ward chart. Hello, Drift." },
-        { "text": "Portage prices this week: kelp cheap, sealed tins dear. Greentide's practically giving greens away. Rusthold fuel's the fairest in the Wreck." },
-        { "text": "Highmark says the ration is steady. Count your bars. Then count your neighbours." },
-        { "text": "Somebody on Low Row lost their whole house in a storm last year. If it happens again, throw a line. That's all any of us has." },
-        { "text": "The Ward had a boat out past Portage last night with its engine baffled. Listen harder than you look." },
-        { "text": "We heard a diver went to the Sounding. Whatever you heard down there, tell us. We'll say it out loud so you don't have to.", "if": "finale_done" }
-      ] },
-    { "id": "vigil", "name": "63.0 — The Vigil's Evensong", "voice": "hymn", "gap": 10, "hours": [17, 23],
-      "lines": [
-        { "text": "♪ Lay the lamp upon the water, let the water judge the flame ♪" },
-        { "text": "The Keeper says: the tide does not hate. It weighs." },
-        { "text": "♪ What we gave the deep, the deep remembers; what it gives back, it gives by name ♪" },
-        { "text": "Be still tonight. The Deep is listening, and it is not unkind to the still." }
-      ] },
-    { "id": "lowlight", "name": "3.3 — (coded channel)", "voice": "numbers", "gap": 6, "hours": [19, 5.5],
-      "lines": [
-        { "text": "[static] ...Lowlight. If you can hear this, you are not alone on the water." },
-        { "text": "Numbers follow. Write them down." },
-        { "text": "Nine six. One two eight. Minus. Nine six. One two eight. Minus." },
-        { "text": "The plaza that fell. Lower the ear at night. Listen to what Highmark listens to." },
-        { "text": "Wardens on the south lane tonight. Engines off past the Stacks. Marlow says: be dull, be dark, be gone." },
-        { "text": "Nine six. One two eight. Minus. [static] ...counting down." }
-      ], "sets": { "2": "heard_signal" } },
-    { "id": "nightsongs", "name": "77.7 — Night Songs", "voice": "song", "gap": 14, "hours": [21, 4],
-      "lines": [
-        { "text": "Night Songs. Old records, older voices. This is Marisol. Tie up, turn down, stay a while." },
-        { "text": "♪ Hold the light for me, hold it till I'm home, the sea is wide but it's not as wide as you ♪" },
-        { "text": "A request came in by bottle, if you can believe it. From a diver called Teo. For his little sister, wherever she's tied up tonight. He says: keep the lamp lit. He says he's sorry about the boat." },
-        { "text": "♪ And if the water rises, and the morning doesn't come, hold the light for me, hold it till I'm home ♪" },
-        { "text": "That's the hour. Sleep dry if you can." }
-      ], "sets": { "2": "teo_song" } },
-    { "id": "static", "name": "—.— (between stations)", "voice": "static", "gap": 18,
-      "lines": [
-        { "text": "[static]" },
-        { "text": "[static] ...two hundred and twelve... [static]" },
-        { "text": "[static]" },
-        { "text": "[a woman's voice, very far away, says your name. Then static.]", "if": "finale_done" }
-      ] }
-  ]
+        { "text": "Citizens are reminded that a boat matching no description at all is wanted for questioning. If you see nothing, say something.", "minStars": 3 },
+        "Today the Concord thanks its patrons, whose generosity keeps the Beacon lit. Patrons, you know who you are. So do we. We're very grateful.",
+        "A reminder that the word 'drowned' is discouraged in official broadcasts. We prefer 'water-adjacent'."
+      ],
+      "ads": [
+        "Gold Seal Reserve. The brandy of the Concord, now available to raft-folk at a special heritage discount. Gold Seal: taste what you've been missing.",
+        "Highmark Ration Bar, new flavour: Plum-Adjacent. It's not plum. It's adjacent. Collect yours on the third day.",
+        "Feeling anxious about the water? Try Calm Tide tablets, available at every Ward station. Side effects may include calm.",
+        "Sundial Estates on the Concord Terraces. Dry floors. Real glass. Applications from raft-born will be reviewed in the order they are ignored.",
+        "Lumi Vale here! When I want to feel heritage, I reach for Gold Seal. Hashtag rations, hashtag lifestyle, hashtag please renew my contract.",
+        "Tide Ward Volunteer Corps: see the Drift from the deck of an interceptor. Uniform, meals and a sense of purpose provided. Conscience not required."
+      ],
+      "news": [
+        "In the Concord tonight: the Calloway Foundation Gala raised a record sum for the Beacon. Guests enjoyed oysters, which are, the Foundation reminds us, abundant.",
+        "Ward Command reports an orderly week. Arrests are up, which shows the system is working, and crime is down, which also shows the system is working.",
+        "The Ministry of Supply denies rumours of a missing ration barge. There is no barge. There was never a barge. Please stop asking about the barge.",
+        { "text": "Ward Command would like to speak with whoever {feed}. They are not angry. They are just very disappointed, and armed.", "if": "feed" }
+      ],
+      "songs": [ { "title": "Order and Supply (Anthem Mix)", "artist": "the Highmark Civic Orchestra" }, { "title": "Yellow Is a Colour of Trust", "artist": "Lumi Vale" } ]
+    },
+    {
+      "id": "freevoice", "name": "101.7 — Raft Free Voice", "host": "Jojo Ferreira", "voice": "voice", "gap": 6, "music": "shanty",
+      "mix": { "talk": 4, "news": 3, "song": 2, "ad": 1 },
+      "talk": [
+        "Free Voice, broadcasting from a raft that isn't on any Ward chart. Hello, Drift.",
+        "Portage prices this week: kelp cheap, sealed tins dear. Greentide's practically giving greens away. Rusthold fuel's the fairest in the Wreck.",
+        "Highmark says the ration is steady. Count your bars. Then count your neighbours.",
+        "Somebody on Low Row lost their whole house in a storm last year. If it happens again, throw a line. That's all any of us has.",
+        "The Ward had a boat out past Portage last night with its engine baffled. Listen harder than you look.",
+        "Message for the Chancellor: we found your oysters. They were ours.",
+        "If Highmark's so worried about smuggling, maybe stop making everything worth smuggling."
+      ],
+      "ads": [ "Free Voice is brought to you by nobody, because nobody would dare. Except Haddie at the Brass Anchor, who says first round's full price and she means it as a threat." ],
+      "news": [
+        "Word on the water: {feed}. Free Voice salutes you, whoever you are. Please don't tell us who you are.",
+        "Lowlight runners report Ward patrols doubling on the east channel. Somebody upset somebody.",
+        "Greentide's harvest is in. The elders are calling it 'adequate', which in Greentide is a party."
+      ],
+      "songs": [ { "title": "Throw a Line", "artist": "The Bilge Pumps" }, { "title": "Salt in the Wound, Salt on the Table", "artist": "Dockmother Ree & Friends" }, { "title": "Ward Boat Blues", "artist": "anonymous" } ]
+    },
+    {
+      "id": "nightsongs", "name": "77.7 — Night Songs", "host": "Della Moon", "voice": "voice", "hours": [21, 5], "gap": 8, "music": "lounge",
+      "mix": { "song": 5, "talk": 2 },
+      "talk": [ "It's late, and you're out on the water, and you're listening to Night Songs. That makes two of us.", "This next one goes out to the boat with no lights on, heading north past the Sounding. Yes, you. Be careful.", "Della Moon here. The tea's cold, the lamp's low, and the Ward's asleep. Probably.", "If you can hear this, somebody you love is thinking about you. Statistically. It's a big Drift." ],
+      "songs": [ { "title": "Lanterns on the Water", "artist": "Della Moon" }, { "title": "The Long Dark of Night", "artist": "Orrin Bay Night Band" }, { "title": "A Room Under the Sea", "artist": "unknown (recorded somewhere warm and wet)" }, { "title": "Ondine", "artist": "the Velvet Hull Quartet" } ]
+    },
+    {
+      "id": "brass", "name": "92.4 — Brass & Salt", "host": "Captain Fitz Okoro", "voice": "voice", "gap": 7, "music": "shanty",
+      "mix": { "song": 5, "talk": 2, "ad": 1 },
+      "talk": [ "Brass & Salt! Shanties for the sweat, jazz for the regret. Captain Fitz at the helm.", "Requests come in by bottle, by pigeon, or by shouting very loudly at the Brass Anchor on Thursdays.", "This one's for every deckhand who ever pulled a rope and wondered why." ],
+      "ads": [ "The Brass Anchor, Portage. Bargaining pit, card tables, and a band that knows four songs extremely well." ],
+      "songs": [ { "title": "Haul Away the Highmark", "artist": "The Bilge Pumps" }, { "title": "Brass Bell Swing", "artist": "Fitz Okoro & the Low Tide Horns" }, { "title": "Seventeen Fathoms", "artist": "The Long Rows" } ]
+    },
+    {
+      "id": "rustbelt", "name": "104.9 — Rustbelt Radio", "host": "Spanner", "voice": "voice", "gap": 6, "music": "forge",
+      "mix": { "song": 4, "talk": 3, "ad": 1 },
+      "talk": [ "RUSTBELT. RADIO. If you can't hear us, weld harder.", "Spanner here. Today's shift report: three fingers lost, two found, one returned to its owner. Safety first, Rusthold.", "The Syndicate would like to remind everyone it is a legitimate welders' guild. The Syndicate would also like its hydrofoil back." ],
+      "ads": [ "The Hot Rivet. Slag on tap. Arm-wrestle Big Marta and win a free drink, or a free cast." ],
+      "songs": [ { "title": "Anvil Heart", "artist": "The Pipe Choir" }, { "title": "Molten", "artist": "Jax Fontaine & the Grinders" }, { "title": "Sparks Fall Up", "artist": "The Pipe Choir" } ]
+    },
+    {
+      "id": "vigil", "name": "63.0 — The Evensong", "host": "Brother Amon", "voice": "hymn", "hours": [17, 23], "gap": 10, "music": "hymn",
+      "mix": { "song": 3, "talk": 2 },
+      "talk": [ "The Vigil keeps a light for everyone the water took. Tonight we name them.", "Rest now. The tide comes in and goes out, and none of it is your fault.", "If you are drinking alone tonight, the Quiet Cup is open until dawn. Tea is free. So is company." ],
+      "songs": [ { "title": "For Those in Peril", "artist": "the Evening Office" }, { "title": "Lantern Hymn", "artist": "the Vigil Choir" } ]
+    },
+    {
+      "id": "tidetalk", "name": "99.0 — Tide Talk", "host": "Barnaby Quill-Harrow", "voice": "voice", "gap": 5, "music": "jingle",
+      "mix": { "call": 5, "talk": 2, "ad": 2 },
+      "talk": [ "You're on Tide Talk, where every opinion is valid and most of them are wrong. Lines are open.", "Barnaby here. Before we start: no, I will not be reading out your conspiracy about the fish again. It was a heron.", "The board's lit up like the Beacon tonight. Let's go to the phones. Well. The radio sets." ],
+      "ads": [ "Tired of paying full price for rations? Invest in Ration Futures! Buy your Tuesday bar on Monday and sell it on Wednesday! (Ration Futures is not affiliated with reality.)", "Barnaby's Miracle Hull Paste. Seals leaks, cures rust, restores hair. Results not typical. Results not real." ],
+      "calls": [
+        [["Caller, Low Row", "Barnaby, the fish are spelling things."], ["Barnaby", "Spelling what, caller?"], ["Caller, Low Row", "Rude words, mostly."], ["Barnaby", "Next caller."]],
+        [["Caller, Portage", "I just want to say the Concord's got heated floors. HEATED FLOORS. We've got wet floors."], ["Barnaby", "Strong point. Wet is a temperature too."]],
+        [["Caller, unknown", "Is it true about the lighthouse? The amber light at night?"], ["Barnaby", "Caller, I have no idea what you're talking about and neither do my lawyers."], ["Caller, unknown", "Three short, one long."], ["Barnaby", "…And we're going to a break."]],
+        [["Caller, Greentide", "I'd like to report that my neighbour has a tomato and won't share it."], ["Barnaby", "Have you tried stealing it, caller?"], ["Caller, Greentide", "That's why I'm calling. To confess."]],
+        [["Caller, Highmark", "As a Concord resident I'd like to say rations are a lifestyle choice."], ["Barnaby", "And what did you choose for breakfast, sir?"], ["Caller, Highmark", "Oysters."], ["Barnaby", "Click."]],
+        [["Caller, the Drift", "Did anyone else see that boat outrun three Ward interceptors last night?"], ["Barnaby", "No. Nobody saw anything. Ward Command, if you're listening: nobody saw anything."]]
+      ]
+    },
+    {
+      "id": "lowlight", "name": "3.3 — (coded channel)", "host": "?", "voice": "numbers", "hours": [19, 5.5], "gap": 6,
+      "mix": { "coded": 1 },
+      "coded": [
+        "Seven. Three. Seven. Nine. Nine. Two.",
+        "The gulls are flying low. Repeat: the gulls are flying low.",
+        { "text": "Under the lamp. Three short, one long. Under the lamp.", "set": "coded_lamp" },
+        "Tuesday's tea is cold. Tuesday's tea is cold.",
+        { "text": "The fish wears brass. The fish wears brass. The door opens for the fish.", "set": "coded_pin", "if": "coded_lamp" },
+        { "text": "East channel dark at second bell. East channel dark.", "set": "coded_channel" },
+        "Grandmother's clock has stopped. Do not wind it."
+      ]
+    }
+  ],
+  "static": { "name": "—.— (between stations)" }
 }

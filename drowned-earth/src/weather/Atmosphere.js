@@ -10,6 +10,7 @@ import { patchCascadeChunk, makeNearCascade } from '../render/Cascades.js';
 const tmp = new THREE.Color();
 const _f = new THREE.Vector3();
 
+function daylightK(a) { return 1 - (a.ctx.time.out.night || 0); }
 export class Atmosphere {
   constructor(ctx) {
     this.ctx = ctx;
@@ -127,7 +128,14 @@ export class Atmosphere {
       if (G.uGlow.value > 0) this.fog.color.lerp(tmp.setRGB(0.01, 0.12, 0.1), G.uGlow.value * 0.5);
     } else {
       this.fog.color.copy(fogCol);
-      this.fog.near = w.fog * (1 + w.rain * 0.4);
+      // local fog banks (Lowlight hides in one): thicker the closer you are
+      let bank = 0;
+      for (const f of this.fogBanks || (this.fogBanks = (this.ctx.data.locations.landmarks || []).filter((l) => this.ctx.data.rafts.communities?.[l.id]?.fog).map((l) => ({ x: l.pos[0], z: l.pos[1], k: this.ctx.data.rafts.communities[l.id].fog })))) {
+        const d = Math.hypot(this.ctx.camera.position.x - f.x, this.ctx.camera.position.z - f.z);
+        bank = Math.max(bank, f.k * Math.max(0, Math.min(1, (140 - d) / 90)));
+      }
+      this.fog.near = w.fog * (1 + w.rain * 0.4) + bank * 0.03;
+      if (bank > 0) this.fog.color.lerp(tmp.setRGB(0.42, 0.47, 0.5).multiplyScalar(0.25 + daylightK(this) * 0.75), bank * 0.7);
     }
     this.farFog.color.copy(fogCol);
     this.farFog.density = w.farFog;

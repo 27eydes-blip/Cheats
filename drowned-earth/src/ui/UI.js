@@ -222,9 +222,12 @@ export class UI {
   }
   openInspection(patrol) {
     const { inventory, standing } = this.ctx;
-    const bribe = Math.max(4, 12 - (7 - standing.shown) * 2);
+    const H = this.ctx.heat, bcfg = H.cfg.bribe || { perStar: 12, maxStars: 3 };
+    const stars = H.stars;
+    const bribe = Math.max(4, 12 - (7 - standing.shown) * 2) + stars * bcfg.perStar;
+    const bribable = stars <= bcfg.maxStars;
     const html = `<h2>Tide Ward inspection</h2><div class="sub">A navy launch bumps alongside. Searchlight in your eyes. "${standing.shown >= 6 ? 'Wrist. Now. Then step back from the locker.' : 'Evening. Wrist, please, and we\'ll have you on your way.'}"</div>
-      <div class="tabs"><button class="btn" data-a="comply">Show your wrist and let them search</button><button class="btn" data-a="bribe" ${inventory.has('scrap', bribe) ? '' : 'disabled'}>Fold ${bribe} scrap into your palm</button><button class="btn" data-a="flee">Open the throttle</button></div><div class="result"></div>`;
+      <div class="tabs"><button class="btn" data-a="comply">Show your wrist and let them search</button><button class="btn" data-a="bribe" ${inventory.has('scrap', bribe) && bribable ? '' : 'disabled'}>${bribable ? `Fold ${bribe} scrap into your palm` : 'Too hot to bribe'}</button><button class="btn" data-a="flee">Open the throttle</button></div><div class="result"></div>`;
     const p = this.openPanel('inspect', html);
     const finish = (lines, outcome) => {
       p.querySelector('.tabs').remove();
@@ -234,10 +237,10 @@ export class UI {
     p.querySelector('[data-a="comply"]').addEventListener('click', () => { const r = patrol.inspect(); finish(r.lines, r.seized.length ? 'seized' : 'clean'); });
     p.querySelector('[data-a="bribe"]').addEventListener('click', () => {
       const ok = Math.random() < (standing.shown >= 7 ? 0.55 : 0.75);
-      if (ok) { inventory.remove('scrap', bribe); this.ctx.heat.add(4, 'bribe'); finish(['The Warden looks at the scrap, then at the dark water, then pockets it. "Didn\'t see you."'], 'bribed'); }
-      else { this.ctx.heat.add(12, 'attempted bribe'); const r = patrol.inspect(); finish(['"Put that away before I write it down." They search anyway.', ...r.lines], 'searched'); }
+      if (ok) { inventory.remove('scrap', bribe); this.ctx.heat.bribe(bcfg.maxStars); finish(['The Warden looks at the scrap, then at the dark water, then pockets it. "Didn\'t see you."'], 'bribed'); }
+      else { this.ctx.heat.crime('evade_stop', 'Attempted bribe'); const r = patrol.inspect(); finish(['"Put that away before I write it down." They search anyway.', ...r.lines], 'searched'); }
     });
-    p.querySelector('[data-a="flee"]').addEventListener('click', () => { this.close(); this.ctx.heat.add(30, 'fled an inspection'); patrol.setState('chase'); this.ctx.boat.vel.addScaledVector(new (this.ctx.boat.pos.constructor)(-Math.sin(this.ctx.boat.heading), 0, -Math.cos(this.ctx.boat.heading)), 6); this.ctx.events.emit('music:moment', 'danger'); });
+    p.querySelector('[data-a="flee"]').addEventListener('click', () => { this.close(); this.ctx.heat.crime('evade_stop', 'Fled an inspection'); patrol.setState('chase'); this.ctx.boat.vel.addScaledVector(new (this.ctx.boat.pos.constructor)(-Math.sin(this.ctx.boat.heading), 0, -Math.cos(this.ctx.boat.heading)), 6); this.ctx.events.emit('music:moment', 'danger'); });
   }
   showLog(id, log, first) {
     const body = log.form === 'recording'
