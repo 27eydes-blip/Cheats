@@ -272,6 +272,7 @@ export class Game {
     events.on('craft', (r) => { if (r.id === 'lantern') { this.ctx.boat.hasLanternRig = true; ui.whisper('You rig the lantern on the boat pole. F lights it while piloting.'); } });
     events.on('flashlight', (on) => audio.play('ui'));
     events.on('objective:done', () => story.checkObjectives());
+    events.on('trade', (e) => { if (e.item === 'teo_bag' && e.dir === 'buy') setTimeout(() => { ui.close(true); story.openLog('teo_02'); }, 300); });
     events.on('log:read', () => { audio.play('page'); audio.music?.setMoment('discovery'); });
     events.on('music:moment', (k) => audio.music?.setMoment(k));
     events.on('music:festival', () => audio.music?.setMoment('festival'));

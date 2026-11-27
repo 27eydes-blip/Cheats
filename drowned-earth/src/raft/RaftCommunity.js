@@ -214,7 +214,7 @@ export function buildRaftCommunity(ctx, def) {
 function setupFestival(ctx, cdef, main, group, interactables) {
   const f = cdef.festival;
   const n = f.boats;
-  const geo = new THREE.ConeGeometry(0.18, 0.28, 4); geo.translate(0, 0.14, 0);
+  const geo = new THREE.ConeGeometry(0.26, 0.42, 4); geo.translate(0, 0.21, 0);
   const paper = new THREE.MeshBasicMaterial({ color: 0xffb466, transparent: true, opacity: 0.95, fog: true });
   const boats = new THREE.InstancedMesh(geo, paper, n + 1);
   boats.frustumCulled = false;
@@ -222,9 +222,9 @@ function setupFestival(ctx, cdef, main, group, interactables) {
   group.add(boats);
   const halos = [];
   for (let i = 0; i <= n; i++) {
-    const h = new THREE.Sprite(ctx.fx.glowMaterial); h.scale.setScalar(1.3); h.layers.set(LAYER_FX); h.visible = false; group.add(h); halos.push(h);
+    const h = new THREE.Sprite(ctx.fx.glowMaterial); h.scale.setScalar(2.4); h.layers.set(LAYER_FX); h.visible = false; group.add(h); halos.push(h);
   }
-  const state = Array.from({ length: n + 1 }, (_, i) => ({ born: -1, a: (i / n) * Math.PI * 2 + Math.random() * 0.3, sp: 0.25 + Math.random() * 0.25, pos: new THREE.Vector3() }));
+  const state = Array.from({ length: n + 1 }, (_, i) => ({ born: -1, a: -Math.PI * 0.5 + ((i / n) - 0.5) * Math.PI * 1.4 + Math.random() * 0.3, sp: 0.07 + Math.random() * 0.12, pos: new THREE.Vector3() }));
   let released = 0, mine = false;
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
   const active = () => { const h = ctx.time.hour; return h >= f.from && h < f.to; };
@@ -260,7 +260,7 @@ function setupFestival(ctx, cdef, main, group, interactables) {
         halos[i].visible = alive && ctx.time.out.night > 0.1;
         if (!alive) { m.makeScale(0, 0, 0); boats.setMatrixAt(i, m); return; }
         const age = now - st.born;
-        if (i < n) st.pos.set(center.x + Math.cos(st.a) * (6 + age * st.sp), 0, center.z + Math.sin(st.a) * (6 + age * st.sp));
+        if (i < n) st.pos.set(center.x + Math.cos(st.a) * (3 + age * st.sp) + Math.sin(age * 0.1 + i) * 1.5, 0, center.z + Math.sin(st.a) * (3 + age * st.sp));
         else st.pos.set(st.pos.x + Math.cos(st.a) * st.sp * dt, 0, st.pos.z + Math.sin(st.a) * st.sp * dt);
         st.pos.y = ctx.waves.height(st.pos.x, st.pos.z) + 0.02;
         m.compose(st.pos, q.setFromAxisAngle(s.set(0, 1, 0), st.a), s.set(1, 1, 1));

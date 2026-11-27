@@ -9,6 +9,15 @@ synthesized with WebAudio.
 > coasts and the low cities. One island stayed dry: Highmark. Everyone else
 > lives on the water.
 
+The game has two halves that share one save and one world:
+
+* **The Drowned District** (story mode, 3D): the playable stage 1 below.
+* **A Life on the Water** (life sim): live a whole life a year at a time on the Drift — birth raft, family,
+  careers, Standing, love, children, death, legacy — with key moments (first dive, lantern night, a Ward
+  stop, a storm, Ward 9) launching into the 3D world and returning a result.
+
+See `WORLD.md` for the world bible and `PROGRESS.md` for the build log, decisions and known issues.
+
 **Stage 1, "The First Drowned District"** (about 15 minutes): you wake at dawn
 in a small repair boat tied to Linden Court, an apartment tower in the drowned
 Lantern Ward of Orrin Bay. Explore the ward by boat, climb into buildings, dive
@@ -25,7 +34,8 @@ npm run build        # production build in dist/
 npm run preview      # serve the build
 npm run validate:data  # check the JSON content for broken references
 npm run test:shots     # headless Chromium screenshots + console-error check (needs Playwright)
-npm run test:smoke     # drives the stage-1 loop (tie-up, loot, craft, trade, dive, radio, save, finale)
+npm run test:smoke     # drives the stage-1 loop (tie-up, loot, craft, trade, dive, radio, patrol, standing, save, finale)
+node scripts/life-smoke.mjs 4   # plays 4 whole lives through the life-sim UI at phone size
 ```
 
 ### Controls
@@ -41,7 +51,10 @@ npm run test:smoke     # drives the stage-1 loop (tie-up, loot, craft, trade, di
 | Flashlight (boat lantern when piloting) | F | Light |
 | Boat camera (first/third person) | V | View |
 | Boat radio | R | Radio |
-| Pack, craft, journal, pause | Tab, Q, J, Esc | Pack, Menu |
+| Cut / start the boat engine (quiet) | C (while piloting) | Crouch |
+| Pack, craft, journal, photo, debug, pause | Tab, Q, J, K, \`, Esc | Pack, Journal, Photo, Menu |
+
+A gamepad (standard mapping) also works: sticks move/look, A dive, B crouch, X use, Y light, LB view, RB sprint.
 
 ### Quality
 
@@ -88,7 +101,11 @@ src/
   story/                Story (flags, objectives, triggers, finale), Radio, Dialogue
   audio/                AudioEngine (beds, streamed spatial emitters, buses, reverb), Synth (all sound recipes)
   ui/                   UI (HUD, wrist gauge, panels, title, end card), TouchControls, style.css
-  save/                 SaveSystem (versioned localStorage + migrations)
+  save/                 SaveSystem (versioned localStorage + migrations, export/import)
+  society/              Standing (the Order of the World), Economy (per-raft prices, rations, rumours), Heat
+  life/                 Life (seeded life simulation), LifeUI (phone-first cards), Scenarios (hybrid 3D moments)
+  deep/                 Deep (depth zones, lanternfish, Listeners, the creeping glow)
+  mods/                 JSON content packs merged at boot (see mods/README.md)
   data/                 JSON content (see below)
 ```
 
@@ -132,6 +149,14 @@ All content lives in `src/data/*.json` and is validated at boot and by `npm run 
   (`when`: playTime, near, hourFrom, night, flags, chance → `do`: whisper, audio, event, flag, delay).
 * **Weather** – `weather.json`: states (fog density, wind, waves, rain, lightning, warmth) and the opening schedule.
 * **World** – `locations.json`: regions, landmarks (id, kind, position, cleared radius) and far landmarks.
+* **Standing** – `standing.json`: the seven tiers (wristband and dock-lamp colours, price modifiers, patrol
+  behaviour, dialogue tone), Standing steps with costs and reputation tradeoffs, forgery rules.
+* **The Deep** – `deep.json`: depth zones, lanternfish swarms, Listener areas, glow creep.
+* **Life sim** – `life_core.json` (births, careers, activities, scenes, world text) and any `life_*.json`
+  (event cards; all are merged). Card schema is documented at the top of `life_events.json` and in `life/Life.js`.
+* **Bottles** – `bottles.json`: drifting messages. Lives that end in the life sim are added automatically.
+* **Content packs** – drop JSON in `src/mods/` (items, recipes, events, logs, bottles, radio lines).
+* `roadmap.json` documents the stubbed systems and the hook each will plug into.
 
 To add a **new landmark kind**, write a builder in `world/landmarks/` (use `Builder`, `storey`, `ladder`,
 `container`, `logItem`, `mooring` from `Architecture.js`) and register it in `core/Game.js`. To add a **new

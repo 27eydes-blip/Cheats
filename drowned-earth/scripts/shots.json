@@ -39,8 +39,8 @@
   "params": {
    "time": "22.3",
    "weather": "fog",
-   "boat": "250,330,2.3",
-   "yaw": "2.3",
+   "boat": "250,330,0.88",
+   "yaw": "0.88",
    "patrol": "1"
   },
   "eval": "(()=>{const c=window.__game.ctx;const p=c.patrol;p.pos.set(214,0,300);p.heading=-0.9;p.setState('suspicious');p.target.copy(c.boat.pos);})()",
@@ -63,12 +63,12 @@
  {
   "name": "07-raft-city-portage",
   "params": {
-   "time": "15.5",
+   "time": "16.2",
    "weather": "clear",
-   "pos": "321,1.3,252",
+   "pos": "324,10.2,221",
    "mode": "foot",
-   "yaw": "-2.2",
-   "pitch": "0.04"
+   "yaw": "3.0",
+   "pitch": "-0.28"
   }
  },
  {
@@ -111,9 +111,10 @@
    "time": "17.2",
    "quality": "low",
    "touch": "1",
-   "pos": "317,1.3,252",
+   "pos": "324,10.2,221",
    "mode": "foot",
-   "yaw": "-0.4"
+   "yaw": "3.0",
+   "pitch": "-0.3"
   }
  },
  {

@@ -107,6 +107,7 @@ export class Deep {
       this.growth.setMatrixAt(i, m);
     });
     this.growth.instanceMatrix.needsUpdate = true;
+    this.growth.count = Math.max(1, shown); // sorted deepest-first, so only visible ones are drawn
     this.threshold = threshold;
     this.ctx.events.emit('glow', { level: lvl, threshold, shown });
   }
@@ -185,7 +186,7 @@ export class Deep {
     });
     this.fish.visible = under;
     // the growth pulses with the Beacon tone / finale
-    mat('glow').emissiveIntensity = 1.3 + Math.sin(G.uTime.value * 1.3) * 0.35 + G.uGlow.value * 1.5;
+    mat('glow').emissiveIntensity = 0.65 + Math.sin(G.uTime.value * 1.3) * 0.2 + G.uGlow.value * 1.2;
   }
   toJSON() { return { glow: this.ctx.state.glow }; }
   load(o) { if (o?.glow != null) { this.ctx.state.glow = o.glow; this.refreshGrowth(); } }

@@ -38,6 +38,9 @@ export class NPC {
     this.hips = new THREE.Group(); this.hips.position.y = 0.88;
     this.torso = mk(part('torso'), coat); this.hips.add(this.torso);
     this.head = mk(part('head'), skin); this.head.position.y = 0.66; this.torso.add(this.head);
+    const eyeM = new THREE.MeshBasicMaterial({ color: 0x1a1512 });
+    for (const ex of [-0.045, 0.045]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.018, 5, 4), eyeM); e.position.set(ex, 0.17, 0.125); this.head.add(e); }
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.03, 0.03), new THREE.MeshStandardMaterial({ color: new THREE.Color(...(def.pants || [0.2, 0.2, 0.2])).multiplyScalar(0.6) })); brow.position.set(0, 0.215, 0.115); this.head.add(brow);
     if (def.headwear === 'hood') this.head.add(mk(part('hood'), coat));
     if (def.headwear === 'hat') this.head.add(mk(part('hat'), pants));
     if (def.mask) this.head.add(mk(part('mask'), new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 1 })));

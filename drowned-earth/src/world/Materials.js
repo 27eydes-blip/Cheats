@@ -36,7 +36,7 @@ export function initMaterials() {
   lib.set('woodFloat', std({ map: rep('wood', 0.5), roughness: 0.9 }, { bob: true }));
   lib.set('plasticFloat', std({ roughness: 0.5 }, { bob: true }));
   lib.set('fabricFloat', std({ map: rep('fabric', 0.8), roughness: 1 }, { bob: true }));
-  lib.set('glow', new THREE.MeshStandardMaterial({ color: 0x0c2622, emissive: 0x3cffcc, emissiveIntensity: 1.5, roughness: 0.35, metalness: 0.1 }));
+  lib.set('glow', new THREE.MeshStandardMaterial({ color: 0x0a1f1c, emissive: 0x1fb89a, emissiveIntensity: 0.8, roughness: 0.35, metalness: 0.1 }));
 }
 
 export function mat(key) {
