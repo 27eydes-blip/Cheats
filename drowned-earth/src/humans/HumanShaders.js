@@ -300,7 +300,16 @@ export function clothMaterial(tint, opts = {}) {
 
 export function cardMaterial(color, alphaTest = 0.05) {
   // brows and lashes: soft-edged hair cards (blended, drawn after the face)
-  const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(...color), roughness: 0.75, alphaTest, side: THREE.DoubleSide, transparent: true, depthWrite: false });
+  const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(...color), roughness: 0.75, alphaTest, side: THREE.DoubleSide, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 });
   m.userData.u = {};
+  // the card texture is coverage only: colour comes from the person's hair colour
+  m.onBeforeCompile = (s) => {
+    s.fragmentShader = s.fragmentShader.replace('#include <map_fragment>', `
+      #ifdef USE_MAP
+        float cov = texture2D(map, vMapUv).a;
+        diffuseColor = vec4(diffuse, clamp(cov * 1.35, 0.0, 1.0) * opacity);
+      #endif`);
+  };
+  m.customProgramCacheKey = () => 'de-card';
   return m;
 }

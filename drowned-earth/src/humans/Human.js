@@ -98,10 +98,10 @@ export class Human {
     this.detail = []; // hidden at LOD1
 
     // ---- proxies
-    const add = (key, material, { detail = false, exprKey = null, sway = false } = {}) => {
+    const add = (key, material, { detail = false, exprKey = null, sway = false, lift = 0 } = {}) => {
       const px = kit.proxies[key];
       if (!px) return null;
-      const g = this.proxyGeometry(px, pos, toM, { exprKey, sway });
+      const g = this.proxyGeometry(px, pos, toM, { exprKey, sway, lift });
       if (exprKey) {
         const eu = exprUniforms(kit.exprProxy[exprKey].tex, kit.expr.units);
         withExpr(material, eu);
@@ -141,12 +141,12 @@ export class Human {
     const browMat = cardMaterial(hairCol.map((c) => Math.min(1, c * 1.6 + 0.02)), 0.05);
     const brow = kit.proxies[p.brow] ? p.brow : 'brow1';
     if (kit.proxies[brow].tex.map) kit.bind(browMat, 'map', kit.proxies[brow].tex.map, true);
-    add(brow, browMat, { detail: true, exprKey: brow });
+    add(brow, browMat, { detail: true, exprKey: brow, lift: 0.003 });
     if (!phone) {
       const lashMat = cardMaterial([0.02, 0.018, 0.016], 0.05);
       const lash = kit.proxies[p.lash] ? p.lash : 'lash1';
       if (kit.proxies[lash].tex.map) kit.bind(lashMat, 'map', kit.proxies[lash].tex.map, true);
-      add(lash, lashMat, { detail: true, exprKey: lash });
+      add(lash, lashMat, { detail: true, exprKey: lash, lift: 0.0012 });
       const teethMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.86, 0.82, 0.72).multiplyScalar(p.age > 55 ? 0.85 : 1), roughness: 0.35 });
       if (kit.proxies.teeth.tex.map) kit.bind(teethMat, 'map', kit.proxies.teeth.tex.map, true);
       add('teeth', teethMat, { detail: true, exprKey: 'teeth' });
@@ -244,7 +244,7 @@ export class Human {
   }
 
   // a fitted proxy: positions from the body, skin weights from its reference vertices
-  proxyGeometry(px, pos, toM, { exprKey, sway }) {
+  proxyGeometry(px, pos, toM, { exprKey, sway, lift = 0 }) {
     const kit = this.kit;
     const fitted = kit.fit(px, pos);
     const nr = px.nr, P = new Float32Array(nr * 3), skinI = new Uint16Array(nr * 4), skinW = new Float32Array(nr * 4);
@@ -280,6 +280,11 @@ export class Human {
       }
       g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
     } else g.computeVertexNormals();
+    if (lift) {
+      // brow/lash cards come out of the fit a hair under the skin on morphed heads: lift them clear
+      const Pn = g.attributes.position, Nn = g.attributes.normal;
+      for (let r = 0; r < nr; r++) Pn.setXYZ(r, Pn.getX(r) + Nn.getX(r) * lift, Pn.getY(r) + Nn.getY(r) * lift, Pn.getZ(r) + Nn.getZ(r) * lift);
+    }
     g.computeBoundingSphere();
     return g;
   }

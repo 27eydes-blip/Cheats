@@ -62,6 +62,15 @@ export class HumanKit {
     const sizes = /skin_/.test(rel) ? [tier, 1024] : [tier];
     const key = rel + '|' + tier;
     if (this.tex.has(key)) return this.tex.get(key);
+    if (rel.endsWith('.png')) {
+      const holder = { texture: null, waiting: [] };
+      new THREE.TextureLoader().load(BASE + rel, (t) => {
+        t.flipY = false; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.needsUpdate = true;
+        holder.texture = t; for (const fn of holder.waiting) fn(t); holder.waiting.length = 0;
+      });
+      this.tex.set(key, holder);
+      return holder;
+    }
     const t = new THREE.Texture();
     // placeholder until the KTX2 arrives; materials pick the real one up on load
     const holder = { texture: null, waiting: [] };

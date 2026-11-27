@@ -214,6 +214,7 @@ function readMat(rel) {
   return m;
 }
 const textureJobs = [];
+const pngJobs = [];
 const texOut = (key) => `tex/${key}`;
 function queueTex(src, key, sizes, kind) { textureJobs.push({ src, key, sizes, kind }); return texOut(key); }
 
@@ -239,7 +240,11 @@ for (const [key, rel] of Object.entries(PROXIES)) {
   const kind = key.split(':')[0];
   const texSize = kind === 'cloth' ? [1024] : kind === 'hair' ? [1024] : key.startsWith('brow') || key.startsWith('lash') ? [512] : key.startsWith('eyes') ? [512] : [512];
   const tex = {};
-  if (mat.diffuse && fs.existsSync(path.join(MH, mat.diffuse))) tex.map = queueTex(mat.diffuse, `${safe}.albedo`, texSize, 'srgb');
+  if (mat.diffuse && fs.existsSync(path.join(MH, mat.diffuse))) {
+    // brows/lashes are black with all their information in a soft alpha: keep them as small PNGs
+    if (/^(brow|lash)/.test(key)) { pngJobs.push({ src: mat.diffuse, out: `tex/${safe}.png` }); tex.map = `tex/${safe}.png`; }
+    else tex.map = queueTex(mat.diffuse, `${safe}.albedo`, texSize, 'srgb');
+  }
   if (mat.normalmap && fs.existsSync(path.join(MH, mat.normalmap))) tex.normalMap = queueTex(mat.normalmap, `${safe}.normal`, [512], 'normal');
   if (mat.aomap && fs.existsSync(path.join(MH, mat.aomap))) tex.aoMap = queueTex(mat.aomap, `${safe}.ao`, [512], 'linear');
   proxies[key] = {
@@ -287,6 +292,7 @@ async function ktx(src, size, kind) {
   else Object.assign(o, { isUASTC: false, qualityLevel: kind === 'srgb' ? 190 : 110, isPerceptual: kind === 'srgb' });
   return Buffer.from(await encodeToKTX2(new Uint8Array(png), o));
 }
+for (const j of pngJobs) await sharp(path.join(MH, j.src)).resize(256, 256).png({ compressionLevel: 9 }).toFile(path.join(OUT, j.out));
 if (!NO_TEX) {
   let bytes = 0;
   for (const j of textureJobs) {
