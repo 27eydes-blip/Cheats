@@ -9,7 +9,11 @@ import { WorldMap } from '../world/WorldMap.js';
 import { ChunkManager } from '../world/ChunkManager.js';
 import { Collision } from '../world/Collision.js';
 import { Interactables } from '../world/Interactables.js';
-import { initMaterials } from '../world/Materials.js';
+import { initMaterials, applySurfaces } from '../world/Materials.js';
+import { AssetLibrary } from '../assets/AssetLibrary.js';
+import { setPropAssets } from '../world/Props.js';
+import { ScanInstancer } from '../world/ScanInstancer.js';
+import { showLoading } from '../ui/Loading.js';
 import { G, bindWaveUniforms } from '../world/WorldShader.js';
 import { getTexture } from '../world/Textures.js';
 import { cityChunk } from '../world/generators/city.js';
@@ -45,6 +49,7 @@ import { TouchControls } from '../ui/TouchControls.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { SaveSystem } from '../save/SaveSystem.js';
 import { Birds } from '../ai/Birds.js';
+import { Fish } from '../ai/Fish.js';
 import { Patrol } from '../ai/Patrol.js';
 import { DeepShapes } from '../ai/DeepShapes.js';
 import { Life } from '../life/Life.js';
@@ -96,8 +101,17 @@ export class Game {
     ctx.pipeline = new Pipeline(renderer, ctx.settings);
     ctx.input = new Input(renderer.domElement, ctx.events);
 
+    const loading = showLoading(document.getElementById('ui'));
+    ctx.assets = new AssetLibrary(renderer, ctx.settings);
+    if (!ctx.params.has('noassets')) await ctx.assets.load((p, what) => loading.set(p, what));
+    loading.phase('Raising the district…');
+    await new Promise((r) => setTimeout(r, 30));
+
     G.uNoiseTex.value = getTexture('noise');
     initMaterials();
+    applySurfaces(ctx.assets);
+    ctx.instancer = new ScanInstancer(ctx.scene, ctx.settings);
+    setPropAssets(ctx.assets, ctx.instancer);
     ctx.worldMap = new WorldMap(ctx.data.locations);
     ctx.collision = new Collision();
     ctx.interact = new Interactables(ctx);
@@ -139,6 +153,7 @@ export class Game {
     ctx.landmarks.register('raft_community', buildRaftCommunity);
     ctx.highmark = new Highmark(ctx, ctx.data.locations.farLandmarks[0]);
     ctx.birds = new Birds(ctx);
+    ctx.fish = new Fish(ctx);
     ctx.patrol = new Patrol(ctx);
     ctx.deep = new DeepShapes(ctx);
     ctx.abyss = new Deep(ctx);
@@ -153,8 +168,8 @@ export class Game {
     ctx.lifeUI = new LifeUI(ctx, ctx.life);
     ctx.scenarios = new Scenarios(ctx);
     ctx.ui.applyAccessibility();
-    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding];
-    this.ambientSystems = [ctx.fx, ctx.birds, ctx.highmark, ctx.abyss];
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding];
+    this.ambientSystems = [ctx.fx, ctx.birds, ctx.fish, ctx.highmark, ctx.abyss];
     this.wireEvents();
     this.newGame();
     applyDebugParams(ctx);
@@ -180,6 +195,7 @@ export class Game {
     this.running = true;
     this.fps = 60; this.fpsAcc = 0; this.fpsN = 0;
     renderer.setAnimationLoop(() => this.loop());
+    loading.done();
     window.__game = this;
     window.__THREE = THREE;
     ctx.events.emit('booted');
@@ -290,6 +306,7 @@ export class Game {
     let dt = Math.min(this.clock.getDelta(), 0.1);
     if (this.fixedDt) dt = this.fixedDt;
     this.fpsAcc += dt; this.fpsN++;
+    this.governResolution(dt);
     if (this.fpsAcc > 1) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
     const paused = ctx.paused;
     ctx.input.poll();
@@ -300,6 +317,22 @@ export class Game {
     this.render(dt);
     ctx.input.endFrame();
     this.frame++;
+  }
+
+  // Dynamic resolution: hold the preset's frame-rate target by scaling the
+  // render resolution between minScale and 1 (hysteresis, small steps).
+  governResolution(dt) {
+    const ctx = this.ctx, q = ctx.settings.q;
+    if (this.fixedDt || ctx.params.get('dynres') === '0') return;
+    const ms = dt * 1000;
+    this.frameEma = this.frameEma == null ? ms : this.frameEma * 0.95 + ms * 0.05;
+    this.govT = (this.govT || 0) + dt;
+    if (this.govT < 1.5 || this.frame < 120) return;
+    this.govT = 0;
+    const target = 1000 / (q.targetFps || 60);
+    const p = ctx.pipeline;
+    if (this.frameEma > target * 1.18 && p.scale > (q.minScale || 0.6)) p.setScale(Math.max(q.minScale || 0.6, p.scale - 0.1));
+    else if (this.frameEma < target * 0.78 && p.scale < 1) p.setScale(Math.min(1, p.scale + 0.05));
   }
 
   update(dt) {
@@ -330,6 +363,7 @@ export class Game {
     ctx.atmosphere.update(dt, cam);
     ctx.chunks.update(cam.position.x, cam.position.z);
     ctx.chunks.tick(dt);
+    ctx.instancer.update(dt, cam.position);
     ctx.water.update(dt, cam, ctx.pipeline);
     ctx.audio.update(dt);
     const mode = ctx.player.mode === 'boat' ? 'boat' : 'foot';
@@ -382,6 +416,17 @@ export class Game {
     const sv = ctx.time.sunDir.clone().applyQuaternion(cam.quaternion.clone().invert());
     u.uSunScreen.value.set(0.5 + THREE.MathUtils.clamp(sv.x, -1, 1) * 0.45, 1.25);
     u.uSunVis.value = Math.max(0, ctx.time.sunDir.y) * (1 - ctx.weather.cur.cloud * 0.6);
+    // screen-space reflections on wet ground, volumetric light density, motion blur
+    ctx.ssrWet = G.uWet.value;
+    ctx.volDensity = ctx.atmosphere.underwater ? 0 : (0.0025 + w.fog * 0.35 + dawnDusk * 0.005 + w.rain * 0.004) * (1 - ctx.atmosphere.indoor * 0.6);
+    ctx.motionBlur = ctx.mode === 'play' && !ctx.photoMode ? 0.45 : 0;
+    // depth of field focus pull: on the speaker during dialogue, otherwise centre-screen
+    const talkTo = ctx.dialogue?.target?.();
+    if (talkTo && ctx.settings.q.postPipeline) {
+      u.uDof.value = 1;
+      u.uFocus.value = talkTo.distanceTo(cam.position);
+      this.dofTalk = true;
+    } else if (this.dofTalk) { u.uDof.value = 0; u.uFocus.value = 0; this.dofTalk = false; }
     ctx.renderer.info.reset();
     ctx.renderer.shadowMap.needsUpdate = ctx.settings.q.shadows;
     ctx.pipeline.render(ctx);

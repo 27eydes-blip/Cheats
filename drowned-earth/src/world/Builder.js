@@ -182,6 +182,7 @@ export function disposeGroup(group) {
   group.traverse((o) => {
     if (o.geometry) o.geometry.dispose();
     if (o.isInstancedMesh) o.dispose?.();
+    o.userData.release?.();
   });
   group.removeFromParent();
 }

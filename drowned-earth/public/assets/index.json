@@ -1,0 +1,1020 @@
+{
+ "textures": {
+  "facade": {
+   "metres": 3,
+   "bytes": {
+    "1k": 337024,
+    "2k": 1432273
+   },
+   "mean": [
+    0.552,
+    0.523,
+    0.437
+   ]
+  },
+  "facadeB": {
+   "metres": 3,
+   "bytes": {
+    "1k": 553744,
+    "2k": 2150028
+   },
+   "mean": [
+    0.519,
+    0.497,
+    0.45
+   ]
+  },
+  "concrete": {
+   "metres": 3,
+   "bytes": {
+    "1k": 601131,
+    "2k": 2329491
+   },
+   "mean": [
+    0.536,
+    0.513,
+    0.468
+   ]
+  },
+  "asphalt": {
+   "metres": 4,
+   "bytes": {
+    "1k": 644489,
+    "2k": 2513917
+   },
+   "mean": [
+    0.274,
+    0.222,
+    0.183
+   ]
+  },
+  "mud": {
+   "metres": 4,
+   "bytes": {
+    "1k": 685357,
+    "2k": 2573693
+   },
+   "mean": [
+    0.302,
+    0.268,
+    0.216
+   ]
+  },
+  "tile": {
+   "metres": 1.5,
+   "bytes": {
+    "1k": 408212,
+    "2k": 1762955
+   },
+   "mean": [
+    0.266,
+    0.135,
+    0.062
+   ]
+  },
+  "rust": {
+   "metres": 2,
+   "bytes": {
+    "1k": 512573,
+    "2k": 2104886
+   },
+   "mean": [
+    0.386,
+    0.225,
+    0.124
+   ]
+  },
+  "metal": {
+   "metres": 2,
+   "bytes": {
+    "1k": 548534,
+    "2k": 2034106
+   },
+   "mean": [
+    0.673,
+    0.563,
+    0.354
+   ]
+  },
+  "container": {
+   "metres": 2.5,
+   "bytes": {
+    "1k": 411482,
+    "2k": 1781284
+   },
+   "mean": [
+    0.343,
+    0.16,
+    0.096
+   ]
+  },
+  "wood": {
+   "metres": 2,
+   "bytes": {
+    "1k": 466950,
+    "2k": 1858553
+   },
+   "mean": [
+    0.313,
+    0.264,
+    0.23
+   ]
+  },
+  "fabric": {
+   "metres": 1,
+   "bytes": {
+    "1k": 593248,
+    "2k": 2372763
+   },
+   "mean": [
+    0.606,
+    0.349,
+    0.332
+   ]
+  },
+  "rock": {
+   "metres": 4,
+   "bytes": {
+    "1k": 605398,
+    "2k": 2295762
+   },
+   "mean": [
+    0.272,
+    0.252,
+    0.216
+   ]
+  }
+ },
+ "hdris": {
+  "dawn": {
+   "file": "hdri/dawn.hdr",
+   "sunU": 0.6123,
+   "sunV": 0.4727,
+   "peak": 19.6,
+   "mean": 0.5895,
+   "bytes": 1173154
+  },
+  "day": {
+   "file": "hdri/day.hdr",
+   "sunU": 0.5947,
+   "sunV": 0.2324,
+   "peak": 60686.9,
+   "mean": 0.6767,
+   "bytes": 1435119
+  },
+  "dusk": {
+   "file": "hdri/dusk.hdr",
+   "sunU": 0.6045,
+   "sunV": 0.4883,
+   "peak": 24.6,
+   "mean": 0.9215,
+   "bytes": 1190247
+  },
+  "night": {
+   "file": "hdri/night.hdr",
+   "sunU": 0.5986,
+   "sunV": 0.4043,
+   "peak": 36558.8,
+   "mean": 0.2299,
+   "bytes": 1393622
+  },
+  "overcast": {
+   "file": "hdri/overcast.hdr",
+   "sunU": 0.5811,
+   "sunV": 0.3711,
+   "peak": 5.9,
+   "mean": 0.8605,
+   "bytes": 1174053
+  }
+ },
+ "models": {
+  "lantern": {
+   "file": "models/lantern.glb",
+   "tris": 3355,
+   "srcTris": 33902,
+   "min": [
+    -0.061,
+    0,
+    -0.048
+   ],
+   "max": [
+    0.061,
+    0.294,
+    0.048
+   ],
+   "bytes": 226648
+  },
+  "lanternWood": {
+   "file": "models/lanternWood.glb",
+   "tris": 3387,
+   "srcTris": 8321,
+   "min": [
+    -0.11,
+    -0.011,
+    -0.11
+   ],
+   "max": [
+    0.111,
+    0.518,
+    0.124
+   ],
+   "bytes": 337580
+  },
+  "oilLamp": {
+   "file": "models/oilLamp.glb",
+   "tris": 2945,
+   "srcTris": 7208,
+   "min": [
+    null,
+    null,
+    null
+   ],
+   "max": [
+    null,
+    null,
+    null
+   ],
+   "bytes": 251460
+  },
+  "barrel": {
+   "file": "models/barrel.glb",
+   "tris": 3164,
+   "srcTris": 2682,
+   "min": [
+    -0.282,
+    -0.007,
+    -0.282
+   ],
+   "max": [
+    0.282,
+    0.873,
+    0.282
+   ],
+   "bytes": 344652
+  },
+  "barrelRust": {
+   "file": "models/barrelRust.glb",
+   "tris": 1737,
+   "srcTris": 1473,
+   "min": [
+    -0.317,
+    0,
+    -0.319
+   ],
+   "max": [
+    0.317,
+    0.93,
+    0.319
+   ],
+   "bytes": 286504
+  },
+  "barrelStove": {
+   "file": "models/barrelStove.glb",
+   "tris": 6765,
+   "srcTris": 9216,
+   "min": [
+    -0.296,
+    0,
+    -0.296
+   ],
+   "max": [
+    0.296,
+    0.856,
+    0.296
+   ],
+   "bytes": 355832
+  },
+  "crate": {
+   "file": "models/crate.glb",
+   "tris": 5897,
+   "srcTris": 6576,
+   "min": [
+    -0.413,
+    -0.008,
+    -0.196
+   ],
+   "max": [
+    0.413,
+    0.342,
+    0.213
+   ],
+   "bytes": 366092
+  },
+  "crate2": {
+   "file": "models/crate2.glb",
+   "tris": 5898,
+   "srcTris": 5176,
+   "min": [
+    -0.265,
+    -0.01,
+    -0.583
+   ],
+   "max": [
+    0.265,
+    0.454,
+    0.583
+   ],
+   "bytes": 361796
+  },
+  "plasticCrate": {
+   "file": "models/plasticCrate.glb",
+   "tris": 20524,
+   "srcTris": 18320,
+   "min": [
+    -0.149,
+    0,
+    -0.204
+   ],
+   "max": [
+    0.149,
+    0.264,
+    0.204
+   ],
+   "bytes": 428592
+  },
+  "jerrycan": {
+   "file": "models/jerrycan.glb",
+   "tris": 2947,
+   "srcTris": 20022,
+   "min": [
+    -0.17,
+    0,
+    -0.089
+   ],
+   "max": [
+    0.18,
+    0.455,
+    0.083
+   ],
+   "bytes": 238344
+  },
+  "jerrycanPlastic": {
+   "file": "models/jerrycanPlastic.glb",
+   "tris": 2948,
+   "srcTris": 7348,
+   "min": [
+    -0.135,
+    0,
+    -0.167
+   ],
+   "max": [
+    0.133,
+    0.318,
+    0.174
+   ],
+   "bytes": 216788
+  },
+  "propane": {
+   "file": "models/propane.glb",
+   "tris": 3203,
+   "srcTris": 5238,
+   "min": [
+    -0.169,
+    0,
+    -0.169
+   ],
+   "max": [
+    0.169,
+    0.553,
+    0.169
+   ],
+   "bytes": 204496
+  },
+  "lifeJacket": {
+   "file": "models/lifeJacket.glb",
+   "tris": 2950,
+   "srcTris": 8968,
+   "min": [
+    -0.354,
+    -0.463,
+    -0.089
+   ],
+   "max": [
+    0.342,
+    0.529,
+    0.095
+   ],
+   "bytes": 216532
+  },
+  "lifebuoy": {
+   "file": "models/lifebuoy.glb",
+   "tris": 2949,
+   "srcTris": 10728,
+   "min": [
+    -0.39,
+    -0.462,
+    -0.07
+   ],
+   "max": [
+    0.393,
+    0.379,
+    0.084
+   ],
+   "bytes": 237524
+  },
+  "buoy": {
+   "file": "models/buoy.glb",
+   "tris": 9970,
+   "srcTris": 12240,
+   "min": [
+    -0.476,
+    -0.809,
+    -0.476
+   ],
+   "max": [
+    0.59,
+    1.847,
+    0.476
+   ],
+   "bytes": 483476
+  },
+  "seaMarker": {
+   "file": "models/seaMarker.glb",
+   "tris": 10732,
+   "srcTris": 13014,
+   "min": [
+    -1.502,
+    -1.282,
+    -1.502
+   ],
+   "max": [
+    1.502,
+    5.557,
+    1.502
+   ],
+   "bytes": 451312
+  },
+  "tyre": {
+   "file": "models/tyre.glb",
+   "tris": 2950,
+   "srcTris": 2880,
+   "min": [
+    -0.3,
+    -0.3,
+    -0.083
+   ],
+   "max": [
+    0.3,
+    0.3,
+    0.082
+   ],
+   "bytes": 194476
+  },
+  "trashbag": {
+   "file": "models/trashbag.glb",
+   "tris": 2950,
+   "srcTris": 4482,
+   "min": [
+    -0.26,
+    -0.001,
+    -0.24
+   ],
+   "max": [
+    0.268,
+    0.574,
+    0.223
+   ],
+   "bytes": 201688
+  },
+  "cardboard": {
+   "file": "models/cardboard.glb",
+   "tris": 2950,
+   "srcTris": 16952,
+   "min": [
+    -0.192,
+    -0.007,
+    -0.225
+   ],
+   "max": [
+    0.194,
+    0.335,
+    0.291
+   ],
+   "bytes": 208840
+  },
+  "basket": {
+   "file": "models/basket.glb",
+   "tris": 3816,
+   "srcTris": 22276,
+   "min": [
+    -0.192,
+    -0.001,
+    -0.147
+   ],
+   "max": [
+    0.191,
+    0.116,
+    0.146
+   ],
+   "bytes": 213684
+  },
+  "bucket": {
+   "file": "models/bucket.glb",
+   "tris": 2948,
+   "srcTris": 5116,
+   "min": [
+    -0.184,
+    0,
+    -0.17
+   ],
+   "max": [
+    0.183,
+    0.55,
+    0.172
+   ],
+   "bytes": 210844
+  },
+  "acUnit": {
+   "file": "models/acUnit.glb",
+   "tris": 6714,
+   "srcTris": 18986,
+   "min": [
+    -0.892,
+    -0.32,
+    -0.216
+   ],
+   "max": [
+    0.905,
+    0.608,
+    0.158
+   ],
+   "bytes": 894820
+  },
+  "streetLamp": {
+   "file": "models/streetLamp.glb",
+   "tris": 5921,
+   "srcTris": 30610,
+   "min": [
+    -0.352,
+    0,
+    -0.193
+   ],
+   "max": [
+    0.352,
+    3.87,
+    0.193
+   ],
+   "bytes": 255784
+  },
+  "hangingLamp": {
+   "file": "models/hangingLamp.glb",
+   "tris": 5971,
+   "srcTris": 22893,
+   "min": [
+    -0.58,
+    -0.75,
+    -0.157
+   ],
+   "max": [
+    0.582,
+    0,
+    0.157
+   ],
+   "bytes": 454756
+  },
+  "searchlight": {
+   "file": "models/searchlight.glb",
+   "tris": 5895,
+   "srcTris": 18802,
+   "min": [
+    -0.083,
+    -0.083,
+    -0.127
+   ],
+   "max": [
+    0.083,
+    0.103,
+    0.126
+   ],
+   "bytes": 281324
+  },
+  "generator": {
+   "file": "models/generator.glb",
+   "tris": 10065,
+   "srcTris": 26419,
+   "min": [
+    -0.415,
+    0.002,
+    -0.282
+   ],
+   "max": [
+    0.4,
+    0.577,
+    0.282
+   ],
+   "bytes": 532968
+  },
+  "rowboat": {
+   "file": "models/rowboat.glb",
+   "tris": 96196,
+   "srcTris": 168317,
+   "min": [
+    -4.75,
+    -2.412,
+    -18.882
+   ],
+   "max": [
+    4.776,
+    30.136,
+    20.789
+   ],
+   "bytes": 4482656
+  },
+  "wheelchair": {
+   "file": "models/wheelchair.glb",
+   "tris": 8119,
+   "srcTris": 40252,
+   "min": [
+    -0.414,
+    0.006,
+    -0.485
+   ],
+   "max": [
+    0.41,
+    1.108,
+    0.604
+   ],
+   "bytes": 387080
+  },
+  "medicalBox": {
+   "file": "models/medicalBox.glb",
+   "tris": 2947,
+   "srcTris": 3718,
+   "min": [
+    -0.263,
+    0,
+    -0.172
+   ],
+   "max": [
+    0.263,
+    0.098,
+    0.178
+   ],
+   "bytes": 178096
+  },
+  "trashCan": {
+   "file": "models/trashCan.glb",
+   "tris": 5897,
+   "srcTris": 13960,
+   "min": [
+    -0.953,
+    -0.163,
+    -0.277
+   ],
+   "max": [
+    1.002,
+    1.045,
+    0.277
+   ],
+   "bytes": 769176
+  },
+  "chair": {
+   "file": "models/chair.glb",
+   "tris": 3060,
+   "srcTris": 3356,
+   "min": [
+    -0.321,
+    0,
+    -0.336
+   ],
+   "max": [
+    0.321,
+    0.88,
+    0.292
+   ],
+   "bytes": 217460
+  },
+  "stool": {
+   "file": "models/stool.glb",
+   "tris": 2950,
+   "srcTris": 10946,
+   "min": [
+    -0.212,
+    0,
+    -0.221
+   ],
+   "max": [
+    0.212,
+    0.437,
+    0.221
+   ],
+   "bytes": 238576
+  },
+  "hydrant": {
+   "file": "models/hydrant.glb",
+   "tris": 6456,
+   "srcTris": 86316,
+   "min": [
+    -0.44,
+    0,
+    -0.126
+   ],
+   "max": [
+    0.433,
+    0.799,
+    0.191
+   ],
+   "bytes": 667336
+  },
+  "utilityBox": {
+   "file": "models/utilityBox.glb",
+   "tris": 5180,
+   "srcTris": 4404,
+   "min": [
+    -0.26,
+    0,
+    -0.21
+   ],
+   "max": [
+    0.26,
+    1.12,
+    0.222
+   ],
+   "bytes": 321636
+  },
+  "barrier": {
+   "file": "models/barrier.glb",
+   "tris": 5900,
+   "srcTris": 60928,
+   "min": [
+    -0.774,
+    -0.008,
+    -0.295
+   ],
+   "max": [
+    0.77,
+    0.822,
+    0.344
+   ],
+   "bytes": 384428
+  },
+  "coveredCar": {
+   "file": "models/coveredCar.glb",
+   "tris": 14147,
+   "srcTris": 12592,
+   "min": [
+    -0.847,
+    0,
+    -2.166
+   ],
+   "max": [
+    0.942,
+    1.411,
+    2.214
+   ],
+   "bytes": 458692
+  },
+  "wheelRim": {
+   "file": "models/wheelRim.glb",
+   "tris": 2988,
+   "srcTris": 16440,
+   "min": [
+    -0.202,
+    -0.202,
+    -0.075
+   ],
+   "max": [
+    0.202,
+    0.201,
+    0.075
+   ],
+   "bytes": 229516
+  },
+  "can": {
+   "file": "models/can.glb",
+   "tris": 2950,
+   "srcTris": 3520,
+   "min": [
+    -0.062,
+    -0.001,
+    -0.061
+   ],
+   "max": [
+    0.063,
+    0.15,
+    0.063
+   ],
+   "bytes": 215664
+  },
+  "gallon": {
+   "file": "models/gallon.glb",
+   "tris": 2950,
+   "srcTris": 13728,
+   "min": [
+    -0.088,
+    0,
+    -0.065
+   ],
+   "max": [
+    0.078,
+    0.274,
+    0.061
+   ],
+   "bytes": 140792
+  },
+  "shelves": {
+   "file": "models/shelves.glb",
+   "tris": 5130,
+   "srcTris": 4348,
+   "min": [
+    -5.487,
+    -0.011,
+    -2.511
+   ],
+   "max": [
+    5.487,
+    21.394,
+    2.511
+   ],
+   "bytes": 270068
+  },
+  "ladder": {
+   "file": "models/ladder.glb",
+   "tris": 6465,
+   "srcTris": 8492,
+   "min": [
+    -0.485,
+    0,
+    -0.25
+   ],
+   "max": [
+    0.474,
+    1.335,
+    0.25
+   ],
+   "bytes": 418844
+  },
+  "shrub": {
+   "file": "models/shrub.glb",
+   "tris": 9433,
+   "srcTris": 27254,
+   "min": [
+    -2.305,
+    -1.166,
+    -1.214
+   ],
+   "max": [
+    4.119,
+    2.832,
+    1.397
+   ],
+   "bytes": 393692
+  },
+  "shrub2": {
+   "file": "models/shrub2.glb",
+   "tris": 9337,
+   "srcTris": 27327,
+   "min": [
+    -0.024,
+    -0.005,
+    -0.075
+   ],
+   "max": [
+    0.559,
+    0.213,
+    0.071
+   ],
+   "bytes": 395040
+  },
+  "fern": {
+   "file": "models/fern.glb",
+   "tris": 4711,
+   "srcTris": 6232,
+   "min": [
+    -0.528,
+    -0.031,
+    -0.422
+   ],
+   "max": [
+    1.444,
+    0.397,
+    1.299
+   ],
+   "bytes": 238644
+  },
+  "deadTrunk": {
+   "file": "models/deadTrunk.glb",
+   "tris": 7075,
+   "srcTris": 101802,
+   "min": [
+    -1.539,
+    -0.027,
+    -0.171
+   ],
+   "max": [
+    1.512,
+    0.263,
+    0.107
+   ],
+   "bytes": 407928
+  },
+  "roots": {
+   "file": "models/roots.glb",
+   "tris": 7060,
+   "srcTris": 225261,
+   "min": [
+    -2.059,
+    -0.044,
+    -0.994
+   ],
+   "max": [
+    2.058,
+    1.464,
+    1.689
+   ],
+   "bytes": 438840
+  },
+  "rocks": {
+   "file": "models/rocks.glb",
+   "tris": 14145,
+   "srcTris": 679936,
+   "min": [
+    -32.14,
+    -1.973,
+    -26.882
+   ],
+   "max": [
+    27.355,
+    1.302,
+    15.605
+   ],
+   "bytes": 474248
+  },
+  "cliff": {
+   "file": "models/cliff.glb",
+   "tris": 23597,
+   "srcTris": 461824,
+   "min": [
+    -45.017,
+    -0.642,
+    -6.206
+   ],
+   "max": [
+    46.924,
+    9.675,
+    4.761
+   ],
+   "bytes": 553848
+  }
+ },
+ "characters": {
+  "bodyMale": {
+   "file": "characters/bodyMale.glb",
+   "bytes": 928168,
+   "tris": 14318
+  },
+  "bodyFemale": {
+   "file": "characters/bodyFemale.glb",
+   "bytes": 947228,
+   "tris": 15060
+  },
+  "outfitMalePeasant": {
+   "file": "characters/outfitMalePeasant.glb",
+   "bytes": 989916,
+   "tris": 12894
+  },
+  "outfitFemalePeasant": {
+   "file": "characters/outfitFemalePeasant.glb",
+   "bytes": 617712,
+   "tris": 13568
+  },
+  "outfitMaleRanger": {
+   "file": "characters/outfitMaleRanger.glb",
+   "bytes": 1270984,
+   "tris": 26982
+  },
+  "outfitFemaleRanger": {
+   "file": "characters/outfitFemaleRanger.glb",
+   "bytes": 1266120,
+   "tris": 26966
+  },
+  "animations": {
+   "file": "characters/animations.glb",
+   "bytes": 2563848,
+   "clips": [
+    "Crouch_Idle_Loop",
+    "Driving_Loop",
+    "Fixing_Kneeling",
+    "Idle_Loop",
+    "Idle_Talking_Loop",
+    "Idle_Torch_Loop",
+    "Interact",
+    "Jog_Fwd_Loop",
+    "PickUp_Table",
+    "Push_Loop",
+    "Sitting_Idle_Loop",
+    "Sitting_Talking_Loop",
+    "Swim_Fwd_Loop",
+    "Swim_Idle_Loop",
+    "Walk_Loop"
+   ]
+  }
+ },
+ "bytes": {
+  "textures1k": 6368142,
+  "textures2k": 25209711,
+  "hdris": 6366195,
+  "models": 22894168,
+  "characters": 8583976
+ }
+}

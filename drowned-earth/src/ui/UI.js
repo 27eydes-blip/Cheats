@@ -102,7 +102,7 @@ export class UI {
     }
     if (this.fpsEl && this.ctx.game.frame % 20 === 0) {
       const r = this.ctx.renderer.info.render;
-      this.fpsEl.textContent = `${this.ctx.game.fps.toFixed(0)} fps · ${this.ctx.settings.quality} · ${this.ctx.chunks.stats.loaded} chunks · ${this.ctx.time.clockString()} · ${this.ctx.weather.state}`;
+      this.fpsEl.textContent = `${this.ctx.game.fps.toFixed(0)} fps · ${this.ctx.settings.label} · ${this.ctx.chunks.stats.loaded} chunks · ${this.ctx.time.clockString()} · ${this.ctx.weather.state}`;
     }
     const heat = this.ctx.heat?.value || 0;
     if (this.ctx.game.frame % 20 === 0) { this.heatEl.style.opacity = heat > 8 ? 1 : 0; this.heatEl.textContent = 'WARD ' + '▮'.repeat(Math.ceil(heat / 20)) + '▯'.repeat(5 - Math.ceil(heat / 20)) + (this.ctx.patrol?.state === 'chase' ? ' · PURSUED' : ''); }
@@ -279,7 +279,7 @@ export class UI {
     const s = this.ctx.settings;
     const html = `<h2>Paused</h2><div class="sub">Drowned Earth — Stage 1: The First Drowned District</div>
       <div class="tabs"><button class="btn" data-close>Resume</button><button class="btn" data-act="inv">Pack</button><button class="btn" data-act="journal">Journal</button><button class="btn" data-act="save">Save</button><button class="btn" data-act="load">Load last save</button><button class="btn" data-act="opts">Options</button><button class="btn" data-act="export">Export save</button><button class="btn" data-act="import">Import save</button><button class="btn" data-act="life">A Life on the Water</button><button class="btn" data-act="title">Title screen</button></div>
-      <h3>Quality</h3><div class="tabs">${Settings.presets().map((q) => `<button class="btn ${q === s.quality ? 'on' : ''}" data-q="${q}">${q}</button>`).join('')}</div>
+      <h3>Quality</h3><div class="tabs"><button class="btn ${s.auto ? 'on' : ''}" data-q="auto">Auto</button>${Settings.presets().map((q) => `<button class="btn ${q === s.quality && !s.auto ? 'on' : ''}" data-q="${q}">${Settings.label(q)}</button>`).join('')}</div>
       <h3>Sound</h3><div class="tabs"><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-vol style="width:220px;pointer-events:auto"></div>
       <h3>Options</h3><div class="tabs"><button class="btn ${s.subtitles ? 'on' : ''}" data-opt="subtitles">Subtitles</button><button class="btn ${s.invertY ? 'on' : ''}" data-opt="invertY">Invert look</button></div>
       <h3>Controls</h3><div class="sub" style="font-style:normal;line-height:1.7">WASD move · mouse look · Shift sprint · C crouch / swim up · Space jump / dive · E use · F flashlight (lantern on the boat) · V boat camera · R radio · Tab pack · Q craft · J journal · Esc pause.<br>Touch: left stick, drag right side to look, buttons for the rest.</div>`;
@@ -323,9 +323,9 @@ export class UI {
   }
   openOptions(fromTitle) {
     const s = this.ctx.settings;
-    const row = (label, key, opts) => `<h3>${label}</h3><div class="tabs">${opts.map(([v, n]) => `<button class="btn ${String(s[key]) === String(v) ? 'on' : ''}" data-k="${key}" data-v="${v}">${n}</button>`).join('')}</div>`;
+    const row = (label, key, opts) => `<h3>${label}</h3><div class="tabs">${opts.map(([v, n]) => `<button class="btn ${(key === 'quality' ? (s.auto ? 'auto' : s.quality) : String(s[key])) === String(v) ? 'on' : ''}" data-k="${key}" data-v="${v}">${n}</button>`).join('')}</div>`;
     const html = `<button class="btn close" data-close>Close</button><h2>Options</h2>
-      ${row('Quality (reloads)', 'quality', [['low', 'Low'], ['medium', 'Medium'], ['high', 'High']])}
+      ${row('Quality (reloads)', 'quality', [['auto', 'Auto'], ['low', 'Phone'], ['medium', 'Standard'], ['high', 'Ultra']])}
       ${row('Difficulty', 'difficulty', [['calm', 'Calm — no threats'], ['standard', 'Standard'], ['harsh', 'Harsh — scarce, permanent']])}
       ${row('Text size', 'textSize', [['1', 'Normal'], ['1.2', 'Large'], ['1.4', 'Larger']])}
       ${row('Sound captions', 'captions', [['true', 'On'], ['false', 'Off']])}

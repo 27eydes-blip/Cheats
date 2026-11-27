@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { skyUniforms, createSky } from './Sky.js';
 import { G } from '../world/WorldShader.js';
 import { setEnvIntensity } from '../world/Materials.js';
+import { HdriDome } from './HdriDome.js';
 
 // Combines time of day + weather + underwater state into lights, fog, sky and
 // the shared shader uniforms. The only place that touches global lighting.
@@ -42,12 +43,22 @@ export class Atmosphere {
     this.envScene.add(this.envSky);
     this.envTimer = 0;
     this.envRT = null;
+    if (ctx.assets && Object.keys(ctx.assets.hdris).length >= 4) {
+      this.dome = new HdriDome(ctx.assets);
+      this.envScene.add(this.dome.mesh);
+    }
     this.underwater = false;
     this.underColor = new THREE.Color(0.024, 0.085, 0.075);
     this.indoor = 0;
     this.updateEnv();
   }
   updateEnv() {
+    if (this.dome) {
+      const { time, weather } = this.ctx;
+      const z = skyUniforms.uZenith.value, h = skyUniforms.uHorizon.value;
+      const lum = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+      this.dome.update(time.hour, weather.cur.cloud, time.sunDir, time.moonDir, (lum(z) + lum(h)) * 0.5);
+    }
     const old = this.envRT;
     this.envRT = this.pmrem.fromScene(this.envScene, 0, 1, 1000);
     this.ctx.scene.environment = this.envRT.texture;

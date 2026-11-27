@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { prepGeometry, boxGeometry } from '../world/Builder.js';
 import { mat } from '../world/Materials.js';
 import { damp } from '../core/rng.js';
+import { Character, charactersAvailable } from './Characters.js';
 
 // Raft-folk. Low-poly figures with procedural animation, living on a raft
 // (they are children of the raft so they ride its motion). Each follows a
@@ -30,6 +31,35 @@ export class NPC {
     this.raft = raft;
     this.root = new THREE.Group();
     this.root.name = 'npc:' + def.id;
+    if (charactersAvailable(ctx.assets)) this.buildRigged(ctx, def);
+    else this.buildBlocky(def);
+    raft.root.add(this.root);
+    this.local = new THREE.Vector3(def.spawn?.[0] ?? 0, raft.deckAt(def.spawn?.[0] ?? 0, def.spawn?.[1] ?? 0), def.spawn?.[1] ?? 0);
+    this.target = this.local.clone();
+    this.heading = 0;
+    this.activity = 'idle';
+    this.phase = Math.random() * 10;
+    this.walk = 0;
+    this.speech = null;
+    this.backoff = 0;
+    this.taskTimer = 0;
+    this.root.position.copy(this.local);
+  }
+  buildRigged(ctx, def) {
+    let seed = 0;
+    for (const ch of def.id) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
+    const skinLum = def.skin ? (def.skin[0] + def.skin[1] + def.skin[2]) / 3 : null;
+    this.rig = new Character(ctx.assets, {
+      seed,
+      female: def.female,
+      outfit: def.headwear === 'hood' ? 'Ranger' : undefined,
+      skin: skinLum == null ? undefined : Math.max(0, Math.min(5, Math.round((0.95 - skinLum) / 0.11))),
+      cloth: def.coat ? def.coat.map((c) => c * 1.9 + 0.15) : undefined,
+    });
+    this.root.add(this.rig.root);
+    this.root.scale.setScalar(def.scale || 1);
+  }
+  buildBlocky(def) {
     const fabric = mat('fabric');
     const skin = new THREE.MeshStandardMaterial({ color: new THREE.Color(...(def.skin || [0.62, 0.46, 0.36])), roughness: 0.8 });
     const coat = fabric.clone(); coat.color = new THREE.Color(...(def.coat || [0.4, 0.38, 0.32]));
@@ -50,17 +80,6 @@ export class NPC {
     this.legR = mk(part('limbL'), pants); this.legR.position.set(0.11, 0, 0); this.hips.add(this.legR);
     this.root.add(this.hips);
     this.root.scale.setScalar(def.scale || 1);
-    raft.root.add(this.root);
-    this.local = new THREE.Vector3(def.spawn?.[0] ?? 0, raft.deckAt(def.spawn?.[0] ?? 0, def.spawn?.[1] ?? 0), def.spawn?.[1] ?? 0);
-    this.target = this.local.clone();
-    this.heading = 0;
-    this.activity = 'idle';
-    this.phase = Math.random() * 10;
-    this.walk = 0;
-    this.speech = null;
-    this.backoff = 0;
-    this.taskTimer = 0;
-    this.root.position.copy(this.local);
   }
   currentTask() {
     const h = this.ctx.time.hour;
@@ -114,6 +133,25 @@ export class NPC {
     this.root.rotation.y = this.heading;
   }
   animate(dt, moving) {
+    if (this.rig) {
+      const p = this.ctx.player.position;
+      const near = this.worldPos(_w).distanceToSquared(p) < 36;
+      this.talkT = Math.max(0, (this.talkT || 0) - dt);
+      const sitting = ['sit', 'fish', 'sleep'].includes(this.activity);
+      this.rig.play(moving ? (this.backoff > 0 ? 'run' : 'walk') : this.talkT > 0 ? (sitting ? 'sitTalk' : 'talk') : this.activity);
+      // distant people animate at a lower rate (cheap crowd)
+      const d2 = this.worldPos(_w).distanceToSquared(p);
+      const far = d2 > 900;
+      // people beyond the preset's crowd distance aren't drawn at all
+      const vis = this.ctx.settings.q.npcDetail === 0 ? 45 : 90;
+      this.rig.root.visible = d2 < vis * vis;
+      if (!this.rig.root.visible) return;
+      this.animAcc = (this.animAcc || 0) + dt;
+      if (far && this.animAcc < 0.1) return;
+      this.rig.update(this.animAcc, near && this.activity !== 'sleep' ? _e.copy(this.ctx.camera.position) : null);
+      this.animAcc = 0;
+      return;
+    }
     const t = this.phase;
     const w = this.walk;
     const s = Math.sin(t * 7) * w;
@@ -141,3 +179,4 @@ export class NPC {
   }
   worldPos(out = new THREE.Vector3()) { return this.root.getWorldPosition(out); }
 }
+const _w = new THREE.Vector3(), _e = new THREE.Vector3();

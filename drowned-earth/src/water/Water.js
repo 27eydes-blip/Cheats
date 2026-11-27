@@ -62,6 +62,23 @@ vec3 ripples(vec2 p, out float foam) {
   return vec3(g.x, 0.0, g.y);
 }
 
+// fine wave octaves (GPU only: too small to matter for buoyancy). Analytic
+// gradients of 6 short directional waves spread around the wind.
+vec2 fineWaves(vec2 p, float t, float amp) {
+  vec2 g = vec2(0.0);
+  float a = atan(uWindDir.y, uWindDir.x);
+  for (int i = 0; i < 6; i++) {
+    float fi = float(i);
+    float ang = a + (fract(fi * 0.618) - 0.5) * 2.2;
+    vec2 d = vec2(cos(ang), sin(ang));
+    float L = 3.6 * pow(0.68, fi);
+    float k = 6.2831853 / L, w = sqrt(9.81 * k);
+    float A = amp * L * 0.012;
+    float ph = k * dot(d, p) - w * t + fi * 1.7;
+    g += d * (A * k * cos(ph));
+  }
+  return g;
+}
 float rainRings(vec2 p) {
   if (uRain < 0.01) return 0.0;
   vec2 cell = floor(p * 1.6); vec2 f = fract(p * 1.6) - 0.5;
@@ -83,7 +100,8 @@ void main() {
   float ripFoam;
   vec3 rip = ripples(vW.xz, ripFoam);
   float rr = rainRings(vW.xz);
-  vec3 N = normalize(vN + detail * 0.22 + rip + vec3(rr * 0.3, 0.0, rr * 0.3));
+  vec2 fw = fineWaves(vW.xz, uTime, 0.35 + uWind) * detailFade;
+  vec3 N = normalize(vN + detail * 0.22 + rip + vec3(rr * 0.3, 0.0, rr * 0.3) - vec3(fw.x, 0.0, fw.y));
   bool below = uUnder > 0.5;
   if (below) N = -N;
   float NdV = max(dot(N, V), 0.0);
@@ -128,11 +146,19 @@ void main() {
       refl += uLightCol[i] * s;
     }
     col = mix(refr, refl, F);
+    // subsurface scattering: sunlight through the thin water of wave crests
+    float sssView = pow(max(dot(V, -normalize(uSunDir + N * 0.35)), 0.0), 4.0);
+    float sss = sssView * (0.4 + max(vCrest, 0.0) * 3.0) * max(uSunDir.y + 0.1, 0.0) * (1.0 - uCloud * 0.7);
+    col += uScatter * uSunColor * sss * 1.6 * (1.0 - F);
     // foam: contact with walls, crests in wind, wake
     float fn = texture2D(tNoise, vW.xz * 0.21 + wind * 0.02).r * 0.6 + texture2D(tNoise, vW.xz * 0.7 - wind * 0.03).g * 0.4;
     float contact = (uHasScene > 0.5) ? smoothstep(0.45, 0.0, thick) * smoothstep(0.35, 0.65, fn + 0.15) * 0.6 : 0.0;
     float crest = smoothstep(0.35, 0.9, vCrest / max(0.2, 0.3 + uWind * 0.5)) * smoothstep(0.45, 0.75, fn) * smoothstep(0.45, 1.0, uWind);
     float wake = smoothstep(0.1, 0.8, ripFoam * fn * 1.6);
+    // wind streaks: long foam lines lying along the wind in a blow
+    vec2 wp2 = vec2(dot(vW.xz, uWindDir), dot(vW.xz, vec2(-uWindDir.y, uWindDir.x)));
+    float streak = texture2D(tNoise, vec2(wp2.x * 0.012 - uTime * 0.01, wp2.y * 0.22)).r;
+    crest += smoothstep(0.62, 0.8, streak) * smoothstep(0.55, 1.0, uWind) * 0.35 * detailFade;
     float foam = clamp(contact + crest + wake, 0.0, 1.0);
     vec3 foamCol = (skyBase(vec3(0.0, 1.0, 0.0)) * 0.6 + uSunColor * max(uSunDir.y, 0.0) * 0.5) * 0.9 + 0.04;
     col = mix(col, foamCol * 0.8, foam * 0.7);

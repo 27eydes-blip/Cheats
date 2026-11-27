@@ -1,0 +1,301 @@
+{
+  "_doc": "Source manifest for every third-party asset. `npm run assets:fetch` downloads into .asset-cache/, `npm run assets:build` writes compressed runtime files into public/assets/. All sources are CC0.",
+  "textures": {
+    "facade": {
+      "src": "polyhaven:concrete_wall_008",
+      "metres": 3.0
+    },
+    "facadeB": {
+      "src": "polyhaven:worn_mossy_plasterwall",
+      "metres": 3.0
+    },
+    "concrete": {
+      "src": "polyhaven:dirty_concrete",
+      "metres": 3.0
+    },
+    "asphalt": {
+      "src": "polyhaven:worn_asphalt",
+      "metres": 4.0
+    },
+    "mud": {
+      "src": "polyhaven:brown_mud_02",
+      "metres": 4.0
+    },
+    "tile": {
+      "src": "polyhaven:dirty_tiles",
+      "metres": 1.5
+    },
+    "rust": {
+      "src": "polyhaven:rust_coarse_01",
+      "metres": 2.0
+    },
+    "metal": {
+      "src": "polyhaven:rusty_metal_02",
+      "metres": 2.0
+    },
+    "container": {
+      "src": "polyhaven:rusty_corrugated_iron",
+      "metres": 2.5
+    },
+    "wood": {
+      "src": "polyhaven:weathered_planks",
+      "metres": 2.0
+    },
+    "fabric": {
+      "src": "polyhaven:fabric_pattern_07",
+      "metres": 1.0
+    },
+    "rock": {
+      "src": "polyhaven:seaside_rock",
+      "metres": 4.0
+    }
+  },
+  "hdris": {
+    "dawn": "polyhaven:kloppenheim_06_puresky",
+    "day": "polyhaven:kloofendal_48d_partly_cloudy_puresky",
+    "dusk": "polyhaven:belfast_sunset_puresky",
+    "night": "polyhaven:kloppenheim_02_puresky",
+    "overcast": "polyhaven:kloofendal_overcast_puresky"
+  },
+  "models": {
+    "lantern": {
+      "src": "polyhaven:Lantern_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "lanternWood": {
+      "src": "polyhaven:wooden_lantern_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "oilLamp": {
+      "src": "polyhaven:vintage_oil_lamp",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "barrel": {
+      "src": "polyhaven:Barrel_01"
+    },
+    "barrelRust": {
+      "src": "polyhaven:barrel_03"
+    },
+    "barrelStove": {
+      "src": "polyhaven:barrel_stove"
+    },
+    "crate": {
+      "src": "polyhaven:wooden_crate_01"
+    },
+    "crate2": {
+      "src": "polyhaven:wooden_crate_02"
+    },
+    "plasticCrate": {
+      "src": "polyhaven:plastic_crate_01"
+    },
+    "jerrycan": {
+      "src": "polyhaven:metal_jerrycan",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "jerrycanPlastic": {
+      "src": "polyhaven:plastic_jerrycan",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "propane": {
+      "src": "polyhaven:propane_tank",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "lifeJacket": {
+      "src": "polyhaven:life_jacket",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "lifebuoy": {
+      "src": "polyhaven:lifebuoy",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "buoy": {
+      "src": "polyhaven:ocean_buoy",
+      "maxTris": 8000
+    },
+    "seaMarker": {
+      "src": "polyhaven:lateral_sea_marker",
+      "maxTris": 8000
+    },
+    "tyre": {
+      "src": "polyhaven:old_tyre",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "trashbag": {
+      "src": "polyhaven:trashbag",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "cardboard": {
+      "src": "polyhaven:cardboard_box_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "basket": {
+      "src": "polyhaven:wicker_basket_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "bucket": {
+      "src": "polyhaven:wooden_bucket_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "acUnit": {
+      "src": "polyhaven:exterior_aircon_unit",
+      "maxTris": 5000
+    },
+    "streetLamp": {
+      "src": "polyhaven:street_lamp_01",
+      "maxTris": 5000
+    },
+    "hangingLamp": {
+      "src": "polyhaven:caged_hanging_light",
+      "maxTris": 4000
+    },
+    "searchlight": {
+      "src": "polyhaven:portable_searchlight"
+    },
+    "generator": {
+      "src": "polyhaven:portable_generator",
+      "maxTris": 6000
+    },
+    "rowboat": {
+      "src": "polyhaven:ship_pinnace",
+      "maxTris": 20000
+    },
+    "wheelchair": {
+      "src": "polyhaven:wheelchair_01",
+      "maxTris": 6000
+    },
+    "medicalBox": {
+      "src": "polyhaven:medical_box",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "trashCan": {
+      "src": "polyhaven:metal_trash_can"
+    },
+    "chair": {
+      "src": "polyhaven:plastic_monobloc_chair_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "stool": {
+      "src": "polyhaven:wooden_stool_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "hydrant": {
+      "src": "polyhaven:fire_hydrant"
+    },
+    "utilityBox": {
+      "src": "polyhaven:utility_box_01"
+    },
+    "barrier": {
+      "src": "polyhaven:concrete_road_barrier"
+    },
+    "coveredCar": {
+      "src": "polyhaven:covered_car",
+      "maxTris": 12000
+    },
+    "wheelRim": {
+      "src": "polyhaven:rusted_wheel_rim_01",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "can": {
+      "src": "polyhaven:can_rusted",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "gallon": {
+      "src": "polyhaven:plastic_bottle_gallon",
+      "maxTris": 2500,
+      "texSize": 512
+    },
+    "shelves": {
+      "src": "polyhaven:steel_frame_shelves_01"
+    },
+    "ladder": {
+      "src": "polyhaven:wooden_ladder"
+    },
+    "shrub": {
+      "src": "polyhaven:shrub_02",
+      "maxTris": 8000
+    },
+    "shrub2": {
+      "src": "polyhaven:shrub_04",
+      "maxTris": 8000
+    },
+    "fern": {
+      "src": "polyhaven:fern_02",
+      "maxTris": 4000
+    },
+    "deadTrunk": {
+      "src": "polyhaven:dead_tree_trunk",
+      "maxTris": 6000
+    },
+    "roots": {
+      "src": "polyhaven:root_cluster_01",
+      "maxTris": 6000
+    },
+    "rocks": {
+      "src": "polyhaven:coast_rocks_01",
+      "maxTris": 12000
+    },
+    "cliff": {
+      "src": "polyhaven:coastal_cliff_01",
+      "maxTris": 20000
+    }
+  },
+  "characters": {
+    "_source": "Quaternius (quaternius.com) \u2014 Universal Base Characters, Modular Character Outfits \u2013 Fantasy, Universal Animation Library. CC0. Fetched from public GitHub mirrors because the originals are distributed via Google Drive.",
+    "bodyMale": {
+      "url": "https://raw.githubusercontent.com/ryanfitzpatrickio/threejs-playground/HEAD/assets-source/universal-base-characters/gltf/Superhero_Male_FullBody.gltf"
+    },
+    "bodyFemale": {
+      "url": "https://raw.githubusercontent.com/ryanfitzpatrickio/threejs-playground/HEAD/assets-source/universal-base-characters/gltf/Superhero_Female_FullBody.gltf"
+    },
+    "outfitMalePeasant": {
+      "url": "https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-assets/HEAD/CC0-packs/Quaternius/Modular%20Character%20Outfits%20-%20Fantasy%5BStandard%5D/Exports/glTF%20(Godot-Unreal)/Outfits/Male_Peasant.gltf"
+    },
+    "outfitFemalePeasant": {
+      "url": "https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-assets/HEAD/CC0-packs/Quaternius/Modular%20Character%20Outfits%20-%20Fantasy%5BStandard%5D/Exports/glTF%20(Godot-Unreal)/Outfits/Female_Peasant.gltf"
+    },
+    "outfitMaleRanger": {
+      "url": "https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-assets/HEAD/CC0-packs/Quaternius/Modular%20Character%20Outfits%20-%20Fantasy%5BStandard%5D/Exports/glTF%20(Godot-Unreal)/Outfits/Male_Ranger.gltf"
+    },
+    "outfitFemaleRanger": {
+      "url": "https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-assets/HEAD/CC0-packs/Quaternius/Modular%20Character%20Outfits%20-%20Fantasy%5BStandard%5D/Exports/glTF%20(Godot-Unreal)/Outfits/Female_Ranger.gltf"
+    },
+    "animations": {
+      "url": "https://media.githubusercontent.com/media/series-ai/jam-ready-assets/HEAD/quaternius-universal-animation-library/3D/characters/UAL1_Standard.glb",
+      "keep": [
+        "Idle_Loop",
+        "Walk_Loop",
+        "Jog_Fwd_Loop",
+        "Idle_Talking_Loop",
+        "Fixing_Kneeling",
+        "Interact",
+        "PickUp_Table",
+        "Sitting_Idle_Loop",
+        "Sitting_Talking_Loop",
+        "Idle_Torch_Loop",
+        "Push_Loop",
+        "Swim_Idle_Loop",
+        "Swim_Fwd_Loop",
+        "Crouch_Idle_Loop",
+        "Driving_Loop"
+      ]
+    }
+  }
+}

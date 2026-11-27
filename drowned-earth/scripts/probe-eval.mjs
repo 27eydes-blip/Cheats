@@ -9,7 +9,7 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const [VW, VH] = (process.env.VIEW || '640x360').split('x').map(Number);
 const page = await browser.newPage({ viewport: { width: VW, height: VH } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(m.type(), m.text().slice(0, 300)); });
-page.on('pageerror', (e) => console.log('PAGEERR', e.message));
+page.on('pageerror', (e) => console.log('PAGEERR', e.message, (e.stack || '').split('\n').slice(0, 6).join(' | ')));
 await page.goto(server.resolvedUrls.local[0] + '?' + process.argv[2]);
 await page.waitForFunction(() => window.__game?.frame > 8, null, { timeout: 120000 });
 const r = await page.evaluate(async (src) => { const g = window.__game; return JSON.stringify(await (0, eval)(src)); }, `(()=>{ const g = window.__game; ${process.argv[3]} })()`);

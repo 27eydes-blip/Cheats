@@ -54,7 +54,22 @@ export class Raft {
     const inst = new InstanceBatch();
     for (const [x, y, z] of out.plants) inst.add('foliage', 'foliage', x, y + 0.15, z, { s: 0.28 + rng.next() * 0.15, color: [0.6, 0.9, 0.5] });
     for (const [x, y, z, c] of out.cloths) inst.add('mattress', 'fabric', x, y, z, { sx: 0.45, sy: 2.4, sz: 0.03, rx: Math.PI / 2, color: c });
-    for (const im of inst.build(new THREE.Vector3())) b.object(im);
+    // the clutter of a working raft, kept to the deck edges where nobody walks
+    const kinds = this.def.kind === 'market' || /market|portage/i.test(this.id)
+      ? ['crate', 'barrel', 'bucket', 'jerrycan', 'trash', 'propane']
+      : ['bucket', 'jerrycan', 'crate', 'stool', 'trash'];
+    for (const r of rects) {
+      const w = r.x1 - r.x0, d = r.z1 - r.z0;
+      const n = Math.floor((w + d) * 0.35 * (this.ctx.settings.q.propDensity ?? 1));
+      for (let i = 0; i < n; i++) {
+        const along = rng.next(), side = Math.floor(rng.next() * 4);
+        const x = side < 2 ? r.x0 + 0.35 + along * (w - 0.7) : side === 2 ? r.x0 + 0.35 : r.x1 - 0.35;
+        const z = side >= 2 ? r.z0 + 0.35 + along * (d - 0.7) : side === 0 ? r.z0 + 0.35 : r.z1 - 0.35;
+        const k = kinds[Math.floor(rng.next() * kinds.length)];
+        inst.add(k, 'wood', x, r.deck + (k === 'barrel' ? 0.45 : 0), z, { ry: rng.next() * 6.28 });
+      }
+    }
+    for (const im of inst.build(new THREE.Vector3(), { dynamic: true, shadows: true })) b.object(im);
     for (const l of out.ladders) ladder(b, l.x, l.z, l.y0, l.y1, 0, { topStep: new THREE.Vector3(l.x, l.y1 + 0.05, l.z - 1.4) });
     this.mesh = b.build('raft ' + this.id);
     this.mesh.position.set(0, 0, 0);

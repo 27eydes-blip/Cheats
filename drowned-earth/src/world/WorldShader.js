@@ -37,7 +37,7 @@ float causticField(vec2 p, float t) {
 
 export function patchMaterial(mat, opts = {}) {
   // aMeta: x = window style (0 none, 1 punched, 2 curtain wall), y = spacing var, z = vines, w = seed
-  const { facade = false, bob = false, noUnderwater = false } = opts;
+  const { facade = false, bob = false, noUnderwater = false, antiTile = false, cloth = false } = opts;
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, G);
     let vs = shader.vertexShader;
@@ -56,6 +56,17 @@ export function patchMaterial(mat, opts = {}) {
           transformed.y += ws.x - tiltP.x * ws.y - tiltP.z * ws.z;
         #include <project_vertex>`);
     }
+    if (cloth) {
+      // tarps and laundry move in the wind: travelling flutter, stronger at free edges
+      vs = vs.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec3 clW = (modelMatrix * vec4(position, 1.0)).xyz;
+        #ifdef USE_INSTANCING
+          clW = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;
+        #endif
+        vec3 cn = abs(objectNormal); vec3 ax = cn.x > cn.y && cn.x > cn.z ? vec3(1.0, 0.0, 0.0) : cn.y > cn.z ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0);
+        float fl = sin(dot(clW.xz, vec2(1.7, 1.1)) - uTime * 4.3) * 0.045 + sin(clW.y * 3.1 + clW.x * 2.3 - uTime * 7.1) * 0.02;
+        transformed += ax * fl * (0.6 + 0.4 * sin(uTime * 0.7 + clW.z));`);
+    }
     vs = vs.replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
       vec4 deW = vec4(transformed, 1.0);
       #ifdef USE_INSTANCING
@@ -66,6 +77,18 @@ export function patchMaterial(mat, opts = {}) {
 
     let fs = shader.fragmentShader;
     fs = fs.replace('#include <common>', `#include <common>\n${COMMON}`);
+    if (antiTile) {
+      // Break up the repeat of scanned tiling materials: a second sample, rotated
+      // and rescaled, blended in by low-frequency noise. Same for roughness/AO.
+      fs = fs.replace('#include <map_fragment>', `
+      #ifdef USE_MAP
+        float deTile = smoothstep(0.3, 0.7, texture2D(uNoiseTex, vMapUv * 0.031 + 0.17).r);
+        vec2 deUv2 = mat2(0.8, -0.6, 0.6, 0.8) * vMapUv * 0.61 + vec2(0.37, 0.71);
+        vec4 deS = mix(texture2D(map, vMapUv), texture2D(map, deUv2), deTile);
+        deS.rgb *= 0.88 + 0.24 * texture2D(uNoiseTex, vMapUv * 0.09 + 0.5).g;
+        diffuseColor *= deS;
+      #endif`);
+    }
     fs = fs.replace('#include <color_fragment>', `#include <color_fragment>
       float deWinMask = 0.0; float deBroken = 0.0; float deLit = 0.0; float deGlassR = 0.05; float deCurtain = 0.0;
       vec3 deInterior = vec3(0.0); float deTrans = 0.0;
@@ -219,6 +242,6 @@ export function patchMaterial(mat, opts = {}) {
     }
     shader.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => `de-${facade ? 'f' : ''}${bob ? 'b' : ''}${noUnderwater ? 'n' : ''}`;
+  mat.customProgramCacheKey = () => `de-${facade ? 'f' : ''}${bob ? 'b' : ''}${noUnderwater ? 'n' : ''}${antiTile ? 't' : ''}${cloth ? 'c' : ''}`;
   return mat;
 }

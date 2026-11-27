@@ -11,6 +11,12 @@ export class Dialogue {
     if (l.once && this.seen[l._key]) return false;
     return true;
   }
+  // world position of whoever is speaking (for the focus pull), or null
+  target() {
+    const a = this.active;
+    if (!a || performance.now() > a.until) { this.active = null; return null; }
+    return a.npc.worldPos(this._p || (this._p = new (a.npc.root.position.constructor)())).setY(a.npc.worldPos().y + 1.6);
+  }
   talk(npc) {
     const d = npc.def, ctx = this.ctx;
     d.talk.forEach((l, i) => (l._key = d.id + ':' + i));
@@ -23,6 +29,9 @@ export class Dialogue {
     const dur = 2.5 + line.text.length * 0.05;
     ctx.ui.subtitle(`${d.name}: ${line.text}`, dur, 'speech');
     ctx.audio?.speak(npc.worldPos(), dur, d.scale || 1);
+    // the speaker turns, talks with their hands; the camera pulls focus to them
+    npc.talkT = dur;
+    this.active = { npc, until: performance.now() + dur * 1000 };
     ctx.events.emit('talk', { npc: d.id, respect: !!d.respect });
     if (d.respect && ctx.standing.shown === 7) ctx.story.setFlag('respected');
     if (d.shop || d.step) setTimeout(() => ctx.ui.openShop(d.shop, d.step, d.name), 700);

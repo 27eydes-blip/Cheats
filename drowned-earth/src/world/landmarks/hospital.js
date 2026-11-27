@@ -118,6 +118,12 @@ export function buildHospital(ctx, def) {
   walker.position.set(bx + 6 - origin.x, -3.6, bzc + 2 - origin.z);
   b.object(walker);
   for (let i = 0; i < 12; i++) inst.add(i % 4 ? 'plank' : 'mattress', i % 4 ? 'woodFloat' : 'fabricFloat', cx - 30 + i * 5, 0, mz1 + 6 + (i % 3) * 4, { ry: i, color: [0.75, 0.72, 0.65] });
+  // the ward as it was left: wheelchairs, med boxes, shelving (scanned)
+  for (let i = 0; i < 9; i++) {
+    const k = ['wheelchair', 'medicalBox', 'shelves', 'stool', 'trash', 'wheelchair', 'medicalBox', 'bucket', 'trash'][i];
+    inst.add(k, 'metal', wx0 + 2 + ((i * 3.7) % Math.max(2, wx1 - wx0 - 4)), 3.85, wz0 + 2 + ((i * 5.3) % Math.max(2, wz1 - wz0 - 4)), { ry: i * 1.9 });
+  }
+  for (let i = 0; i < 6; i++) inst.add(['wheelchair', 'medicalBox', 'trash'][i % 3], 'metal', mx0 + 3 + i * 2.7, 0.47, mz0 + 2.5 + (i % 2) * 3, { ry: i * 2.3 });
   for (const im of inst.build(origin)) b.object(im);
   return {
     group: b.build('St Aldren'), colliders: b.colliders, interactables: b.interactables,

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Builder } from '../Builder.js';
 import { container, logItem, sign, ladder, slabWithHole } from '../Architecture.js';
 import { signMaterial } from '../Materials.js';
+import { InstanceBatch } from '../Props.js';
 
 // MV Calla Morrow: a container ship that drifted into the district during the
 // Rise and ran aground. Built in local space and placed with rotation; its
@@ -81,6 +82,12 @@ export function buildCargoShip(ctx, def) {
   // hatch ladder down into the flooded hold
   ladder(b, 0, hz0 + 3.3, -4, deck, 0, { id: 'calla:hold', prompt: 'Climb out of the hold', topStep: new THREE.Vector3(0, deck + 0.05, hz0 + 1.6), bottomStep: null });
 
+  // deck dressing (scanned): a lifeboat left in its davits, buoys on the rails, crew stores
+  const inst = new InstanceBatch();
+  inst.add('rowboat', 'wood', -W + 1.8, deck + 2.2, L - 14, { ry: 0, rz: 0.12 });
+  for (let i = 0; i < 6; i++) inst.add('lifebuoy', 'plastic', (i % 2 ? W - 0.35 : -W + 0.35), deck + 0.5, -L + 24 + i * 12, { ry: 0 });
+  for (let i = 0; i < 10; i++) inst.add(['crate', 'jerrycan', 'barrel', 'propane', 'trash'][i % 5], 'metal', -W + 2 + ((i * 7.3) % (2 * W - 4)), deck + (i % 5 === 2 ? 0.45 : 0.05), L - 6 - (i % 4) * 2.2, { ry: i * 1.3 });
+  for (const im of inst.build(new THREE.Vector3(), { dynamic: true, shadows: ctx.settings.q.shadows })) b.object(im);
   const group = b.build('Calla Morrow');
   const [px, pz] = def.pos;
   group.position.set(px, 0, pz);

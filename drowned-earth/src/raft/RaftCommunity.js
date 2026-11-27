@@ -133,8 +133,8 @@ export function buildRaftCommunity(ctx, def) {
   const refreshBoard = () => { if (rationMesh) { rationMesh.material.map = boardTexture(ctx.economy.rationText()); rationMesh.material.needsUpdate = true; } };
   const offRation = ctx.events.on('rations', refreshBoard);
   // ---- lantern light pool + smoke + sound ----
-  const maxL = Math.max(2, Math.floor(ctx.settings.q.maxLights * (def.id === 'portage' ? 0.6 : 0.25)));
-  const pool = Array.from({ length: maxL }, () => { const l = new THREE.PointLight(0xffa850, 0, 14, 1.8); l.layers.enableAll(); group.add(l); return l; });
+  const maxL = Math.max(2, Math.floor((ctx.settings.q.pointLights ?? ctx.settings.q.maxLights) * (def.id === 'portage' ? 0.7 : 0.3)));
+  const pool = Array.from({ length: maxL }, () => { const l = new THREE.PointLight(0xffa850, 0, 16, 2); l.layers.enableAll(); group.add(l); return l; });
   const lanterns = [];
   for (const r of rafts.values()) for (const l of r.lanterns) lanterns.push({ r, l });
   const smokes = [];
@@ -184,9 +184,10 @@ export function buildRaftCommunity(ctx, def) {
       const e = pl.userData.e;
       if (!e) { pl.intensity = 0; continue; }
       e.r.worldPoint(e.l.local, pl.position);
-      pl.intensity = night * 9 * (0.92 + Math.sin(t * 9 + pl.id) * 0.08);
+      // flame: slow breathing + quick gutter, never in step with its neighbours
+      pl.intensity = night * 11 * flame(t, pl.id);
     }
-    for (const r of rafts.values()) if (r.fireLight) r.fireLight.intensity = (1.5 + Math.sin(t * 13) * 0.5 + Math.sin(t * 7.3) * 0.4) * (0.4 + night);
+    for (const r of rafts.values()) if (r.fireLight) r.fireLight.intensity = 2.2 * flame(t * 1.4, r.fireLight.id) * (0.4 + night);
     if (fest) fest.update(dt);
     if (main.root.position.distanceTo(pp) < 200) ctx.water.setLights([...pool.slice(0, 3).filter((p) => p.intensity > 0.1).map((p) => ({ pos: p.position, color: new THREE.Color(1, 0.6, 0.25).multiplyScalar(night) })), ...(fest?.lights() || [])]);
   }];
@@ -328,4 +329,14 @@ function setupBreakaway(ctx, raft, bridges, interactables, def) {
     onUse: (c) => { towing = true; c.ui.whisper('Someone on Low Row catches the line and makes it fast. Bring her home slowly.'); c.story.setFlag('towing_lowrow'); },
   });
   return api;
+}
+
+// Layered flicker for a small flame: a slow breath, a faster waver and the
+// occasional gutter. Deterministic per light id so neighbours never pulse together.
+function flame(t, id) {
+  const a = Math.sin(t * 1.7 + id * 1.3) * 0.05;
+  const b = Math.sin(t * 7.9 + id * 2.1) * Math.sin(t * 5.3 + id) * 0.07;
+  const c = Math.sin(t * 17.3 + id * 0.7) * 0.03;
+  const gutter = Math.max(0, Math.sin(t * 0.37 + id * 4.1) - 0.93) * 2.2;
+  return 0.9 + a + b + c - gutter;
 }

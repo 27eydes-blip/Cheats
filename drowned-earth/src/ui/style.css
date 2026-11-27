@@ -165,3 +165,11 @@ canvas.chart { width: 100%; height: auto; border-radius: 3px; box-shadow: inset 
 .debugpanel { position: fixed; right: 8px; top: 8px; width: min(430px, 96vw); background: rgba(0,0,0,.78); color: #9f9; font: 11px ui-monospace, monospace; padding: 8px; z-index: 20; border-radius: 4px; max-height: 90vh; overflow: auto; }
 .debugpanel.hidden { display: none; } .debugpanel pre { margin: 0 0 6px; white-space: pre-wrap; } .dbgbtns { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; } .dbgbtns button { font: 11px ui-monospace, monospace; background: #122; color: #cfc; border: 1px solid #355; padding: 3px 6px; cursor: pointer; }
 body:not(.mode-play) .wristband, body:not(.mode-play) .boatgauge, body:not(.mode-play) .heatmark, body:not(.mode-play) .hud-dot, body:not(.mode-play) .prompt, body:not(.mode-play) .touch, body:not(.mode-play) .note { display: none !important; }
+.loading { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 60%, #0e1a1e, #030607 70%); color: #d8d3c6; transition: opacity .8s; padding: 16px; }
+.loading.out { opacity: 0; pointer-events: none; }
+.loading-inner { width: min(520px, 100%); text-align: center; }
+.loading h1 { font-weight: normal; letter-spacing: .32em; text-indent: .32em; font-size: clamp(24px, 6vw, 44px); margin: 0 0 28px; color: #e8e4d8; }
+.loading-bar { height: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
+.loading-bar i { display: block; height: 100%; background: #d9b77a; transform-origin: left; transform: scaleX(.02); transition: transform .25s; }
+.loading-label { margin-top: 10px; font-size: 13px; letter-spacing: .08em; color: rgba(216,211,198,.7); }
+.loading-line { margin-top: 30px; font-style: italic; color: rgba(216,211,198,.55); font-size: 14px; line-height: 1.6; }

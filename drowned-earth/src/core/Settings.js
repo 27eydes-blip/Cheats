@@ -6,22 +6,47 @@ const PRESETS = {
     chunkNearRadius: 200, chunkFarRadius: 900, waterRings: 48, waterSegments: 64,
     debrisDensity: 0.45, particleCount: 250, rainCount: 1500, envMapUpdates: false,
     maxLights: 3, npcDetail: 0, birdCount: 10, renderScale: 1, reflections: 0,
+    label: 'Phone', targetFps: 30, minScale: 0.6, textureTier: '1k', anisotropy: 2,
+    ssao: false, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 2, propDensity: 0.5, characters: true,
   },
   medium: {
     pixelRatio: 1.5, postPipeline: true, shadows: true, shadowMapSize: 2048, shadowRange: 110,
     chunkNearRadius: 260, chunkFarRadius: 1200, waterRings: 72, waterSegments: 96,
     debrisDensity: 0.75, particleCount: 600, rainCount: 3500, envMapUpdates: true,
     maxLights: 6, npcDetail: 1, birdCount: 18, renderScale: 1, reflections: 0.35,
+    label: 'Standard', targetFps: 60, minScale: 0.65, textureTier: '1k', anisotropy: 8,
+    ssao: true, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 6, propDensity: 0.8, characters: true,
   },
   high: {
     pixelRatio: 2, postPipeline: true, shadows: true, shadowMapSize: 4096, shadowRange: 180,
     chunkNearRadius: 320, chunkFarRadius: 1500, waterRings: 96, waterSegments: 128,
     debrisDensity: 1, particleCount: 1200, rainCount: 6000, envMapUpdates: true,
     maxLights: 10, npcDetail: 2, birdCount: 28, renderScale: 1, reflections: 0.5,
+    label: 'Ultra', targetFps: 60, minScale: 0.7, textureTier: '2k', anisotropy: 16,
+    ssao: true, taa: true, ssr: true, motionBlur: true, volumetric: true, csm: true, pointLights: 12, propDensity: 1, characters: true,
   },
 };
 
 const KEY = 'drowned-earth.settings';
+const ALIAS = { phone: 'low', standard: 'medium', ultra: 'high' };
+
+// Pick a preset from what the GPU says it is. Coarse on purpose: dynamic
+// resolution does the fine tuning at runtime.
+export function detectPreset(isMobile) {
+  if (isMobile) return { preset: 'low', gpu: 'mobile' };
+  let gpu = '';
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    gpu = gl ? (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) : 'none';
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  } catch { gpu = 'unknown'; }
+  const g = gpu.toLowerCase();
+  if (!g || g === 'none') return { preset: 'low', gpu };
+  if (/swiftshader|llvmpipe|software|basic render/.test(g)) return { preset: 'low', gpu };
+  if (/nvidia|geforce|rtx|quadro|radeon rx|radeon pro|apple m[1-9]|apple gpu|arc\(/.test(g) && !/mx\d{3}/.test(g)) return { preset: 'high', gpu };
+  return { preset: 'medium', gpu };
+}
 
 export class Settings {
   constructor() {
@@ -30,7 +55,12 @@ export class Settings {
     let stored = {};
     try { stored = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { stored = {}; }
     const params = new URLSearchParams(location.search);
-    this.quality = params.get('quality') || stored.quality || (isMobile ? 'low' : 'medium');
+    const det = detectPreset(isMobile);
+    this.gpu = det.gpu;
+    let q = params.get('quality') || stored.quality || 'auto';
+    q = ALIAS[q] || q;
+    this.auto = q === 'auto';
+    this.quality = this.auto ? det.preset : q;
     if (!PRESETS[this.quality]) this.quality = 'medium';
     this.volume = stored.volume ?? 0.8;
     this.invertY = stored.invertY ?? false;
@@ -47,12 +77,14 @@ export class Settings {
     this.music = stored.music ?? 1;
   }
   get q() { return PRESETS[this.quality]; }
+  get label() { return PRESETS[this.quality].label + (this.auto ? ' (auto)' : ''); }
   static presets() { return Object.keys(PRESETS); }
-  set(key, value) { this[key] = value; this.save(); }
+  set(key, value) { if (key === 'quality') this.auto = value === 'auto'; this[key] = value; this.save(); }
+  static label(q) { return PRESETS[q]?.label || q; }
   save() {
     try {
       localStorage.setItem(KEY, JSON.stringify({
-        quality: this.quality, volume: this.volume, invertY: this.invertY,
+        quality: this.auto ? 'auto' : this.quality, volume: this.volume, invertY: this.invertY,
         lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
         reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music,
       }));

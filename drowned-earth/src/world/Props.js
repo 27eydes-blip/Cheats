@@ -3,6 +3,95 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { prepGeometry, boxGeometry } from './Builder.js';
 import { mat } from './Materials.js';
 import { LAYER_DETAIL } from '../render/Pipeline.js';
+import { patchMaterial } from './WorldShader.js';
+
+// ---- scanned stand-ins -------------------------------------------------
+// When the asset library has loaded the Poly Haven models, procedural props
+// are swapped for photoscans at real-world scale. `base` is where the
+// procedural prop's bottom sits relative to its origin; `lie` lays the model
+// on its side (floating barrels, chairs); `keys` are interchangeable scans
+// picked per instance. Anything not listed keeps its procedural geometry.
+let ASSETS = null, INSTANCER = null;
+export function setPropAssets(a, instancer) { ASSETS = a; INSTANCER = instancer; }
+let chunkSeq = 0;
+const SCAN = {
+  barrel:      { keys: ['barrel', 'barrelRust', 'barrelRust'], base: -0.45 },
+  barrelFloat: { keys: ['barrel', 'barrelRust'], lie: true, base: -0.28 },
+  crate:       { keys: ['crate', 'crate2', 'plasticCrate'], base: 0 },
+  tire:        { keys: ['tyre'], lie: false, flat: true, base: -0.12 },
+  chairFloat:  { keys: ['chair'], lie: true, base: -0.2 },
+  bottle:      { keys: ['gallon', 'jerrycanPlastic', 'trashbag', 'cardboard'], base: -0.1, lieSome: true },
+  acUnit:      { keys: ['acUnit'], base: 0 },
+  car:         { keys: ['coveredCar'], base: 0, ry: Math.PI / 2 },
+  lantern:     { keys: ['lantern', 'lanternWood'], base: -0.32 },
+
+  lampPost:    { keys: ['streetLamp'], base: 0, scale: 1.6 },
+  foliage:     { keys: ['shrub', 'shrub2'], base: -0.75, scale: 0.75, useS: true },
+  // new dressing types (no procedural twin)
+  lifebuoy:    { keys: ['lifebuoy'], lie: false, flat: true, base: 0 },
+  buoy:        { keys: ['buoy'], base: -0.6 },
+  seaMarker:   { keys: ['seaMarker'], base: -1.2 },
+  lifeJacket:  { keys: ['lifeJacket'], flat: true, base: 0 },
+  jerrycan:    { keys: ['jerrycan', 'jerrycanPlastic'], base: 0 },
+  propane:     { keys: ['propane'], base: 0 },
+  bucket:      { keys: ['bucket', 'basket'], base: 0 },
+  trash:       { keys: ['trashbag', 'cardboard', 'can', 'gallon'], base: 0 },
+  fern:        { keys: ['fern'], base: 0 },
+  roots:       { keys: ['roots'], base: 0 },
+  deadTrunk:   { keys: ['deadTrunk'], base: 0 },
+  rocks:       { keys: ['rocks'], base: 0 },
+  boulder:     { keys: ['boulder'], base: 0 },
+  hydrant:     { keys: ['hydrant'], base: 0 },
+  utilityBox:  { keys: ['utilityBox'], base: 0 },
+  barrier:     { keys: ['barrier'], base: 0 },
+  wheelRim:    { keys: ['wheelRim'], flat: true, base: 0 },
+  trashCan:    { keys: ['trashCan'], base: 0 },
+  barrelStove: { keys: ['barrelStove'], base: 0 },
+  generator:   { keys: ['generator'], base: 0 },
+  shelves:     { keys: ['shelves'], base: 0 },
+  wheelchair:  { keys: ['wheelchair'], base: 0 },
+  medicalBox:  { keys: ['medicalBox'], base: 0 },
+  stool:       { keys: ['stool', 'chair'], base: 0 },
+  rowboat:     { keys: ['rowboat'], base: -0.35 },
+  ladder:      { keys: ['ladder'], base: 0 },
+  hangingLamp: { keys: ['hangingLamp'], base: 0 },
+  searchlight: { keys: ['searchlight'], base: 0 },
+  oilLamp:     { keys: ['oilLamp'], base: 0 },
+};
+export const scanKinds = Object.keys(SCAN);
+const normCache = new Map();
+// model parts with a matrix that puts the model's footprint centre at x=z=0 and
+// its lowest point at y=0 (optionally laid on its side)
+function normalizedParts(key, lie, flat) {
+  const ck = key + (lie ? 'L' : '') + (flat ? 'F' : '');
+  if (normCache.has(ck)) return normCache.get(ck);
+  const parts = ASSETS.parts(key), b = ASSETS.bounds(key);
+  if (!parts || !b) return null;
+  const cx = (b.min[0] + b.max[0]) / 2, cy = (b.min[1] + b.max[1]) / 2, cz = (b.min[2] + b.max[2]) / 2;
+  const pre = new THREE.Matrix4();
+  if (lie) {
+    // rotate about the centre so the long axis lies along x, then rest on the ground
+    const r = new THREE.Matrix4().makeRotationZ(Math.PI / 2);
+    pre.makeTranslation(0, (b.max[0] - b.min[0]) / 2, 0).multiply(r).multiply(new THREE.Matrix4().makeTranslation(-cx, -cy, -cz));
+  } else if (flat) {
+    // the ring lies flat (tyre, lifebuoy): if it was modelled standing, tip it over
+    const tall = (b.max[1] - b.min[1]) > Math.max(b.max[0] - b.min[0], b.max[2] - b.min[2]) * 0.8;
+    if (tall) {
+      const r = new THREE.Matrix4().makeRotationX(Math.PI / 2);
+      pre.makeTranslation(0, (b.max[2] - b.min[2]) / 2, 0).multiply(r).multiply(new THREE.Matrix4().makeTranslation(-cx, -cy, -cz));
+    } else pre.makeTranslation(-cx, -b.min[1], -cz);
+  } else pre.makeTranslation(-cx, -b.min[1], -cz);
+  const out = parts.map((pt) => ({ geometry: pt.geometry, material: pt.material, matrix: pre.clone().multiply(pt.matrix), lod: pt.lod }));
+  out.size = Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) * 0.5;
+  normCache.set(ck, out);
+  return out;
+}
+const bobMats = new Map();
+function bobMaterial(m) {
+  if (!bobMats.has(m)) { const c = m.clone(); patchMaterial(c, { bob: true, prop: true }); bobMats.set(m, c); }
+  return bobMats.get(m);
+}
+const hash3 = (x, y, z) => { const h = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453; return h - Math.floor(h); };
 
 // Reusable prop geometry (built once, shared by every instance in every chunk).
 const cache = new Map();
@@ -101,10 +190,14 @@ export class InstanceBatch {
     if (!this.map.has(k)) this.map.set(k, { prop, matKey, list: [] });
     this.map.get(k).list.push({ x, y, z, rx, ry, rz, sx: sx ?? s, sy: sy ?? s, sz: sz ?? s, color });
   }
-  build(origin, { shadows = false } = {}) {
+  // dynamic: the batch rides a moving parent (rafts), so scanned props get
+  // their own local InstancedMeshes instead of joining the world instancer
+  build(origin, { shadows = false, dynamic = false } = {}) {
     const out = [];
+    if (ASSETS && INSTANCER) this.buildScanned(origin, shadows, out, dynamic);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
     for (const { prop, matKey, list } of this.map.values()) {
+      if (!list.length || !defs[prop]) continue;
       const im = new THREE.InstancedMesh(propGeometry(prop), mat(matKey), list.length);
       list.forEach((it, i) => {
         e.set(it.rx, it.ry, it.rz);
@@ -120,5 +213,74 @@ export class InstanceBatch {
       out.push(im);
     }
     return out;
+  }
+  // pull every instance that has a scanned stand-in out of the procedural lists
+  buildScanned(origin, shadows, out, dynamic) {
+    const groups = new Map(); // `${key}|${lie}|${bob}` → {key, lie, flat, bob, items}
+    for (const entry of this.map.values()) {
+      const sc = SCAN[entry.prop];
+      if (!sc || (dynamic && entry.prop === 'foliage')) continue;
+      const keep = [];
+      for (const it of entry.list) {
+        const h = hash3(it.x, it.y, it.z);
+        const key = sc.keys[Math.floor(h * sc.keys.length) % sc.keys.length];
+        if (!ASSETS.has(key)) { keep.push(it); continue; }
+        const lie = !!sc.lie || (sc.lieSome && h > 0.5);
+        const bob = /Float$/.test(entry.matKey);
+        const gk = `${key}|${lie}|${bob}`;
+        if (!groups.has(gk)) groups.set(gk, { key, lie, flat: !!sc.flat, bob, sc, items: [] });
+        groups.get(gk).items.push(it);
+      }
+      entry.list = keep;
+    }
+    const q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc3 = new THREE.Vector3();
+    const chunkKey = 'c' + (++chunkSeq);
+    let any = false;
+    for (const g of groups.values()) {
+      const parts = normalizedParts(g.key, g.lie, g.flat);
+      if (!parts) continue;
+      const k = g.sc.scale ?? 1;
+      const gk = `${g.key}|${g.lie ? 'L' : ''}${g.flat ? 'F' : ''}|${g.bob ? 'B' : ''}`;
+      if (dynamic) {
+        // rides a moving parent: a THREE.LOD per group (full mesh near, LOD1 beyond, nothing far)
+        const lod = new THREE.LOD();
+        const levels = [new THREE.Group(), new THREE.Group()];
+        for (const part of parts) {
+          const im = new THREE.InstancedMesh(part.geometry, g.bob ? bobMaterial(part.material) : part.material, g.items.length);
+          g.items.forEach((it, i) => {
+            e.set(it.rx * 0.3, it.ry + (g.sc.ry || 0), it.rz * 0.3);
+            const ss = g.sc.useS ? it.sx * k : k;
+            const m4 = new THREE.Matrix4().compose(p.set(it.x - origin.x, it.y - origin.y + (g.sc.base || 0) * ss, it.z - origin.z), q.setFromEuler(e), sc3.set(ss, ss, ss)).multiply(part.matrix);
+            im.setMatrixAt(i, m4);
+          });
+          im.computeBoundingSphere();
+          im.castShadow = shadows && !part.lod; im.receiveShadow = true; im.name = 'scan:' + g.key + (part.lod ? ':lod1' : '');
+          if (parts.size < 1.5) im.layers.set(LAYER_DETAIL);
+          levels[part.lod ? 1 : 0].add(im);
+        }
+        lod.addLevel(levels[0], 0);
+        lod.addLevel(levels[1], 14 + parts.size * 8);
+        lod.addLevel(new THREE.Object3D(), 60 + parts.size * 40);
+        out.push(lod);
+        continue;
+      }
+      INSTANCER.group(gk, g.bob ? parts.map((pt) => ({ ...pt, material: bobMaterial(pt.material) })) : parts, parts.size * k, shadows);
+      // world-space matrices (the instancer lives at the scene root)
+      const mats = g.items.map((it) => {
+        const s = g.sc.useS ? it.sx * k : (Math.abs(it.sx - it.sy) < 1e-3 && Math.abs(it.sx - it.sz) < 1e-3 ? Math.min(1.25, Math.max(0.8, it.sx)) : 1) * k;
+        e.set(g.lie ? 0 : it.rx * 0.3, it.ry + (g.sc.ry || 0), g.lie ? 0 : it.rz * 0.3);
+        return new THREE.Matrix4().compose(p.set(it.x, it.y + (g.sc.base || 0) * (g.sc.useS ? s : 1), it.z), q.setFromEuler(e), sc3.set(s, s, s));
+      });
+      INSTANCER.add(gk, chunkKey, mats);
+      any = true;
+    }
+    if (any) {
+      // handle: when the chunk is disposed, its instances leave the instancer
+      const h = new THREE.Object3D();
+      h.name = 'scan-handle';
+      h.userData.scanChunk = chunkKey;
+      h.userData.release = () => INSTANCER.remove(chunkKey);
+      out.push(h);
+    }
   }
 }

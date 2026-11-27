@@ -134,10 +134,19 @@ export function cityChunk(ctx, cx, cz, lod, region) {
     for (let i = 0; i < nDeb; i++) {
       const p = streetPoint(rng, x0, z0, P, SW);
       if (!p || wm.landmarkClaim(p.x, p.z, 6)) continue;
-      const t = rng.weighted([{ w: 5, v: 'plank' }, { w: 2, v: 'barrelFloat' }, { w: 2, v: 'pallet' }, { w: 1, v: 'chairFloat' }, { w: 1, v: 'mattress' }, { w: 4, v: 'bottle' }, { w: 1, v: 'tire' }]);
-      const mk = t === 'mattress' ? 'fabricFloat' : t === 'bottle' || t === 'barrelFloat' || t === 'tire' ? 'plasticFloat' : 'woodFloat';
+      const t = rng.weighted([{ w: 5, v: 'plank' }, { w: 2, v: 'barrelFloat' }, { w: 2, v: 'pallet' }, { w: 1, v: 'chairFloat' }, { w: 1, v: 'mattress' }, { w: 4, v: 'bottle' }, { w: 1, v: 'tire' }, { w: 1, v: 'lifebuoy' }, { w: 0.6, v: 'lifeJacket' }, { w: 2, v: 'trash' }]);
+      const mk = t === 'mattress' || t === 'lifeJacket' ? 'fabricFloat' : ['bottle', 'barrelFloat', 'tire', 'lifebuoy', 'trash'].includes(t) ? 'plasticFloat' : 'woodFloat';
       const col = t === 'barrelFloat' ? rng.pick([[0.2, 0.3, 0.6], [0.6, 0.2, 0.1], [0.5, 0.5, 0.45]]) : t === 'bottle' ? [0.7, 0.8, 0.85] : t === 'mattress' ? [0.6, 0.56, 0.48] : [0.75, 0.68, 0.6];
       inst.add(t, mk, p.x, 0, p.z, { ry: rng.range(0, 6.28), color: col });
+    }
+    // the street furniture that was left behind, now on the bottom
+    const pd = ctx.settings.q.propDensity ?? 1;
+    const nBed = Math.round(rng.int(6, 12) * density * pd);
+    for (let i = 0; i < nBed; i++) {
+      const p = streetPoint(rng, x0, z0, P, SW);
+      if (!p || wm.landmarkClaim(p.x, p.z)) continue;
+      const t = rng.weighted([{ w: 2, v: 'hydrant' }, { w: 2, v: 'utilityBox' }, { w: 2, v: 'barrier' }, { w: 2, v: 'trashCan' }, { w: 1, v: 'wheelRim' }, { w: 2, v: 'tire' }, { w: 1, v: 'rocks' }]);
+      inst.add(t, 'concrete', p.x, wm.seabedAt(p.x, p.z), p.z, { ry: rng.range(0, 6.28), rz: rng.range(-0.15, 0.15) });
     }
     // seabed
     b.object(seabedMesh(wm, x0, z0, CHUNK, 16, 'asphalt', origin));
@@ -180,6 +189,11 @@ function furnishFloor(b, rng, s, id, inst) {
     if (t === 'shelf') b.boxR(x, fy + 1, z, 1.8, 2, 0.4, rng.pick([0, Math.PI / 2]), 'wood', { color: dark, collide: true });
   }
   for (let i = 0; i < 6; i++) inst.add('plank', 'wood', rng.range(s.x0 + 1, s.x1 - 1), fy + 0.03, rng.range(s.z0 + 1, s.z1 - 1), { ry: rng.range(0, 6), color: [0.5, 0.45, 0.4] });
+  // clutter: what people left when the water came
+  for (let i = 0, n = rng.int(3, 8); i < n; i++) {
+    const t = rng.weighted([{ w: 3, v: 'trash' }, { w: 1, v: 'stool' }, { w: 1, v: 'bucket' }, { w: 1, v: 'shelves' }, { w: 1, v: 'jerrycan' }]);
+    inst.add(t, 'wood', rng.range(s.x0 + 1.2, s.x1 - 1.2), fy, rng.range(s.z0 + 1.2, s.z1 - 1.2), { ry: rng.range(0, 6.28) });
+  }
   const lc = rng.int(1, 2);
   for (let i = 0; i < lc; i++) {
     const x = rng.range(s.x0 + 2, s.x1 - 2), z = rng.range(s.z0 + 2, s.z1 - 2);
@@ -212,6 +226,17 @@ function rooftopCamp(ctx, b, rng, s, id, inst) {
   }
   // rain catchers, buckets
   for (let i = 0; i < rng.int(1, 4); i++) inst.add('barrel', 'plastic', rng.range(s.x0 + 1.5, s.x1 - 1.5), top + 0.45, rng.range(s.z0 + 1.5, s.z1 - 1.5), { color: rng.pick([[0.2, 0.3, 0.6], [0.55, 0.55, 0.5]]) });
+  // the camp's leftovers and the roof's slow return to green
+  for (let i = 0, n = rng.int(2, 6); i < n; i++) {
+    const t = rng.weighted([{ w: 2, v: 'jerrycan' }, { w: 1, v: 'propane' }, { w: 2, v: 'bucket' }, { w: 2, v: 'trash' }, { w: 1, v: 'stool' }, { w: 0.6, v: 'barrelStove' }, { w: 1, v: 'tire' }]);
+    inst.add(t, 'wood', rng.range(s.x0 + 1.5, s.x1 - 1.5), top + (t === 'tire' ? 0.12 : 0), rng.range(s.z0 + 1.5, s.z1 - 1.5), { ry: rng.range(0, 6.28) });
+  }
+  for (let i = 0, n = rng.int(2, 7); i < n; i++) {
+    const edge = rng.int(0, 3), u = rng.range(0.1, 0.9);
+    const x = edge < 2 ? s.x0 + (s.x1 - s.x0) * u : (edge === 2 ? s.x0 + 0.6 : s.x1 - 0.6);
+    const z = edge >= 2 ? s.z0 + (s.z1 - s.z0) * u : (edge === 0 ? s.z0 + 0.6 : s.z1 - 0.6);
+    inst.add(rng.weighted([{ w: 3, v: 'fern' }, { w: 2, v: 'foliage' }, { w: 1, v: 'roots' }]), 'foliage', x, top + (rng.chance(0.5) ? 0 : 0.75), z, { ry: rng.range(0, 6.28), s: rng.range(0.8, 1.2) });
+  }
   if (ctx.data.logPlacements) {
     const lp2 = ctx.data.logPlacements.ambient;
     if (lp2 && rng.chance(0.25)) ctx.events.emit('ambientNoteSlot', { id, x: cx, y: top, z: cz });

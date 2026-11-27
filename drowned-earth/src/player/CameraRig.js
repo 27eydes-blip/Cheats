@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { damp } from '../core/rng.js';
 
-// First-person camera with sway (fatigue), shiver (cold), impact shake, plus an
+// First-person camera with handheld drift, breathing, stride sway, sway
+// (fatigue), shiver (cold), impact shake, plus an
 // optional third-person chase view while piloting the boat.
 export class CameraRig {
   constructor(ctx, camera) {
@@ -49,6 +50,18 @@ export class CameraRig {
     const shiver = (survival ? survival.shiverAmount() : 0) * calm;
     const swayX = Math.sin(this.t * 0.7) * 0.012 * fatigue + Math.sin(this.t * 31) * 0.0025 * shiver;
     const swayY = Math.sin(this.t * 0.53 + 1) * 0.009 * fatigue + Math.sin(this.t * 27 + 2) * 0.002 * shiver;
+    // handheld: a slow, never-repeating drift, like a camera held by a person
+    const n = (a, b, c) => Math.sin(this.t * a) * 0.6 + Math.sin(this.t * b + 1.3) * 0.3 + Math.sin(this.t * c + 2.1) * 0.1;
+    const exert = Math.min(1, (player.sprintTime || 0) * 0.25 + (survival ? survival.swayAmount() * 0.5 : 0));
+    const hand = 0.0016 * calm;
+    const breath = Math.sin(this.t * (1.55 + exert * 1.5)) * (0.0014 + exert * 0.0045) * calm;
+    // footstep sway: the head rolls and drifts with each stride
+    const bp = player.bobPhase || 0;
+    this.moveK = damp(this.moveK || 0, Math.abs(bp - (this.lastBp ?? bp)) > 1e-4 && player.mode === 'foot' ? 1 : 0, 6, dt);
+    this.lastBp = bp;
+    const stepRoll = Math.sin(bp * Math.PI * 0.5) * 0.0065 * this.moveK * calm;
+    const stepYaw = Math.sin(bp * Math.PI * 0.5 + 0.6) * 0.0035 * this.moveK * calm;
+    const hpx = n(0.83, 1.91, 3.7) * hand + breath, hpy = n(0.61, 1.37, 2.9) * hand + stepYaw, hpr = n(0.47, 1.13, 2.3) * hand * 0.8 + stepRoll;
     const sh = this.shake * this.shake * calm;
     const shx = (Math.random() - 0.5) * 0.05 * sh, shy = (Math.random() - 0.5) * 0.05 * sh;
 
@@ -76,13 +89,13 @@ export class CameraRig {
         cam.position.copy(player.position);
         cam.position.y += 1.05;
         const boatRoll = boat.roll * 0.6, boatPitch = boat.pitch * 0.6;
-        cam.rotation.set(player.pitch + boatPitch + swayY + shy, player.yaw + swayX + shx, -boatRoll, 'YXZ');
+        cam.rotation.set(player.pitch + boatPitch + swayY + shy + hpx * 0.7, player.yaw + swayX + shx + hpy * 0.7, -boatRoll + hpr * 0.7, 'YXZ');
         player.eye.copy(cam.position);
       } else {
         cam.position.copy(player.eye);
         let roll = 0;
         if (player.mode === 'swim' && !player.headUnder) roll = Math.sin(this.t * 1.3) * 0.02;
-        cam.rotation.set(player.pitch + swayY + shy, player.yaw + swayX + shx, roll + Math.sin(this.t * 0.4) * 0.006 * fatigue, 'YXZ');
+        cam.rotation.set(player.pitch + swayY + shy + hpx, player.yaw + swayX + shx + hpy, roll + hpr + Math.sin(this.t * 0.4) * 0.006 * fatigue, 'YXZ');
       }
       this.smoothPos.copy(cam.position);
     }
