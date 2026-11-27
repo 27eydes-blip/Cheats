@@ -132,7 +132,7 @@ export class Viewer {
     const [dist, drop] = SHOTS[this.shot];
     const h = p0.human;
     const head = h.bone.head.getWorldPosition(new THREE.Vector3());
-    const tgt = this.shot === 'full' ? new THREE.Vector3(0, h.height * 0.5, 0) : this.shot === 'mid' ? new THREE.Vector3(head.x, head.y - 0.32, head.z) : head.clone().add(new THREE.Vector3(0, 0.02, 0));
+    const tgt = this.shot === 'full' ? new THREE.Vector3(0, h.height * 0.5, 0) : this.shot === 'mid' ? new THREE.Vector3(head.x, head.y - 0.2, head.z) : head.clone().add(new THREE.Vector3(0, 0.02, 0));
     if (this.row) { tgt.set(0, h.height * 0.55, 0); }
     const r = this.row ? 4.2 : dist;
     this.camera.position.set(tgt.x + Math.sin(this.yaw) * r, tgt.y - drop * 0.1 + (this.shot === 'close' ? 0.02 : 0.05), tgt.z + Math.cos(this.yaw) * r);

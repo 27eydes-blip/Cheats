@@ -44,10 +44,11 @@ export class Person {
     const i = kit.boneIndex['lowerarm02.L'] ?? kit.boneIndex['lowerarm01.L'];
     const h = this.human.restHeads[kit.boneIndex['wrist.L']], t = this.human.restHeads[i];
     const dir = new THREE.Vector3(t[0] - h[0], t[1] - h[1], t[2] - h[2]).normalize();
-    const band = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 8, 24), new THREE.MeshStandardMaterial({ color: col, roughness: 0.6 }));
+    // a woven cloth band, not a bangle
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.029, 0.0042, 6, 28), new THREE.MeshStandardMaterial({ color: new THREE.Color(col).multiplyScalar(0.8), roughness: 0.95 }));
     band.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
     band.position.copy(dir).multiplyScalar(0.035);
-    band.scale.set(1, 0.85, 1.6);
+    band.scale.set(1, 0.82, 2.6);
     band.castShadow = true;
     wrist.add(band);
     this.band = band;
