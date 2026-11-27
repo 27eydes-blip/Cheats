@@ -418,7 +418,7 @@ export class Game {
     u.uSunVis.value = Math.max(0, ctx.time.sunDir.y) * (1 - ctx.weather.cur.cloud * 0.6);
     // screen-space reflections on wet ground, volumetric light density, motion blur
     ctx.ssrWet = G.uWet.value;
-    ctx.volDensity = ctx.atmosphere.underwater ? 0 : (0.0025 + w.fog * 0.35 + dawnDusk * 0.005 + w.rain * 0.004) * (1 - ctx.atmosphere.indoor * 0.6);
+    ctx.volDensity = ctx.atmosphere.underwater ? 0 : (0.0015 + w.fog * 0.15 + dawnDusk * 0.0025 + w.rain * 0.002) * (1 - ctx.atmosphere.indoor * 0.6);
     ctx.motionBlur = ctx.mode === 'play' && !ctx.photoMode ? 0.45 : 0;
     // depth of field focus pull: on the speaker during dialogue, otherwise centre-screen
     const talkTo = ctx.dialogue?.target?.();

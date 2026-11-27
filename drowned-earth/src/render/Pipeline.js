@@ -273,7 +273,8 @@ void main() {
   }
   float d = texture2D(tDepth, uv).x;
   // subtle chromatic aberration toward the frame edges
-  vec2 ca = (uv - 0.5) * uLens * 0.0035;
+  // lens fringing: faint, and only toward the corners (it reads as fake mid-frame)
+  vec2 cq = uv - 0.5; vec2 ca = cq * dot(cq, cq) * uLens * 0.004;
   vec3 col = uFXAA > 0.5 ? fxaa(uv) : texture2D(tColor, uv).rgb;
   if (uLens > 0.5) { col.r = mix(col.r, texture2D(tColor, uv + ca).r, 0.85); col.b = mix(col.b, texture2D(tColor, uv - ca).b, 0.85); }
   // camera motion blur: reproject this pixel into last frame and smear along the difference
@@ -317,7 +318,7 @@ void main() {
     vec3 mcol = uMistCol + uSunCol * toSun * 0.9;
     col = mix(col, mcol, clamp(mist, 0.0, 0.92));
     // volumetric sunlight (Ultra): in-scattered light through the shadow map
-    if (uVol > 0.5) { vec4 vs = texture2D(tVol, vUv); col = col * mix(1.0, vs.a, 0.35) + vs.rgb; }
+    if (uVol > 0.5) { vec4 vs = texture2D(tVol, vUv); col = col * mix(1.0, vs.a, 0.2) + vs.rgb * 0.55; }
     // god rays: march toward the sun, gathering open sky between the towers
     if (uShaft > 0.001) {
       vec2 delta = (uSunUV - uv) / 36.0;
