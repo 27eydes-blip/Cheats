@@ -1403,6 +1403,23 @@ body.ice .fp-feats span{background:#fff;border-color:#d3e3ef}
 .cere-face svg{display:block;width:100%;height:100%}
 .plink{display:inline-flex;align-items:center}
 @media (max-width:600px){.phead .pportrait~.pno{display:none}.phead{gap:14px}}
+/* ===== Smooth scrolling polish ===== */
+html{scroll-behavior:auto!important;-webkit-text-size-adjust:100%}
+html,body{overscroll-behavior-y:none}
+body{-webkit-tap-highlight-color:transparent}
+/* Horizontal strips: momentum, snap, and no accidental swipe-back */
+.tabs,.chips,.cfilt,.navg .tabs,.hub-head+.tabs,.aggr,.tw{overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.tabs>*,.chips>*,.cfilt>*{scroll-snap-align:start}
+/* Long lists only draw what's on screen */
+.teams{content-visibility:auto;contain-intrinsic-size:auto 900px}
+.sel-conf{content-visibility:auto;contain-intrinsic-size:auto 50px}
+.log>div,.news>div{content-visibility:auto;contain-intrinsic-size:auto 40px}
+/* Buttons respond instantly to taps */
+button,.btn,.tab,[data-act]{touch-action:manipulation}
+@media (max-width:900px){
+  /* Frosted blur behind cards is costly while scrolling on phones; cards are nearly opaque anyway */
+  .panel,.chip,.glass,.navgroups,.dt,.gh-wk,.bwatch,.fpm,.fp-stats div{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
 /* ===== Ice Cold base (generated rules follow) ===== */
 body.ice{--amber:var(--ta);--night:#eaf4fb;--panel:#ffffff;--panel-2:#f3f8fc;--line:#c9dbe9;--chalk:#0d2236;--muted:#5d7891;--glass:rgba(255,255,255,.86);--hair:rgba(16,42,67,.1);--steel:#3d6d94;--good:#0a8a5c;--bad:#c0264a;--gold-soft:var(--ta-d);--neon:var(--ta);
   color:#0d2236;background:linear-gradient(180deg,color-mix(in srgb,var(--ta) 7%,#f3f9fd),color-mix(in srgb,var(--ta) 14%,#dcebf6)) fixed!important;background-color:#eaf4fb!important}
@@ -1468,6 +1485,11 @@ body.ice .hub-head{background:linear-gradient(135deg,var(--ta),color-mix(in srgb
 body.ice .hub-head :is(h1,.eyebrow){color:#fff!important}
 body.ice .uchip{background:#fff!important;color:#0d2236!important;border:1px solid #c9dbe9!important;text-shadow:none!important}
 body.ice .uchip.on{background:var(--ta)!important;color:var(--ta-ink)!important;border-color:var(--ta)!important}
+/* Paint the dark backdrop once on a fixed layer instead of a fixed background (iPhone repaints those on every scroll) */
+body.ice{background:transparent!important;background-color:transparent!important}
+body.ice::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:1!important;display:block!important;
+  background:radial-gradient(ellipse 120% 60% at 50% -10%,color-mix(in srgb,var(--ta) 38%,#22384f),transparent 70%),linear-gradient(180deg,color-mix(in srgb,var(--ta) 16%,#1c2f44),color-mix(in srgb,var(--ta) 10%,#0e1a28))}
+body.ice .panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.97)!important}
 body.ice{background:radial-gradient(1100px 520px at 50% -220px,color-mix(in srgb,var(--tc1) 38%,transparent),transparent 72%),
     radial-gradient(900px 500px at 50% 120%,color-mix(in srgb,var(--tc1) 14%,transparent),transparent 70%),
     repeating-linear-gradient(90deg,rgba(13,34,54,0.008) 0 1px,transparent 1px 96px),var(--night)}
@@ -1820,6 +1842,11 @@ body.ice .hub-head{background:linear-gradient(135deg,var(--ta),color-mix(in srgb
 body.ice .hub-head :is(h1,.eyebrow){color:#fff!important}
 body.ice .uchip{background:#fff!important;color:#0d2236!important;border:1px solid #c9dbe9!important;text-shadow:none!important}
 body.ice .uchip.on{background:var(--ta)!important;color:var(--ta-ink)!important;border-color:var(--ta)!important}
+/* Paint the dark backdrop once on a fixed layer instead of a fixed background (iPhone repaints those on every scroll) */
+body.ice{background:transparent!important;background-color:transparent!important}
+body.ice::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:1!important;display:block!important;
+  background:radial-gradient(ellipse 120% 60% at 50% -10%,color-mix(in srgb,var(--ta) 38%,#22384f),transparent 70%),linear-gradient(180deg,color-mix(in srgb,var(--ta) 16%,#1c2f44),color-mix(in srgb,var(--ta) 10%,#0e1a28))}
+body.ice .panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.97)!important}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -6665,7 +6692,7 @@ function render(){
     // Switching tabs only fades the content area; a new screen gets the full entrance.
     if(k!==lastView&&S&&base===lastBase&&!WATCH){lastView=k;app.classList.remove("enter");const b=app.querySelector&&app.querySelector(".tabbody,.hubgrid");if(b)b.classList.add("swap")}
     else if(k!==lastView){lastView=k;lastBase=base;app.classList.remove("enter");void app.offsetWidth;app.classList.add("enter");clearTimeout(enterT);enterT=setTimeout(()=>app.classList.remove("enter"),700)}else app.classList.remove("enter")}catch(e){}
-  if(tabJump){tabJump=false;const n=app.querySelector&&app.querySelector(".navgroups");if(n){const y=n.getBoundingClientRect().top+scrollY-8;if(scrollY>y+4)scrollTo({top:y,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}}
+  if(tabJump){tabJump=false;const n=app.querySelector&&app.querySelector(".navgroups"),vis=n&&n.offsetParent!==null&&n.getClientRects().length;if(vis){const y=n.getBoundingClientRect().top+scrollY-8;if(scrollY>y+4)scrollTo({top:y,behavior:"instant"})}else if(scrollY>0)scrollTo({top:0,behavior:"instant"})}
 }
 function renderCore(){
   if(!S)return renderSelect();
@@ -7664,10 +7691,10 @@ function dramaPick(v){
 function jugSetup(){
   if(!G19()||(S.jug&&S.jug.season===S.season))return;let pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]===2);if(!pool.length)pool=S.teams.filter(t=>t.id!==S.user&&CONF_TIER[t.conf]>=2);if(!pool.length)return;
   const t=pool[Math.floor(Math.random()*pool.length)];t.roster.slice().sort((a,b)=>b.ovr-a.ovr).slice(0,5).forEach(p=>{p.ovr=Math.min(90,Math.max(p.ovr+9,82+Math.floor(Math.random()*5)))});
-  const boss=rankIds().find(id=>id!==S.user);S.jug={season:S.season,id:t.id,boss};RK.key=null;
+  const opps=new Set();for(const day of S.schedule||[])for(const g of day)if(g[0]===S.user||g[1]===S.user)opps.add(g[0]===S.user?g[1]:g[0]);const boss=rankIds().find(id=>id!==S.user&&opps.has(id))??rankIds().find(id=>id!==S.user);S.jug={season:S.season,id:t.id,boss};RK.key=null;
   news(`🧨 Nobody's talking about ${t.name}. They should be. Their starting five is loaded.`);
   post({h:"@TheBubbleBoy",n:"",v:true,txt:`Mark it down: ${t.name} (${CONFS[t.conf]}) is this year's juggernaut. Nobody wants them in March. 🧨`,tag:"Juggernaut",likes:clout(2)});
-  if(boss!=null)post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`Preseason No. 1 ${T(boss).name} is the team everybody's chasing. The Final Boss. 👹`,tag:"Final Boss",likes:clout(2)});
+  if(boss!=null)post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`${T(boss).name} is the toughest team on ${T(S.user).name}'s schedule. The Final Boss. 👹`,tag:"Final Boss",likes:clout(2)});
 }
 function jugGame(gm){
   const J=S.jug;if(!G19()||!J||J.season!==S.season||gm.winner!==S.user)return;const o=gm.h===S.user?gm.a:gm.h;
