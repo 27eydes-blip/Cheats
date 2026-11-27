@@ -186,7 +186,8 @@ export function patchMaterial(mat, opts = {}) {
           room = mix(room, mix(vec3(0.55, 0.5, 0.42), vec3(0.42, 0.3, 0.26), step(0.63, h)) * (0.72 + 0.28 * sin(f.x * 70.0 + h * 9.0)), cur * 0.85);
           deInterior = room;
           deTrans = pane * mix(0.75, 0.45, curtain);
-          if (deLit > 0.5) deInterior = mix(room, vec3(1.0, 0.62, 0.3), 0.6) * 3.0;
+          // a lamp on inside: only reads once it's dark out, and it's warm, never grey
+          if (deLit > 0.5) deInterior = mix(room, mix(room, vec3(1.0, 0.58, 0.26) * 3.2, 0.85), smoothstep(0.35, 0.9, uNight));
         }
         // glass is dark and reflective; dirt makes it hazy at the bottom
         float dirt = texture2D(uNoiseTex, vUvM * 0.4).g * (0.6 + 0.4 * (1.0 - hf));
