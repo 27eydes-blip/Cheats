@@ -35,7 +35,7 @@ void main() {
     float rays = sin(ang * 23.0 + uTime * 0.3) * sin(ang * 41.0 - uTime * 0.21) * 0.5 + 0.5;
     rays = pow(rays, 3.0) * smoothstep(1.2, 0.0, length(dir)) * uSunVis * (1.0 - uIndoor);
     float distFade = 1.0 - exp(-viewZ * 0.09);
-    col += uUnderColor * rays * 2.4 * distFade * exp(-uCamDepth * 0.06);
+    col += uUnderColor * rays * 2.4 * distFade * exp(-uCamDepth * 0.13);
     // drifting murk
     float murk = rnd(floor(vUv * 180.0 + uTime * 0.6)) * 0.02;
     col += uUnderColor * murk;

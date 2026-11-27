@@ -91,8 +91,9 @@ export class Atmosphere {
     if (this.underwater) {
       const depth = Math.max(0, -camera.position.y);
       const daylight = Math.max(0.03, (1 - night) * cloudDim);
-      this.fog.color.copy(this.underColor).multiplyScalar(daylight * Math.exp(-depth * 0.05) + 0.004);
-      this.fog.near = (0.07 + depth * 0.0025 + w.rain * 0.02 + this.indoor * 0.04) * (1 - G.uGlow.value * 0.6);
+      const zc = this.zoneColor ? tmp.setRGB(...this.zoneColor).multiplyScalar(3) : this.underColor;
+      this.fog.color.copy(zc).multiplyScalar(daylight * Math.exp(-depth * 0.05) + 0.004);
+      this.fog.near = (this.zoneFog || 1) * (0.07 + depth * 0.0025 + w.rain * 0.02 + this.indoor * 0.04) * (1 - G.uGlow.value * 0.6);
       if (G.uGlow.value > 0) this.fog.color.lerp(tmp.setRGB(0.01, 0.12, 0.1), G.uGlow.value * 0.5);
     } else {
       this.fog.color.copy(fogCol);

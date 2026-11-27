@@ -84,6 +84,7 @@ export class UI {
     this.wrist.classList.toggle('on', diving);
     if (diving) {
       this.wrist.querySelector('.depth').textContent = player.depth.toFixed(1);
+      this.wrist.querySelector('.lbl').textContent = (this.ctx.abyss?.zone?.name || 'depth').replace('the ', '').toUpperCase();
       const o2 = survival.oxygen / 100;
       const ring = this.wrist.querySelector('.o2');
       ring.setAttribute('stroke-dashoffset', String(314 * (1 - o2)));

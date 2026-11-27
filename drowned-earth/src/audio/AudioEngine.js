@@ -227,6 +227,7 @@ export class AudioEngine {
       case 'answerTone': s.deepTone(this.master, 8, 0.35); this.cap('tone'); break;
       case 'ropeSnap': s.thud(this.world, 3); s.creak(this.world, true); break;
       case 'chimeSwell': for (let i = 0; i < 5; i++) setTimeout(() => s.chime(this.ui), i * 380); break;
+      case 'ping': s.click(this.master, 2400); s.click(this.master, 2400, 0.9); s.click(this.master, 2400, 1.7); break;
       case 'earPop': s.thud(this.master, 0.6); break;
       case 'breath': s.breath(this.master); break;
       case 'deepMoan': this.cap('moan'); s.moan(this.panner(cam.clone().add(new THREE.Vector3((Math.random() - 0.5) * 200, -80, (Math.random() - 0.5) * 200)), 60, 0.4)); break;

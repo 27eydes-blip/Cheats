@@ -20,6 +20,7 @@ export function loadData() {
     raftPieces: get('raftPieces') || {},
     trade: get('trade') || {},
     story: get('story') || {},
+    deep: get('deep') || { zones: [], swarms: [], listeners: [], glow: {} },
     standing: get('standing') || { tiers: {}, steps: {} },
     life: loadLife(optional),
   };

@@ -24,3 +24,10 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 - Title screen now offers Continue / The Drowned District (story) / A Life on the Water / Options, over a slow cinematic dawn flight across the district, with a procedural stencil logo.
 - Options: quality, difficulty (Calm/Standard/Harsh), text size, sound captions, subtitles, reduce motion, colour-safe indicators, high contrast, one-handed touch layout, lens effects, music level.
 - Tests: `scripts/life-smoke.mjs` plays whole lives through the UI with random choices and fails on console errors (4 lives to old age, clean).
+
+### D. The Deep — done
+- `deep/Deep.js` + `data/deep.json`: four depth zones (Sunlit Shallows, Drowned Streets, the Dark Shelf, the Abyss) each with its own water colour, fog density and pressure drain on your air (no pressure suit in stage 1, so the Abyss is a wall). The wrist gauge names the zone.
+- **Lanternfish swarms** (GPU points) in the Sounding, the subway tunnel and Ward 9; each swarm goes dark when a Listener comes within ~28 m.
+- **Listeners**: pale, many-limbed shapes that drift in two areas and hunt by sound only (fast swimming, a clinking spare tank, the boat engine overhead, the sonar pinger). They keep their distance from a still, quiet diver. Contact is dread, not damage: a shake, a moan, air knocked out of you, and it lets you go. The music falls silent when one is near.
+- **The glow creeps**: 520 growth points from the Sounding pit out across the city; the depth they reach rises with a world glow level (+7%/day, +25% after the finale), so after day 2–3 it reaches the drowned streets.
+- Dive gear: spare air bottle (double breath, louder), sonar pinger (finds salvage, wakes things), pressure suit stubbed.

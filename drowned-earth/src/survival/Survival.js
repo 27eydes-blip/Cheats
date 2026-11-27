@@ -39,7 +39,7 @@ export class Survival {
     if (player.flashlight) this.battery = Math.max(0, this.battery - dt * 0.12);
     // oxygen
     if (player.headUnder) {
-      this.oxygen = Math.max(0, this.oxygen - (100 / this.oxygenSeconds) * dt * (this.ctx.input.held.sprint ? 1.4 : 1));
+      this.oxygen = Math.max(0, this.oxygen - (100 / this.oxygenSeconds) * dt * (this.ctx.input.held.sprint ? 1.4 : 1) * (this.pressureDrain || 1));
       if (this.oxygen <= 0) this.drowning += dt; else this.drowning = 0;
     } else { this.oxygen = Math.min(this.maxOxygen, this.oxygen + dt * 35); this.drowning = 0; }
     if (this.drowning > 4 && !this.blackout) this.blackOut('water');
@@ -78,6 +78,16 @@ export class Survival {
   useItem(id) {
     const inv = this.ctx.inventory, d = inv.def(id);
     if (!d?.use || !inv.has(id)) return false;
+    if (d.use.ping) {
+      if (!this.ctx.player.headUnder) { this.ctx.ui.toast('The pinger only works underwater.'); return false; }
+      const ab = this.ctx.abyss; ab.noise = 1; ab.noisePos.copy(this.ctx.player.position);
+      this.ctx.audio?.play('ping');
+      let best = null, bd = 45;
+      for (const it of this.ctx.interact.items.values()) { if (it.kind !== 'container' && it.kind !== 'log') continue; if (it.enabled && !it.enabled(this.ctx, it)) continue; const p = this.ctx.interact.posOf(it); const d = p.distanceTo(this.ctx.player.position); if (d < bd) { bd = d; best = p.clone(); } }
+      if (best) { const v = best.sub(this.ctx.player.position); const ang = Math.atan2(-v.x, -v.z) - this.ctx.player.yaw; const dirs = ['ahead', 'ahead-left', 'left', 'behind-left', 'behind', 'behind-right', 'right', 'ahead-right']; const i = ((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8; this.ctx.ui.whisper(`The ping comes back hard from ${dirs[i]}, about ${Math.round(bd)} metres${v.y < -2 ? ', below you' : ''}. And something else heard it too.`); }
+      else this.ctx.ui.whisper('The ping comes back soft and empty. Something else heard it.');
+      return true;
+    }
     if (d.use.log) { this.ctx.story.openLog(d.use.log); return true; }
     if (d.use.forge) { if (this.ctx.standing.forged != null) { this.ctx.ui.toast('Already wearing it.'); return false; } this.ctx.standing.wearForged(d.use.forge); return true; }
     if (d.use.tank) { if (this.tanks) { this.ctx.ui.toast('The spare bottle is already rigged.'); return false; } this.tanks = 1; this.oxygenSeconds = 95; inv.remove(id); this.ctx.ui.whisper('You strap the spare bottle to your back. Twice the breath. It knocks against your ribs when you swim fast.'); return true; }

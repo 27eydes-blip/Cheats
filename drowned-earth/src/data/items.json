@@ -446,6 +446,18 @@
     "relic",
     "contraband"
    ]
+  },
+  "sonar_pinger": {
+   "name": "Sonar pinger",
+   "desc": "Rusthold build. Ping underwater (Use) to find salvage nearby. Loud. Things below hear it.",
+   "value": 10,
+   "weight": 0.6,
+   "tags": [
+    "gear"
+   ],
+   "use": {
+    "ping": 1
+   }
   }
  }
 }

@@ -20,7 +20,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #070b0d; col
 .wrist.on { opacity: .95; transform: translateY(0) rotate(-8deg); }
 .wrist svg { position: absolute; inset: 0; }
 .wrist .depth { position: absolute; left: 0; right: 0; top: 42px; text-align: center; font: 600 22px/1 ui-monospace, monospace; color: #9fe0c8; text-shadow: 0 0 8px rgba(80,255,200,.4); }
-.wrist .lbl { position: absolute; left: 0; right: 0; top: 70px; text-align: center; font: 10px ui-monospace, monospace; color: #6c8f85; letter-spacing: .2em; }
+.wrist .lbl { position: absolute; left: 10px; right: 10px; top: 70px; text-align: center; font: 8px ui-monospace, monospace; color: #6c8f85; letter-spacing: .08em; line-height: 1.1; }
 .boatgauge { position: absolute; right: 22px; bottom: 26px; font: 12px ui-monospace, monospace; color: var(--dim); text-align: right; line-height: 1.6; opacity: 0; transition: opacity .4s; text-shadow: 0 1px 4px #000; }
 .boatgauge.on { opacity: 1; }
 .boatgauge .bar { display: inline-block; width: 70px; height: 4px; background: rgba(255,255,255,.12); vertical-align: middle; margin-left: 8px; }

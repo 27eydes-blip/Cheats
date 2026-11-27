@@ -24,7 +24,7 @@ export class SaveSystem {
       survival: c.survival.toJSON(), inventory: c.inventory.toJSON(),
       flags: c.state.flags, looted: [...c.state.looted], logs: [...c.state.logs], playTime: c.state.playTime, seen: c.state.seenLines,
       story: c.story.toJSON(), trade: c.trade.stock, radio: { index: c.radio.index },
-      standing: c.standing.toJSON(), economy: c.economy.toJSON(), heat: c.heat.toJSON(), life: c.life?.toJSON?.() || null,
+      standing: c.standing.toJSON(), economy: c.economy.toJSON(), heat: c.heat.toJSON(), deep: c.abyss.toJSON(), life: c.life?.toJSON?.() || null,
     };
   }
   save(reason = 'auto') {
@@ -55,7 +55,7 @@ export class SaveSystem {
     c.survival.load(s.survival); c.inventory.load(s.inventory); c.boatStorage.load(s.boat.storage);
     Object.keys(c.state.flags).forEach((k) => delete c.state.flags[k]); Object.assign(c.state.flags, s.flags);
     c.state.looted = new Set(s.looted); c.state.logs = new Set(s.logs); c.state.playTime = s.playTime; c.state.seenLines = s.seen || {};
-    c.standing.load(s.standing); c.economy.load(s.economy); c.heat.load(s.heat);
+    c.standing.load(s.standing); c.economy.load(s.economy); c.heat.load(s.heat); c.abyss.load(s.deep);
     for (const u of Object.keys(s.boat.upgrades || {})) c.boat.applyUpgrade(u);
     if (s.life && c.life) c.life.load(s.life);
     c.events.emit('standing', c.standing.shown);
