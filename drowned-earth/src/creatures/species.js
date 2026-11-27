@@ -68,26 +68,44 @@ export function gullrat(mgr, c) {
 
 // ---------------------------------------------------------------- siltwolves
 function wolfMesh(scale = 1) {
+  // built facing +X: deep chest, tucked waist, long muzzle, tall ears, two-part legs, low brush tail
   const g = new THREE.Group();
-  const fur = mat(0x4a4a44, { roughness: 0.95 });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.7, 4, 10).rotateZ(Math.PI / 2), fur); body.position.y = 0.6;
-  const neck = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.25, 4, 8), fur); neck.position.set(0.5, 0.78, 0); neck.rotation.z = -0.9;
-  const head = new THREE.Group(); head.position.set(0.68, 0.88, 0);
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), fur); skull.scale.set(1.2, 0.95, 0.9);
-  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.26, 8).rotateZ(-Math.PI / 2), fur); snout.position.x = 0.18; snout.position.y = -0.03;
-  const earL = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 4), fur); earL.position.set(-0.02, 0.14, 0.07);
-  const earR = earL.clone(); earR.position.z = -0.07;
+  const fur = mat(0x5a564c, { roughness: 0.97 });
+  const dark = mat(0x34312b, { roughness: 0.97 });
+  const ell = (rx, ry, rz, m = fur) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), m); e.scale.set(rx, ry, rz); return e; };
+  const chest = ell(0.34, 0.24, 0.19); chest.position.set(0.22, 0.66, 0);
+  const belly = ell(0.3, 0.17, 0.155); belly.position.set(-0.08, 0.64, 0);
+  const hips = ell(0.22, 0.18, 0.15); hips.position.set(-0.36, 0.66, 0);
+  const ruff = ell(0.2, 0.22, 0.2, dark); ruff.position.set(0.42, 0.78, 0); // the mane of wet silt-matted fur
+  const neck = ell(0.17, 0.13, 0.12); neck.position.set(0.52, 0.86, 0); neck.rotation.z = 0.7;
+  const head = new THREE.Group(); head.position.set(0.66, 0.96, 0);
+  const skull = ell(0.15, 0.12, 0.12); skull.position.x = 0.02;
+  const muzzleG = new THREE.CylinderGeometry(0.045, 0.085, 0.24, 8); muzzleG.rotateZ(-Math.PI / 2);
+  const muzzle = new THREE.Mesh(muzzleG, fur); muzzle.position.set(0.2, -0.04, 0);
+  const nose = ell(0.03, 0.025, 0.03, mat(0x111111, { roughness: 0.4 })); nose.position.set(0.32, -0.03, 0);
+  const jaw = ell(0.1, 0.03, 0.05, dark); jaw.position.set(0.16, -0.09, 0);
+  const earG = new THREE.ConeGeometry(0.05, 0.16, 4); earG.translate(0, 0.08, 0);
+  const earL = new THREE.Mesh(earG, dark); earL.position.set(-0.04, 0.09, 0.07); earL.rotation.x = 0.25;
+  const earR = new THREE.Mesh(earG, dark); earR.position.set(-0.04, 0.09, -0.07); earR.rotation.x = -0.25;
   const eyeM = new THREE.MeshBasicMaterial({ color: 0x9a8a40 });
-  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), eyeM); eyeL.position.set(0.1, 0.04, 0.07);
-  const eyeR = eyeL.clone(); eyeR.position.z = -0.07;
-  head.add(skull, snout, earL, earR, eyeL, eyeR);
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 4), eyeM); eyeL.position.set(0.1, 0.03, 0.065);
+  const eyeR = eyeL.clone(); eyeR.position.z = -0.065;
+  head.add(skull, muzzle, nose, jaw, earL, earR, eyeL, eyeR);
   const legs = [];
-  for (const [x, z] of [[0.32, 0.12], [0.32, -0.12], [-0.32, 0.12], [-0.32, -0.12]]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.035, 0.5, 6).translate(0, -0.25, 0), fur);
-    leg.position.set(x, 0.52, z); legs.push(leg); g.add(leg);
+  for (const [x, z, front] of [[0.3, 0.1, 1], [0.3, -0.1, 1], [-0.38, 0.09, 0], [-0.38, -0.09, 0]]) {
+    const hip = new THREE.Group(); hip.position.set(x, 0.6, z);
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(front ? 0.05 : 0.07, 0.22, 3, 6).translate(0, -0.13, 0), fur);
+    const knee = new THREE.Group(); knee.position.y = -0.27; knee.rotation.z = front ? 0.15 : -0.35;
+    const lower = new THREE.Mesh(new THREE.CapsuleGeometry(0.032, 0.26, 3, 6).translate(0, -0.15, 0), dark);
+    const paw = ell(0.06, 0.03, 0.045, dark); paw.position.set(0.03, -0.3, 0);
+    knee.add(lower, paw); hip.add(upper, knee);
+    if (!front) hip.rotation.z = 0.25;
+    legs.push(hip); g.add(hip);
   }
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.45, 6).rotateZ(Math.PI / 2 + 0.6), fur); tail.position.set(-0.6, 0.7, 0);
-  g.add(body, neck, head, tail);
+  const tail = new THREE.Group(); tail.position.set(-0.52, 0.74, 0);
+  const brush = ell(0.07, 0.24, 0.07); brush.position.y = -0.2;
+  tail.add(brush); tail.rotation.z = -0.5;
+  g.add(chest, belly, hips, ruff, neck, head, tail);
   g.scale.setScalar(scale);
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return { g, head, legs, tail, ears: [earL, earR], eyeM };
@@ -132,14 +150,17 @@ export function siltwolf(mgr, c) {
         w.p.x += (tx - w.p.x) * Math.min(1, dt * 3); w.p.z += (tz - w.p.z) * Math.min(1, dt * 3); w.p.y = c.pos.y;
         const vx = w.p.x - ox, vz = w.p.z - oz;
         const look = c.state === 'idle' ? Math.atan2(vx, vz) : Math.atan2(p.x - w.p.x, p.z - w.p.z);
-        if (Math.hypot(vx, vz) > 1e-4 || c.state !== 'idle') w.h += (((look - Math.PI / 2 - w.h + Math.PI) % (Math.PI * 2)) - Math.PI) * Math.min(1, dt * 5);
-        w.g.position.copy(w.p); w.g.rotation.y = -w.h;
+        if (Math.hypot(vx, vz) > 1e-4 || c.state !== 'idle') { let dh = look - Math.PI / 2 - w.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); w.h += dh * Math.min(1, dt * 5); }
+        w.g.position.copy(w.p); w.g.rotation.y = w.h;
         w.ph += dt * (2 + moving * 10);
-        w.legs.forEach((l, k) => { l.rotation.z = Math.sin(w.ph + (k % 2 ? Math.PI : 0) + (k > 1 ? 0.6 : 0)) * 0.5 * moving; });
+        w.legs.forEach((l, k) => { l.rotation.z = (k > 1 ? 0.25 : 0) + Math.sin(w.ph + (k % 2 ? Math.PI : 0) + (k > 1 ? 0.6 : 0)) * 0.5 * moving; });
         // alert: head up, ears forward; warning: head low, hackles, tail stiff
-        w.head.rotation.z = c.state === 'warning' ? -0.45 : c.state === 'alert' ? 0.25 : Math.sin(c.t * 0.4 + i) * 0.15 - 0.2;
-        w.tail.rotation.z = c.state === 'warning' ? 0.3 : c.state === 'idle' ? Math.sin(c.t * 2 + i) * 0.2 : 0;
-        w.ears.forEach((e) => { e.rotation.z = c.state === 'warning' ? -0.7 : 0; });
+        w.head.rotation.z = c.state === 'warning' ? -0.35 : c.state === 'alert' ? 0.2 : Math.sin(c.t * 0.4 + i) * 0.15 - 0.15;
+        w.head.position.y = c.state === 'warning' ? 0.84 : 0.96;
+        w.tail.rotation.z = c.state === 'warning' ? 0.6 : c.state === 'attack' ? 0.2 : -0.5 + (c.state === 'idle' ? Math.sin(c.t * 2 + i) * 0.15 : 0);
+        w.tail.rotation.x = c.state === 'idle' ? Math.sin(c.t * 1.7 + i) * 0.2 : 0;
+        w.ears.forEach((e) => { e.rotation.z = c.state === 'warning' ? -0.9 : c.state === 'alert' ? 0.2 : 0; });
+        w.g.position.y = c.pos.y - (c.state === 'warning' ? 0.06 : 0); // crouched to spring
         w.eyeM.color.setHex(c.state === 'warning' || c.state === 'attack' ? 0xe0c050 : 0x9a8a40);
       });
       pups.forEach((pp, i) => { pp.g.rotation.y = Math.sin(c.t * 0.5 + i) * 0.8; });
