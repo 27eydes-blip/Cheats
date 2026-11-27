@@ -121,7 +121,7 @@ export class Human {
     this.eyeMat = eyeMaterial();
     const iris = kit.eyeColors.find((e) => e.name === p.eyes) || kit.eyeColors[0];
     kit.bind(this.eyeMat, 'map', iris.tex, true);
-    this.eyes = add(phone ? 'eyesLow' : 'eyes', this.eyeMat);
+    this.eyes = add('eyes', this.eyeMat); // high-poly eyes everywhere: ~1k verts, and the eyes are what people look at
     if (this.eyes) {
       // the eye proxy includes a cornea shell (mapped to the atlas corner): make it a clear, wet layer
       const g = this.eyes.geometry, uv = g.attributes.uv, ix = g.index;

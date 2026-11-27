@@ -13,7 +13,7 @@ await server.listen();
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: W, height: H } });
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 600)); });
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(server.resolvedUrls.local[0] + `?viewer=1&clean=1&dynres=0&quality=${process.env.QUALITY || 'high'}`);
 await page.waitForFunction(() => window.__viewer, null, { timeout: 300000 });

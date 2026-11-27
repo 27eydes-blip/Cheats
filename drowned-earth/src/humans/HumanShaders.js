@@ -35,7 +35,7 @@ export function exprUniforms(tex, n) {
 export function skinMaterial(look, exprU, opts = {}) {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.52, metalness: 0 });
   m.normalMap = poreTexture();
-  m.normalScale = new THREE.Vector2(0.16, 0.16);
+  m.normalScale = new THREE.Vector2(0.09, 0.09);
   const u = m.userData.u = {
     ...exprU,
     uTone: { value: new THREE.Color(...(look.tone || [1, 1, 1])) },
@@ -163,7 +163,7 @@ function poreTexture() {
   g.putImageData(img, 0, 0);
   pores = new THREE.CanvasTexture(c);
   pores.wrapS = pores.wrapT = THREE.RepeatWrapping;
-  pores.repeat.set(28, 28);
+  pores.repeat.set(90, 90);
   return pores;
 }
 

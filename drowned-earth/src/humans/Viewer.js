@@ -128,6 +128,7 @@ export class Viewer {
     const p0 = this.people[0];
     if (!p0) return;
     if (this.spin) this.yaw += dt * 0.35;
+    if (!SHOTS[this.shot]) { for (const p of this.people) p.update(dt, this.camera.position); this.ctx.renderer.info.reset(); this.ctx.pipeline.render(this.world); return; }
     const [dist, drop] = SHOTS[this.shot];
     const h = p0.human;
     const head = h.bone.head.getWorldPosition(new THREE.Vector3());
