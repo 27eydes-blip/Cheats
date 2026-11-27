@@ -180,7 +180,9 @@ export function eyeMaterial() {
           // pupil dilation: remap radii inside the iris; iris sits a little behind the cornea (parallax)
           // the atlas holds two eyes; pick this fragment's iris centre
           vec2 uIrisC = vMapUv.x > 0.5 ? vec2(0.705, 0.295) : vec2(0.29, 0.727);
-          vec2 euv = vMapUv - uIrisC; float r = length(euv);
+          // the eyeball's front maps ~one iris-radius off the painted iris: re-centre it
+          vec2 uvE = vMapUv + (vMapUv.x > 0.5 ? vec2(0.0, 0.05) : vec2(0.0, 0.062));
+          vec2 euv = uvE - uIrisC; float r = length(euv);
           float p0 = uIrisR * 0.31, p = uIrisR * mix(0.27, 0.58, uPupil);
           float rs = r < p ? r * (p0 / p) : (r < uIrisR ? p0 + (r - p) * (uIrisR - p0) / (uIrisR - p) : r);
           vec2 suv = uIrisC + (r > 1e-5 ? euv / r * rs : euv);

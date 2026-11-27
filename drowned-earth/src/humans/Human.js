@@ -132,7 +132,8 @@ export class Human {
       }
       g.setIndex([...opaque, ...cornea]);
       g.clearGroups(); g.addGroup(0, opaque.length, 0); g.addGroup(opaque.length, cornea.length, 1);
-      this.corneaMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, metalness: 0, transparent: true, opacity: 0.12, depthWrite: false, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6 });
+      // cornea: only its reflection (wet highlight, the sky in the eye) is added on top of the iris
+      this.corneaMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.03, metalness: 0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, envMapIntensity: 0.7 });
       this.eyes.material = [this.eyeMat, this.corneaMat];
       this.eyes.castShadow = false;
     }
