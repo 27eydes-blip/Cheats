@@ -33,7 +33,7 @@
    "pitch": "0.02"
   },
   "frames": 50,
-  "eval": "(()=>{const c=window.__game.ctx;const r=c.state.community.rafts.get('market');const p=r.root.position.clone();p.x+=3;p.y+=1.2;p.z+=1.5;c.player.mode='foot';c.player.teleport(p);c.player.yaw=-0.12;c.player.pitch=0.0;})()",
+  "eval": "(()=>{const c=window.__game.ctx;const r=c.state.community.rafts.get('market');const p=r.root.position.clone();p.x+=-1.2;p.y+=1.2;p.z+=-3.4;c.player.mode='foot';c.player.teleport(p);c.player.yaw=0.15;c.player.pitch=-0.06;})()",
   "wait": 2500
  },
  {

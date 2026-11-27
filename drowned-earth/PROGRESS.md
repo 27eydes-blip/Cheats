@@ -51,6 +51,12 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 1. Fixed: boat teleporting 13 km on spawn inside a building (hull push-out bug), the far layer (Highmark) showing through from underwater, splash particles reading as smoke columns, underwater light shafts radiating from the floor and showing in tunnels, the title logo clipping, HUD showing over the title, patrol beam washing out the screen in fog, lanternfish too small to see, the glow material blowing out to white, festival lanterns drifting too far too fast, raft-city shot positions, the start view facing the tower wall.
 2. Performance: growth instances drawn only up to the visible count (1.0M → 0.35M triangles at the title), small props on a detail layer skipped by the reflection pass, instanced props don't cast shadows. Audio: water footsteps in shallows, hull creaks with speed, a 3-second silence before the finale.
 
+## Verification (final run)
+- `npm run test:shots` — 12 scripted views (title dawn, dawn, midday, dusk festival, fog patrol, Dark Shelf dive, Portage from the Crow, Ward 9 basement, Beacon at night, midnight storm, phone 390×780 on low quality, third-person dusk): **0 console errors**. Images in `screenshots/`.
+- `npm run test:smoke` — drives the story loop end to end (tie-up, loot, craft, logs, swim/dive, radio, docking at the red lamp, dialogue, trade, workbench, patrol inspection, Standing step, Listener hunt, journal + photo, life-sim ageing, sleep, save/load, the Keeper's decoding, storm, finale): **passes, 0 errors**.
+- `node scripts/life-smoke.mjs 4` — four whole lives through the phone UI with random choices, including skipped 3D scenes: **passes**.
+- `npm run build` and `npm run validate:data`: pass.
+
 ## Decisions (and why)
 - **Story mode and life sim are two doors into one world.** The 3D stage is the immersive slice; the life sim is the long arc. Scenes launched from the life sim snapshot and restore the 3D world so neither corrupts the other's save, while both live in one versioned save file.
 - **Seeded everything.** World chunks, loot, lives and the daily tide all derive from seeds, so content is reproducible for testing and shareable as a seed.
