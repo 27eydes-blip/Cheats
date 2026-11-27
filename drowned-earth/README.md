@@ -78,7 +78,7 @@ the preset's minimum and 100 % to hold **30 fps on Phone, 60 on Standard/Ultra**
 | Volumetric light | – | screen-space shafts | **shadow-mapped volumetric sun** + shafts |
 | Motion blur (Options toggle, **off by default**) | – | camera motion blur | camera motion blur |
 | Sharpen (Options slider, **on, 50 %** by default) | – | CAS-style | CAS-style, slightly stronger after TAA |
-| Texture mip bias | 0 | −0.25 | −0.6, plus log2(render scale) when dynamic res drops |
+| Texture mip bias | 0 | −0.25 | −0.4, plus log2(render scale) when dynamic res drops |
 | Scanned textures | 1k | 1k | 1k at boot, **2k streamed in** |
 | Lantern lights (pool) | 2 | 6 | 12 |
 | Prop density / draw distance | 50 % | 80 % | 100 % |

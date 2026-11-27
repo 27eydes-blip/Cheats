@@ -22,7 +22,7 @@ const PRESETS = {
     chunkNearRadius: 320, chunkFarRadius: 1500, waterRings: 96, waterSegments: 128,
     debrisDensity: 1, particleCount: 1200, rainCount: 6000, envMapUpdates: true,
     maxLights: 10, npcDetail: 2, birdCount: 28, renderScale: 1, reflections: 0.5,
-    label: 'Ultra', targetFps: 60, minScale: 0.85, mipBias: -0.6, textureTier: '2k', anisotropy: 16,
+    label: 'Ultra', targetFps: 60, minScale: 0.85, mipBias: -0.4, textureTier: '2k', anisotropy: 16,
     ssao: true, taa: true, ssr: true, motionBlur: true, volumetric: true, csm: true, pointLights: 12, propDensity: 1, characters: true,
   },
 };

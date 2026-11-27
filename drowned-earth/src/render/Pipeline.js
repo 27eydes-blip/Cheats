@@ -342,7 +342,7 @@ void main() {
     vec3 cT = col / (1.0 + col), nT = n / (1.0 + n), sT = s2 / (1.0 + s2), eT = e / (1.0 + e), wT = w / (1.0 + w);
     vec3 mn = min(cT, min(min(nT, sT), min(eT, wT))), mx = max(cT, max(max(nT, sT), max(eT, wT)));
     vec3 amp = sqrt(clamp(min(mn, 1.0 - mx) / max(mx, 1e-4), 0.0, 1.0));
-    vec3 wgt = -amp / mix(8.0, 5.0, uSharp);
+    vec3 wgt = -amp / mix(10.0, 6.0, uSharp);
     vec3 r = (cT + (nT + sT + eT + wT) * wgt) / (1.0 + 4.0 * wgt);
     r = clamp(r, 0.0, 0.999);
     col = r / (1.0 - r);
