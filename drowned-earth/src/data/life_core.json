@@ -1,0 +1,1314 @@
+{
+ "_doc": "Life-sim core data. births: birth rafts (standing, stat mods, family jobs, starting rep). careers: ranks, pay per rank (scrap/yr), skill stat, minAge, req (Life.meets), standing they impose, reputation shifts, risk + hazards. activities: things you can do once per action slot. world: quiet-year lines, news, heirs, death texts. scenes: hybrid 3D moments.",
+ "births": {
+  "portage": {
+   "name": "Portage",
+   "short": "Portage",
+   "standing": 5,
+   "scrap": 4,
+   "stats": {
+    "charm": 8,
+    "smarts": 3
+   },
+   "rep": {
+    "portage": 20
+   },
+   "parentJobs": [
+    "trader",
+    "deckhand",
+    "brewer",
+    "fisher"
+   ],
+   "mentorJobs": [
+    "trader",
+    "pilot"
+   ],
+   "intro": "The loudest raft in the Drift. Your first sound is somebody haggling over the price of salt."
+  },
+  "greentide": {
+   "name": "Greentide",
+   "short": "Greentide",
+   "standing": 5,
+   "scrap": 2,
+   "stats": {
+    "health": 6,
+    "karma": 6,
+    "smarts": 4
+   },
+   "rep": {
+    "greentide": 25
+   },
+   "parentJobs": [
+    "gardener",
+    "teacher",
+    "medic"
+   ],
+   "mentorJobs": [
+    "gardener",
+    "medic"
+   ],
+   "intro": "Born under a rain-catcher. The first thing you smell is wet soil, which most people on Earth never smell again."
+  },
+  "rusthold": {
+   "name": "Rusthold",
+   "short": "Rusthold",
+   "standing": 5,
+   "scrap": 3,
+   "stats": {
+    "strength": 8,
+    "smarts": 5
+   },
+   "rep": {
+    "rusthold": 25
+   },
+   "parentJobs": [
+    "engineer",
+    "mechanic",
+    "deckhand"
+   ],
+   "mentorJobs": [
+    "engineer",
+    "mechanic"
+   ],
+   "intro": "Born on a welded oil-rig raft. The forge is the warmest place, so that is where they put you."
+  },
+  "vigil": {
+   "name": "The Vigil",
+   "short": "the Vigil",
+   "standing": 5,
+   "scrap": 1,
+   "stats": {
+    "faith": 20,
+    "deepsense": 10,
+    "karma": 5
+   },
+   "rep": {
+    "vigil": 30
+   },
+   "parentJobs": [
+    "teacher",
+    "musician",
+    "medic"
+   ],
+   "mentorJobs": [
+    "musician",
+    "seeker"
+   ],
+   "intro": "Born by candlelight on the faith raft. The Keeper puts a drop of seawater on your tongue, as she does for everyone.",
+   "prep": "on"
+  },
+  "lowlight": {
+   "name": "Lowlight",
+   "short": "Lowlight",
+   "standing": 6,
+   "scrap": 5,
+   "stats": {
+    "nerve": 12,
+    "luck": 6,
+    "karma": -4
+   },
+   "rep": {
+    "lowlight": 30,
+    "tide_ward": -15,
+    "highmark": -10
+   },
+   "parentJobs": [
+    "smuggler",
+    "forger",
+    "pilot"
+   ],
+   "mentorJobs": [
+    "smuggler",
+    "pilot"
+   ],
+   "orphanChance": 0.15,
+   "intro": "Born in the fog sea, on a raft that isn't on any chart. Your mother names you in a whisper, out of habit."
+  },
+  "drifter": {
+   "name": "a Drifter boat",
+   "short": "the drift",
+   "standing": 6,
+   "scrap": 1,
+   "stats": {
+    "stamina": 8,
+    "nerve": 6,
+    "luck": -3
+   },
+   "rep": {},
+   "parentJobs": [
+    "fisher",
+    "salvager"
+   ],
+   "mentorJobs": [
+    "salvager",
+    "fisher"
+   ],
+   "orphanChance": 0.2,
+   "intro": "Born on a boat with no raft to tie to. The whole sea is your neighbourhood, and none of it is friendly.",
+   "prep": "on"
+  },
+  "deepborn": {
+   "name": "the Deep-Born crews",
+   "short": "the dive crews",
+   "standing": 7,
+   "scrap": 2,
+   "stats": {
+    "deepsense": 18,
+    "nerve": 8,
+    "stamina": 6,
+    "happiness": -4
+   },
+   "rep": {
+    "deep_born": 30
+   },
+   "parentJobs": [
+    "diver",
+    "salvager"
+   ],
+   "mentorJobs": [
+    "diver",
+    "deep_pilot"
+   ],
+   "intro": "Born to a dive crew. They tie a tally cord to your wrist before they tie anything else.",
+   "prep": "among"
+  },
+  "highmark_ring": {
+   "name": "Highmark's lower ring",
+   "short": "the lower ring",
+   "standing": 2,
+   "scrap": 6,
+   "stats": {
+    "smarts": 10,
+    "health": 10,
+    "deepsense": -10
+   },
+   "rep": {
+    "highmark": 25
+   },
+   "parentJobs": [
+    "clerk",
+    "archivist",
+    "provisioner"
+   ],
+   "mentorJobs": [
+    "archivist",
+    "clerk"
+   ],
+   "intro": "Born on dry land, in the lowest ring of Highmark, where the gutters still flood every spring. A blue band is fastened to your wrist.",
+   "prep": "in"
+  }
+ },
+ "careers": {
+  "deckhand": {
+   "name": "Raft crew",
+   "ranks": [
+    "Deckhand",
+    "Rigger",
+    "Bosun"
+   ],
+   "pay": [
+    3,
+    5,
+    8
+   ],
+   "skill": "strength",
+   "minAge": 14,
+   "easy": 0.3,
+   "standing": 5,
+   "tags": [
+    "raft"
+   ],
+   "risk": 0.04,
+   "hazards": [
+    "A line parts under load and the end catches you across the ribs."
+   ]
+  },
+  "fisher": {
+   "name": "Fishing",
+   "ranks": [
+    "Net hand",
+    "Fisher",
+    "Skipper"
+   ],
+   "pay": [
+    3,
+    5,
+    7
+   ],
+   "skill": "stamina",
+   "minAge": 14,
+   "easy": 0.25,
+   "tags": [
+    "raft",
+    "sea"
+   ],
+   "risk": 0.05,
+   "hazards": [
+    "A swell takes the boat sideways. You come home with nothing but bruises."
+   ]
+  },
+  "gardener": {
+   "name": "Raft gardens",
+   "ranks": [
+    "Weeder",
+    "Gardener",
+    "Seed-keeper"
+   ],
+   "pay": [
+    2,
+    4,
+    6
+   ],
+   "skill": "smarts",
+   "minAge": 13,
+   "easy": 0.25,
+   "tags": [
+    "raft"
+   ],
+   "rep": {
+    "greentide": 5
+   }
+  },
+  "engineer": {
+   "name": "Engineering",
+   "ranks": [
+    "Apprentice",
+    "Engineer",
+    "Chief engineer"
+   ],
+   "pay": [
+    3,
+    7,
+    11
+   ],
+   "skill": "smarts",
+   "minAge": 15,
+   "tags": [
+    "raft"
+   ],
+   "rep": {
+    "rusthold": 5
+   },
+   "risk": 0.03,
+   "hazards": [
+    "A weld spits. You will carry the scar."
+   ]
+  },
+  "mechanic": {
+   "name": "Mechanics",
+   "ranks": [
+    "Grease monkey",
+    "Mechanic",
+    "Master mechanic"
+   ],
+   "pay": [
+    3,
+    6,
+    9
+   ],
+   "skill": "strength",
+   "minAge": 15,
+   "tags": [
+    "raft"
+   ],
+   "risk": 0.03,
+   "hazards": [
+    "An engine block shifts. You keep the finger, just about."
+   ]
+  },
+  "trader": {
+   "name": "Trade",
+   "ranks": [
+    "Runner",
+    "Trader",
+    "Broker"
+   ],
+   "pay": [
+    4,
+    8,
+    14
+   ],
+   "skill": "charm",
+   "minAge": 16,
+   "tags": [
+    "raft"
+   ],
+   "rep": {
+    "portage": 5
+   }
+  },
+  "pilot": {
+   "name": "Piloting",
+   "ranks": [
+    "Boat hand",
+    "Pilot",
+    "Harbour pilot"
+   ],
+   "pay": [
+    4,
+    7,
+    10
+   ],
+   "skill": "nerve",
+   "minAge": 16,
+   "tags": [
+    "raft",
+    "sea"
+   ],
+   "risk": 0.03
+  },
+  "medic": {
+   "name": "Medicine",
+   "ranks": [
+    "Orderly",
+    "Medic",
+    "Raft physician"
+   ],
+   "pay": [
+    3,
+    7,
+    10
+   ],
+   "skill": "smarts",
+   "minAge": 17,
+   "req": {
+    "stat": {
+     "smarts": [
+      45,
+      100
+     ]
+    }
+   },
+   "tags": [
+    "raft"
+   ],
+   "rep": {
+    "greentide": 4,
+    "vigil": 4
+   }
+  },
+  "teacher": {
+   "name": "Teaching",
+   "ranks": [
+    "Deck tutor",
+    "Teacher",
+    "Lore-keeper"
+   ],
+   "pay": [
+    2,
+    5,
+    7
+   ],
+   "skill": "smarts",
+   "minAge": 18,
+   "req": {
+    "stat": {
+     "smarts": [
+      50,
+      100
+     ]
+    }
+   },
+   "tags": [
+    "raft"
+   ]
+  },
+  "brewer": {
+   "name": "Brewing",
+   "ranks": [
+    "Bottle washer",
+    "Brewer",
+    "Still-master"
+   ],
+   "pay": [
+    3,
+    5,
+    9
+   ],
+   "skill": "luck",
+   "minAge": 16,
+   "easy": 0.2,
+   "tags": [
+    "raft"
+   ]
+  },
+  "musician": {
+   "name": "Music",
+   "ranks": [
+    "Busker",
+    "Musician",
+    "Night Songs voice"
+   ],
+   "pay": [
+    1,
+    4,
+    9
+   ],
+   "skill": "charm",
+   "minAge": 14,
+   "easy": 0.2,
+   "tags": [
+    "raft"
+   ]
+  },
+  "steward": {
+   "name": "Raft stewardship",
+   "ranks": [
+    "Steward",
+    "Senior steward",
+    "Raft leader"
+   ],
+   "pay": [
+    6,
+    10,
+    16
+   ],
+   "skill": "charm",
+   "minAge": 28,
+   "req": {
+    "stat": {
+     "karma": [
+      55,
+      100
+     ],
+     "charm": [
+      50,
+      100
+     ]
+    },
+    "standingMax": 5
+   },
+   "tags": [
+    "raft"
+   ],
+   "rep": {
+    "portage": 10,
+    "tide_ward": -5
+   }
+  },
+  "smuggler": {
+   "name": "Smuggling",
+   "ranks": [
+    "Runner",
+    "Smuggler",
+    "Captain of Lowlight"
+   ],
+   "pay": [
+    6,
+    12,
+    20
+   ],
+   "skill": "nerve",
+   "minAge": 16,
+   "tags": [
+    "outlaw"
+   ],
+   "rep": {
+    "lowlight": 15,
+    "tide_ward": -15,
+    "highmark": -10
+   },
+   "risk": 0.07,
+   "hazards": [
+    "A Ward searchlight finds you. You lose the cargo and a tooth."
+   ]
+  },
+  "forger": {
+   "name": "Forgery",
+   "ranks": [
+    "Ink boy",
+    "Forger",
+    "Master of seals"
+   ],
+   "pay": [
+    5,
+    10,
+    16
+   ],
+   "skill": "smarts",
+   "minAge": 17,
+   "req": {
+    "stat": {
+     "smarts": [
+      50,
+      100
+     ]
+    }
+   },
+   "tags": [
+    "outlaw"
+   ],
+   "rep": {
+    "lowlight": 10,
+    "highmark": -8
+   }
+  },
+  "thief": {
+   "name": "Thievery",
+   "ranks": [
+    "Pickpocket",
+    "Thief",
+    "Ghost of the Stacks"
+   ],
+   "pay": [
+    4,
+    8,
+    12
+   ],
+   "skill": "luck",
+   "minAge": 12,
+   "tags": [
+    "outlaw"
+   ],
+   "risk": 0.06,
+   "rep": {
+    "portage": -8
+   },
+   "hazards": [
+    "Caught with your hand in a locker. The raft votes. You spend a season scrubbing hulls."
+   ]
+  },
+  "raider": {
+   "name": "Raiding",
+   "ranks": [
+    "Boarder",
+    "Raider",
+    "Raid captain"
+   ],
+   "pay": [
+    8,
+    14,
+    20
+   ],
+   "skill": "strength",
+   "minAge": 18,
+   "req": {
+    "stat": {
+     "karma": [
+      0,
+      45
+     ]
+    }
+   },
+   "tags": [
+    "outlaw"
+   ],
+   "risk": 0.1,
+   "rep": {
+    "portage": -15,
+    "greentide": -15
+   }
+  },
+  "clerk": {
+   "name": "Highmark clerkship",
+   "ranks": [
+    "Clerk",
+    "Senior clerk",
+    "Provisioner"
+   ],
+   "pay": [
+    6,
+    9,
+    13
+   ],
+   "skill": "smarts",
+   "minAge": 17,
+   "req": {
+    "standingMax": 4
+   },
+   "tags": [
+    "highmark"
+   ],
+   "rep": {
+    "highmark": 8
+   }
+  },
+  "archivist": {
+   "name": "The Archives",
+   "ranks": [
+    "Archive runner",
+    "Archivist",
+    "Keeper of Files"
+   ],
+   "pay": [
+    6,
+    10,
+    15
+   ],
+   "skill": "smarts",
+   "minAge": 18,
+   "req": {
+    "standingMax": 3,
+    "stat": {
+     "smarts": [
+      55,
+      100
+     ]
+    }
+   },
+   "tags": [
+    "highmark"
+   ],
+   "rep": {
+    "highmark": 10
+   }
+  },
+  "physician": {
+   "name": "Highmark medicine",
+   "ranks": [
+    "Ward orderly",
+    "Physician",
+    "Concord physician"
+   ],
+   "pay": [
+    8,
+    14,
+    22
+   ],
+   "skill": "smarts",
+   "minAge": 20,
+   "req": {
+    "standingMax": 2,
+    "stat": {
+     "smarts": [
+      60,
+      100
+     ]
+    }
+   },
+   "tags": [
+    "highmark"
+   ]
+  },
+  "ward_deckhand": {
+   "name": "The Tide Ward",
+   "ranks": [
+    "Ward deckhand",
+    "Warden",
+    "Ward captain",
+    "Marshal"
+   ],
+   "pay": [
+    5,
+    9,
+    14,
+    20
+   ],
+   "skill": "nerve",
+   "minAge": 16,
+   "easy": 0.25,
+   "standing": 3,
+   "forceStanding": true,
+   "tags": [
+    "highmark",
+    "ward"
+   ],
+   "rep": {
+    "tide_ward": 25,
+    "highmark": 10,
+    "portage": -15,
+    "lowlight": -25
+   },
+   "risk": 0.04,
+   "hazards": [
+    "A raid on a smuggler raft goes wrong in the fog."
+   ]
+  },
+  "seatholder": {
+   "name": "The Concord",
+   "ranks": [
+    "Seat-holder"
+   ],
+   "pay": [
+    40
+   ],
+   "skill": "charm",
+   "minAge": 40,
+   "req": {
+    "standingMax": 2,
+    "stat": {
+     "charm": [
+      75,
+      100
+     ],
+     "karma": [
+      0,
+      60
+     ]
+    },
+    "flag": "concord_favour"
+   },
+   "standing": 1,
+   "tags": [
+    "highmark"
+   ]
+  },
+  "diver": {
+   "name": "Diving",
+   "ranks": [
+    "Line tender",
+    "Diver",
+    "Deep diver"
+   ],
+   "pay": [
+    4,
+    8,
+    12
+   ],
+   "skill": "deepsense",
+   "minAge": 14,
+   "easy": 0.35,
+   "standing": 7,
+   "forceStanding": false,
+   "tags": [
+    "deep"
+   ],
+   "rep": {
+    "deep_born": 10
+   },
+   "payCur": "glass",
+   "risk": 0.07,
+   "hazards": [
+    "You come up too fast. For a week your joints sing.",
+    "Your line fouls in a stairwell. You get out. Something in you stays down there."
+   ]
+  },
+  "salvager": {
+   "name": "Salvage",
+   "ranks": [
+    "Picker",
+    "Salvager",
+    "Salvage boss"
+   ],
+   "pay": [
+    5,
+    9,
+    13
+   ],
+   "skill": "strength",
+   "minAge": 15,
+   "easy": 0.3,
+   "tags": [
+    "deep"
+   ],
+   "rep": {
+    "deep_born": 6
+   },
+   "risk": 0.06,
+   "hazards": [
+    "A floor gives way in a drowned office."
+   ]
+  },
+  "deep_pilot": {
+   "name": "Deep piloting",
+   "ranks": [
+    "Bell hand",
+    "Deep pilot",
+    "Abyss pilot"
+   ],
+   "pay": [
+    8,
+    13,
+    19
+   ],
+   "skill": "nerve",
+   "minAge": 20,
+   "req": {
+    "stat": {
+     "deepsense": [
+      55,
+      100
+     ]
+    }
+   },
+   "tags": [
+    "deep"
+   ],
+   "risk": 0.08,
+   "payCur": "glass"
+  },
+  "seeker": {
+   "name": "Cathedral seeking",
+   "ranks": [
+    "Listener",
+    "Seeker",
+    "Listener-Whisperer"
+   ],
+   "pay": [
+    2,
+    5,
+    8
+   ],
+   "skill": "deepsense",
+   "minAge": 18,
+   "req": {
+    "stat": {
+     "deepsense": [
+      65,
+      100
+     ]
+    }
+   },
+   "tags": [
+    "deep",
+    "faith"
+   ],
+   "rep": {
+    "vigil": 10,
+    "highmark": -10
+   },
+   "risk": 0.05,
+   "hazards": [
+    "You hear the Choir for a whole night and cannot speak for three days."
+   ]
+  }
+ },
+ "names": {
+  "female": [
+   "Wren",
+   "Isla",
+   "Mara",
+   "Nell",
+   "Odile",
+   "Tess",
+   "Juno",
+   "Ada",
+   "Pell",
+   "Sefa",
+   "Rue",
+   "Linnet",
+   "Marisol",
+   "Bea",
+   "Kit",
+   "Ines",
+   "Hollis",
+   "Dela",
+   "Avi",
+   "Noor",
+   "Yara",
+   "Petra",
+   "Lark",
+   "Cass"
+  ],
+  "male": [
+   "Teo",
+   "Ivo",
+   "Bram",
+   "Corr",
+   "Jory",
+   "Sal",
+   "Ruel",
+   "Fen",
+   "Moss",
+   "Tam",
+   "Oskar",
+   "Danil",
+   "Hesk",
+   "Lio",
+   "Arno",
+   "Pim",
+   "Rafe",
+   "Emil",
+   "Cato",
+   "Joss",
+   "Nico",
+   "Ward",
+   "Silas",
+   "Ezra"
+  ],
+  "any": [
+   "Wren",
+   "Rue",
+   "Kit",
+   "Sal",
+   "Moss",
+   "Lark",
+   "Fen",
+   "Ash",
+   "Tide",
+   "Rain"
+  ],
+  "family": [
+   "Calloway-Ashe",
+   "Vance",
+   "Koa",
+   "Hollis",
+   "Marlow",
+   "Ferrow",
+   "Oduya",
+   "Lind",
+   "Okafor",
+   "Brask",
+   "Tamm",
+   "Delacroix-Hu",
+   "Ness",
+   "Varga",
+   "Achterberg",
+   "Sollen",
+   "Pike",
+   "Ruiz-Mbeki",
+   "Haldane",
+   "Quill"
+  ]
+ },
+ "relationships": {
+  "traits": [
+   "warm",
+   "cold",
+   "funny",
+   "proud",
+   "anxious",
+   "loyal",
+   "restless",
+   "devout",
+   "greedy",
+   "gentle",
+   "stubborn",
+   "curious"
+  ],
+  "lines": {
+   "meet": [
+    "They share half a ration bar without being asked.",
+    "They laugh at the wrong moment, and so do you.",
+    "They are mending a net badly. You show them the knot.",
+    "They tell you a joke about Highmark that would get you both searched."
+   ],
+   "talk": [
+    "You sit on the edge of the raft and say nothing important for an hour.",
+    "% tells you about a dream with dry streets in it.",
+    "You trade complaints about the weather like coins.",
+    "% asks how you are, and waits for the real answer."
+   ],
+   "gift": [
+    "% turns the gift over in their hands for a long time.",
+    "You give % a scrap of real glass. They try not to look as pleased as they are.",
+    "A tin of fish, still sealed. % holds it like a baby."
+   ],
+   "argue": [
+    "It starts with rations. It ends with things neither of you can take back.",
+    "% says you're more Deep-Born than raft-born. They mean it as a cut. It is one.",
+    "You argue about Highmark until the lanterns go out."
+   ],
+   "share": [
+    "You split your week's ration with %. They don't thank you. They don't need to.",
+    "You leave half your water at %'s door."
+   ],
+   "romanceYes": [
+    "% kisses you behind the rain-catcher. The rain doesn't mind.",
+    "% says yes before you've finished asking.",
+    "It's awkward, then it isn't."
+   ],
+   "romanceNo": [
+    "% looks at your wrist, then at the floor. 'I can't. My family...'",
+    "% laughs, kindly, and that is worse.",
+    "Not yet, says %. Maybe not ever."
+   ],
+   "marry": [
+    "You marry % on the water at dusk. Everyone you love is there, and some people you don't.",
+    "A quiet wedding with % on a borrowed barge. The Keeper ties your wrists together with blue thread."
+   ],
+   "child": [
+    "Small and loud and furious at the cold.",
+    "They have your eyes and your bad timing.",
+    "The midwife says they'll be a diver. Everyone says that about every baby."
+   ],
+   "leave": [
+    "You leave on a grey morning with one bag.",
+    "It ends quietly. That's almost the worst part."
+   ],
+   "reconcile": [
+    "You share a pipe on the stern and the old thing between you finally sinks.",
+    "% says 'I missed you, you idiot,' and that's that."
+   ],
+   "betray": [
+    "You sell %'s name to a Warden for scrap. You tell yourself everybody does.",
+    "You take what % trusted you with. The raft finds out. Rafts always find out."
+   ]
+  }
+ },
+ "activities": {
+  "train": {
+   "name": "Train on the deck",
+   "out": [
+    {
+     "w": 3,
+     "text": "Rope climbs and swims until you shake.",
+     "fx": {
+      "strength": 3,
+      "stamina": 3,
+      "health": 1
+     }
+    },
+    {
+     "w": 1,
+     "text": "You pull something in your shoulder.",
+     "fx": {
+      "health": -4,
+      "strength": 1
+     }
+    }
+   ]
+  },
+  "study": {
+   "name": "Study",
+   "out": [
+    {
+     "w": 3,
+     "text": "You read waterlogged manuals until they make sense.",
+     "fx": {
+      "smarts": 4
+     }
+    },
+    {
+     "w": 1,
+     "text": "The Vigil's library has a map of the old coast. You trace it with a finger.",
+     "fx": {
+      "smarts": 3,
+      "deepsense": 2
+     }
+    }
+   ]
+  },
+  "pray": {
+   "name": "Pray at the Vigil",
+   "out": [
+    {
+     "w": 3,
+     "text": "You light a candle and put it on the water. It doesn't sink.",
+     "fx": {
+      "faith": 5,
+      "happiness": 3,
+      "karma": 1
+     }
+    },
+    {
+     "w": 1,
+     "text": "In the quiet, you hear something far below that is not quiet at all.",
+     "fx": {
+      "faith": 3,
+      "deepsense": 4,
+      "happiness": -2
+     }
+    }
+   ]
+  },
+  "shallows": {
+   "name": "Dive the shallows",
+   "req": {
+    "standingMin": 1
+   },
+   "out": [
+    {
+     "w": 3,
+     "check": "deepsense",
+     "good": true,
+     "text": "A good dive. Copper and a jar of buttons.",
+     "fx": {
+      "scrap": 4,
+      "deepsense": 2
+     }
+    },
+    {
+     "w": 1,
+     "text": "Smooth warm glass in a drowned kitchen.",
+     "fx": {
+      "glass": 1,
+      "deepsense": 3
+     }
+    },
+    {
+     "w": 1,
+     "check": "nerve",
+     "good": false,
+     "text": "Your air runs short in a stairwell. You get out. You don't sleep much.",
+     "fx": {
+      "health": -6,
+      "nerve": 2
+     }
+    }
+   ]
+  },
+  "gamble": {
+   "name": "Dice at the Exchange",
+   "cost": {
+    "scrap": 3
+   },
+   "out": [
+    {
+     "w": 1,
+     "check": "luck",
+     "good": true,
+     "text": "The bones fall your way. Twice.",
+     "fx": {
+      "scrap": 9,
+      "happiness": 3
+     }
+    },
+    {
+     "w": 2,
+     "text": "The bones don't love you tonight.",
+     "fx": {
+      "happiness": -2
+     }
+    }
+   ]
+  },
+  "doctor": {
+   "name": "See a medic",
+   "cost": {
+    "scrap": 4
+   },
+   "out": [
+    {
+     "w": 3,
+     "text": "Ivo listens to your chest and gives you something bitter.",
+     "fx": {
+      "health": 10
+     }
+    },
+    {
+     "w": 1,
+     "text": "There's nothing to be done, he says, but rest.",
+     "fx": {
+      "health": 3,
+      "happiness": -2
+     }
+    }
+   ]
+  },
+  "nightmarket": {
+   "name": "Night market",
+   "cost": {
+    "scrap": 2
+   },
+   "out": [
+    {
+     "w": 2,
+     "text": "You trade a stolen permit stamp for a jar of real honey.",
+     "fx": {
+      "happiness": 5,
+      "karma": -2,
+      "rep.lowlight": 3
+     }
+    },
+    {
+     "w": 1,
+     "text": "A Ward informer is working the stalls. You leave fast, empty-handed.",
+     "fx": {
+      "nerve": 2,
+      "rep.tide_ward": -3
+     }
+    }
+   ]
+  },
+  "volunteer": {
+   "name": "Help on the raft",
+   "out": [
+    {
+     "w": 3,
+     "text": "You re-lash Low Row's lines in the rain. Nobody asked. Everybody noticed.",
+     "fx": {
+      "karma": 4,
+      "rep.portage": 4,
+      "stamina": 1
+     }
+    },
+    {
+     "w": 1,
+     "text": "You teach a kid to tie a bowline. She ties it wrong forever, proudly.",
+     "fx": {
+      "karma": 3,
+      "happiness": 4
+     }
+    }
+   ]
+  },
+  "sea": {
+   "name": "Go out on the water (3D)",
+   "scene": "free",
+   "out": [
+    {
+     "w": 1,
+     "text": "You take the boat out with no plan and come back at dusk with salt in your hair.",
+     "fx": {
+      "happiness": 6
+     }
+    }
+   ]
+  }
+ },
+ "scenes": {
+  "free": {
+   "title": "Out on the water",
+   "desc": "Free roam the Lantern Ward. Return when you like.",
+   "skill": "nerve"
+  },
+  "first_dive": {
+   "title": "First dive",
+   "desc": "Under Linden Court the lobby is flooded. Dive, find something worth carrying, and come back up.",
+   "skill": "deepsense",
+   "time": 150
+  },
+  "festival": {
+   "title": "Lantern night",
+   "desc": "Dusk on Portage. Find the Exchange and set a lantern on the water for someone.",
+   "skill": "charm",
+   "time": 200
+  },
+  "patrol_stop": {
+   "title": "Fog and searchlights",
+   "desc": "Night, fog, a Tide Ward launch hunting by engine noise. Hide (cut the engine with C, get behind something) or face the inspection.",
+   "skill": "nerve",
+   "time": 150
+  },
+  "storm": {
+   "title": "The night Low Row tore loose",
+   "desc": "Midnight storm. A raft has broken its lines. Get a tow line on it and bring it home.",
+   "skill": "strength",
+   "time": 300
+  },
+  "quarantine_dive": {
+   "title": "Ward 9",
+   "desc": "The sealed quarantine wing of St. Aldren. Down the service shaft into the flooded basement, to where the growth glows. Then back up.",
+   "skill": "deepsense",
+   "time": 220
+  }
+ },
+ "world": {
+  "quietYears": [
+   "A year of mending nets and waiting for rain.",
+   "Nothing much happens. That is its own kind of luck.",
+   "The raft drifts a little south. So do you.",
+   "You spend the year being exactly who you were.",
+   "The Beacon turns. The tide comes and goes. You get a year older.",
+   "A grey year. Someone you don't know dies; someone you don't know is born."
+  ],
+  "worldNews": [
+   "Highmark announces a new ration seal design. Old seals are void by spring.",
+   "A storm season like nobody remembers. Two small rafts are never seen again.",
+   "The glow is seen from the surface off the Wrecklands for the first time in years.",
+   "Raft Free Voice goes silent for a month, then comes back angrier.",
+   "Greentide's harvest fails. Kelp goes to three scrap a bundle.",
+   "A Ward captain resigns and joins Lowlight. The radio says he drowned.",
+   "Somebody paints HIGHMARK LIES on the Beacon's harbour wall. Twice."
+  ],
+  "heirs": [
+   "Steward Pim Achterberg",
+   "Moss Varga",
+   "Ada Hollis",
+   "a woman everyone calls Second Keeper",
+   "Rue Ferrow",
+   "Captain Lio Marlow",
+   "Chancellor Danil Voss"
+  ],
+  "deaths": {
+   "illness": "Your body simply runs out, the way lamps do.",
+   "old age": "You die in your sleep, old, on the water. Someone puts a lantern out for you.",
+   "storm": "The storm takes you. They never find the boat.",
+   "deep": "You go down past the Dark Shelf and do not come back up. The tally on your sleeve stops at that number.",
+   "patrol": "A Ward boarding goes badly. It is written down as an accident.",
+   "hush": "The Hush comes back for one more. You lose your voice first. You are not afraid, at the end. You are listening.",
+   "drowned": "The water was always going to have you. It is gentle about it."
+  }
+ }
+}

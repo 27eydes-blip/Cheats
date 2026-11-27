@@ -47,6 +47,9 @@ import { SaveSystem } from '../save/SaveSystem.js';
 import { Birds } from '../ai/Birds.js';
 import { Patrol } from '../ai/Patrol.js';
 import { DeepShapes } from '../ai/DeepShapes.js';
+import { Life } from '../life/Life.js';
+import { LifeUI } from '../life/LifeUI.js';
+import { Scenarios } from '../life/Scenarios.js';
 import { Standing } from '../society/Standing.js';
 import { Economy } from '../society/Economy.js';
 import { Heat } from '../society/Heat.js';
@@ -134,7 +137,12 @@ export class Game {
     ctx.deep = new DeepShapes(ctx);
     ctx.save = new SaveSystem(ctx);
     ctx.touch = new TouchControls(ctx);
+    ctx.life = new Life(ctx);
+    ctx.lifeUI = new LifeUI(ctx, ctx.life);
+    ctx.scenarios = new Scenarios(ctx);
+    ctx.ui.applyAccessibility();
     this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat];
+    this.ambientSystems = [ctx.fx, ctx.birds, ctx.highmark];
     this.wireEvents();
     this.newGame();
     applyDebugParams(ctx);
@@ -142,15 +150,14 @@ export class Game {
     ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z);
     ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
     ctx.paused = ctx.params.has('pause');
-    if (!ctx.params.has('skipintro')) {
-      ctx.input.enabled = false;
-      ctx.ui.titleScreen(ctx.save.has(), (cont) => {
-        if (cont) ctx.save.load();
-        ctx.input.enabled = true;
-        ctx.ui.fade(0.01, null, 0.2);
-        ctx.story.checkObjectives();
-      });
-    }
+    this.onTitleChoice = (choice) => {
+      if (choice === 'continue') { if (ctx.save.load()) this.enterStory(true); else this.enterStory(false); }
+      else if (choice === 'story') this.enterStory(false);
+      else if (choice === 'life') this.enterLife();
+    };
+    if (ctx.params.has('skipintro')) { ctx.mode = 'play'; ctx.story.checkObjectives(); }
+    else if (ctx.params.has('life')) this.enterLife();
+    else ctx.ui.titleScreen(ctx.save.has(), this.onTitleChoice);
     const unlock = () => ctx.audio.start();
     addEventListener('pointerdown', unlock, { once: true });
     addEventListener('keydown', unlock, { once: true });
@@ -169,6 +176,50 @@ export class Game {
   // test helper: advance the simulation n fixed steps
   step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { this.ctx.input.poll(); this.update(dt); this.ctx.input.endFrame(); } }
 
+  toTitle() {
+    const ctx = this.ctx;
+    ctx.mode = 'title';
+    ctx.input.enabled = false;
+    ctx.paused = false;
+    ctx.time.hour = 6.05; ctx.time.frozen = true; ctx.time.update(0);
+    ctx.weather.set('mist', true);
+  }
+  enterStory(loaded) {
+    const ctx = this.ctx;
+    ctx.lifeUI.hide();
+    ctx.time.frozen = !!ctx.params.has('freeze');
+    if (!loaded) { this.resetStory(); this.newGame(); ctx.weather.set('mist', true); ctx.weather.locked = false; ctx.weather.scheduleIdx = 0; ctx.weather.hoursLeft = ctx.data.weather.schedule[0].hours; }
+    ctx.mode = 'play';
+    ctx.input.enabled = true;
+    ctx.ui.fade(0.01, null, 0.4);
+    ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
+    ctx.story.current = null;
+    ctx.story.checkObjectives();
+    if (!loaded) ctx.onboarding?.begin();
+  }
+  resetStory() {
+    const ctx = this.ctx, st = ctx.state;
+    for (const k of Object.keys(st.flags)) delete st.flags[k];
+    st.looted.clear(); st.logs.clear(); st.playTime = 0;
+    for (const k of Object.keys(st.seenLines || {})) delete st.seenLines[k];
+    ctx.inventory.items = {}; ctx.boatStorage.items = {};
+    ctx.standing = new Standing(ctx); ctx.economy = new Economy(ctx); ctx.heat = new Heat(ctx);
+    this.systems = this.systems.map((s) => (s instanceof Economy ? ctx.economy : s instanceof Heat ? ctx.heat : s));
+    Object.assign(ctx.survival, { thirst: 82, hunger: 75, warmth: 70, rest: 72, oxygen: 100, sick: 0, battery: 70, tanks: 0, oxygenSeconds: 50 });
+    ctx.story.fired.clear(); ctx.story.pending.length = 0; ctx.story.finale = null;
+    ctx.boat.upgrades = {}; ctx.boat.mods = { thrust: 1, noise: 1, fuel: 1, damage: 1 }; ctx.boat.platesMesh.visible = false; ctx.boat.spotLamp.visible = false;
+    ctx.boat.fuel = 6; ctx.boat.hull = 78; ctx.boat.hasLanternRig = false; ctx.boat.lantern = false;
+    ctx.events.emit('standing', 7);
+  }
+  enterLife() {
+    const ctx = this.ctx;
+    this.toTitle();
+    ctx.mode = 'life';
+    const s = ctx.save.read();
+    if (s?.life && !ctx.life.s) ctx.life.load(s.life);
+    ctx.lifeUI.show();
+  }
+  // test helper: advance the simulation n fixed steps
   isIndoors(p) {
     for (const l of this.ctx.landmarks.loaded.values()) for (const b of l.interiors || []) if (p.x > b[0] && p.y > b[1] && p.z > b[2] && p.x < b[3] && p.y < b[4] && p.z < b[5]) return true;
     return false;
@@ -223,7 +274,7 @@ export class Game {
     if (this.fpsAcc > 1) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
     const paused = ctx.paused;
     ctx.input.poll();
-    if (!paused) this.update(dt);
+    if (!paused || ctx.mode !== 'play') this.update(dt);
     ctx.ui.update(dt);
     this.render(dt);
     ctx.input.endFrame();
@@ -242,12 +293,15 @@ export class Game {
     ctx.waves.setWeather(ctx.weather.cur.waves, ctx.weather.windDir);
     ctx.waves.update(dt);
     G.uTime.value += dt;
-    if (ctx.input.pressed('view')) ctx.rig.toggleView();
-    ctx.player.update(dt);
+    const playing = ctx.mode === 'play';
+    if (playing && ctx.input.pressed('view')) ctx.rig.toggleView();
+    if (playing) ctx.player.update(dt);
     ctx.boat.update(dt);
     ctx.landmarks.tick(dt);
-    ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z);
-    for (const s of this.systems) s.update?.(dt);
+    const focus = playing ? ctx.player.position : ctx.camera.position;
+    ctx.landmarks.update(focus.x, focus.z);
+    for (const s of playing ? this.systems : this.ambientSystems) s.update?.(dt);
+    ctx.scenarios.update(dt);
     ctx.rig.update(dt);
     const cam = ctx.camera;
     ctx.atmosphere.underwater = ctx.waves.height(cam.position.x, cam.position.z) > cam.position.y + 0.02;
@@ -258,9 +312,9 @@ export class Game {
     ctx.water.update(dt, cam, ctx.pipeline);
     ctx.audio.update(dt);
     const mode = ctx.player.mode === 'boat' ? 'boat' : 'foot';
-    if (ctx.player.mode !== 'climb') ctx.interact.update(ctx.player.eye, ctx.player.forward, mode);
+    if (playing && ctx.player.mode !== 'climb') ctx.interact.update(ctx.player.eye, ctx.player.forward, mode);
     else ctx.interact.focus = null;
-    if (ctx.input.pressed('use')) ctx.interact.use();
+    if (playing && ctx.input.pressed('use')) ctx.interact.use();
     // warmth near raft fires
     const comm = ctx.state.community;
     if (comm) for (const r of comm.rafts.values()) if (r.fireLight && r.fireLight.getWorldPosition(this._fv || (this._fv = new THREE.Vector3())).distanceTo(ctx.player.position) < 3) ctx.survival.nearFire = true;

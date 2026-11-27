@@ -192,6 +192,7 @@ export function buildRaftCommunity(ctx, def) {
   }];
   ctx.state.communities = ctx.state.communities || {};
   ctx.state.communities[def.id] = { rafts, npcs, def: cdef };
+  if (loose) ctx.state.communities[def.id].breakaway = loose;
   if (def.id === 'portage') ctx.state.community = ctx.state.communities[def.id];
   return {
     group, interactables, updaters, audio,
@@ -309,6 +310,7 @@ function setupBreakaway(ctx, raft, bridges, interactables, def) {
     },
   };
   raft.loose = false;
+  api.start = () => { raft.loose = true; towing = false; vel.set(1, 0, 0.5); ctx.ui.whisper('A crack like a gunshot over the wind. Low Row has torn loose and is drifting into the dark.'); ctx.audio?.play('ropeSnap'); };
   ctx.events.on('tick:minute', () => {
     if (!raft.loose && check()) {
       raft.loose = true;

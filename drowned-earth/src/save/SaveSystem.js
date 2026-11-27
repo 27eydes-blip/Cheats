@@ -28,7 +28,7 @@ export class SaveSystem {
     };
   }
   save(reason = 'auto') {
-    if (this.ctx.player.mode === 'climb' || this.ctx.survival.blackout) return false;
+    if (this.ctx.scenarioActive || this.ctx.player.mode === 'climb' || this.ctx.survival.blackout) return false;
     try { localStorage.setItem(KEY, JSON.stringify(this.snapshot())); this.ctx.events.emit('saved', reason); return true; } catch (e) { console.warn('save failed', e); return false; }
   }
   read() {
@@ -43,6 +43,9 @@ export class SaveSystem {
   load() {
     const s = this.read();
     if (!s) return false;
+    return this.apply(s);
+  }
+  apply(s) {
     const c = this.ctx, V = (a) => new THREE.Vector3().fromArray(a);
     c.player.teleport(V(s.player.pos), s.player.yaw); c.player.pitch = s.player.pitch; c.player.mode = s.player.mode;
     c.boat.pos.copy(V(s.boat.pos)); c.boat.heading = s.boat.heading; c.boat.fuel = s.boat.fuel; c.boat.hull = s.boat.hull; c.boat.hasLanternRig = s.boat.lantern;
@@ -62,6 +65,7 @@ export class SaveSystem {
     return true;
   }
   update(dt) {
+    if (this.ctx.scenarioActive || this.ctx.mode !== 'play') return;
     this.autosaveT -= dt;
     if (this.autosaveT <= 0) { this.autosaveT = 60; this.save('auto'); }
   }

@@ -21,17 +21,35 @@ export class CameraRig {
     this.thirdPerson = !this.thirdPerson;
     this.tpYaw = 0; this.tpPitch = -0.22;
   }
+  // Title / life-sim backdrop: a slow dawn flight over the drowned district.
+  cinematic(dt) {
+    if (!this.path) {
+      const P = [[-300, 9, 330], [-150, 14, 180], [-40, 22, 120], [120, 30, 20], [260, 16, 140], [330, 9, 330], [120, 7, 360], [-120, 12, 420]];
+      this.path = new THREE.CatmullRomCurve3(P.map(([x, y, z]) => new THREE.Vector3(x, y, z)), true, 'centripetal');
+      this.ct = 0;
+    }
+    this.ct = (this.ct + dt * 0.006) % 1;
+    const p = this.path.getPointAt(this.ct), q = this.path.getPointAt((this.ct + 0.02) % 1);
+    const cam = this.camera;
+    cam.position.copy(p);
+    const look = q.clone(); look.y = p.y - 3 + Math.sin(this.t * 0.1) * 2;
+    cam.lookAt(look);
+    cam.updateMatrixWorld();
+    this.ctx.player.eye.copy(cam.position);
+  }
   update(dt) {
     const { player, boat, survival } = this.ctx;
     const cam = this.camera;
     this.t += dt;
+    if (this.ctx.mode && this.ctx.mode !== 'play') { this.cinematic(dt); return; }
+    const calm = this.ctx.settings.reduceMotion ? 0 : 1;
     this.shake = Math.max(0, this.shake - dt * 1.2);
     if (player.mode !== 'boat') this.thirdPerson = false;
-    const fatigue = survival ? survival.swayAmount() : 0;
-    const shiver = survival ? survival.shiverAmount() : 0;
+    const fatigue = (survival ? survival.swayAmount() : 0) * calm;
+    const shiver = (survival ? survival.shiverAmount() : 0) * calm;
     const swayX = Math.sin(this.t * 0.7) * 0.012 * fatigue + Math.sin(this.t * 31) * 0.0025 * shiver;
     const swayY = Math.sin(this.t * 0.53 + 1) * 0.009 * fatigue + Math.sin(this.t * 27 + 2) * 0.002 * shiver;
-    const sh = this.shake * this.shake;
+    const sh = this.shake * this.shake * calm;
     const shx = (Math.random() - 0.5) * 0.05 * sh, shy = (Math.random() - 0.5) * 0.05 * sh;
 
     if (this.thirdPerson) {

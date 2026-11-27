@@ -1,0 +1,7308 @@
+{
+"_doc": "Life-sim event cards. ages [min,max]; req (see Life.meets); choices \u2192 weighted outcomes with fx, flags, career, standing, person, lose, best, death, or a 3D scene with success/fail outcomes.",
+"events": [
+{
+"id": "c_storm_cradle",
+"ages": [
+0,
+2
+],
+"title": "First storm",
+"text": "The first storm of your life. The raft bucks like an animal. Somebody has to hold you.",
+"choices": [
+{
+"label": "Cry the whole night",
+"out": [
+{
+"w": 1,
+"text": "You scream through every gust. Afterwards everyone swears you scared the storm off.",
+"fx": {
+"nerve": 2,
+"happiness": 1
+}
+}
+]
+},
+{
+"label": "Sleep through it",
+"out": [
+{
+"w": 1,
+"text": "You sleep through the whole thing. The old women say that means something. They argue about what.",
+"fx": {
+"deepsense": 4,
+"luck": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_first_word",
+"ages": [
+1,
+2
+],
+"title": "First word",
+"text": "You say your first word. Everyone leans in.",
+"choices": [
+{
+"label": "\"Water\"",
+"out": [
+{
+"w": 1,
+"text": "Of course it was \"water\". The raft laughs for a week.",
+"fx": {
+"smarts": 2,
+"happiness": 2
+}
+}
+]
+},
+{
+"label": "\"Lamp\"",
+"out": [
+{
+"w": 1,
+"text": "\"Lamp\", pointing at the Beacon on the horizon. Your mother goes quiet.",
+"fx": {
+"deepsense": 3
+}
+}
+]
+},
+{
+"label": "A word nobody knows",
+"out": [
+{
+"w": 1,
+"text": "A word nobody knows. You say it again at night, to the floorboards.",
+"fx": {
+"deepsense": 6,
+"faith": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_learn_swim",
+"ages": [
+3,
+6
+],
+"title": "Learning to swim",
+"text": "They lower you into the water on a rope, the way every raft child learns.",
+"choices": [
+{
+"label": "Kick hard",
+"out": [
+{
+"w": 1,
+"text": "You swim like a dog in a hurry. It counts.",
+"fx": {
+"stamina": 4,
+"nerve": 3
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "You swallow half the Drift and come up blue. You learn anyway.",
+"fx": {
+"health": -3,
+"nerve": 5
+}
+}
+]
+},
+{
+"label": "Float still",
+"out": [
+{
+"w": 1,
+"text": "You lie on your back and look at the sky. You are very good at being still in water. That will matter.",
+"fx": {
+"deepsense": 5,
+"happiness": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_bracelet",
+"ages": [
+4,
+7
+],
+"title": "Your first bracelet",
+"text": "Raft children get a rope bracelet in their raft's colour at five.",
+"choices": [
+{
+"label": "Wear it proudly",
+"out": [
+{
+"w": 1,
+"text": "You wear it until it rots, and then you wear the rot.",
+"fx": {
+"happiness": 4,
+"rep.portage": 2
+}
+}
+]
+},
+{
+"label": "Trade it for a fish hook",
+"out": [
+{
+"w": 1,
+"text": "You trade it to a Drifter kid for a fish hook. Your mother is livid. The hook is excellent.",
+"fx": {
+"luck": 2,
+"karma": -1,
+"happiness": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"portage",
+"greentide",
+"rusthold",
+"vigil"
+]
+}
+},
+{
+"id": "c_tally_cord",
+"ages": [
+4,
+7
+],
+"title": "The tally cord",
+"text": "Dive-crew children get their first tally cord at five. No marks on it yet.",
+"choices": [
+{
+"label": "Ask when you can dive",
+"out": [
+{
+"w": 1,
+"text": "\"When you can hold your breath longer than your temper,\" says {mentor}.",
+"fx": {
+"deepsense": 3,
+"nerve": 2
+}
+}
+]
+},
+{
+"label": "Hide it in your shirt",
+"out": [
+{
+"w": 1,
+"text": "Raft kids stare at it anyway. You learn early what the cord means to other people.",
+"fx": {
+"happiness": -3,
+"nerve": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"deepborn"
+]
+}
+},
+{
+"id": "c_pet_gull",
+"ages": [
+4,
+10
+],
+"title": "A gull",
+"text": "A gull with a bent wing starts following you around the deck.",
+"choices": [
+{
+"label": "Feed it your fish",
+"out": [
+{
+"w": 1,
+"text": "It follows you for years. You call it Captain. It never learns anything.",
+"fx": {
+"happiness": 6,
+"karma": 2
+},
+"flag": "pet_gull"
+}
+]
+},
+{
+"label": "Chase it off",
+"out": [
+{
+"w": 1,
+"text": "It goes. Some days you look for it anyway.",
+"fx": {
+"happiness": -1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_deck_school",
+"ages": [
+6,
+9
+],
+"title": "Deck school",
+"text": "School is a tarp, a chalkboard and Teacher Nell, who was a Highmark clerk once.",
+"choices": [
+{
+"label": "Pay attention",
+"out": [
+{
+"w": 1,
+"text": "You learn to read on ration notices. You learn to count on ration notices.",
+"fx": {
+"smarts": 5
+}
+}
+]
+},
+{
+"label": "Watch the water",
+"out": [
+{
+"w": 1,
+"text": "You learn the names of every wave instead. Nell writes \"dreamy\" on your slate.",
+"fx": {
+"deepsense": 4,
+"smarts": -1
+}
+}
+]
+},
+{
+"label": "Make the others laugh",
+"out": [
+{
+"w": 1,
+"text": "You get sent to scrub the hull. Worth it.",
+"fx": {
+"charm": 4,
+"smarts": -1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_friend_hush",
+"ages": [
+7,
+11
+],
+"title": "A friend in the fog",
+"text": "Your best friend {friend} goes out on a skiff toward the Hush on a dare.",
+"choices": [
+{
+"label": "Go with them",
+"out": [
+{
+"w": 1,
+"text": "The fog takes the sound from everything. You both come back, barely, and never talk about what you heard.",
+"fx": {
+"nerve": 6,
+"deepsense": 5,
+"health": -3
+}
+},
+{
+"w": 1,
+"text": "You turn back halfway. They don't. They are never found.",
+"fx": {
+"happiness": -15,
+"nerve": 3
+},
+"lose": "friend"
+}
+]
+},
+{
+"label": "Tell an adult",
+"out": [
+{
+"w": 2,
+"text": "They are hauled back, furious at you. Alive, though.",
+"fx": {
+"karma": 4
+}
+},
+{
+"w": 1,
+"text": "By the time anyone goes, the fog has them. You are not to blame. You blame yourself.",
+"fx": {
+"happiness": -12
+},
+"lose": "friend"
+}
+]
+},
+{
+"label": "Stay home",
+"out": [
+{
+"w": 1,
+"text": "They come back at dawn, white as paper, and never go near the fog again.",
+"fx": {
+"happiness": -2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_make_friend",
+"ages": [
+5,
+10
+],
+"title": "New kid",
+"text": "A family ties up from another raft. They have a kid your age who stands too close to everyone.",
+"choices": [
+{
+"label": "Say hello",
+"out": [
+{
+"w": 1,
+"text": "You become inseparable the way only children can.",
+"fx": {
+"happiness": 6,
+"charm": 2
+},
+"person": {
+"role": "friend"
+}
+}
+]
+},
+{
+"label": "Ignore them",
+"out": [
+{
+"w": 1,
+"text": "They make friends with someone else. You pretend not to mind.",
+"fx": {
+"happiness": -1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_hush_cough",
+"ages": [
+3,
+10
+],
+"title": "A cough",
+"text": "You catch a cough. On the rafts, every cough is still a little frightening.",
+"choices": [
+{
+"label": "Hide it",
+"out": [
+{
+"w": 1,
+"text": "It passes. The fear in your mother's face doesn't, quite.",
+"fx": {
+"health": -3,
+"nerve": 2
+}
+}
+]
+},
+{
+"label": "Tell your mother",
+"out": [
+{
+"w": 1,
+"text": "She sits up with you three nights running, listening to your voice. It doesn't go.",
+"fx": {
+"health": 2,
+"happiness": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_stolen_tin",
+"ages": [
+6,
+11
+],
+"title": "The sealed tin",
+"text": "A sealed Highmark tin rolls off a trader's stall and stops at your feet.",
+"choices": [
+{
+"label": "Give it back",
+"out": [
+{
+"w": 1,
+"text": "The trader gives you a dried fig for your honesty. It is the best thing you have ever eaten.",
+"fx": {
+"karma": 5,
+"happiness": 3
+}
+}
+]
+},
+{
+"label": "Keep it",
+"out": [
+{
+"w": 1,
+"text": "Fish. Real fish. You share it with nobody and feel strange about it for years.",
+"fx": {
+"karma": -4,
+"health": 2
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "A Warden on inspection sees the seal in your hands. Your family pays a fine they can't afford.",
+"fx": {
+"karma": -4,
+"scrap": -3,
+"rep.tide_ward": -5
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_ration_day",
+"ages": [
+5,
+12
+],
+"title": "Ration day",
+"text": "Ration day. The Ward launch ties up and everyone lines up by wristband colour.",
+"choices": [
+{
+"label": "Stand in line quietly",
+"out": [
+{
+"w": 1,
+"text": "You watch a Warden count your family's bars twice and give you one fewer.",
+"fx": {
+"nerve": 1,
+"karma": 1
+}
+}
+]
+},
+{
+"label": "Ask the Warden why",
+"out": [
+{
+"w": 1,
+"text": "He looks at you a long time. Then he slips you an extra bar. \"Don't tell.\"",
+"fx": {
+"karma": 3,
+"happiness": 3,
+"rep.tide_ward": 2
+}
+},
+{
+"w": 2,
+"text": "\"Because.\" Your father pulls you away by the collar.",
+"fx": {
+"nerve": 3,
+"happiness": -2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_beacon",
+"ages": [
+4,
+10
+],
+"title": "The Beacon",
+"text": "At night you count the Beacon's sweeps from the stern until you fall asleep.",
+"choices": [
+{
+"label": "Count to a hundred",
+"out": [
+{
+"w": 1,
+"text": "Fifteen seconds every turn. You could set your heart by it.",
+"fx": {
+"smarts": 2,
+"happiness": 2
+}
+}
+]
+},
+{
+"label": "Listen after it passes",
+"out": [
+{
+"w": 1,
+"text": "Sometimes, after it passes, the water hums. You decide not to tell anyone.",
+"fx": {
+"deepsense": 6,
+"faith": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_lost_overboard",
+"ages": [
+3,
+8
+],
+"title": "Overboard",
+"text": "You fall between two rafts during a swell.",
+"choices": [
+{
+"label": "Grab the rope",
+"out": [
+{
+"w": 1,
+"text": "You catch a mooring line and hang there until someone hauls you up by the hair.",
+"fx": {
+"strength": 3,
+"nerve": 3
+},
+"check": "strength",
+"good": true
+},
+{
+"w": 1,
+"text": "You go under the barge. In the green dark something hums at you. Then hands, and air.",
+"fx": {
+"deepsense": 8,
+"health": -6,
+"nerve": 4
+}
+}
+]
+},
+{
+"label": "Hold your breath and wait",
+"out": [
+{
+"w": 1,
+"text": "You float up into a gap and breathe. You were never scared. That frightens the adults more.",
+"fx": {
+"deepsense": 6,
+"nerve": 6
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_storm_drill",
+"ages": [
+6,
+12
+],
+"title": "Storm drill",
+"text": "The raft runs a storm drill. Children carry lamps to the lashing points.",
+"choices": [
+{
+"label": "Run fast",
+"out": [
+{
+"w": 1,
+"text": "Your lamp is first at every post. The steward ruffles your hair.",
+"fx": {
+"stamina": 3,
+"rep.portage": 2
+}
+}
+]
+},
+{
+"label": "Help a smaller kid",
+"out": [
+{
+"w": 1,
+"text": "You end up carrying two lamps and a crying five-year-old. You are late. Nobody minds.",
+"fx": {
+"karma": 4,
+"charm": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_vigil_candle",
+"ages": [
+5,
+12
+],
+"title": "Candle on the water",
+"text": "The Vigil sets candles on the water for the drowned. A child is allowed to set one.",
+"choices": [
+{
+"label": "Set one for the drowned",
+"out": [
+{
+"w": 1,
+"text": "It floats a long way. The Keeper says it found someone.",
+"fx": {
+"faith": 6,
+"happiness": 2
+}
+}
+]
+},
+{
+"label": "Ask where they go",
+"out": [
+{
+"w": 1,
+"text": "\"Down,\" says the Keeper. \"Everything goes down eventually. That isn't sad.\"",
+"fx": {
+"deepsense": 4,
+"faith": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_forge_burn",
+"ages": [
+6,
+12
+],
+"title": "The forge",
+"text": "The Rusthold forge is warm and forbidden.",
+"choices": [
+{
+"label": "Sneak in",
+"out": [
+{
+"w": 1,
+"text": "You learn to strike a spark. You also learn what a burn feels like.",
+"fx": {
+"smarts": 3,
+"health": -3,
+"strength": 1
+}
+}
+]
+},
+{
+"label": "Ask the smith to teach you",
+"out": [
+{
+"w": 1,
+"text": "She lets you work the bellows for a year. Your arms get strong.",
+"fx": {
+"strength": 5,
+"smarts": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"rusthold"
+]
+}
+},
+{
+"id": "c_seed_pocket",
+"ages": [
+6,
+12
+],
+"title": "Seeds",
+"text": "Elder Koa gives every Greentide child a seed on their eighth birthday.",
+"choices": [
+{
+"label": "Plant it",
+"out": [
+{
+"w": 1,
+"text": "A bean vine climbs the rain-catcher. You check on it every morning like a sibling.",
+"fx": {
+"happiness": 5,
+"karma": 2,
+"smarts": 2
+}
+}
+]
+},
+{
+"label": "Keep it in your pocket",
+"out": [
+{
+"w": 1,
+"text": "You keep it for years. Everyone needs something that might still grow.",
+"fx": {
+"faith": 3,
+"luck": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"greentide"
+]
+}
+},
+{
+"id": "c_fog_lessons",
+"ages": [
+6,
+12
+],
+"title": "Fog lessons",
+"text": "On Lowlight, children learn to move through fog by sound alone.",
+"choices": [
+{
+"label": "Learn it well",
+"out": [
+{
+"w": 1,
+"text": "You can find the galley blindfolded from anywhere on the raft.",
+"fx": {
+"nerve": 4,
+"deepsense": 3,
+"smarts": 2
+}
+}
+]
+},
+{
+"label": "Hate the fog",
+"out": [
+{
+"w": 1,
+"text": "You hate it, and it knows, and you get lost twice.",
+"fx": {
+"nerve": 2,
+"happiness": -2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"lowlight"
+]
+}
+},
+{
+"id": "c_dry_school",
+"ages": [
+6,
+12
+],
+"title": "Highmark school",
+"text": "Lower-ring school on Highmark. Real desks. Real books. A portrait of the Chancellor.",
+"choices": [
+{
+"label": "Top of the class",
+"out": [
+{
+"w": 1,
+"text": "You learn the Concord's history by heart. It is very tidy.",
+"fx": {
+"smarts": 7,
+"rep.highmark": 3
+}
+}
+]
+},
+{
+"label": "Ask about the rafts",
+"out": [
+{
+"w": 1,
+"text": "The teacher says raft-folk are \"our partners in supply\". She does not look at you when she says it.",
+"fx": {
+"smarts": 3,
+"karma": 2,
+"nerve": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"highmark_ring"
+]
+}
+},
+{
+"id": "c_parent_hurt",
+"ages": [
+4,
+12
+],
+"title": "Your parent is hurt",
+"text": "Your {mentor}... no, your mother comes home with her hand wrapped in a sail.",
+"choices": [
+{
+"label": "Help with her work",
+"out": [
+{
+"w": 1,
+"text": "You do her shifts for a month. You are too small for it and you do it anyway.",
+"fx": {
+"strength": 3,
+"karma": 4,
+"happiness": -2
+}
+}
+]
+},
+{
+"label": "Stay out of the way",
+"out": [
+{
+"w": 1,
+"text": "She heals. She notices you didn't help. She never says so.",
+"fx": {
+"happiness": -2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasParent": true
+}
+},
+{
+"id": "c_message_bottle",
+"ages": [
+5,
+12
+],
+"title": "A bottle",
+"text": "A bottle with a note in it bumps against the raft.",
+"choices": [
+{
+"label": "Read it",
+"out": [
+{
+"w": 1,
+"text": "\"If anyone finds this, the Morrow family survived the Rise on the roof of the Kessler building. We waited.\" The date is twenty years old.",
+"fx": {
+"deepsense": 2,
+"happiness": -2,
+"smarts": 1
+}
+}
+]
+},
+{
+"label": "Write back and throw it out again",
+"out": [
+{
+"w": 1,
+"text": "You write your name and your raft. Years later, someone writes back.",
+"fx": {
+"happiness": 4,
+"luck": 3
+},
+"flag": "bottle_sent"
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_dive_watch",
+"ages": [
+7,
+12
+],
+"title": "Watching the divers",
+"text": "You watch the Deep-Born crews go down off the edge of the raft.",
+"choices": [
+{
+"label": "Count how long they stay down",
+"out": [
+{
+"w": 1,
+"text": "Two minutes. Three. You hold your breath with them until you see stars.",
+"fx": {
+"deepsense": 4,
+"stamina": 2
+}
+}
+]
+},
+{
+"label": "Ask one of them what it's like",
+"out": [
+{
+"w": 1,
+"text": "She shows you the tally on her sleeve. \"Like being listened to,\" she says.",
+"fx": {
+"deepsense": 6,
+"rep.deep_born": 4
+}
+}
+]
+},
+{
+"label": "Throw a stone at them",
+"out": [
+{
+"w": 1,
+"text": "Everyone else does. You do. The diver doesn't even look up.",
+"fx": {
+"karma": -4
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"notBirth": [
+"deepborn"
+]
+}
+},
+{
+"id": "c_first_breath_hold",
+"ages": [
+7,
+12
+],
+"title": "Breath games",
+"text": "The crew children have breath-holding contests off the stern.",
+"choices": [
+{
+"label": "Win",
+"out": [
+{
+"w": 1,
+"text": "You stay under until they pull you up by the ankle. You win.",
+"fx": {
+"deepsense": 5,
+"nerve": 3
+},
+"check": "deepsense",
+"good": true
+},
+{
+"w": 1,
+"text": "You black out. You wake up on the deck with the whole crew staring.",
+"fx": {
+"health": -4,
+"deepsense": 6
+}
+}
+]
+},
+{
+"label": "Let the little one win",
+"out": [
+{
+"w": 1,
+"text": "She is insufferable about it for a year.",
+"fx": {
+"karma": 4,
+"charm": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"deepborn",
+"drifter"
+]
+}
+},
+{
+"id": "c_rival",
+"ages": [
+8,
+12
+],
+"title": "A rival",
+"text": "{rival} decides you are their enemy. You are not sure why.",
+"choices": [
+{
+"label": "Fight them",
+"out": [
+{
+"w": 1,
+"text": "You both lose teeth. It is a good fight. You are rivals for life.",
+"fx": {
+"strength": 3,
+"health": -3
+},
+"person": {
+"role": "rival"
+}
+}
+]
+},
+{
+"label": "Make friends with them",
+"out": [
+{
+"w": 1,
+"text": "It takes a year. Then it's easy.",
+"fx": {
+"charm": 4
+},
+"person": {
+"role": "friend"
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "They don't want to be your friend. They want to be your rival.",
+"person": {
+"role": "rival"
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_sibling_born",
+"ages": [
+2,
+9
+],
+"title": "A new sibling",
+"text": "A baby is born into your family. Everything smells of milk and salt.",
+"choices": [
+{
+"label": "Love them fiercely",
+"out": [
+{
+"w": 1,
+"text": "You carry them everywhere. They will follow you for the rest of your life.",
+"fx": {
+"happiness": 5,
+"karma": 3
+},
+"person": {
+"role": "sibling"
+}
+}
+]
+},
+{
+"label": "Be jealous",
+"out": [
+{
+"w": 1,
+"text": "You are jealous for exactly a year, then forget why.",
+"fx": {
+"happiness": -2
+},
+"person": {
+"role": "sibling"
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasParent": true
+}
+},
+{
+"id": "c_fever",
+"ages": [
+1,
+10
+],
+"title": "Fever",
+"text": "A fever comes through the raft. Three children are very sick. You are one of them.",
+"choices": [
+{
+"label": "Fight it",
+"out": [
+{
+"w": 1,
+"text": "You come out the other side thinner and stubborn.",
+"fx": {
+"health": -6,
+"stamina": 3
+},
+"check": "health",
+"good": true
+},
+{
+"w": 1,
+"text": "You nearly don't. You remember voices underwater the whole time.",
+"fx": {
+"health": -12,
+"deepsense": 8
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_raft_collision",
+"ages": [
+4,
+12
+],
+"title": "Collision",
+"text": "Two rafts collide in the night. Your bunk ends up on the floor.",
+"choices": [
+{
+"label": "Help push them apart",
+"out": [
+{
+"w": 1,
+"text": "You push with your whole small body. It might even have helped.",
+"fx": {
+"strength": 2,
+"karma": 2
+}
+}
+]
+},
+{
+"label": "Hide",
+"out": [
+{
+"w": 1,
+"text": "You hide in a locker until morning. Nobody notices you were gone, which is worse.",
+"fx": {
+"nerve": -2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_hm_inspector",
+"ages": [
+6,
+12
+],
+"title": "The inspector",
+"text": "A Highmark inspector visits. White coat, gloves, a little book.",
+"choices": [
+{
+"label": "Ask what's in the book",
+"out": [
+{
+"w": 1,
+"text": "\"Numbers,\" he says, and smiles, and writes one down. Your father goes grey.",
+"fx": {
+"smarts": 2,
+"nerve": 2
+}
+}
+]
+},
+{
+"label": "Spit at his shoes",
+"out": [
+{
+"w": 1,
+"text": "Your family's ration is cut for a season. Some of the adults look at you with something like pride.",
+"fx": {
+"karma": -2,
+"rep.highmark": -8,
+"rep.portage": 3,
+"nerve": 4
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "c_old_song",
+"ages": [
+3,
+12
+],
+"title": "The old song",
+"text": "Someone on the raft has an old wind-up player and exactly one record.",
+"choices": [
+{
+"label": "Learn the words",
+"out": [
+{
+"w": 1,
+"text": "\"Hold the light for me.\" You sing it for the rest of your life, slightly wrong.",
+"fx": {
+"happiness": 5,
+"charm": 2
+},
+"flag": "knows_song"
+}
+]
+},
+{
+"label": "Ask what the world was like",
+"out": [
+{
+"w": 1,
+"text": "\"Dry,\" the old man says. \"Loud. We complained a lot.\" He laughs until he coughs.",
+"fx": {
+"smarts": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_choosing",
+"ages": [
+13,
+14
+],
+"title": "The Choosing Night",
+"text": "At fourteen, on the Choosing Night, raft children pick the path they'll be apprenticed to.",
+"choices": [
+{
+"label": "The water (diving)",
+"out": [
+{
+"w": 1,
+"text": "You choose the water. Some people stop standing next to you.",
+"fx": {
+"deepsense": 5,
+"nerve": 3
+},
+"career": "diver",
+"standing": 7,
+"flag": "chose_deep"
+}
+]
+},
+{
+"label": "The deck (raft crew)",
+"out": [
+{
+"w": 1,
+"text": "You choose the deck. Solid, decent, damp.",
+"fx": {
+"strength": 3
+},
+"career": "deckhand"
+}
+]
+},
+{
+"label": "The bench (engineering)",
+"out": [
+{
+"w": 1,
+"text": "You choose the bench. Your hands will never be clean again.",
+"fx": {
+"smarts": 3
+},
+"career": "engineer"
+}
+]
+},
+{
+"label": "Nothing yet",
+"out": [
+{
+"w": 1,
+"text": "You choose nothing. The adults sigh. You feel free.",
+"fx": {
+"happiness": 2,
+"nerve": 2
+}
+}
+]
+}
+],
+"weight": 4
+},
+{
+"id": "t_first_dive",
+"ages": [
+13,
+17
+],
+"title": "First dive",
+"text": "{mentor} takes you to the drowned lobby under Linden Court for your first real dive.",
+"choices": [
+{
+"label": "Go down (play it)",
+"out": [
+{
+"w": 1,
+"text": "You go down.",
+"scene": "first_dive",
+"success": {
+"w": 1,
+"text": "You come up with a toolbox and a grin that won't leave. Your first tally mark.",
+"fx": {
+"deepsense": 6,
+"nerve": 5,
+"scrap": 4
+},
+"flag": "first_dive_done",
+"best": "Your first dive, under Linden Court."
+},
+"fail": {
+"w": 1,
+"text": "Your air goes and the hands that pull you up are the only reason you're alive. You dive again anyway, later.",
+"fx": {
+"health": -8,
+"deepsense": 5,
+"nerve": 4
+},
+"flag": "first_dive_done"
+}
+}
+]
+},
+{
+"label": "Refuse",
+"out": [
+{
+"w": 1,
+"text": "You can't. Not yet. {mentor} doesn't push.",
+"fx": {
+"nerve": -3,
+"happiness": -2
+}
+}
+]
+}
+],
+"weight": 3
+},
+{
+"id": "t_crush",
+"ages": [
+13,
+17
+],
+"title": "First crush",
+"text": "You can't stop looking at someone across the market deck.",
+"choices": [
+{
+"label": "Say something",
+"out": [
+{
+"w": 1,
+"text": "You say something stupid. They laugh. Then they say something stupid back.",
+"fx": {
+"happiness": 6,
+"charm": 3
+},
+"person": {
+"role": "partner"
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "They look at your wrist, and away.",
+"fx": {
+"happiness": -5
+}
+}
+]
+},
+{
+"label": "Write them a note",
+"out": [
+{
+"w": 1,
+"text": "You never send it. You keep it for years.",
+"fx": {
+"smarts": 1,
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_first_fight",
+"ages": [
+13,
+17
+],
+"title": "A fight",
+"text": "Someone on the deck calls your family \"Ward-lickers\" \u2014 or \"dive-dirt\". Everyone is watching.",
+"choices": [
+{
+"label": "Swing first",
+"out": [
+{
+"w": 1,
+"text": "You win, mostly. The steward makes you both scrub the bilge together.",
+"fx": {
+"strength": 3,
+"nerve": 4,
+"karma": -2
+},
+"check": "strength",
+"good": true
+},
+{
+"w": 1,
+"text": "You lose. Badly. People respect you more anyway.",
+"fx": {
+"health": -6,
+"nerve": 4
+}
+}
+]
+},
+{
+"label": "Walk away",
+"out": [
+{
+"w": 1,
+"text": "It costs more than the fight would have. You do it anyway.",
+"fx": {
+"karma": 3,
+"nerve": -1
+}
+}
+]
+},
+{
+"label": "Make them laugh",
+"out": [
+{
+"w": 1,
+"text": "You turn it into a joke and they can't follow up. A useful trick.",
+"fx": {
+"charm": 4
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "It doesn't land. They hit you anyway.",
+"fx": {
+"health": -4
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_first_theft",
+"ages": [
+13,
+17
+],
+"title": "A locker",
+"text": "A trader's locker is open and nobody is looking.",
+"choices": [
+{
+"label": "Take something",
+"out": [
+{
+"w": 1,
+"text": "A battery and a jar of honey. Nobody finds out. You eat the honey alone.",
+"fx": {
+"scrap": 4,
+"karma": -5,
+"nerve": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "Caught. The raft votes on your punishment. You scrub hulls for a season.",
+"fx": {
+"karma": -5,
+"rep.portage": -8,
+"happiness": -4
+}
+}
+]
+},
+{
+"label": "Close it for them",
+"out": [
+{
+"w": 1,
+"text": "The trader never knows. You do.",
+"fx": {
+"karma": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_apprentice_offer",
+"ages": [
+14,
+17
+],
+"title": "An offer",
+"text": "{mentor} offers to take you on properly.",
+"choices": [
+{
+"label": "Accept",
+"out": [
+{
+"w": 1,
+"text": "You follow them for three years and learn everything they know that can be taught.",
+"fx": {
+"smarts": 3,
+"deepsense": 3,
+"nerve": 3
+},
+"flag": "apprenticed"
+}
+]
+},
+{
+"label": "Strike out alone",
+"out": [
+{
+"w": 1,
+"text": "You want to learn your own mistakes. You do.",
+"fx": {
+"nerve": 4,
+"luck": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_gang",
+"ages": [
+14,
+17
+],
+"title": "The Stacks crew",
+"text": "Kids from the Stacks run errands for the night market. They want you.",
+"choices": [
+{
+"label": "Join them",
+"out": [
+{
+"w": 1,
+"text": "Fast money, faster friends. You learn every hiding place on Portage.",
+"fx": {
+"scrap": 6,
+"nerve": 4,
+"karma": -3,
+"rep.lowlight": 5
+},
+"flag": "stacks_crew"
+}
+]
+},
+{
+"label": "Say no",
+"out": [
+{
+"w": 1,
+"text": "They stop talking to you. One of them gets arrested a year later.",
+"fx": {
+"karma": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_ward_recruiter",
+"ages": [
+16,
+17
+],
+"title": "Conscription",
+"text": "A Tide Ward recruiter ties up on ration day with a list of names. Yours is on it.",
+"choices": [
+{
+"label": "Go willingly",
+"out": [
+{
+"w": 1,
+"text": "Black wristband, navy coat. Your old friends don't meet your eye on the dock.",
+"fx": {
+"nerve": 3
+},
+"career": "ward_deckhand"
+}
+]
+},
+{
+"label": "Hide in the Stacks",
+"out": [
+{
+"w": 1,
+"text": "You hide for three days. They take someone else.",
+"fx": {
+"karma": -3,
+"nerve": 4
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "They find you. You go anyway, with a mark against your name.",
+"fx": {
+"nerve": 2,
+"happiness": -6
+},
+"career": "ward_deckhand"
+}
+]
+},
+{
+"label": "Pay them off",
+"out": [
+{
+"w": 1,
+"text": "Your family empties a jar of scrap into the recruiter's hand. He crosses your name out.",
+"fx": {
+"scrap": -6,
+"happiness": -2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 5
+}
+},
+{
+"id": "t_hm_exam",
+"ages": [
+15,
+17
+],
+"title": "The examination",
+"text": "The lower-ring examination decides who goes up the mountain and who stays near the gutters.",
+"choices": [
+{
+"label": "Study for months",
+"out": [
+{
+"w": 1,
+"text": "You pass. A pale gray uniform. Everyone at home is very proud and very quiet.",
+"fx": {
+"smarts": 5
+},
+"check": "smarts",
+"good": true,
+"flag": "passed_exam"
+},
+{
+"w": 1,
+"text": "You miss by two marks. Nobody says it out loud.",
+"fx": {
+"happiness": -6,
+"smarts": 2
+}
+}
+]
+},
+{
+"label": "Help a friend cheat",
+"out": [
+{
+"w": 1,
+"text": "Your friend passes. You don't. They never forget it.",
+"fx": {
+"karma": 5,
+"happiness": -3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"birth": [
+"highmark_ring"
+]
+}
+},
+{
+"id": "t_lost_in_building",
+"ages": [
+13,
+17
+],
+"title": "Lost inside",
+"text": "On a salvage run you take a wrong turn in a drowned office and your light dies.",
+"choices": [
+{
+"label": "Follow the wall",
+"out": [
+{
+"w": 1,
+"text": "You follow the wall with one hand for an hour that lasts a year. You find the window.",
+"fx": {
+"nerve": 6,
+"deepsense": 4
+},
+"check": "deepsense",
+"good": true
+},
+{
+"w": 1,
+"text": "You come out through the roof somehow, half drowned, with a jar of glass you don't remember picking up.",
+"fx": {
+"health": -8,
+"glass": 1,
+"deepsense": 6
+}
+}
+]
+},
+{
+"label": "Wait for the crew",
+"out": [
+{
+"w": 1,
+"text": "They find you by your humming. You didn't know you were humming.",
+"fx": {
+"deepsense": 3,
+"happiness": -1
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"careerTag": "deep"
+}
+},
+{
+"id": "t_first_kiss",
+"ages": [
+14,
+17
+],
+"title": "Lantern night",
+"text": "Lantern night. Someone you like is standing alone at the rail.",
+"choices": [
+{
+"label": "Stand next to them",
+"out": [
+{
+"w": 1,
+"text": "You don't say anything. You don't need to.",
+"fx": {
+"happiness": 7
+},
+"person": {
+"role": "partner"
+},
+"check": "looks",
+"good": true
+},
+{
+"w": 1,
+"text": "They move away. Politely.",
+"fx": {
+"happiness": -3
+}
+}
+]
+},
+{
+"label": "Light a lantern instead",
+"out": [
+{
+"w": 1,
+"text": "You write your grandmother's name on the paper. It is a good night anyway.",
+"fx": {
+"faith": 3,
+"happiness": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_runaway",
+"ages": [
+14,
+17
+],
+"title": "Running away",
+"text": "You could just take a skiff and go.",
+"choices": [
+{
+"label": "Go",
+"out": [
+{
+"w": 1,
+"text": "You last two weeks on your own. You come back thinner and much harder to impress.",
+"fx": {
+"nerve": 6,
+"stamina": 4,
+"happiness": -3
+}
+},
+{
+"w": 1,
+"text": "You find a Drifter crew who take you in. You become one of them.",
+"fx": {
+"nerve": 5
+},
+"standing": 6,
+"flag": "drifted"
+}
+]
+},
+{
+"label": "Stay",
+"out": [
+{
+"w": 1,
+"text": "You stay. Something in you keeps the skiff's knots loose, just in case.",
+"fx": {
+"happiness": -1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_hush_rumour",
+"ages": [
+13,
+17
+],
+"title": "The quiet girl",
+"text": "A girl on your raft stops talking. Everyone whispers the old word.",
+"choices": [
+{
+"label": "Sit with her",
+"out": [
+{
+"w": 1,
+"text": "She can't talk but she can write. She writes \"it's singing\". You keep her company until her family takes her to the Vigil.",
+"fx": {
+"karma": 6,
+"deepsense": 4,
+"faith": 2
+}
+}
+]
+},
+{
+"label": "Keep away",
+"out": [
+{
+"w": 1,
+"text": "You keep away, like everyone. You hear later she's fine. You aren't sure that's true.",
+"fx": {
+"karma": -2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_smuggle_run",
+"ages": [
+15,
+17
+],
+"title": "A small run",
+"text": "A Lowlight runner asks you to carry a sealed bag across two rafts. \"Don't open it.\"",
+"choices": [
+{
+"label": "Do it",
+"out": [
+{
+"w": 1,
+"text": "Easy scrap. You don't open it. You never find out.",
+"fx": {
+"scrap": 5,
+"nerve": 3,
+"rep.lowlight": 4
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "A Ward search on the second raft. You drop the bag over the side. Lowlight wants it paid for.",
+"fx": {
+"nerve": 4,
+"rep.lowlight": -6,
+"scrap": -2
+}
+}
+]
+},
+{
+"label": "Open it",
+"out": [
+{
+"w": 1,
+"text": "Medicine. Real Highmark medicine, for a raft with sick children. You carry it twice as carefully.",
+"fx": {
+"karma": 6,
+"scrap": 3,
+"rep.lowlight": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_bloom_sighting",
+"ages": [
+13,
+17
+],
+"title": "A light below",
+"text": "Night swimming. Something glows, far below, between the drowned towers.",
+"choices": [
+{
+"label": "Dive toward it",
+"out": [
+{
+"w": 1,
+"text": "It is a person standing in the water, lit from inside by growth. It doesn't move. You do. Fast.",
+"fx": {
+"deepsense": 8,
+"nerve": 4,
+"happiness": -4
+},
+"flag": "saw_bloomwalker"
+}
+]
+},
+{
+"label": "Tell the Keeper",
+"out": [
+{
+"w": 1,
+"text": "She listens. \"It was someone,\" she says. \"Be kind to it. Be far from it.\"",
+"fx": {
+"faith": 5,
+"deepsense": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_music",
+"ages": [
+13,
+17
+],
+"title": "An instrument",
+"text": "You find a salvage fiddle with two strings.",
+"choices": [
+{
+"label": "Learn it",
+"out": [
+{
+"w": 1,
+"text": "By winter you can play three songs. One of them is almost beautiful.",
+"fx": {
+"charm": 4,
+"happiness": 5
+},
+"flag": "plays_music"
+}
+]
+},
+{
+"label": "Sell it",
+"out": [
+{
+"w": 1,
+"text": "Five scrap. You hear someone else play it on the Exchange for years.",
+"fx": {
+"scrap": 5
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_parent_lost",
+"ages": [
+13,
+17
+],
+"title": "A boat that doesn't come back",
+"text": "Your father's fishing boat doesn't come back from the Supply Lanes.",
+"choices": [
+{
+"label": "Search for it",
+"out": [
+{
+"w": 1,
+"text": "You search for six days. You find a single oar with his initials.",
+"fx": {
+"nerve": 5,
+"happiness": -15
+},
+"lose": "father"
+}
+]
+},
+{
+"label": "Wait at the dock",
+"out": [
+{
+"w": 1,
+"text": "He comes back on the seventh day, towed by a Ward launch, with a broken leg and a story.",
+"fx": {
+"happiness": 5,
+"rep.tide_ward": 3
+}
+},
+{
+"w": 2,
+"text": "You wait. That is all anyone can do. He is not on the next boat, or the one after.",
+"fx": {
+"happiness": -15
+},
+"lose": "father"
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasParent": true
+}
+},
+{
+"id": "t_teach_kid",
+"ages": [
+14,
+17
+],
+"title": "A kid follows you",
+"text": "A small kid starts following you everywhere and copying how you tie knots.",
+"choices": [
+{
+"label": "Teach them properly",
+"out": [
+{
+"w": 1,
+"text": "They become very good. Better than you, one day.",
+"fx": {
+"karma": 4,
+"charm": 2
+},
+"person": {
+"role": "friend",
+"age": 8
+}
+}
+]
+},
+{
+"label": "Shoo them away",
+"out": [
+{
+"w": 1,
+"text": "They cry. You feel like the tide.",
+"fx": {
+"karma": -2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_highmark_view",
+"ages": [
+13,
+17
+],
+"title": "The view",
+"text": "On a clear night you climb the Crow and look at Highmark's lights for an hour.",
+"choices": [
+{
+"label": "Want to go there",
+"out": [
+{
+"w": 1,
+"text": "You decide, very privately, that one day you will stand on dry ground.",
+"fx": {
+"nerve": 2
+},
+"flag": "wants_highmark"
+}
+]
+},
+{
+"label": "Hate it",
+"out": [
+{
+"w": 1,
+"text": "Every light up there is a ration that didn't come here. You decide that, very privately.",
+"fx": {
+"nerve": 3,
+"rep.highmark": -3
+},
+"flag": "hates_highmark"
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_vigil_novice",
+"ages": [
+13,
+17
+],
+"title": "The Keeper's question",
+"text": "The Keeper asks if you would like to sit the night watch with the novices.",
+"choices": [
+{
+"label": "Sit the watch",
+"out": [
+{
+"w": 1,
+"text": "All night by a candle on the water. Near dawn the water hums and the candle flame bends toward the sound.",
+"fx": {
+"faith": 7,
+"deepsense": 6
+},
+"flag": "vigil_watch"
+}
+]
+},
+{
+"label": "Politely refuse",
+"out": [
+{
+"w": 1,
+"text": "\"Of course,\" she says. \"The water will ask you again.\"",
+"fx": {
+"faith": -1
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"stat": {
+"faith": [
+40,
+100
+]
+}
+}
+},
+{
+"id": "t_engine_fix",
+"ages": [
+13,
+17
+],
+"title": "The dead engine",
+"text": "A trader's engine dies at the dock. Everyone is shouting. You think you can see why.",
+"choices": [
+{
+"label": "Fix it",
+"out": [
+{
+"w": 1,
+"text": "Fuel line, cracked. You fix it with tape and nerve. The trader pays you.",
+"fx": {
+"smarts": 4,
+"scrap": 4
+},
+"check": "smarts",
+"good": true
+},
+{
+"w": 1,
+"text": "You make it worse. Spectacularly worse.",
+"fx": {
+"charm": -2,
+"happiness": -3
+}
+}
+]
+},
+{
+"label": "Point it out to an adult",
+"out": [
+{
+"w": 1,
+"text": "They fix it and take the credit. You learn something about adults.",
+"fx": {
+"smarts": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_ration_riot",
+"ages": [
+14,
+17
+],
+"title": "Ration day riot",
+"text": "The ration launch is short by a third. People start shoving.",
+"choices": [
+{
+"label": "Get into the crowd",
+"out": [
+{
+"w": 1,
+"text": "You end up throwing a sealed tin at a Warden. Hero to the Stacks, file in the Archives.",
+"fx": {
+"nerve": 5,
+"rep.tide_ward": -10,
+"rep.portage": 5,
+"world.uprising": 0.02
+},
+"flag": "ward_file"
+}
+]
+},
+{
+"label": "Pull your family out",
+"out": [
+{
+"w": 1,
+"text": "You get them out before the Wardens use the batons.",
+"fx": {
+"karma": 3,
+"strength": 1
+}
+}
+]
+},
+{
+"label": "Help the Wardens restore order",
+"out": [
+{
+"w": 1,
+"text": "A Ward officer notes your name with approval. Your friends note it too.",
+"fx": {
+"rep.tide_ward": 8,
+"rep.portage": -6
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_teo_dive_story",
+"ages": [
+13,
+17
+],
+"title": "A diver's story",
+"text": "An old diver tells you about a ring of black stones far down the Sounding, that hums when the Beacon passes.",
+"choices": [
+{
+"label": "Believe them",
+"out": [
+{
+"w": 1,
+"text": "You lie awake listening for it. Some nights you think you hear it.",
+"fx": {
+"deepsense": 6,
+"faith": 2
+},
+"flag": "heard_of_cathedral"
+}
+]
+},
+{
+"label": "Laugh it off",
+"out": [
+{
+"w": 1,
+"text": "He just nods. \"You will,\" he says.",
+"fx": {
+"smarts": 1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "t_first_job",
+"ages": [
+15,
+17
+],
+"title": "Odd jobs",
+"text": "There is always work for hands on a raft, if not for much.",
+"choices": [
+{
+"label": "Haul nets",
+"out": [
+{
+"w": 1,
+"text": "Your back aches and your hands harden.",
+"fx": {
+"strength": 3,
+"scrap": 3
+}
+}
+]
+},
+{
+"label": "Run messages",
+"out": [
+{
+"w": 1,
+"text": "You learn everyone's business. Very useful.",
+"fx": {
+"charm": 3,
+"scrap": 2,
+"smarts": 1
+}
+}
+]
+},
+{
+"label": "Work the night market",
+"out": [
+{
+"w": 1,
+"text": "You learn the prices of things that don't have prices.",
+"fx": {
+"scrap": 5,
+"karma": -2,
+"rep.lowlight": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_leave_home",
+"ages": [
+18,
+20
+],
+"title": "Your own bunk",
+"text": "You could keep your family's bunk, or find your own place.",
+"choices": [
+{
+"label": "Your own place",
+"out": [
+{
+"w": 1,
+"text": "A container on the Stacks with a hole in the roof. Yours.",
+"fx": {
+"happiness": 5,
+"scrap": -2
+}
+}
+]
+},
+{
+"label": "Stay with family",
+"out": [
+{
+"w": 1,
+"text": "You save scrap and lose a little privacy every year.",
+"fx": {
+"scrap": 3,
+"happiness": -1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_job_offer_trader",
+"ages": [
+18,
+40
+],
+"title": "Vance's offer",
+"text": "Madam Oru Vance's people want a runner. She sees something in you, or says she does.",
+"choices": [
+{
+"label": "Take it",
+"out": [
+{
+"w": 1,
+"text": "You run cargo between rafts. Vance pays fair and remembers everything.",
+"fx": {
+"charm": 2
+},
+"career": "trader",
+"flag": "vance_runner"
+}
+]
+},
+{
+"label": "Turn her down",
+"out": [
+{
+"w": 1,
+"text": "\"Pity,\" she says. \"Come back when you're hungrier.\""
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMax": 6
+}
+},
+{
+"id": "a_trader_permit",
+"ages": [
+20,
+45
+],
+"title": "A yellow permit",
+"text": "A Highmark provisioner offers you a trader's permit \u2014 if you report \"irregularities\" on your raft.",
+"choices": [
+{
+"label": "Take the permit",
+"out": [
+{
+"w": 1,
+"text": "Yellow tag on your arm. Cheaper fuel. Fewer people sit with you at dinner.",
+"fx": {
+"rep.highmark": 10,
+"rep.portage": -12,
+"karma": -4
+},
+"standing": 4,
+"flag": "informer"
+}
+]
+},
+{
+"label": "Take it and report nothing",
+"out": [
+{
+"w": 1,
+"text": "You file empty reports for two years. Then they notice.",
+"fx": {
+"rep.highmark": -5,
+"nerve": 4
+},
+"standing": 4,
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "They notice in a month. Permit revoked, name filed.",
+"fx": {
+"rep.highmark": -12,
+"rep.tide_ward": -8
+}
+}
+]
+},
+{
+"label": "Refuse",
+"out": [
+{
+"w": 1,
+"text": "The provisioner shrugs. \"Your loss.\" It is, a little.",
+"fx": {
+"karma": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 5
+}
+},
+{
+"id": "a_drifter_tag",
+"ages": [
+18,
+50
+],
+"title": "Cut the cord",
+"text": "Sal at the night market offers to cut the Deep-Born tally off your sleeve and sell you a drifter's nothing.",
+"choices": [
+{
+"label": "Do it",
+"out": [
+{
+"w": 1,
+"text": "Orange docks. Fewer stares. The dive crews say you're ashamed of them. You are, a bit.",
+"fx": {
+"rep.deep_born": -10,
+"scrap": -4
+},
+"standing": 6
+}
+]
+},
+{
+"label": "Keep the tally",
+"out": [
+{
+"w": 1,
+"text": "You keep it. It's yours.",
+"fx": {
+"rep.deep_born": 6,
+"karma": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 7
+}
+},
+{
+"id": "a_marriage_proposal",
+"ages": [
+20,
+50
+],
+"title": "A question",
+"text": "{partner} asks if you'd marry them on the water.",
+"choices": [
+{
+"label": "Yes",
+"out": [
+{
+"w": 1,
+"text": "A dusk wedding on a borrowed barge. Lanterns. The Keeper ties your wrists with blue thread.",
+"fx": {
+"happiness": 15
+},
+"flag": "married",
+"best": "Marrying {partner} on the water at dusk."
+}
+]
+},
+{
+"label": "Not yet",
+"out": [
+{
+"w": 1,
+"text": "They say they'll wait. They mean it, mostly.",
+"fx": {
+"happiness": -3
+}
+}
+]
+},
+{
+"label": "No",
+"out": [
+{
+"w": 1,
+"text": "They take it quietly and leave on the next trader.",
+"fx": {
+"happiness": -8
+},
+"lose": "partner"
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasPartner": true
+}
+},
+{
+"id": "a_child",
+"ages": [
+20,
+45
+],
+"title": "A child",
+"text": "{partner} says it might be time for a child.",
+"choices": [
+{
+"label": "Yes",
+"out": [
+{
+"w": 1,
+"text": "A child, small and furious and yours.",
+"fx": {
+"happiness": 12,
+"scrap": -3
+},
+"person": {
+"role": "child"
+},
+"best": "The first time you held your child."
+}
+]
+},
+{
+"label": "Wait",
+"out": [
+{
+"w": 1,
+"text": "You wait. Some years waiting is a choice and some years it isn't."
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasPartner": true
+}
+},
+{
+"id": "a_meet_someone",
+"ages": [
+18,
+55
+],
+"title": "Someone new",
+"text": "Someone new ties up next to you at the dock and asks for a light.",
+"choices": [
+{
+"label": "Give them the light and stay",
+"out": [
+{
+"w": 1,
+"text": "You talk until the lamps go out.",
+"fx": {
+"happiness": 5
+},
+"person": {
+"role": "partner"
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "Pleasant. Nothing more.",
+"fx": {
+"happiness": 1
+}
+}
+]
+},
+{
+"label": "Give them the light and go",
+"out": [
+{
+"w": 1,
+"text": "You wonder about them, later."
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasPartner": false
+},
+"once": false
+},
+{
+"id": "a_promotion_test",
+"ages": [
+20,
+60
+],
+"title": "A chance",
+"text": "Your boss offers you a harder job, more responsibility, more pay.",
+"choices": [
+{
+"label": "Take it",
+"out": [
+{
+"w": 1,
+"text": "You do it well. People start calling you by your title.",
+"fx": {
+"scrap": 5,
+"happiness": 3
+},
+"check": "smarts",
+"good": true,
+"flag": "promoted_once"
+},
+{
+"w": 1,
+"text": "You struggle. They give it to someone else.",
+"fx": {
+"happiness": -5
+}
+}
+]
+},
+{
+"label": "Stay where you are",
+"out": [
+{
+"w": 1,
+"text": "Safe. Comfortable. A little dull.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasCareer": true
+},
+"once": false
+},
+{
+"id": "a_diver_deep_contract",
+"ages": [
+18,
+55
+],
+"title": "A deep contract",
+"text": "A man with Highmark shoes and no wristband offers a fortune to dive past the Dark Shelf.",
+"choices": [
+{
+"label": "Take it",
+"out": [
+{
+"w": 1,
+"text": "You go deeper than you have ever been. You come back. The man pays in glass and doesn't blink.",
+"fx": {
+"glass": 4,
+"deepsense": 10,
+"nerve": 6
+},
+"check": "deepsense",
+"good": true,
+"flag": "cathedral_fed"
+},
+{
+"w": 1,
+"text": "You go deep. You come back without three days of memory and with the tune of the Choir in your chest.",
+"fx": {
+"health": -15,
+"deepsense": 14,
+"glass": 2
+},
+"flag": "cathedral_fed"
+}
+]
+},
+{
+"label": "Ask who he works for",
+"out": [
+{
+"w": 1,
+"text": "\"The Archives,\" he says, after a long time. You walk away. He makes a note.",
+"fx": {
+"smarts": 3,
+"rep.highmark": -5
+},
+"flag": "knows_archives"
+}
+]
+},
+{
+"label": "Refuse",
+"out": [
+{
+"w": 1,
+"text": "He finds someone else. The someone else doesn't come back up.",
+"fx": {
+"karma": 2,
+"happiness": -4
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"careerTag": "deep"
+}
+},
+{
+"id": "a_quarantine_contract",
+"ages": [
+18,
+55
+],
+"title": "Ward 9",
+"text": "Lowlight wants something from the flooded basement under St. Aldren's quarantine wing.",
+"choices": [
+{
+"label": "Go (play it)",
+"out": [
+{
+"w": 1,
+"text": "You go.",
+"scene": "quarantine_dive",
+"success": {
+"w": 1,
+"text": "You come up with a sample of the growth in a jar and something worse: you understand what Ward 9 was for.",
+"fx": {
+"glass": 2,
+"deepsense": 10,
+"rep.lowlight": 10
+},
+"flag": "ward9_truth",
+"best": "Coming up out of Ward 9 alive."
+},
+"fail": {
+"w": 1,
+"text": "The basement is darker than the job said. You come up empty, coughing, and dream of glowing hands for a year.",
+"fx": {
+"health": -10,
+"deepsense": 6
+}
+}
+}
+]
+},
+{
+"label": "Refuse",
+"out": [
+{
+"w": 1,
+"text": "\"Fair,\" says the runner. \"Smart.\" It doesn't sound like a compliment.",
+"fx": {
+"rep.lowlight": -3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 5
+}
+},
+{
+"id": "a_festival",
+"ages": [
+18,
+70
+],
+"title": "Lantern night",
+"text": "It's lantern night on Portage. You have a name in your head.",
+"choices": [
+{
+"label": "Go (play it)",
+"out": [
+{
+"w": 1,
+"text": "You go.",
+"scene": "festival",
+"success": {
+"w": 1,
+"text": "Your lantern goes out with all the others. For one night the Drift is full of names.",
+"fx": {
+"happiness": 10,
+"faith": 4,
+"rep.portage": 3
+},
+"best": "Lantern night, setting a name on the water."
+},
+"fail": {
+"w": 1,
+"text": "You get there late. The lanterns are already far out. You watch them anyway.",
+"fx": {
+"happiness": 3
+}
+}
+}
+]
+},
+{
+"label": "Stay home",
+"out": [
+{
+"w": 1,
+"text": "You watch the lights from your bunk window.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "a_patrol_stop",
+"ages": [
+18,
+60
+],
+"title": "Searchlight",
+"text": "You're out late with something in your locker you shouldn't have. Engines in the fog.",
+"choices": [
+{
+"label": "Hide (play it)",
+"out": [
+{
+"w": 1,
+"text": "You hide.",
+"scene": "patrol_stop",
+"success": {
+"w": 1,
+"text": "The searchlight swings past twice. Then the engine fades. You breathe.",
+"fx": {
+"nerve": 5,
+"rep.lowlight": 3
+}
+},
+"fail": {
+"w": 1,
+"text": "They board. They take the locker, a week's scrap and your good mood.",
+"fx": {
+"scrap": -5,
+"rep.tide_ward": -6,
+"happiness": -4
+}
+}
+}
+]
+},
+{
+"label": "Hail them and comply",
+"out": [
+{
+"w": 1,
+"text": "They search everything. A conscript deckhand pockets your contraband and winks.",
+"fx": {
+"karma": 1,
+"nerve": 1
+}
+},
+{
+"w": 2,
+"text": "They seize the lot and write your name down.",
+"fx": {
+"scrap": -4,
+"rep.tide_ward": -4
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 4
+},
+"once": false
+},
+{
+"id": "a_storm",
+"ages": [
+16,
+70
+],
+"title": "The midnight storm",
+"text": "A storm at midnight. Low Row's lines part and a whole raft starts to drift.",
+"choices": [
+{
+"label": "Throw a line (play it)",
+"out": [
+{
+"w": 1,
+"text": "You go.",
+"scene": "storm",
+"success": {
+"w": 1,
+"text": "You tow them home through the black. Every bunk on Low Row knows your name now.",
+"fx": {
+"karma": 10,
+"strength": 3,
+"rep.portage": 12
+},
+"best": "Towing Low Row home through the storm."
+},
+"fail": {
+"w": 1,
+"text": "You lose them in the rain. They are found three days later, alive, far out. You couldn't have done more.",
+"fx": {
+"happiness": -6,
+"karma": 4
+}
+}
+}
+]
+},
+{
+"label": "Secure your own boat",
+"out": [
+{
+"w": 1,
+"text": "You hold your own lines all night. In the morning a raft is missing.",
+"fx": {
+"happiness": -6,
+"karma": -3
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "a_uprising_meeting",
+"ages": [
+18,
+64
+],
+"title": "A meeting",
+"text": "A meeting in the Stacks at midnight. People are talking about the rafts refusing the next ration day.",
+"choices": [
+{
+"label": "Speak",
+"out": [
+{
+"w": 1,
+"text": "You speak. People listen. A Ward informer listens too.",
+"fx": {
+"charm": 3,
+"world.uprising": 0.05,
+"rep.tide_ward": -8
+},
+"flag": "uprising_voice"
+}
+]
+},
+{
+"label": "Listen",
+"out": [
+{
+"w": 1,
+"text": "You listen. The anger is very old and very reasonable.",
+"fx": {
+"smarts": 2,
+"world.uprising": 0.01
+}
+}
+]
+},
+{
+"label": "Report it",
+"out": [
+{
+"w": 1,
+"text": "A Ward officer thanks you for your service. Three people disappear.",
+"fx": {
+"rep.tide_ward": 12,
+"karma": -15,
+"scrap": 6,
+"world.uprising": -0.04
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_ration_cut",
+"ages": [
+18,
+70
+],
+"title": "Ration cut",
+"text": "Highmark cuts the ration by a quarter. The board on your raft is rewritten in red chalk.",
+"choices": [
+{
+"label": "Share what you have",
+"out": [
+{
+"w": 1,
+"text": "You feed two families for a month. You are thin. You are not sorry.",
+"fx": {
+"health": -4,
+"karma": 8,
+"rations": -15
+}
+}
+]
+},
+{
+"label": "Hoard",
+"out": [
+{
+"w": 1,
+"text": "You make it through fine. Not everyone does.",
+"fx": {
+"karma": -5,
+"rations": 10
+}
+}
+]
+},
+{
+"label": "Buy from the night market",
+"out": [
+{
+"w": 1,
+"text": "Forged seals. They work this time.",
+"fx": {
+"scrap": -5,
+"rations": 15,
+"rep.lowlight": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"world": {
+"rations": [
+0,
+0.8
+]
+}
+},
+"once": false
+},
+{
+"id": "a_glow_rising",
+"ages": [
+18,
+80
+],
+"title": "Glow under the raft",
+"text": "For the first time, there is a faint glow under your own raft at night.",
+"choices": [
+{
+"label": "Dive to look",
+"out": [
+{
+"w": 1,
+"text": "Growth on the floats, pale and pulsing. It turns toward your breathing.",
+"fx": {
+"deepsense": 8,
+"nerve": 4,
+"happiness": -4
+},
+"flag": "glow_seen"
+}
+]
+},
+{
+"label": "Tell the steward",
+"out": [
+{
+"w": 1,
+"text": "They scrape it off. It grows back in a week.",
+"fx": {
+"smarts": 2
+}
+}
+]
+},
+{
+"label": "Pray",
+"out": [
+{
+"w": 1,
+"text": "You pray to a tide you are less sure of than you were.",
+"fx": {
+"faith": 4
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"world": {
+"glow": [
+0.3,
+1
+]
+}
+}
+},
+{
+"id": "a_lost_ring",
+"ages": [
+18,
+60
+],
+"title": "The wedding ring",
+"text": "A widow on Low Row lost her wedding ring in the drowned church off the north lane.",
+"choices": [
+{
+"label": "Dive for it",
+"out": [
+{
+"w": 1,
+"text": "You find it on the altar step, under a fall of glass. She cries. You pretend you aren't.",
+"fx": {
+"karma": 8,
+"deepsense": 3,
+"rep.portage": 4
+},
+"check": "deepsense",
+"good": true
+},
+{
+"w": 1,
+"text": "You don't find it. You find a hundred other rings instead and leave them all.",
+"fx": {
+"deepsense": 4,
+"happiness": -2
+}
+}
+]
+},
+{
+"label": "Give her one of your own",
+"out": [
+{
+"w": 1,
+"text": "It isn't hers. She wears it anyway.",
+"fx": {
+"karma": 5,
+"scrap": -3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_sick_child",
+"ages": [
+20,
+60
+],
+"title": "Medicine",
+"text": "A child on your raft needs Highmark medicine. Nobody has a permit.",
+"choices": [
+{
+"label": "Buy forged seals",
+"out": [
+{
+"w": 1,
+"text": "It works. The child lives. You are in debt to Lowlight for a year.",
+"fx": {
+"karma": 8,
+"scrap": -6,
+"rep.lowlight": 5
+}
+}
+]
+},
+{
+"label": "Ask Highmark directly",
+"out": [
+{
+"w": 1,
+"text": "A physician on the Outer Harbor gives you the medicine and her name, quietly. Kindness in a gray uniform.",
+"fx": {
+"karma": 5,
+"rep.highmark": 4
+},
+"check": "charm",
+"good": true,
+"flag": "kind_physician"
+},
+{
+"w": 1,
+"text": "Denied. Forms. More forms. The child lives anyway, no thanks to anyone.",
+"fx": {
+"happiness": -4
+}
+}
+]
+},
+{
+"label": "Steal it from a Ward launch",
+"out": [
+{
+"w": 1,
+"text": "You get it. You also get a file.",
+"fx": {
+"karma": 4,
+"nerve": 6,
+"rep.tide_ward": -12
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_ghost_signal",
+"ages": [
+18,
+70
+],
+"title": "A voice in the static",
+"text": "On a dead frequency you hear a voice reading names. Your name is on the list.",
+"choices": [
+{
+"label": "Keep listening",
+"out": [
+{
+"w": 1,
+"text": "The voice reads names until dawn. Most of them are drowned. You are not. Yet.",
+"fx": {
+"deepsense": 8,
+"happiness": -5
+},
+"flag": "ghost_signal"
+}
+]
+},
+{
+"label": "Turn it off",
+"out": [
+{
+"w": 1,
+"text": "You turn it off. You don't sleep.",
+"fx": {
+"health": -2
+}
+}
+]
+}
+],
+"weight": 1,
+"rare": true
+},
+{
+"id": "a_keeper_riddle",
+"ages": [
+20,
+80
+],
+"title": "The Keeper",
+"text": "The Keeper asks you, \"What does the water want?\"",
+"choices": [
+{
+"label": "\"To be heard.\"",
+"out": [
+{
+"w": 1,
+"text": "She nods slowly. \"Then be careful what you say near it.\"",
+"fx": {
+"faith": 4,
+"deepsense": 5
+},
+"flag": "keeper_trust"
+}
+]
+},
+{
+"label": "\"Nothing. It's water.\"",
+"out": [
+{
+"w": 1,
+"text": "\"Mm,\" she says. \"That is what Highmark says too.\"",
+"fx": {
+"smarts": 2,
+"faith": -3
+}
+}
+]
+},
+{
+"label": "\"Us.\"",
+"out": [
+{
+"w": 1,
+"text": "She looks at you for a long time. \"Yes,\" she says. \"Some of us.\"",
+"fx": {
+"deepsense": 8,
+"faith": 3,
+"happiness": -3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_debt",
+"ages": [
+20,
+60
+],
+"title": "Debt",
+"text": "Vance's collectors come about a loan. You don't remember it being this much.",
+"choices": [
+{
+"label": "Pay",
+"out": [
+{
+"w": 1,
+"text": "You pay. You are poorer and freer.",
+"fx": {
+"scrap": -8
+}
+}
+]
+},
+{
+"label": "Negotiate",
+"out": [
+{
+"w": 1,
+"text": "Vance herself waves them off. \"Not this one. Not this year.\"",
+"fx": {
+"charm": 3,
+"rep.portage": -2
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "They take your engine as collateral.",
+"fx": {
+"happiness": -6
+}
+}
+]
+},
+{
+"label": "Run to Lowlight",
+"out": [
+{
+"w": 1,
+"text": "You disappear into the Hush for a season.",
+"fx": {
+"rep.portage": -10,
+"rep.lowlight": 6
+},
+"standing": 6
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"stat": {
+"luck": [
+0,
+45
+]
+}
+}
+},
+{
+"id": "a_ward_kindness",
+"ages": [
+18,
+70
+],
+"title": "A Warden",
+"text": "During a search, a young Warden finds the contraband in your locker. She looks at you, then closes it.",
+"choices": [
+{
+"label": "Thank her quietly",
+"out": [
+{
+"w": 1,
+"text": "\"I'm from Greentide,\" she says. \"Keep your head down.\"",
+"fx": {
+"karma": 2,
+"happiness": 4
+},
+"flag": "ward_friend"
+}
+]
+},
+{
+"label": "Say nothing",
+"out": [
+{
+"w": 1,
+"text": "She moves on. You never see her again. You think about her often."
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 5
+}
+},
+{
+"id": "a_old_friend_return",
+"ages": [
+25,
+70
+],
+"title": "An old face",
+"text": "{friend} turns up at your dock after years away.",
+"choices": [
+{
+"label": "Embrace them",
+"out": [
+{
+"w": 1,
+"text": "Like no time passed. Like all of it did.",
+"fx": {
+"happiness": 8
+}
+}
+]
+},
+{
+"label": "Ask where they've been",
+"out": [
+{
+"w": 1,
+"text": "\"Highmark,\" they say, and show you a blue wristband, and look ashamed of it.",
+"fx": {
+"smarts": 1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_mentor_dies",
+"ages": [
+20,
+60
+],
+"title": "Your mentor",
+"text": "{mentor} is dying. They ask for you.",
+"choices": [
+{
+"label": "Go to them",
+"out": [
+{
+"w": 1,
+"text": "They give you their dive knife and one piece of advice: \"Go quiet.\"",
+"fx": {
+"happiness": -6,
+"deepsense": 4,
+"karma": 3
+},
+"lose": "mentor"
+}
+]
+},
+{
+"label": "You can't bear it",
+"out": [
+{
+"w": 1,
+"text": "You don't go. They die without you. You keep their name on a lantern every year.",
+"fx": {
+"happiness": -10
+},
+"lose": "mentor"
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_bring_tide_ceremony",
+"ages": [
+30,
+60
+],
+"title": "A child's bracelet",
+"text": "Your child is five. It's time for their first bracelet.",
+"choices": [
+{
+"label": "Your raft's colour",
+"out": [
+{
+"w": 1,
+"text": "They wear it proudly, then lose it in a week.",
+"fx": {
+"happiness": 5
+}
+}
+]
+},
+{
+"label": "No bracelet \u2014 let them choose",
+"out": [
+{
+"w": 1,
+"text": "Unusual. People talk. Your child grows up unafraid of most things.",
+"fx": {
+"nerve": 2,
+"karma": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasKids": true
+}
+},
+{
+"id": "a_child_dive",
+"ages": [
+30,
+70
+],
+"title": "Your child wants to dive",
+"text": "Your child wants to be a diver.",
+"choices": [
+{
+"label": "Teach them yourself",
+"out": [
+{
+"w": 1,
+"text": "You teach them everything you know about being quiet.",
+"fx": {
+"happiness": 4,
+"deepsense": 2
+}
+}
+]
+},
+{
+"label": "Forbid it",
+"out": [
+{
+"w": 1,
+"text": "They dive anyway, at night, alone. They are fine. You never forgive yourself the fear.",
+"fx": {
+"happiness": -4
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasKids": true
+}
+},
+{
+"id": "a_smuggle_offer",
+"ages": [
+18,
+55
+],
+"title": "Captain Marlow",
+"text": "Captain Sef Marlow of Lowlight sits down next to you without asking. \"I hear you're steady.\"",
+"choices": [
+{
+"label": "Work for Lowlight",
+"out": [
+{
+"w": 1,
+"text": "Fog, engines off, cargo that doesn't exist.",
+"fx": {
+"nerve": 3
+},
+"career": "smuggler",
+"flag": "lowlight_crew"
+}
+]
+},
+{
+"label": "Ask about the Ward",
+"out": [
+{
+"w": 1,
+"text": "\"I was a captain,\" he says. \"I saw the cargo manifests. Now I'm this.\" He doesn't elaborate.",
+"fx": {
+"smarts": 3
+},
+"flag": "marlow_story"
+}
+]
+},
+{
+"label": "Turn him in",
+"out": [
+{
+"w": 1,
+"text": "The Ward never finds him. Lowlight never forgets you.",
+"fx": {
+"rep.lowlight": -30,
+"rep.tide_ward": 10,
+"karma": -6
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_ward_career_moment",
+"ages": [
+18,
+60
+],
+"title": "A raft inspection",
+"text": "As a Warden, you are ordered to seize a raft's medicine for having no permits.",
+"choices": [
+{
+"label": "Follow orders",
+"out": [
+{
+"w": 1,
+"text": "You seize it. A child on that raft will be sick all winter. The captain commends you.",
+"fx": {
+"karma": -10,
+"rep.tide_ward": 8
+},
+"flag": "seized_medicine"
+}
+]
+},
+{
+"label": "Look the other way",
+"out": [
+{
+"w": 1,
+"text": "You \"miss\" the locker. Your sergeant notices. He also says nothing.",
+"fx": {
+"karma": 8,
+"rep.portage": 5
+}
+}
+]
+},
+{
+"label": "Report the order",
+"out": [
+{
+"w": 1,
+"text": "A file opens with your name on it.",
+"fx": {
+"nerve": 4,
+"rep.tide_ward": -10,
+"karma": 5
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"career": [
+"ward_deckhand"
+]
+}
+},
+{
+"id": "a_engineer_project",
+"ages": [
+22,
+60
+],
+"title": "Bram's project",
+"text": "Bram Hollis wants to build a pump that could lift a whole raft's water. He needs help.",
+"choices": [
+{
+"label": "Help him",
+"out": [
+{
+"w": 1,
+"text": "It takes a year. It works. Rusthold names a bolt after you.",
+"fx": {
+"smarts": 5,
+"rep.rusthold": 10,
+"happiness": 5
+}
+}
+]
+},
+{
+"label": "Too busy",
+"out": [
+{
+"w": 1,
+"text": "He builds it anyway. It breaks. He builds it again."
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"careerTag": "raft"
+}
+},
+{
+"id": "a_greentide_seed",
+"ages": [
+22,
+60
+],
+"title": "The seed vault",
+"text": "Someone stole Greentide's seed vault. Elder Koa is calm, which is frightening.",
+"choices": [
+{
+"label": "Track it down",
+"out": [
+{
+"w": 1,
+"text": "You find it in a Ward launch's hold, labelled \"confiscated\". You get it back without a fight, somehow.",
+"fx": {
+"karma": 8,
+"rep.greentide": 15,
+"nerve": 4
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "You track it to Highmark's Outer Harbor and no further.",
+"fx": {
+"rep.greentide": 4,
+"smarts": 2
+}
+}
+]
+},
+{
+"label": "Donate seeds of your own",
+"out": [
+{
+"w": 1,
+"text": "Three beans and a potato eye. Koa plants them herself.",
+"fx": {
+"karma": 4,
+"rep.greentide": 6
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_highmark_visit",
+"ages": [
+18,
+70
+],
+"title": "Outer Harbor",
+"text": "Your permit lets you onto the Outer Harbor of Highmark for one day.",
+"choices": [
+{
+"label": "Look up the mountain",
+"out": [
+{
+"w": 1,
+"text": "White terraces, real trees, someone eating an orange. You don't speak for the whole trip back.",
+"fx": {
+"happiness": -3,
+"smarts": 3,
+"rep.highmark": 2
+},
+"best": "Seeing dry land on Highmark."
+}
+]
+},
+{
+"label": "Try to slip past the gate",
+"out": [
+{
+"w": 1,
+"text": "Tide Ward. Detention. A long night in a white room. They let you go with a stamp on your file.",
+"fx": {
+"nerve": 5,
+"rep.tide_ward": -10
+},
+"check": "nerve",
+"good": false
+},
+{
+"w": 1,
+"text": "You get two terraces up before anyone looks at your wrist. You touch real soil. Then you leave, fast.",
+"fx": {
+"nerve": 6,
+"deepsense": 2
+},
+"flag": "touched_soil"
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMax": 4
+}
+},
+{
+"id": "a_concord_favour",
+"ages": [
+30,
+64
+],
+"title": "A Concord dinner",
+"text": "Somehow you are invited to a Concord dinner as somebody's guest.",
+"choices": [
+{
+"label": "Charm them",
+"out": [
+{
+"w": 1,
+"text": "A Seat-holder remembers your name. That is worth more than the meal.",
+"fx": {
+"charm": 4,
+"rep.highmark": 10
+},
+"flag": "concord_favour"
+}
+]
+},
+{
+"label": "Ask about the Cathedral",
+"out": [
+{
+"w": 1,
+"text": "The room goes quiet. Director Voss smiles at you. You are not invited back.",
+"fx": {
+"rep.highmark": -15,
+"smarts": 3
+},
+"flag": "voss_noticed"
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMax": 2
+}
+},
+{
+"id": "a_archive_secret",
+"ages": [
+25,
+64
+],
+"title": "In the Archives",
+"text": "Filing old records, you find a folder: PROJECT UNDERTOW \u2014 FEEDING SCHEDULE.",
+"choices": [
+{
+"label": "Read it",
+"out": [
+{
+"w": 1,
+"text": "Names. Dates. Raft divers sent down on \"survey contracts\". A column marked \"returned\": almost empty.",
+"fx": {
+"smarts": 5,
+"karma": 0,
+"happiness": -8
+},
+"flag": "knows_undertow"
+}
+]
+},
+{
+"label": "Copy it out for Raft Free Voice",
+"out": [
+{
+"w": 1,
+"text": "It goes out on the pirate radio. Highmark calls it a forgery. The rafts know better.",
+"fx": {
+"world.uprising": 0.12,
+"rep.highmark": -30,
+"nerve": 6
+},
+"flag": "leaked_undertow"
+}
+]
+},
+{
+"label": "Put it back",
+"out": [
+{
+"w": 1,
+"text": "You put it back. You are very careful never to think about it.",
+"fx": {
+"karma": -5
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"career": [
+"archivist",
+"clerk"
+]
+}
+},
+{
+"id": "a_listener_whisper",
+"ages": [
+25,
+70
+],
+"title": "The Choir",
+"text": "On a night dive, you hear the Choir: a song you feel in your ribs.",
+"choices": [
+{
+"label": "Hum back",
+"out": [
+{
+"w": 1,
+"text": "Something huge turns in the dark, far off, and passes. It heard you. It didn't mind.",
+"fx": {
+"deepsense": 12,
+"faith": 5
+},
+"flag": "hummed_choir"
+}
+]
+},
+{
+"label": "Go silent",
+"out": [
+{
+"w": 1,
+"text": "The song passes over you like weather.",
+"fx": {
+"deepsense": 6,
+"nerve": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"stat": {
+"deepsense": [
+60,
+100
+]
+}
+}
+},
+{
+"id": "a_listener_attack",
+"ages": [
+20,
+70
+],
+"title": "Something listening",
+"text": "Your line tender drops a tool on the deck above. Below you, something pale turns toward the sound.",
+"choices": [
+{
+"label": "Freeze",
+"out": [
+{
+"w": 1,
+"text": "You hold still until your lungs scream. It passes, close enough to feel the water move.",
+"fx": {
+"nerve": 6,
+"deepsense": 5
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "You hold still. It doesn't pass. Then it does. You come up shaking and never dive with that tender again.",
+"fx": {
+"nerve": 4,
+"health": -5
+}
+}
+]
+},
+{
+"label": "Bolt for the surface",
+"out": [
+{
+"w": 1,
+"text": "You make it, just. Your tender saw something pale break the surface behind you. She quits the next day.",
+"fx": {
+"health": -8,
+"nerve": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"careerTag": "deep"
+}
+},
+{
+"id": "a_disaster_fire",
+"ages": [
+18,
+70
+],
+"title": "Fire on the Stacks",
+"text": "A fire on the Stacks. Containers burn like stoves.",
+"choices": [
+{
+"label": "Fight it",
+"out": [
+{
+"w": 1,
+"text": "Bucket lines in the dark. You save the next three containers.",
+"fx": {
+"strength": 2,
+"karma": 6,
+"health": -4,
+"rep.portage": 6
+}
+}
+]
+},
+{
+"label": "Save your own things",
+"out": [
+{
+"w": 1,
+"text": "You save your things. You lose some friends.",
+"fx": {
+"scrap": 2,
+"karma": -3
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "a_contaminated_water",
+"ages": [
+18,
+70
+],
+"title": "Bad water",
+"text": "Someone's still was bad. Half the raft is sick.",
+"choices": [
+{
+"label": "Nurse people",
+"out": [
+{
+"w": 1,
+"text": "A week without sleep. Nobody dies on your shift.",
+"fx": {
+"karma": 6,
+"health": -4,
+"smarts": 2
+}
+}
+]
+},
+{
+"label": "Find the source",
+"out": [
+{
+"w": 1,
+"text": "A cracked filter, a dead gull. You fix it. You are a hero for a week.",
+"fx": {
+"smarts": 4,
+"rep.portage": 4
+},
+"check": "smarts",
+"good": true
+},
+{
+"w": 1,
+"text": "You can't find it. It passes anyway."
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_rogue_wave",
+"ages": [
+18,
+70
+],
+"title": "Rogue wave",
+"text": "A rogue wave out of a flat sea. Your boat is in its path.",
+"choices": [
+{
+"label": "Turn into it",
+"out": [
+{
+"w": 1,
+"text": "You climb it bow-first and fall off the back screaming. Alive.",
+"fx": {
+"nerve": 6
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "It rolls you. You come up under the hull and find the air pocket by luck.",
+"fx": {
+"health": -10,
+"luck": -2
+}
+}
+]
+},
+{
+"label": "Run before it",
+"out": [
+{
+"w": 1,
+"text": "It catches you anyway. You lose the cargo and keep the boat.",
+"fx": {
+"scrap": -4
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_hush_return",
+"ages": [
+25,
+80
+],
+"title": "The Hush",
+"text": "You wake up with no voice.",
+"choices": [
+{
+"label": "Go to the Vigil",
+"out": [
+{
+"w": 1,
+"text": "The Keeper sits with you. On the fourth day your voice comes back. It was a cold, nothing more. Probably.",
+"fx": {
+"faith": 4,
+"happiness": 3
+},
+"check": "health",
+"good": true
+},
+{
+"w": 1,
+"text": "It doesn't come back. You learn to write. You hear the deep singing every night. You are not afraid.",
+"fx": {
+"deepsense": 15,
+"happiness": -10
+},
+"flag": "hush_touched"
+}
+]
+},
+{
+"label": "Hide it",
+"out": [
+{
+"w": 1,
+"text": "You hide it for a week. It goes. You never tell anyone.",
+"fx": {
+"nerve": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"rare": true
+},
+{
+"id": "a_midlife",
+"ages": [
+40,
+50
+],
+"title": "Halfway",
+"text": "You are halfway through, if you're lucky.",
+"choices": [
+{
+"label": "Change everything",
+"out": [
+{
+"w": 1,
+"text": "You quit, sell your bunk and buy a skiff. Your family thinks you've lost your mind.",
+"fx": {
+"happiness": 6,
+"scrap": -5
+},
+"career": null
+}
+]
+},
+{
+"label": "Stay the course",
+"out": [
+{
+"w": 1,
+"text": "You stay. There is a dignity in it, and a weight.",
+"fx": {
+"happiness": -1,
+"karma": 1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_raft_leader_vote",
+"ages": [
+35,
+64
+],
+"title": "The vote",
+"text": "Your raft needs a new steward. People keep looking at you.",
+"choices": [
+{
+"label": "Stand",
+"out": [
+{
+"w": 1,
+"text": "You win by eleven votes.",
+"fx": {
+"charm": 4
+},
+"career": "steward",
+"check": "charm",
+"good": true,
+"best": "Being chosen as steward by your raft."
+},
+{
+"w": 1,
+"text": "You lose by eleven votes. The winner asks you to be her second.",
+"fx": {
+"happiness": -2,
+"rep.portage": 4
+}
+}
+]
+},
+{
+"label": "Back someone else",
+"out": [
+{
+"w": 1,
+"text": "Your candidate wins. You have a friend in power, which is better.",
+"fx": {
+"karma": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"stat": {
+"karma": [
+55,
+100
+]
+},
+"standingMax": 5
+}
+},
+{
+"id": "a_bottle_reply",
+"ages": [
+20,
+70
+],
+"title": "A reply",
+"text": "A bottle washes up with your own handwriting in it, and a reply underneath.",
+"choices": [
+{
+"label": "Read it",
+"out": [
+{
+"w": 1,
+"text": "\"We are on a raft called Greenshade, far north. We grow apples in a greenhouse. Come and see.\" No coordinates.",
+"fx": {
+"happiness": 8,
+"faith": 3
+},
+"flag": "greenshade"
+}
+]
+},
+{
+"label": "Keep it for later",
+"out": [
+{
+"w": 1,
+"text": "You keep it in your jacket for the rest of your life.",
+"fx": {
+"happiness": 4
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"flag": "bottle_sent"
+}
+},
+{
+"id": "a_pet",
+"ages": [
+18,
+60
+],
+"title": "A raft dog",
+"text": "A thin raft dog starts sleeping by your door.",
+"choices": [
+{
+"label": "Feed it",
+"out": [
+{
+"w": 1,
+"text": "It never leaves your side again. It barks at Wardens. It's right to.",
+"fx": {
+"happiness": 8
+},
+"flag": "pet_dog"
+}
+]
+},
+{
+"label": "Leave it",
+"out": [
+{
+"w": 1,
+"text": "Someone else feeds it. It still sleeps by your door.",
+"fx": {
+"happiness": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_salt_deal",
+"ages": [
+18,
+64
+],
+"title": "Salt",
+"text": "Greentide needs salt. Rusthold has too much. You have a boat.",
+"choices": [
+{
+"label": "Run the trade",
+"out": [
+{
+"w": 1,
+"text": "Buy low, sell high, and the margin is yours.",
+"fx": {
+"scrap": 6,
+"salt": -1,
+"smarts": 2
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "A storm costs you the cargo halfway.",
+"fx": {
+"scrap": -3
+}
+}
+]
+},
+{
+"label": "Give the salt away",
+"out": [
+{
+"w": 1,
+"text": "Koa remembers. Everybody remembers who gave salt.",
+"fx": {
+"karma": 5,
+"rep.greentide": 8
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "a_ward_bribe",
+"ages": [
+18,
+64
+],
+"title": "A Warden's price",
+"text": "A Warden says he'll overlook your expired tag for three scrap.",
+"choices": [
+{
+"label": "Pay",
+"out": [
+{
+"w": 1,
+"text": "He pockets it. It happens again next month.",
+"fx": {
+"scrap": -3
+}
+}
+]
+},
+{
+"label": "Report him",
+"out": [
+{
+"w": 1,
+"text": "Nothing happens to him. Several things happen to you.",
+"fx": {
+"rep.tide_ward": -8,
+"karma": 3
+}
+}
+]
+},
+{
+"label": "Talk him down",
+"out": [
+{
+"w": 1,
+"text": "You talk about his mother's raft. He laughs and waves you on.",
+"fx": {
+"charm": 3
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "He doubles it.",
+"fx": {
+"scrap": -6
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 5
+},
+"once": false
+},
+{
+"id": "a_glass_find",
+"ages": [
+18,
+60
+],
+"title": "Warm glass",
+"text": "You find a whole pane of deep-glass in a drowned stairwell. It's warm.",
+"choices": [
+{
+"label": "Sell it at the Exchange",
+"out": [
+{
+"w": 1,
+"text": "Vance pays well and asks where. You lie. She knows.",
+"fx": {
+"glass": 3,
+"scrap": 5
+}
+}
+]
+},
+{
+"label": "Give it to the Vigil",
+"out": [
+{
+"w": 1,
+"text": "The Keeper holds it to her ear. \"It's still singing,\" she says.",
+"fx": {
+"faith": 6,
+"deepsense": 4,
+"rep.vigil": 8
+}
+}
+]
+},
+{
+"label": "Keep it",
+"out": [
+{
+"w": 1,
+"text": "You keep it under your pillow. Your dreams get very loud.",
+"fx": {
+"deepsense": 8,
+"happiness": -2,
+"glass": 1
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"careerTag": "deep"
+}
+},
+{
+"id": "a_memory_pool",
+"ages": [
+20,
+70
+],
+"title": "A memory pool",
+"text": "In the Cask Street tunnels, a pocket of warm water. Voices in it, like a held breath.",
+"choices": [
+{
+"label": "Listen",
+"out": [
+{
+"w": 1,
+"text": "A child counting stations. A bell. Then everybody says the same word at once, and the word is lost.",
+"fx": {
+"deepsense": 10,
+"smarts": 3
+},
+"flag": "memory_pool"
+}
+]
+},
+{
+"label": "Swim on",
+"out": [
+{
+"w": 1,
+"text": "You swim on. The voices follow you for a while.",
+"fx": {
+"deepsense": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"stat": {
+"deepsense": [
+50,
+100
+]
+}
+},
+"rare": true
+},
+{
+"id": "a_greenhouse",
+"ages": [
+30,
+70
+],
+"title": "Rumour of land",
+"text": "A Drifter swears he's seen a second island, far north, under the aurora.",
+"choices": [
+{
+"label": "Believe him",
+"out": [
+{
+"w": 1,
+"text": "You buy him a drink and his chart. The chart is beautiful and probably wrong.",
+"fx": {
+"happiness": 4,
+"scrap": -2
+},
+"flag": "north_chart"
+}
+]
+},
+{
+"label": "Laugh",
+"out": [
+{
+"w": 1,
+"text": "He shrugs. \"Someone will find it. Not you.\""
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_sibling_trouble",
+"ages": [
+20,
+60
+],
+"title": "Your sibling",
+"text": "Your sibling is in trouble with Lowlight and needs scrap.",
+"choices": [
+{
+"label": "Pay their debt",
+"out": [
+{
+"w": 1,
+"text": "They cry. They pay you back in a year. Mostly.",
+"fx": {
+"scrap": -8,
+"karma": 5
+}
+}
+]
+},
+{
+"label": "Let them face it",
+"out": [
+{
+"w": 1,
+"text": "They lose their boat. You lose them for a decade.",
+"fx": {
+"karma": -3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"res": {
+"scrap": 5
+}
+}
+},
+{
+"id": "a_ward_chase",
+"ages": [
+18,
+60
+],
+"title": "Pursuit",
+"text": "A Ward launch is chasing you through the Wrecklands and your engine is coughing.",
+"choices": [
+{
+"label": "Lose them in the towers",
+"out": [
+{
+"w": 1,
+"text": "You thread the drowned towers at speed. They don't follow you into Cask Street.",
+"fx": {
+"nerve": 5,
+"rep.lowlight": 4
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "You run aground on a drowned car. They are very polite about arresting you.",
+"fx": {
+"scrap": -6,
+"rep.tide_ward": -10,
+"happiness": -5
+}
+}
+]
+},
+{
+"label": "Cut the engine and drift",
+"out": [
+{
+"w": 1,
+"text": "You drift in the dark behind a tower. Their searchlight passes over the water twice.",
+"fx": {
+"nerve": 4,
+"deepsense": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"career": [
+"smuggler",
+"raider",
+"thief"
+]
+},
+"once": false
+},
+{
+"id": "a_teo",
+"ages": [
+18,
+64
+],
+"title": "A brother's recorder",
+"text": "A salvager sells you a waterlogged recorder. The voice on it says your family name.",
+"choices": [
+{
+"label": "Listen",
+"out": [
+{
+"w": 1,
+"text": "\"...if anyone finds this, tell my sister I went down the Sounding on purpose.\" The rest is static. It might be anyone's brother. It might not.",
+"fx": {
+"deepsense": 6,
+"happiness": -4
+},
+"flag": "teo_recorder"
+}
+]
+},
+{
+"label": "Don't listen",
+"out": [
+{
+"w": 1,
+"text": "You keep it in a drawer, unplayed, for years."
+}
+]
+}
+],
+"weight": 1,
+"rare": true
+},
+{
+"id": "a_cathedral_call",
+"ages": [
+30,
+75
+],
+"title": "The low tone",
+"text": "The low tone shakes the water every night now. The Vigil says the Cathedral is waking.",
+"choices": [
+{
+"label": "Join the seekers",
+"out": [
+{
+"w": 1,
+"text": "You go to the Sounding with the Listeners and sit above it all night.",
+"fx": {
+"deepsense": 10,
+"faith": 6
+},
+"career": "seeker"
+}
+]
+},
+{
+"label": "Join the uprising",
+"out": [
+{
+"w": 1,
+"text": "If Highmark is feeding it, starve them both.",
+"fx": {
+"world.uprising": 0.06,
+"nerve": 4
+},
+"flag": "uprising_voice"
+}
+]
+},
+{
+"label": "Keep your head down",
+"out": [
+{
+"w": 1,
+"text": "You stay home and tie your lines tighter."
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"world": {
+"glow": [
+0.45,
+1
+]
+}
+}
+},
+{
+"id": "a_ending_choice",
+"ages": [
+40,
+80
+],
+"title": "The Sounding",
+"text": "You know enough now: Undertow, the feeding, the Cathedral. Someone has to decide something.",
+"choices": [
+{
+"label": "Shut it down",
+"out": [
+{
+"w": 1,
+"text": "You go down with a Rusthold charge and Teo's map. The tone stops. So, in a way, do you.",
+"fx": {
+"karma": 20
+},
+"flag": "ending_shutdown",
+"death": "deep",
+"best": "Going down to shut the Cathedral down."
+}
+]
+},
+{
+"label": "Expose Highmark",
+"out": [
+{
+"w": 1,
+"text": "Raft Free Voice reads your files for a week straight. The rafts stop the next ration day. Highmark bends.",
+"fx": {
+"world.uprising": 0.3,
+"rep.highmark": -50
+},
+"flag": "ending_expose",
+"best": "The week the rafts heard the truth."
+}
+]
+},
+{
+"label": "Join the Concord",
+"out": [
+{
+"w": 1,
+"text": "You take Voss's offer. A silver wristband. A dry bed. The lie, kept.",
+"fx": {
+"karma": -25,
+"scrap": 40
+},
+"standing": 2,
+"flag": "ending_join"
+}
+]
+},
+{
+"label": "Free the Cathedral",
+"out": [
+{
+"w": 1,
+"text": "You lower every hydrophone on the Drift and play it back its own song. The sea changes overnight.",
+"fx": {
+"deepsense": 20,
+"world.glow": 0.4
+},
+"flag": "ending_free",
+"best": "The night the sea changed."
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"flag": "knows_undertow",
+"stat": {
+"deepsense": [
+55,
+100
+]
+}
+}
+},
+{
+"id": "job_fisher",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A fat school of mackerel under the drowned flyover.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You fill the boat twice.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "The net snags on a drowned car and tears.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"fisher"
+]
+},
+"once": false
+},
+{
+"id": "job_gardener",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "Blight on the bean vines.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You catch it early and burn the worst of it.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You lose half the crop.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"gardener"
+]
+},
+"once": false
+},
+{
+"id": "job_engineer",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "The main pump on your raft starts making a new sound.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You fix it before it fails.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "It fails at midnight. You fix it by dawn, barely.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"engineer"
+]
+},
+"once": false
+},
+{
+"id": "job_trader",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A rumour of a ration cut. Prices are about to move.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You buy early and sell late.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You buy late and sell early.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"trader"
+]
+},
+"once": false
+},
+{
+"id": "job_medic",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A diver is brought up blue and not breathing.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You bring her back.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You do everything right and she doesn't come back.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"medic"
+]
+},
+"once": false
+},
+{
+"id": "job_musician",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "You are asked to play at a funeral at sea.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "Everybody cries in the right places.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "A string breaks in the quiet part.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"musician"
+]
+},
+"once": false
+},
+{
+"id": "job_smuggler",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A run through the Hush with no compass.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You navigate by the sound of the Beacon's foghorn alone.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You come out the wrong side of the fog, right next to a Ward launch.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"smuggler"
+]
+},
+"once": false
+},
+{
+"id": "job_diver",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A night dive in the Drowned Streets.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You come up with copper, a ring and a full tally mark.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "Your light dies at thirty metres.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"diver"
+]
+},
+"once": false
+},
+{
+"id": "job_salvager",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A sunk ferry in the Wrecklands, full of luggage.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "Nobody has been in for years. You fill the boat.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "Someone has. They are still there.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"salvager"
+]
+},
+"once": false
+},
+{
+"id": "job_ward_deckhand",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "Night patrol on the south lane.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "Quiet. You share coffee with a raft-born deckhand and talk about home.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You stop a smuggler and find your cousin at the tiller.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"ward_deckhand"
+]
+},
+"once": false
+},
+{
+"id": "job_clerk",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "The ration ledgers don't add up.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You make them add up. You are praised.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You ask why. You are moved to a smaller desk.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"clerk"
+]
+},
+"once": false
+},
+{
+"id": "job_teacher",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A raft child asks why Highmark gets the rain.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "You tell them the truth, gently.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You tell them the official answer. They know.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"teacher"
+]
+},
+"once": false
+},
+{
+"id": "job_pilot",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "You guide a convoy through a fog bank.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "Every boat comes out the other side.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "You lose one in the fog. It turns up a day later.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"pilot"
+]
+},
+"once": false
+},
+{
+"id": "job_seeker",
+"ages": [
+18,
+64
+],
+"title": "At work",
+"text": "A night at the Sounding with the Listeners.",
+"choices": [
+{
+"label": "Give it everything",
+"out": [
+{
+"w": 1,
+"text": "The tone comes. You understand one word of it.",
+"fx": {
+"happiness": 4,
+"scrap": 3
+},
+"check": "luck",
+"good": true
+},
+{
+"w": 1,
+"text": "The tone comes. It understands one word of you.",
+"fx": {
+"happiness": -4,
+"health": -2
+}
+}
+]
+},
+{
+"label": "Do the safe thing",
+"out": [
+{
+"w": 1,
+"text": "You do the safe thing. It is fine. Fine is underrated.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 2,
+"req": {
+"career": [
+"seeker"
+]
+},
+"once": false
+},
+{
+"id": "e_tide_ceremony",
+"ages": [
+65,
+70
+],
+"title": "The Tide Ceremony",
+"text": "At sixty-five, raft-folk are offered the Tide Ceremony: a night on the water, alone, with a lantern.",
+"choices": [
+{
+"label": "Take it",
+"out": [
+{
+"w": 1,
+"text": "All night alone on the water. At dawn you know what you were for.",
+"fx": {
+"faith": 8,
+"happiness": 8
+},
+"best": "The night of your Tide Ceremony."
+}
+]
+},
+{
+"label": "Decline",
+"out": [
+{
+"w": 1,
+"text": "You have had enough nights alone on the water, thank you.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "e_pass_on",
+"ages": [
+65,
+90
+],
+"title": "Your gear",
+"text": "Your dive knife, your charts, your boat. Who gets them?",
+"choices": [
+{
+"label": "Your child",
+"out": [
+{
+"w": 1,
+"text": "They take it all with great seriousness and then use the knife to open tins.",
+"fx": {
+"happiness": 5
+}
+}
+]
+},
+{
+"label": "A young Deep-Born",
+"out": [
+{
+"w": 1,
+"text": "A kid with a blank tally cord. Her face, when you hand her the knife.",
+"fx": {
+"karma": 8,
+"rep.deep_born": 10
+}
+}
+]
+},
+{
+"label": "The sea",
+"out": [
+{
+"w": 1,
+"text": "You drop it all over the side on a calm morning.",
+"fx": {
+"faith": 5,
+"deepsense": 4
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "e_last_dive",
+"ages": [
+65,
+85
+],
+"title": "One last dive",
+"text": "You want to dive one more time.",
+"choices": [
+{
+"label": "Go",
+"out": [
+{
+"w": 1,
+"text": "The water holds you like it remembers you.",
+"fx": {
+"happiness": 10,
+"deepsense": 6
+},
+"check": "health",
+"good": true,
+"best": "Your last dive, at an age when nobody dives."
+},
+{
+"w": 1,
+"text": "Your heart doesn't like it. The water is gentle about it.",
+"death": "drowned"
+}
+]
+},
+{
+"label": "Watch from the boat",
+"out": [
+{
+"w": 1,
+"text": "You watch the young ones go down and come up laughing.",
+"fx": {
+"happiness": 4
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"stat": {
+"deepsense": [
+45,
+100
+]
+}
+}
+},
+{
+"id": "e_memoir",
+"ages": [
+65,
+90
+],
+"title": "Your story",
+"text": "A Raft Free Voice runner wants your story for the radio.",
+"choices": [
+{
+"label": "Tell all of it",
+"out": [
+{
+"w": 1,
+"text": "They read it out over three nights. People you don't know stop you on the Exchange to say thank you.",
+"fx": {
+"happiness": 8,
+"charm": 3
+}
+}
+]
+},
+{
+"label": "Tell the good parts",
+"out": [
+{
+"w": 1,
+"text": "It's a good story. It's mostly true.",
+"fx": {
+"happiness": 4
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "e_illness",
+"ages": [
+65,
+95
+],
+"title": "A long cough",
+"text": "A cough that doesn't leave.",
+"choices": [
+{
+"label": "See the medic",
+"out": [
+{
+"w": 1,
+"text": "Bitter medicine and rest. It helps.",
+"fx": {
+"health": 6,
+"scrap": -3
+}
+}
+]
+},
+{
+"label": "Ignore it",
+"out": [
+{
+"w": 1,
+"text": "It settles in like a lodger.",
+"fx": {
+"health": -10
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "e_grandchild",
+"ages": [
+60,
+90
+],
+"title": "A grandchild",
+"text": "Your child brings a baby to show you.",
+"choices": [
+{
+"label": "Hold them",
+"out": [
+{
+"w": 1,
+"text": "Small and furious at the cold. Exactly like their parent was.",
+"fx": {
+"happiness": 12
+},
+"best": "Holding your grandchild."
+}
+]
+},
+{
+"label": "Tell them a story",
+"out": [
+{
+"w": 1,
+"text": "They are too young to understand. You tell it anyway.",
+"fx": {
+"happiness": 6
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"hasKids": true
+}
+},
+{
+"id": "e_reconcile",
+"ages": [
+60,
+90
+],
+"title": "Old grudges",
+"text": "You're old enough to be tired of a grudge.",
+"choices": [
+{
+"label": "Make peace with {rival}",
+"out": [
+{
+"w": 1,
+"text": "You share a pipe. Neither of you apologises. Both of you mean it.",
+"fx": {
+"happiness": 6,
+"karma": 4
+}
+}
+]
+},
+{
+"label": "Keep the grudge warm",
+"out": [
+{
+"w": 1,
+"text": "It keeps you warm. That's what grudges are for.",
+"fx": {
+"happiness": 1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "e_beacon_watch",
+"ages": [
+65,
+95
+],
+"title": "The Beacon",
+"text": "You count the Beacon's sweeps again, the way you did as a child.",
+"choices": [
+{
+"label": "Count",
+"out": [
+{
+"w": 1,
+"text": "Fifteen seconds. It never changed. You did.",
+"fx": {
+"happiness": 4
+}
+}
+]
+},
+{
+"label": "Listen after it passes",
+"out": [
+{
+"w": 1,
+"text": "The water hums. It always did. You just stopped noticing.",
+"fx": {
+"deepsense": 5,
+"faith": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "e_last_lantern",
+"ages": [
+70,
+99
+],
+"title": "A lantern for you",
+"text": "On lantern night someone writes your name on a lantern, early, as a joke.",
+"choices": [
+{
+"label": "Laugh",
+"out": [
+{
+"w": 1,
+"text": "You laugh until you cough. You write theirs on one too.",
+"fx": {
+"happiness": 8
+}
+}
+]
+},
+{
+"label": "Set it on the water yourself",
+"out": [
+{
+"w": 1,
+"text": "You watch your own name float out to sea. It feels like permission.",
+"fx": {
+"faith": 5,
+"happiness": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "e_highmark_apology",
+"ages": [
+65,
+95
+],
+"title": "A letter",
+"text": "A letter from Highmark: an \"acknowledgement of historical irregularities in supply\". It is not an apology.",
+"choices": [
+{
+"label": "Burn it",
+"out": [
+{
+"w": 1,
+"text": "It burns well. Highmark paper always did.",
+"fx": {
+"happiness": 3
+}
+}
+]
+},
+{
+"label": "Read it on Raft Free Voice",
+"out": [
+{
+"w": 1,
+"text": "Your voice cracks on \"irregularities\". The whole Drift hears it crack.",
+"fx": {
+"world.uprising": 0.05,
+"charm": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"world": {
+"uprising": [
+0.4,
+1
+]
+}
+}
+},
+{
+"id": "e_young_deepborn",
+"ages": [
+60,
+90
+],
+"title": "A young diver",
+"text": "A young Deep-Born diver asks you how you got old.",
+"choices": [
+{
+"label": "\"Quiet.\"",
+"out": [
+{
+"w": 1,
+"text": "\"Go quiet. Come back.\" She writes it on her sleeve.",
+"fx": {
+"karma": 4,
+"rep.deep_born": 5
+}
+}
+]
+},
+{
+"label": "\"Luck.\"",
+"out": [
+{
+"w": 1,
+"text": "\"Luck, and a good tender, and not being stupid twice.\"",
+"fx": {
+"happiness": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "x_storm_year",
+"ages": [
+6,
+90
+],
+"title": "Storm season",
+"text": "The worst storm season in years. Rafts break and rejoin like ice.",
+"choices": [
+{
+"label": "Help re-lash rafts",
+"out": [
+{
+"w": 1,
+"text": "Every night for a month. Your hands are rope.",
+"fx": {
+"strength": 3,
+"karma": 5,
+"rep.portage": 3
+}
+}
+]
+},
+{
+"label": "Stay below and wait",
+"out": [
+{
+"w": 1,
+"text": "You wait it out. It waits you out right back.",
+"fx": {
+"happiness": -3
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_found_scrap",
+"ages": [
+8,
+90
+],
+"title": "Something in the water",
+"text": "Something heavy bumps your boat.",
+"choices": [
+{
+"label": "Haul it up",
+"out": [
+{
+"w": 1,
+"text": "A sealed toolbox. Somebody's whole life, rusted shut.",
+"fx": {
+"scrap": 5
+}
+},
+{
+"w": 1,
+"text": "A drowned suitcase full of photographs. You keep one.",
+"fx": {
+"happiness": 2
+}
+}
+]
+},
+{
+"label": "Let it go",
+"out": [
+{
+"w": 1,
+"text": "It sinks. Some things should."
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_lucky",
+"ages": [
+6,
+90
+],
+"title": "A gull steals your lunch",
+"text": "A gull steals your lunch, flies off, and drops a ration seal on your head.",
+"choices": [
+{
+"label": "Laugh",
+"out": [
+{
+"w": 1,
+"text": "Best trade you ever made.",
+"fx": {
+"seal": 1,
+"luck": 3,
+"happiness": 4
+}
+}
+]
+}
+],
+"weight": 1,
+"rare": true
+},
+{
+"id": "x_aurora",
+"ages": [
+6,
+90
+],
+"title": "Aurora",
+"text": "A night so clear the aurora spills down from the north over the whole Drift.",
+"choices": [
+{
+"label": "Wake everyone",
+"out": [
+{
+"w": 1,
+"text": "The whole raft stands on deck in blankets, silent.",
+"fx": {
+"happiness": 8,
+"karma": 2
+},
+"best": "The night of the aurora."
+}
+]
+},
+{
+"label": "Watch alone",
+"out": [
+{
+"w": 1,
+"text": "You have it to yourself for an hour. It is enough.",
+"fx": {
+"happiness": 6,
+"faith": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"rare": true
+},
+{
+"id": "x_long_dark",
+"ages": [
+10,
+90
+],
+"title": "The Long Dark Night",
+"text": "The Long Dark Night: no moon, no stars, everyone tied up and indoors.",
+"choices": [
+{
+"label": "Stay inside",
+"out": [
+{
+"w": 1,
+"text": "You stay in, listening to the raft creak. Something walks across the deck above. Nothing is there in the morning.",
+"fx": {
+"nerve": 2
+}
+}
+]
+},
+{
+"label": "Go out on the water",
+"out": [
+{
+"w": 1,
+"text": "The glow is everywhere below you, brighter than you've ever seen. You can see the shape of the Cathedral. Nobody believes you.",
+"fx": {
+"deepsense": 12,
+"nerve": 5,
+"happiness": -3
+},
+"flag": "saw_cathedral"
+}
+]
+}
+],
+"weight": 1,
+"rare": true
+},
+{
+"id": "x_sick",
+"ages": [
+5,
+90
+],
+"title": "A bad winter",
+"text": "A bad winter. Damp gets into your chest.",
+"choices": [
+{
+"label": "Rest",
+"out": [
+{
+"w": 1,
+"text": "You rest. It passes.",
+"fx": {
+"health": -3
+}
+}
+]
+},
+{
+"label": "Keep working",
+"out": [
+{
+"w": 1,
+"text": "You keep working. It doesn't pass.",
+"fx": {
+"health": -9,
+"scrap": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_kindness",
+"ages": [
+8,
+90
+],
+"title": "A stranger",
+"text": "A Drifter with no bracelet and no boat asks you for water.",
+"choices": [
+{
+"label": "Share your water",
+"out": [
+{
+"w": 1,
+"text": "They drink, thank you, and are gone. A month later a bag of salt turns up on your bunk.",
+"fx": {
+"karma": 6,
+"salt": 2
+}
+}
+]
+},
+{
+"label": "Send them on",
+"out": [
+{
+"w": 1,
+"text": "They go. You think about them in the next drought.",
+"fx": {
+"karma": -3
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_radio_song",
+"ages": [
+6,
+90
+],
+"title": "Night Songs",
+"text": "Late at night, the Night Songs station plays \"Hold the Light for Me\".",
+"choices": [
+{
+"label": "Sing along",
+"out": [
+{
+"w": 1,
+"text": "You sing it slightly wrong, the way you always have.",
+"fx": {
+"happiness": 5
+}
+}
+]
+},
+{
+"label": "Turn it off",
+"out": [
+{
+"w": 1,
+"text": "Some songs are too much.",
+"fx": {
+"happiness": -1
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "x_wardens_raid",
+"ages": [
+10,
+90
+],
+"title": "A raid",
+"text": "The Tide Ward raids your raft looking for a deserter.",
+"choices": [
+{
+"label": "Hide the deserter",
+"out": [
+{
+"w": 1,
+"text": "He hides in your bunk under the nets. They don't find him. Lowlight owes you.",
+"fx": {
+"karma": 6,
+"rep.lowlight": 8,
+"nerve": 5
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "They find him in your bunk. They don't find you guilty. Just noted.",
+"fx": {
+"rep.tide_ward": -12,
+"nerve": 4
+}
+}
+]
+},
+{
+"label": "Point them to him",
+"out": [
+{
+"w": 1,
+"text": "They take him away. Nobody on your raft looks at you the same.",
+"fx": {
+"rep.tide_ward": 8,
+"rep.portage": -10,
+"karma": -8
+}
+}
+]
+},
+{
+"label": "Stay out of it",
+"out": [
+{
+"w": 1,
+"text": "They find him anyway. You did nothing, which is something."
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_glow_fish",
+"ages": [
+8,
+90
+],
+"title": "Lanternfish",
+"text": "A swarm of lanternfish lights up the water under the raft. Then, all at once, they go dark.",
+"choices": [
+{
+"label": "Hold your breath",
+"out": [
+{
+"w": 1,
+"text": "Something passes below. Big. Quiet. Then the light comes back, slowly.",
+"fx": {
+"deepsense": 6,
+"nerve": 3
+}
+}
+]
+},
+{
+"label": "Shout for everyone to look",
+"out": [
+{
+"w": 1,
+"text": "By the time they look, the fish are lit again. You don't say what you felt pass.",
+"fx": {
+"deepsense": 3
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "x_wedding",
+"ages": [
+10,
+90
+],
+"title": "A wedding on the water",
+"text": "A wedding on Portage. Everyone is invited, which is the rule.",
+"choices": [
+{
+"label": "Dance",
+"out": [
+{
+"w": 1,
+"text": "You dance until the barge leans.",
+"fx": {
+"happiness": 6,
+"charm": 2
+}
+}
+]
+},
+{
+"label": "Help in the galley",
+"out": [
+{
+"w": 1,
+"text": "You make stew for two hundred. It is mostly stew.",
+"fx": {
+"karma": 3,
+"happiness": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_funeral",
+"ages": [
+8,
+90
+],
+"title": "A funeral at sea",
+"text": "A funeral at sea for an old fisher. A lantern, a song, a long silence.",
+"choices": [
+{
+"label": "Sing",
+"out": [
+{
+"w": 1,
+"text": "Your voice carries further over the water than you meant it to.",
+"fx": {
+"faith": 3,
+"charm": 2
+}
+}
+]
+},
+{
+"label": "Stand at the back",
+"out": [
+{
+"w": 1,
+"text": "You stand at the back and hold the rail.",
+"fx": {
+"faith": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_market_day",
+"ages": [
+8,
+90
+],
+"title": "Market day",
+"text": "Market day on the Exchange: noise, smoke, lies about prices.",
+"choices": [
+{
+"label": "Haggle hard",
+"out": [
+{
+"w": 1,
+"text": "You get the best price on the raft and the worst reputation.",
+"fx": {
+"scrap": 4,
+"charm": -1
+},
+"check": "charm",
+"good": true
+},
+{
+"w": 1,
+"text": "Odile sees you coming from a mile off.",
+"fx": {
+"scrap": -2
+}
+}
+]
+},
+{
+"label": "Just look",
+"out": [
+{
+"w": 1,
+"text": "You buy nothing and eat a hot fish bun. Perfect day.",
+"fx": {
+"happiness": 4
+}
+}
+]
+}
+],
+"weight": 1,
+"once": false
+},
+{
+"id": "x_standing_slight",
+"ages": [
+8,
+90
+],
+"title": "The dock",
+"text": "A dockmaster won't let you tie up because of the colour of your wrist.",
+"choices": [
+{
+"label": "Argue",
+"out": [
+{
+"w": 1,
+"text": "You argue. You lose. You tie up at the red lamp, round the back, like always.",
+"fx": {
+"happiness": -3,
+"nerve": 2
+}
+}
+]
+},
+{
+"label": "Tie up where you're told",
+"out": [
+{
+"w": 1,
+"text": "You tie up at the red lamp. Someone has left a lantern lit there for you anyway.",
+"fx": {
+"happiness": 1,
+"karma": 1
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 6
+},
+"once": false
+},
+{
+"id": "x_respect",
+"ages": [
+10,
+90
+],
+"title": "Madam Vance",
+"text": "Madam Oru Vance pours you tea on the Exchange, in front of everyone, wristband and all.",
+"choices": [
+{
+"label": "Drink it",
+"out": [
+{
+"w": 1,
+"text": "It's terrible tea. Everybody sees. That was the point.",
+"fx": {
+"happiness": 6,
+"rep.portage": 6
+}
+}
+]
+},
+{
+"label": "Ask why",
+"out": [
+{
+"w": 1,
+"text": "\"Because your money's the same colour as everyone else's,\" she says. \"And because I knew your brother.\"",
+"fx": {
+"happiness": 4,
+"smarts": 1
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 6
+}
+},
+{
+"id": "t_wristband_swap",
+"ages": [
+14,
+17
+],
+"title": "Borrowed colours",
+"text": "A raft-born friend offers to swap bracelets with you for a day so you can see the Exchange from the green dock.",
+"choices": [
+{
+"label": "Swap",
+"out": [
+{
+"w": 1,
+"text": "For one day nobody steps back from you. It is the strangest day of your life.",
+"fx": {
+"happiness": 5,
+"nerve": 2
+}
+},
+{
+"w": 1,
+"text": "A dockmaster checks. Both of you are in trouble.",
+"fx": {
+"rep.portage": -4,
+"happiness": -3
+}
+}
+]
+},
+{
+"label": "Keep your own",
+"out": [
+{
+"w": 1,
+"text": "\"It's mine,\" you say. Your friend respects that more than they expected to.",
+"fx": {
+"karma": 2
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"standingMin": 6
+}
+},
+{
+"id": "t_raft_drift",
+"ages": [
+13,
+17
+],
+"title": "The raft that wants to leave",
+"text": "Some families on your raft want to cut loose and drift north, away from Highmark's lanes.",
+"choices": [
+{
+"label": "Back them",
+"out": [
+{
+"w": 1,
+"text": "The vote fails by four. The idea doesn't.",
+"fx": {
+"world.uprising": 0.02,
+"nerve": 2
+}
+}
+]
+},
+{
+"label": "Back staying",
+"out": [
+{
+"w": 1,
+"text": "You stay where the rations come. It is the sensible choice. You hate it a little."
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_missing_keeper",
+"ages": [
+20,
+70
+],
+"title": "The lighthouse keeper",
+"text": "The keeper of the old harbour light off the Wrecklands hasn't lit it for a week.",
+"choices": [
+{
+"label": "Go and look",
+"out": [
+{
+"w": 1,
+"text": "He's fine. He ran out of oil and was too proud to ask. You bring him oil. He gives you a chart.",
+"fx": {
+"karma": 5,
+"scrap": -2
+},
+"flag": "keeper_chart"
+}
+]
+},
+{
+"label": "Leave it to the Ward",
+"out": [
+{
+"w": 1,
+"text": "The Ward doesn't go. The light stays dark. A trader runs aground in the spring.",
+"fx": {
+"karma": -2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_stolen_boat",
+"ages": [
+18,
+70
+],
+"title": "Your boat is gone",
+"text": "Your boat isn't where you tied it.",
+"choices": [
+{
+"label": "Track it",
+"out": [
+{
+"w": 1,
+"text": "You find it at the night market, half repainted. Sal gives it back with an apology and a bottle.",
+"fx": {
+"nerve": 3
+},
+"check": "nerve",
+"good": true
+},
+{
+"w": 1,
+"text": "Gone. You borrow a skiff and start again.",
+"fx": {
+"scrap": -6,
+"happiness": -5
+}
+}
+]
+},
+{
+"label": "Let it go",
+"out": [
+{
+"w": 1,
+"text": "You let it go. Somebody needed it more, you tell yourself.",
+"fx": {
+"karma": 2,
+"scrap": -4
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "a_crew_hire",
+"ages": [
+22,
+60
+],
+"title": "A crew of your own",
+"text": "You have enough scrap to hire a hand for your boat.",
+"choices": [
+{
+"label": "Hire the quiet one",
+"out": [
+{
+"w": 1,
+"text": "She says nothing for a year and saves your life twice.",
+"fx": {
+"scrap": -4
+},
+"person": {
+"role": "friend"
+}
+}
+]
+},
+{
+"label": "Hire the cheerful one",
+"out": [
+{
+"w": 1,
+"text": "He never stops talking. Wardens love him. Your inspections get much shorter.",
+"fx": {
+"scrap": -4,
+"rep.tide_ward": 3
+},
+"person": {
+"role": "friend"
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"res": {
+"scrap": 6
+}
+}
+},
+{
+"id": "x_photo",
+"ages": [
+10,
+90
+],
+"title": "A photograph",
+"text": "A trader is selling old photographs by the handful. Strangers on dry streets.",
+"choices": [
+{
+"label": "Buy one",
+"out": [
+{
+"w": 1,
+"text": "A woman laughing on a dry beach. You keep it on your wall. People ask if she's family. You say yes.",
+"fx": {
+"happiness": 4,
+"scrap": -1
+}
+}
+]
+},
+{
+"label": "Ask where they came from",
+"out": [
+{
+"w": 1,
+"text": "\"Library at the bottom of Orrin Bay,\" he says. \"Pages float. Photographs float.\"",
+"fx": {
+"smarts": 2
+}
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "x_wristband_cut",
+"ages": [
+16,
+90
+],
+"title": "A cut wristband",
+"text": "A boy on the Exchange has cut off his bracelet and is shouting that colours are a Highmark trick.",
+"choices": [
+{
+"label": "Cut yours too",
+"out": [
+{
+"w": 1,
+"text": "Some people cheer. A Ward informer writes down your face.",
+"fx": {
+"world.uprising": 0.03,
+"rep.tide_ward": -6,
+"nerve": 4
+}
+}
+]
+},
+{
+"label": "Walk past",
+"out": [
+{
+"w": 1,
+"text": "You walk past. You think about it for a long time."
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "e_quiet_morning",
+"ages": [
+60,
+99
+],
+"title": "A quiet morning",
+"text": "Sunrise on flat water. Nothing is happening. Everyone you love is asleep.",
+"choices": [
+{
+"label": "Watch it",
+"out": [
+{
+"w": 1,
+"text": "The sun comes up out of the sea, as it has every day of your life. You are glad you saw this one.",
+"fx": {
+"happiness": 10
+},
+"best": "A quiet sunrise on flat water, late in life."
+}
+]
+}
+],
+"weight": 1
+},
+{
+"id": "x_bloom_child",
+"ages": [
+6,
+90
+],
+"title": "A child who hums",
+"text": "A child on your raft hums a tune nobody taught her, and the growth under the floats pulses in time.",
+"choices": [
+{
+"label": "Hum with her",
+"out": [
+{
+"w": 1,
+"text": "The growth pulses brighter. The child laughs. You stop, carefully.",
+"fx": {
+"deepsense": 5
+}
+}
+]
+},
+{
+"label": "Take her to the Keeper",
+"out": [
+{
+"w": 1,
+"text": "The Keeper listens and goes very still. \"Keep her near the Vigil,\" she says.",
+"fx": {
+"faith": 3,
+"rep.vigil": 3
+}
+}
+]
+}
+],
+"weight": 1,
+"req": {
+"world": {
+"glow": [
+0.25,
+1
+]
+}
+}
+}
+]
+}

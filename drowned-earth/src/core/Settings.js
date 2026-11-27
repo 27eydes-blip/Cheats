@@ -36,6 +36,15 @@ export class Settings {
     this.invertY = stored.invertY ?? false;
     this.lookSensitivity = stored.lookSensitivity ?? 1;
     this.subtitles = stored.subtitles ?? true;
+    this.difficulty = stored.difficulty ?? 'standard';
+    this.captions = stored.captions ?? false;
+    this.textSize = stored.textSize ?? 1;
+    this.reduceMotion = stored.reduceMotion ?? false;
+    this.colorSafe = stored.colorSafe ?? false;
+    this.highContrast = stored.highContrast ?? false;
+    this.oneHand = stored.oneHand ?? false;
+    this.lensFx = stored.lensFx ?? true;
+    this.music = stored.music ?? 1;
   }
   get q() { return PRESETS[this.quality]; }
   static presets() { return Object.keys(PRESETS); }
@@ -44,7 +53,8 @@ export class Settings {
     try {
       localStorage.setItem(KEY, JSON.stringify({
         quality: this.quality, volume: this.volume, invertY: this.invertY,
-        lookSensitivity: this.lookSensitivity, subtitles: this.subtitles,
+        lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
+        reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music,
       }));
     } catch { /* storage may be unavailable */ }
   }

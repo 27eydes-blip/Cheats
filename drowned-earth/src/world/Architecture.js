@@ -131,7 +131,7 @@ export function ladder(b, x, z, y0, y1, ry, { id, prompt = 'Climb', topStep = nu
     onUse: (ctx) => ctx.player.climb(bottom, top, topStep),
   });
   b.interact({
-    id: id && id + ':down', kind: 'ladder', pos: top.clone().setY(y1 + 0.8), radius: 2.0, prompt: 'Climb down',
+    id: id && id + ':down', kind: 'ladder', pos: top.clone().setY(y1 + 0.8), radius: 2.7, prompt: 'Climb down',
     onUse: (ctx) => ctx.player.climb(top, bottom, bottomStep, true),
   });
 }

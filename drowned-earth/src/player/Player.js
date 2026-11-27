@@ -94,7 +94,7 @@ export class Player {
     }
 
     // eye + view vector
-    const bob = this.mode === 'foot' && this.grounded ? Math.sin(this.bobPhase * Math.PI) * 0.035 : 0;
+    const bob = this.mode === 'foot' && this.grounded && !this.ctx.settings.reduceMotion ? Math.sin(this.bobPhase * Math.PI) * 0.035 : 0;
     const eyeH = this.mode === 'swim' ? 0 : (this.mode === 'boat' ? 0 : this.eyeHeight - this.crouch * 0.55);
     this.eye.copy(this.position); this.eye.y += eyeH + bob;
     this.forward.set(0, 0, -1).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));

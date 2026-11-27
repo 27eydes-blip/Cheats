@@ -255,7 +255,7 @@ export class UI {
   openPause() {
     const s = this.ctx.settings;
     const html = `<h2>Paused</h2><div class="sub">Drowned Earth — Stage 1: The First Drowned District</div>
-      <div class="tabs"><button class="btn" data-close>Resume</button><button class="btn" data-act="inv">Pack</button><button class="btn" data-act="journal">Journal</button><button class="btn" data-act="save">Save</button><button class="btn" data-act="load">Load last save</button></div>
+      <div class="tabs"><button class="btn" data-close>Resume</button><button class="btn" data-act="inv">Pack</button><button class="btn" data-act="journal">Journal</button><button class="btn" data-act="save">Save</button><button class="btn" data-act="load">Load last save</button><button class="btn" data-act="opts">Options</button><button class="btn" data-act="life">A Life on the Water</button><button class="btn" data-act="title">Title screen</button></div>
       <h3>Quality</h3><div class="tabs">${Settings.presets().map((q) => `<button class="btn ${q === s.quality ? 'on' : ''}" data-q="${q}">${q}</button>`).join('')}</div>
       <h3>Sound</h3><div class="tabs"><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-vol style="width:220px;pointer-events:auto"></div>
       <h3>Options</h3><div class="tabs"><button class="btn ${s.subtitles ? 'on' : ''}" data-opt="subtitles">Subtitles</button><button class="btn ${s.invertY ? 'on' : ''}" data-opt="invertY">Invert look</button></div>
@@ -264,23 +264,103 @@ export class UI {
       p.querySelector('[data-act="inv"]').addEventListener('click', () => this.openInventory());
       p.querySelector('[data-act="journal"]').addEventListener('click', () => this.openJournal());
       p.querySelector('[data-act="save"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.toast('Saved.'); });
+      p.querySelector('[data-act="opts"]').addEventListener('click', () => this.openOptions());
+      p.querySelector('[data-act="life"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.close(); this.ctx.game.enterLife(); });
+      p.querySelector('[data-act="title"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.close(); this.titleScreen(this.ctx.save.has(), this.ctx.game.onTitleChoice); });
       p.querySelector('[data-act="load"]').addEventListener('click', () => { if (this.ctx.save.load()) { this.close(); this.toast('Loaded.'); } });
       p.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => { s.set('quality', b.dataset.q); location.reload(); }));
       p.querySelector('[data-vol]').addEventListener('input', (e) => { s.set('volume', parseFloat(e.target.value)); this.ctx.audio?.setVolume(s.volume); });
       p.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', () => { s.set(b.dataset.opt, !s[b.dataset.opt]); b.classList.toggle('on'); }));
     });
   }
-  titleScreen(hasSave, onStart) {
-    const t = this.root.appendChild(el('div', 'title', `<h1>DROWNED EARTH</h1><p>The seas took the coasts. The Hush took the rest. One island stayed dry.</p>
-      ${hasSave ? '<button class="btn big" data-c>Continue</button>' : ''}<button class="btn big" data-n>${hasSave ? 'New game' : 'Begin'}</button>
-      <div class="small">Headphones recommended. Desktop: click to look, WASD, E to use. Phone: left stick to move, drag right to look.<br>Quality: <b>${this.ctx.settings.quality}</b> (change in the pause menu)</div>`));
-    const go = (cont) => { this.ctx.audio?.start(); t.style.opacity = 0; setTimeout(() => t.remove(), 1500); onStart(cont); };
-    t.querySelector('[data-n]').addEventListener('click', () => go(false));
-    t.querySelector('[data-c]')?.addEventListener('click', () => go(true));
+  titleScreen(hasSave, onChoice) {
+    this.ctx.game.toTitle();
+    const lifeSave = !!this.ctx.save.read()?.life?.alive;
+    const t = this.root.appendChild(el('div', 'title'));
+    t.innerHTML = `<canvas class="logo" width="900" height="200"></canvas>
+      <p>The seas took the coasts. The Hush took the rest. One island stayed dry.</p>
+      <div class="menu">
+        ${hasSave ? '<button class="btn big" data-c="continue">Continue</button>' : ''}
+        <button class="btn big" data-c="story">The Drowned District</button>
+        <button class="btn big" data-c="life">${lifeSave ? 'Continue your life' : 'A Life on the Water'}</button>
+        <button class="btn big ghostb" data-c="options">Options</button>
+      </div>
+      <div class="small">Headphones recommended. Desktop: click to look, WASD, E to use. Phone: left stick to move, drag right to look.<br><span class="dim">Stage 1 · Lantern Ward, Orrin Bay · year 41 after the Rise</span></div>`;
+    drawLogo(t.querySelector('canvas'));
+    const go = (choice) => {
+      this.ctx.audio?.start();
+      if (choice === 'options') { this.openOptions(true); return; }
+      t.style.opacity = 0; setTimeout(() => t.remove(), 1200);
+      onChoice(choice);
+    };
+    t.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => go(b.dataset.c)));
+    this.titleEl = t;
+  }
+  openOptions(fromTitle) {
+    const s = this.ctx.settings;
+    const row = (label, key, opts) => `<h3>${label}</h3><div class="tabs">${opts.map(([v, n]) => `<button class="btn ${String(s[key]) === String(v) ? 'on' : ''}" data-k="${key}" data-v="${v}">${n}</button>`).join('')}</div>`;
+    const html = `<button class="btn close" data-close>Close</button><h2>Options</h2>
+      ${row('Quality (reloads)', 'quality', [['low', 'Low'], ['medium', 'Medium'], ['high', 'High']])}
+      ${row('Difficulty', 'difficulty', [['calm', 'Calm — no threats'], ['standard', 'Standard'], ['harsh', 'Harsh — scarce, permanent']])}
+      ${row('Text size', 'textSize', [['1', 'Normal'], ['1.2', 'Large'], ['1.4', 'Larger']])}
+      ${row('Sound captions', 'captions', [['true', 'On'], ['false', 'Off']])}
+      ${row('Subtitles', 'subtitles', [['true', 'On'], ['false', 'Off']])}
+      ${row('Reduce motion (no bob, sway or shake)', 'reduceMotion', [['true', 'On'], ['false', 'Off']])}
+      ${row('Colour-safe indicators (labels + patterns)', 'colorSafe', [['true', 'On'], ['false', 'Off']])}
+      ${row('High-contrast UI', 'highContrast', [['true', 'On'], ['false', 'Off']])}
+      ${row('One-handed touch layout', 'oneHand', [['true', 'On'], ['false', 'Off']])}
+      ${row('Film grain & lens effects', 'lensFx', [['true', 'On'], ['false', 'Off']])}
+      ${row('Music', 'music', [['1', 'On'], ['0.5', 'Quiet'], ['0', 'Off']])}
+      ${row('Invert look', 'invertY', [['true', 'On'], ['false', 'Off']])}
+      <h3>Volume</h3><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-vol style="width:240px;pointer-events:auto">
+      <h3>Controls</h3><div class="sub" style="font-style:normal;line-height:1.7">WASD move · mouse look · Shift sprint · C crouch / swim up / cut the boat engine · Space jump / dive · E use · F flashlight (lantern or spotlight on the boat) · V boat camera · R radio · Tab pack · Q craft · J journal & map · K photo mode · \` debug · Esc pause.<br>Touch: left stick, drag right to look, buttons for the rest.</div>`;
+    const p = this.openPanel('options', html, (p) => {
+      p.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
+        const k = b.dataset.k; let v = b.dataset.v;
+        if (v === 'true' || v === 'false') v = v === 'true'; else if (!isNaN(+v) && k !== 'quality') v = +v;
+        s.set(k, v);
+        if (k === 'quality') { location.reload(); return; }
+        this.applyAccessibility();
+        this.openOptions(fromTitle);
+      }));
+      p.querySelector('[data-vol]').addEventListener('input', (e) => { s.set('volume', parseFloat(e.target.value)); this.ctx.audio?.setVolume(s.volume); });
+    });
+    if (fromTitle) this.ctx.paused = false;
+    return p;
+  }
+  applyAccessibility() {
+    const s = this.ctx.settings, b = document.body;
+    document.documentElement.style.fontSize = `${16 * (s.textSize || 1)}px`;
+    document.getElementById('ui').style.zoom = s.textSize && s.textSize !== 1 ? String(s.textSize) : '';
+    b.classList.toggle('hc', !!s.highContrast);
+    b.classList.toggle('colorsafe', !!s.colorSafe);
+    b.classList.toggle('onehand', !!s.oneHand);
   }
   endCard() {
     const e = this.root.appendChild(el('div', 'endcard', `<h2>END OF STAGE ONE</h2><p>Something under Orrin Bay has finished counting. Highmark's lighthouse is dark for the first time in living memory.<br><br>The water is waiting.</p><button class="btn big" style="margin-top:20px;opacity:.8">Keep drifting</button>`));
     requestAnimationFrame(() => e.classList.add('on'));
     e.querySelector('button').addEventListener('click', () => e.remove());
   }
+}
+
+// DROWNED EARTH, stencil-cut and water-stained, drawn procedurally.
+function drawLogo(c) {
+  const g = c.getContext('2d');
+  const w = c.width, h = c.height;
+  g.clearRect(0, 0, w, h);
+  g.font = 'bold 118px Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const grad = g.createLinearGradient(0, 30, 0, 170);
+  grad.addColorStop(0, '#efe9d8'); grad.addColorStop(0.62, '#d9d2bf'); grad.addColorStop(0.63, '#7fa3a6'); grad.addColorStop(1, '#2f5157');
+  g.fillStyle = grad;
+  g.letterSpacing = '14px';
+  g.fillText('DROWNED EARTH', w / 2, h / 2 + 6);
+  // stencil bridges
+  g.globalCompositeOperation = 'destination-out';
+  for (let x = 40; x < w; x += 23 + (x % 7)) g.fillRect(x, 0, 3, h);
+  g.fillRect(0, h / 2 + 2, w, 4);
+  // water line shimmer
+  for (let i = 0; i < 70; i++) { g.fillRect(Math.random() * w, h / 2 + 18 + Math.random() * 45, 8 + Math.random() * 40, 1.5); }
+  g.globalCompositeOperation = 'source-over';
+  g.letterSpacing = '0px';
 }

@@ -106,6 +106,7 @@ export class Survival {
   }
   blackOut(reason) {
     this.blackout = true;
+    this.ctx.events.emit('blackout', reason);
     const { ui, player, boat } = this.ctx;
     ui.whisper(reason === 'water' ? 'The dark closes in…' : 'Your legs fold under you…');
     ui.fade(2.5, () => {
