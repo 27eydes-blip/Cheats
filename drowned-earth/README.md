@@ -1,9 +1,12 @@
 # Drowned Earth
 
 A quiet, first-person exploration-survival game set on a flooded future Earth.
-Runs in the browser on phones and desktops (three.js + Vite). No image or audio
-files: every texture is drawn procedurally at boot and every sound is
-synthesized with WebAudio.
+Runs in the browser on phones and desktops (three.js + Vite, WebGL2). Every
+sound is synthesized with WebAudio. The look combines original procedural
+work (architecture, water, sky, clouds, interiors seen through windows) with
+CC0 photoscans: Poly Haven materials, props and HDRI skies, and rigged
+Quaternius characters (see `CREDITS.md`). If the asset files are missing, the
+game falls back to its procedural textures and box props and still runs.
 
 > Decades ago the Hush killed more than half the world. Then the Rise took the
 > coasts and the low cities. One island stayed dry: Highmark. Everyone else
@@ -58,22 +61,43 @@ A gamepad (standard mapping) also works: sticks move/look, A dive, B crouch, X u
 
 ### Quality
 
-Low / medium / high is chosen in the pause menu (or `?quality=low|medium|high`).
-Phones default to low, desktops to medium.
+Presets are **Phone**, **Standard** and **Ultra**, plus **Auto** (the default), which reads the
+GPU name: phones and software renderers get Phone, discrete NVIDIA/AMD/Apple-silicon GPUs get Ultra,
+everything else Standard. Change it in Options or with `?quality=phone|standard|ultra|auto`
+(the old `low|medium|high` still work). A frame governor then scales render resolution between
+the preset's minimum and 100 % to hold **30 fps on Phone, 60 on Standard/Ultra**
+(`?dynres=0` turns it off).
 
-| | low | medium | high |
+| | Phone | Standard | Ultra |
 | --- | --- | --- | --- |
-| Pixel ratio cap | 1 | 1.5 | 2 |
-| Render path | single pass, no refraction | HDR target + refraction, depth foam, underwater shafts | same, bigger shadows |
-| Sun shadows | off | 1024 | 2048 |
-| Planar water reflections | off (sky only) | 35 % res | 50 % res |
-| Streaming radius (near / far) | 200 / 900 m | 260 / 1200 m | 320 / 1500 m |
-| Water grid | 48×64 | 72×96 | 96×128 |
-| Debris, particles, rain, birds | reduced | medium | full |
+| Pixel ratio cap / min dynamic scale | 1 / 60 % | 1.5 / 65 % | 2 / 70 % |
+| Render path | single pass, MSAA | HDR, refraction, FXAA | HDR, refraction, **TAA** |
+| Sun shadows | off | 2048, 110 m | **2 cascades**: 2048 near (26 m) + 4096 wide (180 m) |
+| Ambient occlusion | – | SSAO, half res | SSAO, half res, temporal |
+| Reflections | sky + HDRI | planar water (35 %) | planar water (50 %) + **SSR** on wet ground |
+| Volumetric light | – | screen-space shafts | **shadow-mapped volumetric sun** + shafts |
+| Motion blur | – | – | camera motion blur (off with Reduce motion) |
+| Scanned textures | 1k | 1k | 1k at boot, **2k streamed in** |
+| Lantern lights (pool) | 2 | 6 | 12 |
+| Prop density / draw distance | 50 % | 80 % | 100 % |
+
+### Assets
+
+`assets/manifest.json` lists every third-party source (all CC0). To rebuild `public/assets/`:
+
+```bash
+NODE_USE_ENV_PROXY=1 node scripts/assets/fetch.mjs   # downloads into .asset-cache/ (git-ignored)
+node scripts/assets/build.mjs                        # or: build.mjs textures|models|characters|hdri
+```
+
+The build transcodes textures to KTX2 (Basis ETC1S, normal-map mode for normals) at 1k and 2k,
+compresses geometry with meshopt, simplifies every model to a triangle budget and adds an LOD1
+(≈18 %), and trims the animation library to the clips the game uses. Download size: ≈ 6 MB of 1k
+materials (+ ≈ 25 MB of 2k on Ultra), 6 MB of HDRIs, 23 MB of models, 9 MB of characters.
 
 ### Debug URL parameters
 
-`?skipintro=1&time=21.5&freeze=1&weather=storm&quality=high&stats=1&pause=1&touch=1`
+`?skipintro=1&time=21.5&freeze=1&weather=storm&quality=ultra&stats=1&pause=1&touch=1&debug=1&noassets=1&dynres=0`
 plus `pos=x,y,z&mode=foot|swim|boat`, `boat=x,z,heading`, `yaw=`, `pitch=`, `tp=1` (third-person boat
 camera), `flashlight=1`, `patrol=1` (Tide Warden patrol at any hour), `pause=1` (start paused; step with
 `__game.step(n)`), `touch=1` (force the touch UI). `window.__game` exposes everything; `scripts/probe-eval.mjs`

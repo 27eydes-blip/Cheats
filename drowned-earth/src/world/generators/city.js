@@ -145,7 +145,7 @@ export function cityChunk(ctx, cx, cz, lod, region) {
     for (let i = 0; i < nBed; i++) {
       const p = streetPoint(rng, x0, z0, P, SW);
       if (!p || wm.landmarkClaim(p.x, p.z)) continue;
-      const t = rng.weighted([{ w: 2, v: 'hydrant' }, { w: 2, v: 'utilityBox' }, { w: 2, v: 'barrier' }, { w: 2, v: 'trashCan' }, { w: 1, v: 'wheelRim' }, { w: 2, v: 'tire' }, { w: 1, v: 'rocks' }]);
+      const t = rng.weighted([{ w: 2, v: 'hydrant' }, { w: 2, v: 'utilityBox' }, { w: 2, v: 'barrier' }, { w: 2, v: 'trashCan' }, { w: 1, v: 'wheelRim' }, { w: 2, v: 'tire' }, { w: 1, v: 'rocks' }, { w: 2, v: 'roots' }, { w: 1, v: 'deadTrunk' }]);
       inst.add(t, 'concrete', p.x, wm.seabedAt(p.x, p.z), p.z, { ry: rng.range(0, 6.28), rz: rng.range(-0.15, 0.15) });
     }
     // seabed

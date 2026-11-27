@@ -18,13 +18,19 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 let failures = 0;
 for (const shot of SHOTS) {
   if (only && !shot.name.includes(only)) continue;
-  const page = await browser.newPage({ viewport: shot.viewport || { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  // VIEW=1920x1080 overrides the viewport; DSF sets the device pixel ratio
+  // (phone: VIEW=412x915 DSF=2.625 → 1081×2402); QUALITY forces a preset.
+  const [vw, vh] = (process.env.VIEW || '').split('x').map(Number);
+  const viewport = vw ? { width: vw, height: vh } : shot.viewport || { width: 1280, height: 720 };
+  const page = await browser.newPage({ viewport, deviceScaleFactor: +(process.env.DSF || 1), isMobile: !!process.env.MOBILE, hasTouch: !!process.env.MOBILE });
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); if (m.type() === 'warning' && process.env.WARN) console.log('  warn:', m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
-  const q = new URLSearchParams(shot.title ? { freeze: '1', ...shot.params } : { skipintro: '1', freeze: '1', ...shot.params }).toString();
+  const params = { dynres: '0', ...(shot.title ? { freeze: '1' } : { skipintro: '1', freeze: '1' }), ...shot.params };
+  if (process.env.QUALITY) params.quality = process.env.QUALITY;
+  const q = new URLSearchParams(params).toString();
   await page.goto(`${url}?${q}`);
-  await page.waitForFunction(() => window.__game && window.__game.frame > 5, null, { timeout: 120000 });
+  await page.waitForFunction(() => window.__game && window.__game.frame > 5, null, { timeout: 300000 });
   // let chunks stream in and the pipeline settle
   await page.evaluate(async (frames) => {
     const g = window.__game;

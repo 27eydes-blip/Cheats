@@ -3,10 +3,12 @@ import { skyUniforms, createSky } from './Sky.js';
 import { G } from '../world/WorldShader.js';
 import { setEnvIntensity } from '../world/Materials.js';
 import { HdriDome } from './HdriDome.js';
+import { patchCascadeChunk, makeNearCascade } from '../render/Cascades.js';
 
 // Combines time of day + weather + underwater state into lights, fog, sky and
 // the shared shader uniforms. The only place that touches global lighting.
 const tmp = new THREE.Color();
+const _f = new THREE.Vector3();
 
 export class Atmosphere {
   constructor(ctx) {
@@ -21,6 +23,13 @@ export class Atmosphere {
       const R = settings.q.shadowRange || 70; c.left = -R; c.right = R; c.top = R; c.bottom = -R; c.near = 1; c.far = 600;
       this.sun.shadow.bias = -0.0008;
       this.sun.shadow.normalBias = 0.04;
+    }
+    if (settings.q.shadows && settings.q.csm) {
+      // near cascade first: it must take shadow index 0
+      patchCascadeChunk();
+      this.near = makeNearCascade(2048, 26);
+      this.near.layers.enableAll();
+      scene.add(this.near, this.near.target);
     }
     scene.add(this.sun, this.sun.target);
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
@@ -91,6 +100,16 @@ export class Atmosphere {
     const target = this.ctx.player.position;
     this.sun.position.copy(target).addScaledVector(ld, 300);
     this.sun.target.position.copy(target);
+    if (this.near) {
+      // centre the near cascade a little ahead of the camera, snapped to its texels
+      const cam = this.ctx.camera;
+      const f = _f.set(0, 0, -1).applyQuaternion(cam.quaternion).setY(0).normalize().multiplyScalar(12).add(cam.position);
+      const texel = (26 * 2) / 2048;
+      f.x = Math.round(f.x / texel) * texel; f.z = Math.round(f.z / texel) * texel;
+      this.near.position.copy(f).addScaledVector(ld, 300);
+      this.near.target.position.copy(f);
+      this.near.target.updateMatrixWorld();
+    }
     // snap shadow camera to texels to avoid shimmering
     this.hemi.color.copy(o.hemiSky).lerp(tmp.setRGB(0.55, 0.58, 0.6), w.cloud * 0.4 * (1 - night));
     this.hemi.groundColor.copy(o.hemiGround);

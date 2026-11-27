@@ -42,7 +42,7 @@ export class DebugPanel {
     const mem = performance.memory ? `${(performance.memory.usedJSHeapSize / 1048576).toFixed(0)} MB heap` : 'n/a';
     this.el.querySelector('.dbg').textContent =
 `${c.game.fps.toFixed(0)} fps · ${r.render.calls} calls · ${(r.render.triangles / 1000).toFixed(0)}k tris · ${r.memory.geometries} geo · ${r.memory.textures} tex · ${mem}
-${c.settings.label} · render ${Math.round(c.pipeline.size.x)}×${Math.round(c.pipeline.size.y)} (scale ${c.pipeline.scale.toFixed(2)}) · frame ${(c.game.frameEma || 0).toFixed(1)} ms · GPU ${c.settings.gpu || '?'}
+${c.settings.label} · render ${Math.round(c.pipeline.size.x)}×${Math.round(c.pipeline.size.y)} (scale ${c.pipeline.scale.toFixed(2)}) · frame ${(c.game.frameEma || 0).toFixed(1)} ms · GPU ${c.settings.gpu || '?'} · WebGL2${'gpu' in navigator ? ' (WebGPU available, not used)' : ''}
 textures ≈ ${((c.assets?.textureBytes || 0) / 1048576).toFixed(0)} MB GPU · assets ${((c.assets?.downloaded || 0) / 1048576).toFixed(1)} MB downloaded · scans ${c.instancer?.stats.lod0 ?? 0} near / ${c.instancer?.stats.lod1 ?? 0} far
 post: ${['ssao', 'taa', 'ssr', 'motionBlur', 'volumetric'].filter((k) => c.settings.q[k]).join(' ') || 'none'}${c.settings.q.postPipeline && !c.settings.q.taa ? ' fxaa' : ''} · chunks ${c.chunks.stats.loaded} · mode ${c.mode}/${c.player.mode}
 day ${c.time.day} ${c.time.clockString()} · ${c.weather.state} · wind ${c.weather.cur.wind.toFixed(2)}

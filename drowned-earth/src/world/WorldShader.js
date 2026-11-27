@@ -54,6 +54,10 @@ export function patchMaterial(mat, opts = {}) {
           vec3 ws = waveSample(iOrigin.xz);
           vec3 tiltP = transformed;
           transformed.y += ws.x - tiltP.x * ws.y - tiltP.z * ws.z;
+          // slow wander on the current, a slow spin
+          float dph = iOrigin.x * 0.37 + iOrigin.z * 0.23;
+          transformed.x += sin(uTime * 0.045 + dph) * 0.9;
+          transformed.z += cos(uTime * 0.038 + dph * 1.3) * 0.9;
         #include <project_vertex>`);
     }
     if (cloth) {
