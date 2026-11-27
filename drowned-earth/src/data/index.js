@@ -4,6 +4,7 @@ import locations from './locations.json';
 import weather from './weather.json';
 
 const optional = import.meta.glob('./*.json', { eager: true });
+const mods = import.meta.glob('../mods/*.json', { eager: true });
 
 export function loadData() {
   const get = (name) => optional[`./${name}.json`]?.default;
@@ -24,6 +25,18 @@ export function loadData() {
     standing: get('standing') || { tiers: {}, steps: {} },
     life: loadLife(optional),
   };
+  data.bottles = get('bottles') || { spots: [], notes: [] };
+  // content packs: merge items, recipes, events, logs, bottles, radio lines
+  for (const [path, m] of Object.entries(mods)) {
+    const d = m.default; if (!d) continue;
+    Object.assign(data.items.items, d.items || {});
+    if (d.recipes) data.recipes.recipes.push(...d.recipes);
+    if (d.events) data.life.events.push(...d.events);
+    Object.assign(data.logs.logs || {}, d.logs || {});
+    if (d.bottles) data.bottles.notes.push(...d.bottles);
+    for (const [st, lines] of Object.entries(d.radioLines || {})) data.radio.stations?.find((s) => s.id === st)?.lines.push(...lines);
+    data.modPacks = [...(data.modPacks || []), path.split('/').pop()];
+  }
   validate(data);
   return data;
 }

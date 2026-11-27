@@ -47,9 +47,9 @@ export class Deep {
       vertexShader: `uniform float uTime; uniform float uDark[${this.swarms.length}]; attribute vec3 seed; varying float vA;
         void main(){ float s = seed.x, r = seed.y; int si = int(seed.z + 0.5);
           vec3 p = position + vec3(cos(uTime * 0.3 + s) * r * fract(s * 1.7), sin(uTime * 0.21 + s * 2.0) * r * 0.35, sin(uTime * 0.27 + s) * r * fract(s * 3.1));
-          vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_PointSize = 26.0 / max(-mv.z, 0.5);
+          vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_PointSize = 70.0 / max(-mv.z, 0.5);
           vA = (0.55 + 0.45 * sin(uTime * 2.0 + s * 9.0)) * (1.0 - uDark[si]); gl_Position = projectionMatrix * mv; }`,
-      fragmentShader: 'uniform sampler2D map; varying float vA; void main(){ float a = texture2D(map, gl_PointCoord).a * vA; gl_FragColor = vec4(vec3(0.45, 1.0, 0.85) * a, a); }',
+      fragmentShader: 'uniform sampler2D map; varying float vA; void main(){ float a = texture2D(map, gl_PointCoord).a * vA; gl_FragColor = vec4(vec3(0.55, 1.3, 1.0) * a * 1.6, a); }',
     }));
     this.fish.frustumCulled = false;
     this.fish.layers.set(LAYER_FX);
@@ -92,7 +92,6 @@ export class Deep {
     this.growthPts.sort((a, b) => a.y - b.y);
     this.growth = new THREE.InstancedMesh(propGeometry('growth'), mat('glow'), this.growthPts.length);
     this.growth.frustumCulled = false;
-    this.growth.layers.set(LAYER_FX);
     this.ctx.scene.add(this.growth);
     this.refreshGrowth();
   }
@@ -184,9 +183,9 @@ export class Deep {
       const want = d < 28 ? 1 : 0;
       this.swarmDark[i] += (want - this.swarmDark[i]) * Math.min(1, dt * (want ? 4 : 0.5));
     });
-    this.fish.visible = under || player.position.distanceTo(this.swarms[0].c) < 120;
+    this.fish.visible = under;
     // the growth pulses with the Beacon tone / finale
-    mat('glow').opacity = 0.6 + Math.sin(G.uTime.value * 1.3) * 0.15 + G.uGlow.value * 0.3;
+    mat('glow').emissiveIntensity = 1.3 + Math.sin(G.uTime.value * 1.3) * 0.35 + G.uGlow.value * 1.5;
   }
   toJSON() { return { glow: this.ctx.state.glow }; }
   load(o) { if (o?.glow != null) { this.ctx.state.glow = o.glow; this.refreshGrowth(); } }

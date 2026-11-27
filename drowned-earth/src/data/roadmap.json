@@ -1,0 +1,19 @@
+{
+  "_doc": "Systems designed but stubbed in stage 1. Each entry names the hook already in the code that a later stage plugs into. Not loaded by the game; kept with the data so designers and code agree.",
+  "stubs": {
+    "tide_clock": { "hook": "weather/TimeOfDay.js (day counter) + WorldMap.seabedAt", "plan": "A Great Tide once per in-game year raises the sea; low rafts flood, new dive routes open. Needs a world water-level offset applied in Waves.height and the water/seabed shaders." },
+    "star_navigation": { "hook": "weather/Sky.js star field + Highmark Beacon bearing on the journal chart", "plan": "Named constellations, a sextant item, the Beacon sweep period and bird flight as bearings; no GPS ever." },
+    "voice_of_the_deep": { "hook": "story finale hydrophone + Deep.noise", "plan": "Hydrophone mini-game: tune frequency and phase to decode Cathedral patterns into a glyph lexicon; unlocks ending (d)." },
+    "raft_rituals": { "hook": "Weather events + RaftCommunity NPC schedules ('festival' activity)", "plan": "Each raft lights lamps / sings / ties knots before storms; joining gives rep and storm bonuses." },
+    "memory_dives": { "hook": "Cask Street memory pool (sepia-blue filter + log)", "plan": "Touching objects replays a short 3D vignette from the flood in sepia-blue." },
+    "long_dark_night": { "hook": "TimeOfDay moonless override + Deep glow", "plan": "Once a year no moon or stars; everyone ties up; the glow is brightest; strange events." },
+    "ghost_rafts": { "hook": "world/Bottles.js past-lives storage", "plan": "Dim translucent rafts where previous lives (or other players) lived, with messages and gifts (async shared worlds)." },
+    "crew_and_boats": { "hook": "player/Boat.js mods + upgrades", "plan": "Boat classes (skiff, runabout, trawler, salvage tug, sail clipper, own raft) with speed/cargo/crew/noise; hire crew with skills, loyalty and fears." },
+    "player_rafts": { "hook": "raft/Raft.js addPiece() + RaftKit structures", "plan": "Attach pieces, sails, gardens, rain catchers, workshops, defences; your raft becomes a base." },
+    "secret_societies": { "hook": "story flags + Standing reputations", "plan": "Tideholders, Salvage Brotherhood, Quiet Hand with rituals, quests and hidden rewards." },
+    "justice": { "hook": "society/Heat.js + patrol inspection", "plan": "Fines, confiscation, forced farm labour, exile to the Hush, raft trials by community vote." },
+    "new_game_plus": { "hook": "Life.continueAsChild inheritance + SaveSystem", "plan": "Legacy items, harder Highmark, hidden endings for specific life paths." },
+    "cloud_save": { "hook": "save/SaveSystem.js (versioned JSON; export/import already in the pause menu)", "plan": "Swap localStorage for a backend adapter with the same snapshot/apply interface." },
+    "rebindable_keys": { "hook": "core/Input.js KEYMAP", "plan": "Options page to rebind; store overrides in Settings." }
+  }
+}

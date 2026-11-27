@@ -71,7 +71,7 @@ export class Scenarios {
       def.setup();
       c.chunks.update(c.player.position.x, c.player.position.z, true);
       c.landmarks.update(c.player.position.x, c.player.position.z);
-      c.paused = false; c.input.enabled = true; c.mode = 'play';
+      c.paused = false; c.input.enabled = true; c.game.setMode('play');
       c.ui.whisper(meta.title);
     });
     this.banner.classList.remove('hidden');
@@ -100,6 +100,7 @@ export class Scenarios {
       c.save.apply(this.snapshot);
       c.patrol.forceActive = false; c.patrol.setState('patrol');
       c.scenarioActive = false;
+      c.game.setMode('life');
       a.cb(res);
     }, 0.3);
   }

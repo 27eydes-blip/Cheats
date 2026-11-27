@@ -37,6 +37,26 @@ export class Birds {
     this.silence = 0;
     this.t = 0;
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler();
+    this.companionSetup();
+  }
+  // The boat gull: share fish once and it rides your bow. It leaves near the Deep.
+  companionSetup() {
+    const c = this.ctx;
+    this.comp = { on: !!c.state.flags.gull_friend, away: false, pos: new THREE.Vector3(), mood: 1 };
+    c.interact.add({ id: 'gull:feed', kind: 'gull', mode: 'boat', radius: 6, requireLook: false,
+      pos: (v) => v.copy(c.boat.pos).setY(1.2),
+      enabled: (cc) => !cc.state.flags.gull_friend && cc.time.out.night < 0.5 && (cc.inventory.has('canned_fish') || cc.inventory.has('kelp')) && cc.state.playTime > 120,
+      prompt: 'A gull with a bent wing is watching you eat. Share some',
+      onUse: (cc) => { cc.inventory.remove(cc.inventory.has('canned_fish') ? 'canned_fish' : 'kelp'); cc.state.flags.gull_friend = true; this.comp.on = true; cc.ui.whisper('The gull eats, then settles on your bow like it owns it. You decide to call it Captain.'); } });
+  }
+  updateCompanion(dt) {
+    const c = this.ctx, k = this.comp; if (!k?.on) return;
+    const nearDeep = Math.hypot(c.boat.pos.x - 96, c.boat.pos.z + 128) < 90 || c.state.glow > 0.7;
+    if (nearDeep && !k.away) { k.away = true; c.ui.whisper('Captain lifts off the bow and flies hard for the towers. Animals don\'t stay near the Deep.'); }
+    if (!nearDeep && k.away) { k.away = false; }
+    const bow = new THREE.Vector3(0, 0.95, -2.35).applyMatrix4(c.boat.group.matrixWorld);
+    if (k.away) bow.add(new THREE.Vector3(-120, 40, 60));
+    k.pos.lerp(bow, Math.min(1, dt * (k.away ? 0.4 : 3)));
   }
   randomBirdPos() { const b = this.birds[Math.floor(Math.random() * this.n)]; return b && b.roost ? b.pos.clone() : null; }
   update(dt) {
@@ -47,7 +67,9 @@ export class Birds {
     const roosts = [...this.roosts.values()].filter((r) => Math.hypot(r.x - cam.x, r.z - cam.z) < 260);
     const night = this.ctx.time.out.night > 0.6;
     const col = new THREE.Color();
+    this.updateCompanion(dt);
     this.birds.forEach((b, i) => {
+      if (i === 0 && this.comp?.on) { const perched = !this.comp.away && this.comp.pos.distanceTo(this.ctx.boat.pos) < 4; this._e.set(0, this.ctx.boat.heading, 0); this.mesh.setColorAt(i, new THREE.Color(perched ? 0 : 1, 0, 0)); this._m.compose(this.comp.pos, this._q.setFromEuler(this._e), new THREE.Vector3(1.1, 1.1, 1.1)); this.mesh.setMatrixAt(i, this._m); return; }
       if (!b.roost || !roosts.includes(b.roost)) b.roost = roosts.length ? roosts[(i * 7) % roosts.length] : null;
       if (!b.roost) { this._m.makeScale(0, 0, 0); this.mesh.setMatrixAt(i, this._m); return; }
       const sit = b.perched || night || this.silence > 0 || this.ctx.weather.cur.rain > 0.6;

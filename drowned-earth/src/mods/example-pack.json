@@ -1,0 +1,7 @@
+{
+  "_doc": "Example content pack: one item, one life event, one bottle note, one radio line.",
+  "items": { "tide_charm": { "name": "Tide charm", "desc": "A knot of blue thread and a fish bone. The Vigil sells them to the nervous.", "value": 2, "weight": 0.01, "tags": ["keepsake"] } },
+  "events": [ { "id": "mod_tide_charm", "ages": [10, 80], "title": "A charm", "text": "A Vigil novice offers you a tide charm for a single scrap.", "choices": [ { "label": "Buy it", "out": [ { "w": 1, "text": "You tie it to your wrist next to your band. You feel exactly as lucky as before, which is fine.", "fx": { "scrap": -1, "faith": 2, "luck": 1 } } ] }, { "label": "No thanks", "out": [ { "w": 1, "text": "The novice smiles. 'The tide is patient.'", "fx": {} } ] } ] } ],
+  "bottles": [ "This bottle came from a content pack. Hello from outside the water." ],
+  "radioLines": { "freevoice": [ { "text": "A message from the mod deck: the Drift is bigger than the map." } ] }
+}

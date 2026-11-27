@@ -69,6 +69,10 @@ export function buildSubway(ctx, def) {
     const side = i % 2 ? -1 : 1;
     inst.add('growth', 'glow', cx + side * (24 + (i % 3)), -14.5 + (i % 5) * 0.9, p0z + 6 + (i % 4) * 1.4, { s: 0.6 + (i % 3) * 0.4 });
   }
+  // a memory pool: warm water full of voices
+  b.interact({ id: 'memory:cask', kind: 'memory', pos: new THREE.Vector3(cx + 21, -13.4, p0z + 7), radius: 3.2, requireLook: false,
+    prompt: (c) => (c.story.hasLog('memory_01') ? 'The warm water, still full of voices' : 'Touch the warm water'),
+    onUse: (c) => { c.canvas.style.filter = 'sepia(.55) hue-rotate(160deg) saturate(.8)'; c.state.memoryFilter = true; c.story.openLog('memory_01'); c.audio?.play('chimeSwell'); } });
   for (const im of inst.build(origin)) b.object(im);
   return {
     group: b.build('Cask Street'), colliders: b.colliders, interactables: b.interactables,

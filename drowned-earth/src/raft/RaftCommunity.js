@@ -252,6 +252,7 @@ function setupFestival(ctx, cdef, main, group, interactables) {
       const on = active();
       const now = ctx.state.playTime;
       const center = _v.set(f.center[0], 0, f.center[1]).applyMatrix4(main.root.matrixWorld).clone();
+      if (on && released === 0) { const into = Math.min(1, (ctx.time.hour - f.from) / 0.6); const k = Math.floor(n * 0.8 * into); for (; released < k; released++) { state[released].born = now - Math.random() * 140; state[released].pos.copy(center); } }
       if (on && released < n && Math.random() < dt * 0.9) { const st = state[released++]; st.born = now; st.pos.copy(center); }
       if (!on && released > 0 && ctx.time.hour > f.to) { released = 0; mine = false; state.forEach((st) => (st.born = -1)); }
       state.forEach((st, i) => {

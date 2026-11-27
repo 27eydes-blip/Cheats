@@ -134,6 +134,7 @@ export class UI {
   close(silent) {
     if (!this.panel) return;
     this.panel.remove(); this.panel = null; this.panelKind = null; this.currentStation = null;
+    if (this.ctx.state.memoryFilter) { this.ctx.state.memoryFilter = false; this.ctx.canvas.style.filter = ''; }
     this.ctx.paused = false; this.ctx.input.enabled = true;
     if (!silent) this.ctx.audio?.play('ui');
   }
@@ -214,6 +215,7 @@ export class UI {
     this.openPanel('shop', render(), bind);
     this.ctx.paused = true;
   }
+  showNote(title, text) { this.openPanel('log', `<button class="btn close" data-close>Close</button><h2>${esc(title)}</h2><div class="logtext hand">${esc(text)}</div>`); this.ctx.paused = true; }
   showBoard(name, lines, rumours) {
     const r = (rumours || []).slice(0, 5).map((x) => `<div class="row"><div class="name"><small>Day ${x.day}</small>${esc(x.text)}</div></div>`).join('') || '<div class="sub">No news worth chalk.</div>';
     this.openPanel('log', `<button class="btn close" data-close>Close</button><h2>${esc(name)} — ration board</h2><div class="logtext" style="font-family:ui-monospace,monospace">${lines.map(esc).join('\n')}</div><h3>Chalked underneath</h3>${r}`);
@@ -276,7 +278,7 @@ export class UI {
   openPause() {
     const s = this.ctx.settings;
     const html = `<h2>Paused</h2><div class="sub">Drowned Earth — Stage 1: The First Drowned District</div>
-      <div class="tabs"><button class="btn" data-close>Resume</button><button class="btn" data-act="inv">Pack</button><button class="btn" data-act="journal">Journal</button><button class="btn" data-act="save">Save</button><button class="btn" data-act="load">Load last save</button><button class="btn" data-act="opts">Options</button><button class="btn" data-act="life">A Life on the Water</button><button class="btn" data-act="title">Title screen</button></div>
+      <div class="tabs"><button class="btn" data-close>Resume</button><button class="btn" data-act="inv">Pack</button><button class="btn" data-act="journal">Journal</button><button class="btn" data-act="save">Save</button><button class="btn" data-act="load">Load last save</button><button class="btn" data-act="opts">Options</button><button class="btn" data-act="export">Export save</button><button class="btn" data-act="import">Import save</button><button class="btn" data-act="life">A Life on the Water</button><button class="btn" data-act="title">Title screen</button></div>
       <h3>Quality</h3><div class="tabs">${Settings.presets().map((q) => `<button class="btn ${q === s.quality ? 'on' : ''}" data-q="${q}">${q}</button>`).join('')}</div>
       <h3>Sound</h3><div class="tabs"><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-vol style="width:220px;pointer-events:auto"></div>
       <h3>Options</h3><div class="tabs"><button class="btn ${s.subtitles ? 'on' : ''}" data-opt="subtitles">Subtitles</button><button class="btn ${s.invertY ? 'on' : ''}" data-opt="invertY">Invert look</button></div>
@@ -286,6 +288,8 @@ export class UI {
       p.querySelector('[data-act="journal"]').addEventListener('click', () => this.openJournal());
       p.querySelector('[data-act="save"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.toast('Saved.'); });
       p.querySelector('[data-act="opts"]').addEventListener('click', () => this.openOptions());
+      p.querySelector('[data-act="export"]').addEventListener('click', () => { this.ctx.save.save('manual'); const blob = new Blob([localStorage.getItem('drowned-earth.save') || '{}'], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `drowned-earth-day${this.ctx.time.day}.json`; a.click(); });
+      p.querySelector('[data-act="import"]').addEventListener('click', () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json'; i.onchange = async () => { const t = await i.files[0].text(); try { JSON.parse(t); localStorage.setItem('drowned-earth.save', t); if (this.ctx.save.load()) { this.close(); this.toast('Save imported.'); } } catch { this.toast('That file is not a Drowned Earth save.'); } }; i.click(); });
       p.querySelector('[data-act="life"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.close(); this.ctx.game.enterLife(); });
       p.querySelector('[data-act="title"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.close(); this.titleScreen(this.ctx.save.has(), this.ctx.game.onTitleChoice); });
       p.querySelector('[data-act="load"]').addEventListener('click', () => { if (this.ctx.save.load()) { this.close(); this.toast('Loaded.'); } });
@@ -369,12 +373,13 @@ function drawLogo(c) {
   const g = c.getContext('2d');
   const w = c.width, h = c.height;
   g.clearRect(0, 0, w, h);
-  g.font = 'bold 118px Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif';
+  let size = 118;
   g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.letterSpacing = '10px';
+  do { g.font = `bold ${size}px Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif`; size -= 4; } while (g.measureText('DROWNED EARTH').width > w - 60 && size > 40);
   const grad = g.createLinearGradient(0, 30, 0, 170);
   grad.addColorStop(0, '#efe9d8'); grad.addColorStop(0.62, '#d9d2bf'); grad.addColorStop(0.63, '#7fa3a6'); grad.addColorStop(1, '#2f5157');
   g.fillStyle = grad;
-  g.letterSpacing = '14px';
   g.fillText('DROWNED EARTH', w / 2, h / 2 + 6);
   // stencil bridges
   g.globalCompositeOperation = 'destination-out';

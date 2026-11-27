@@ -55,6 +55,7 @@ import { Journal } from '../ui/Journal.js';
 import { Photo } from '../ui/Photo.js';
 import { DebugPanel } from '../ui/DebugPanel.js';
 import { Onboarding } from '../ui/Onboarding.js';
+import { Bottles } from '../world/Bottles.js';
 import { Standing } from '../society/Standing.js';
 import { Economy } from '../society/Economy.js';
 import { Heat } from '../society/Heat.js';
@@ -147,6 +148,7 @@ export class Game {
     ctx.photo = new Photo(ctx);
     ctx.debug = new DebugPanel(ctx);
     ctx.onboarding = new Onboarding(ctx);
+    ctx.bottles = new Bottles(ctx);
     ctx.life = new Life(ctx);
     ctx.lifeUI = new LifeUI(ctx, ctx.life);
     ctx.scenarios = new Scenarios(ctx);
@@ -165,7 +167,7 @@ export class Game {
       else if (choice === 'story') this.enterStory(false);
       else if (choice === 'life') this.enterLife();
     };
-    if (ctx.params.has('skipintro')) { ctx.mode = 'play'; ctx.story.checkObjectives(); }
+    if (ctx.params.has('skipintro')) { this.setMode('play'); ctx.story.checkObjectives(); }
     else if (ctx.params.has('life')) this.enterLife();
     else ctx.ui.titleScreen(ctx.save.has(), this.onTitleChoice);
     const unlock = () => ctx.audio.start();
@@ -186,9 +188,10 @@ export class Game {
   // test helper: advance the simulation n fixed steps
   step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { this.ctx.input.poll(); this.update(dt); this.ctx.input.endFrame(); } }
 
+  setMode(m) { this.ctx.mode = m; document.body.classList.toggle('mode-play', m === 'play'); }
   toTitle() {
     const ctx = this.ctx;
-    ctx.mode = 'title';
+    this.setMode('title');
     ctx.input.enabled = false;
     ctx.paused = false;
     ctx.time.hour = 6.05; ctx.time.frozen = true; ctx.time.update(0);
@@ -199,7 +202,7 @@ export class Game {
     ctx.lifeUI.hide();
     ctx.time.frozen = !!ctx.params.has('freeze');
     if (!loaded) { this.resetStory(); this.newGame(); ctx.weather.set('mist', true); ctx.weather.locked = false; ctx.weather.scheduleIdx = 0; ctx.weather.hoursLeft = ctx.data.weather.schedule[0].hours; }
-    ctx.mode = 'play';
+    this.setMode('play');
     ctx.input.enabled = true;
     ctx.ui.fade(0.01, null, 0.4);
     ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
@@ -225,12 +228,14 @@ export class Game {
   enterLife() {
     const ctx = this.ctx;
     this.toTitle();
-    ctx.mode = 'life';
+    this.setMode('life');
     const s = ctx.save.read();
     if (s?.life && !ctx.life.s) ctx.life.load(s.life);
     ctx.lifeUI.show();
   }
   // test helper: advance the simulation n fixed steps
+  haptic(ms) { if (this.ctx.input.usingTouch && navigator.vibrate && !this.ctx.settings.reduceMotion) try { navigator.vibrate(ms); } catch { /* not allowed */ } }
+
   isIndoors(p) {
     for (const l of this.ctx.landmarks.loaded.values()) for (const b of l.interiors || []) if (p.x > b[0] && p.y > b[1] && p.z > b[2] && p.x < b[3] && p.y < b[4] && p.z < b[5]) return true;
     return false;
@@ -258,7 +263,9 @@ export class Game {
     events.on('footstep', (e) => audio.footstep(e));
     events.on('splash', (e) => audio.splash(e.pos, e.big ? 1 : 0.5));
     events.on('swimstroke', (e) => (e.under ? audio.play('bubbles', { n: 3 }) : audio.splash(e.pos, 0.25)));
-    events.on('boat:impact', (e) => audio.impact(e.pos, e.speed));
+    events.on('boat:impact', (e) => { audio.impact(e.pos, e.speed); this.haptic(Math.min(200, e.speed * 40)); });
+    events.on('shake', (v) => this.haptic(v * 120));
+    events.on('blackout', () => this.haptic([80, 60, 80]));
     events.on('lightning', (e) => audio.play('thunder', { dist: e.dist }));
     events.on('boat:tie', () => audio.play('ui'));
     events.on('climbout', () => audio.splash(this.ctx.player.position.clone(), 0.4));

@@ -1,4 +1,5 @@
 import { STATS, STAT_LABEL } from './Life.js';
+import { rememberLife } from '../world/Bottles.js';
 
 // Mobile-first life-sim UI: one thumb, big buttons, cards readable in 5 s.
 // Worn-paper event cards with tide stains; profile bar, stat bars, life log,
@@ -36,7 +37,7 @@ export class LifeUI {
         <div class="life-births">${Object.entries(births).filter(([id]) => id !== 'highmark_ring').map(([id, b]) => `<button class="birth ${st.birth === id ? 'on' : ''}" data-birth="${id}"><i style="background:${this.tier(b.standing).wristband}"></i><b>${esc(b.name)}</b><small>${esc(this.tier(b.standing).short)} · ${esc(b.intro.split('.')[0])}.</small></button>`).join('')}
           <button class="birth ${st.birth === 'random' ? 'on' : ''}" data-birth="random"><i style="background:#888"></i><b>Let the tide decide</b><small>Any raft. A small chance of Highmark's lower ring.</small></button></div>
         <label>Seed (optional — the same seed replays the same life)<input data-k="seed" value="${esc(st.seed)}" placeholder="random"></label>
-        <div class="life-row"><button class="lbtn" data-rand>Randomise</button><button class="lbtn big primary" data-go>Be born</button></div>
+        <div class="life-row"><button class="lbtn" data-rand>Randomise</button><button class="lbtn" data-daily>Today's tide</button><button class="lbtn big primary" data-go>Be born</button></div>
         <button class="lbtn ghost" data-back>Back to title</button></div></div>`;
       this.root.querySelectorAll('[data-sex]').forEach((b) => b.onclick = () => { st.sex = b.dataset.sex; draw(); });
       this.root.querySelectorAll('[data-hair]').forEach((b) => b.onclick = () => { st.hair = b.dataset.hair; draw(); });
@@ -44,6 +45,7 @@ export class LifeUI {
       this.root.querySelectorAll('[data-birth]').forEach((b) => b.onclick = () => { st.birth = b.dataset.birth; draw(); });
       this.root.querySelectorAll('input[data-k]').forEach((i) => i.oninput = () => { st[i.dataset.k] = i.value; });
       this.root.querySelector('[data-rand]').onclick = () => { const n = this.ctx.data.life.names; st.sex = ['female', 'male', 'other'][Math.floor(Math.random() * 3)]; st.name = `${n.any[Math.floor(Math.random() * n.any.length)]} ${n.family[Math.floor(Math.random() * n.family.length)]}`; st.birth = 'random'; draw(); };
+      this.root.querySelector('[data-daily]').onclick = () => { st.seed = 'daily-' + new Date().toISOString().slice(0, 10); st.birth = 'random'; draw(); };
       this.root.querySelector('[data-go]').onclick = () => {
         this.life.create({ name: st.name.trim() || 'Wren Calloway-Ashe', sex: st.sex, birth: st.birth === 'random' ? null : st.birth, appearance: { hair: st.hair, eyes: st.eyes }, seed: st.seed.trim() || undefined });
         this.ctx.audio?.play('chimeSwell');
@@ -234,6 +236,7 @@ export class LifeUI {
   showDeath() {
     const L = this.life, s = L.summary();
     this.card = null;
+    rememberLife(s);
     this.root.querySelectorAll('.life-card-wrap').forEach((n) => n.remove());
     const kids = L.s.people.some((p) => p.role === 'child' && p.alive);
     const d = el('div', 'life-card-wrap', `<div class="life-card paper death"><div class="lc-age">${esc(s.name)} · ${s.age}</div><h3>${esc(s.cause === 'old age' ? 'A long life' : 'The water took you')}</h3>

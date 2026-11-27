@@ -22,7 +22,7 @@ for (const shot of SHOTS) {
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); if (m.type() === 'warning' && process.env.WARN) console.log('  warn:', m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
-  const q = new URLSearchParams({ skipintro: '1', freeze: '1', ...shot.params }).toString();
+  const q = new URLSearchParams(shot.title ? { freeze: '1', ...shot.params } : { skipintro: '1', freeze: '1', ...shot.params }).toString();
   await page.goto(`${url}?${q}`);
   await page.waitForFunction(() => window.__game && window.__game.frame > 5, null, { timeout: 120000 });
   // let chunks stream in and the pipeline settle
@@ -32,8 +32,9 @@ for (const shot of SHOTS) {
     await new Promise((res) => { const t = () => (g.frame - start > frames ? res() : requestAnimationFrame(t)); t(); });
   }, shot.frames || 40);
   if (shot.eval) await page.evaluate(shot.eval);
-  if (shot.eval) await page.waitForTimeout(1500);
+  if (shot.eval) await page.waitForTimeout(shot.wait || 1500);
   await page.screenshot({ path: `shots/${shot.name}.png` });
+  if (process.env.OUT) { fs.mkdirSync(process.env.OUT, { recursive: true }); fs.copyFileSync(`shots/${shot.name}.png`, `${process.env.OUT}/${shot.name}.png`); }
   const info = await page.evaluate(() => { const g = window.__game; const r = g.ctx.renderer.info; return { fps: g.fps.toFixed(1), calls: r.render.calls, tris: r.render.triangles, chunks: g.ctx.chunks.stats.loaded }; });
   console.log(`${shot.name}: ${JSON.stringify(info)}${errors.length ? ' ERRORS:\n  ' + errors.join('\n  ') : ''}`);
   if (errors.length) failures++;

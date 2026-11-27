@@ -1,0 +1,13 @@
+{
+  "_doc": "Messages in bottles. Bottles drift at these points (x, z) in stage 1; each carries a note. Notes from past lives played in the life sim are added automatically (localStorage) and float in too.",
+  "spots": [[-180, 120], [40, 220], [200, -60], [-60, -300], [380, 40], [150, 420], [-400, 0]],
+  "notes": [
+    "We are on the roof of the Kessler building. Eleven of us. Two children. If anyone finds this — we waited.",
+    "To whoever: the kale on Greentide is better than the kale anywhere else and I will die on that hill (raft).",
+    "My son is on Highmark now. Blue wristband. He writes that the floors are dry and he cannot sleep for the quiet.",
+    "If you are Deep-Born and reading this: you are not unlucky. You are necessary. Those are different things. — H.",
+    "Tide's out. Beacon's on. Still here. — the Ferrow twins, Low Row",
+    "Don't trust the ration count on the fourth week of any month. Count your own.",
+    "Somebody hums under the Sounding. It knows three notes. Last month it knew two."
+  ]
+}

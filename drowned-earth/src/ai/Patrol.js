@@ -170,7 +170,8 @@ export class Patrol {
     const localDir = dir.clone().applyQuaternion(this.group.quaternion.clone().invert());
     this.beam.position.copy(this.spot.position);
     this.beam.lookAt(this.beam.position.clone().add(localDir)); this.beam.rotateY(Math.PI);
-    this.beam.material.opacity = 0.05 + this.ctx.atmosphere.fog.near * 25 + this.ctx.weather.cur.rain * 0.05;
+    const camIn = this.ctx.camera.position.distanceTo(this.pos) < 75 ? 0.35 : 1;
+    this.beam.material.opacity = Math.min(0.09, 0.03 + this.ctx.atmosphere.fog.near * 6 + this.ctx.weather.cur.rain * 0.03) * camIn;
     this.red.visible = Math.sin(waves.time * 3) > 0;
     if (!this.emitter && this.ctx.audio?.started) this.emitter = this.ctx.audio.addEmitter({ type: 'patrolEngine', pos: (v) => v.copy(this.pos) });
     if (this.ctx.audio?.started) this.ctx.audio.danger = this.state === 'chase' ? 1 : this.state === 'search' || this.state === 'suspicious' ? 0.5 : 0;

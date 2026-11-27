@@ -52,8 +52,25 @@ export class Input {
   pressed(a) { return this.justPressed.has(a); }
   addLook(dx, dy) { if (this.enabled) { this.look.x += dx; this.look.y += dy; } }
 
+  // Gamepad (standard mapping): sticks move/look, face buttons act.
+  pollPad() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const p = [...pads].find((g) => g && g.connected);
+    if (!p) return null;
+    const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
+    const map = { 0: 'dive', 1: 'crouch', 2: 'use', 3: 'light', 4: 'view', 5: 'sprint', 9: 'pause', 8: 'inventory', 12: 'radio', 13: 'journal', 15: 'craft' };
+    this.padPrev = this.padPrev || {};
+    for (const [i, a] of Object.entries(map)) {
+      const down = !!p.buttons[i]?.pressed;
+      if (down && !this.padPrev[i]) this.press(a); else if (!down && this.padPrev[i]) this.release(a);
+      this.padPrev[i] = down;
+    }
+    if (this.enabled) this.addLook(dz(p.axes[2] || 0) * 14, dz(p.axes[3] || 0) * 14);
+    return { x: dz(p.axes[0] || 0), y: -dz(p.axes[1] || 0) };
+  }
   // Called once per frame before gameplay update.
   poll() {
+    const pad = this.pollPad();
     const k = this.keys;
     let x = 0, y = 0;
     if (this.enabled) {
@@ -62,6 +79,7 @@ export class Input {
       if (k.has('KeyD') || k.has('ArrowRight')) x += 1;
       if (k.has('KeyA') || k.has('ArrowLeft')) x -= 1;
       x += this.touchMove.x; y += this.touchMove.y;
+      if (pad) { x += pad.x; y += pad.y; }
     }
     const len = Math.hypot(x, y);
     if (len > 1) { x /= len; y /= len; }
