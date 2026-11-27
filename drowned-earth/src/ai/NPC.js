@@ -82,7 +82,8 @@ export class NPC {
     if (playerNear && playerLocal) {
       const dx = this.local.x - playerLocal.x, dz = this.local.z - playerLocal.z;
       const d = Math.hypot(dx, dz);
-      if (d < 1.5 && d > 0.01) { tx = this.local.x + (dx / d) * 1.2; tz = this.local.z + (dz / d) * 1.2; this.backoff = 1.2; }
+      const keep = this.def.respect ? 1.1 : this.ctx.standing.shown === 7 ? 2.4 : 1.5;
+      if (d < keep && d > 0.01) { tx = this.local.x + (dx / d) * 1.2; tz = this.local.z + (dz / d) * 1.2; this.backoff = 1.2; }
     }
     this.backoff = Math.max(0, this.backoff - dt);
     const dx = tx - this.local.x, dz = tz - this.local.z;
@@ -131,6 +132,7 @@ export class NPC {
     else if (a === 'sit') { this.hips.position.y = 0.45; this.legL.rotation.x = -1.4; this.legR.rotation.x = -1.4; }
     else if (a === 'sleep') { this.hips.position.y = 0.2; this.torso.rotation.x = -1.45; this.legL.rotation.x = -1.5; this.legR.rotation.x = -1.5; }
     else if (a === 'pray') { this.torso.rotation.x = 0.15; this.head.rotation.x = 0.4; this.armL.rotation.x = -0.8; this.armR.rotation.x = -0.8; }
+    else if (a === 'festival') { this.head.rotation.x = -0.15; this.armR.rotation.x = -0.5 + Math.sin(t * 0.6) * 0.1; }
     else if (a === 'fish') { this.armR.rotation.x = -1.0 + Math.sin(t * 0.7) * 0.1; this.armL.rotation.x = -0.9; }
     else { this.head.rotation.y = Math.sin(t * 0.4 + 1) * 0.5; }
   }

@@ -1,18 +1,258 @@
 {
-  "_doc": "Stage 1 story beats. Objectives are shown as quiet journal notes (never waypoints). Triggers run actions when conditions are met: flags (all), logsRead (min count), near [x,z,r], time [from,to], once.",
-  "objectives": [
-    { "id": "wake", "text": "The boat is tied to Linden Court. Search the building.", "doneWhen": { "logs": ["linden_01"] } },
-    { "id": "kettle", "text": "There is smoke to the south-east. Raft-folk. Trade there.", "doneWhen": { "flags": ["visited_kettle"] } },
-    { "id": "radio", "text": "Listen to the boat radio (R). Not every voice is Highmark's.", "doneWhen": { "flags": ["heard_signal"] } },
-    { "id": "ansel", "text": "Someone at Kettle Drift might know what the numbers mean.", "doneWhen": { "flags": ["signal_decoded"] }, "after": "heard_signal" },
-    { "id": "sounding", "text": "The Sounding. Lower the Unmoored hydrophone. At night, if you must.", "doneWhen": { "flags": ["finale_done"] }, "after": "signal_decoded" }
-  ],
-  "triggers": [
-    { "id": "first_dawn_whisper", "once": true, "when": { "playTime": 4 }, "do": [ { "whisper": "Cold. The boat rocks. The tower is silent above you." } ] },
-    { "id": "see_highmark", "once": true, "when": { "playTime": 40 }, "do": [ { "whisper": "To the north, on the horizon: Highmark. Still dry. Still lit." } ] },
-    { "id": "kettle_smoke", "once": true, "when": { "near": [318, 250, 140] }, "do": [ { "whisper": "Voices. Hammering. Somebody is cooking." } ] },
-    { "id": "sounding_near", "once": true, "when": { "near": [96, -128, 60] }, "do": [ { "whisper": "The water here is black. The seabed simply stops." }, { "audio": "deepMoan" } ] },
-    { "id": "night_one", "once": true, "when": { "hourFrom": 20.5 }, "do": [ { "whisper": "Night. Lights on the raft. One lamp in a far tower window." } ] },
-    { "id": "gulls_quiet", "once": false, "cooldown": 300, "when": { "night": true, "chance": 0.002 }, "do": [ { "event": "gulls:silence" }, { "delay": 8, "audio": "deepMoan" } ] }
-  ]
+ "_doc": "Stage 1 story beats. Objectives are shown as quiet journal notes (never waypoints). Triggers run actions when conditions are met: flags (all), logsRead (min count), near [x,z,r], time [from,to], once.",
+ "objectives": [
+  {
+   "id": "wake",
+   "text": "Teo left a recorder in the flat upstairs. Find it.",
+   "doneWhen": {
+    "logs": [
+     "linden_01"
+    ]
+   }
+  },
+  {
+   "id": "first_dive",
+   "text": "Something glints in the flooded basement under the lobby. Dive for it (Space in water).",
+   "doneWhen": {
+    "flags": [
+     "first_salvage"
+    ]
+   }
+  },
+  {
+   "id": "portage",
+   "text": "Smoke to the south-east: Portage. Divers dock at the red lamp.",
+   "doneWhen": {
+    "flags": [
+     "visited_portage"
+    ]
+   }
+  },
+  {
+   "id": "bram",
+   "text": "Teo said Bram has his bag. Rusthold's tender is south of Portage.",
+   "doneWhen": {
+    "flags": [
+     "teo_bag"
+    ]
+   },
+   "after": "heard_teo"
+  },
+  {
+   "id": "radio",
+   "text": "Listen on 3.3 after dark (R on the boat radio).",
+   "doneWhen": {
+    "flags": [
+     "heard_signal"
+    ]
+   },
+   "after": "teo_bag"
+  },
+  {
+   "id": "keeper",
+   "text": "The Keeper, on Portage's Vigil Mission deck, reads numbers like scripture.",
+   "doneWhen": {
+    "flags": [
+     "signal_decoded"
+    ]
+   },
+   "after": "heard_signal"
+  },
+  {
+   "id": "sounding",
+   "text": "The Sounding. Lower the Lowlight hydrophone. At night, if you must.",
+   "doneWhen": {
+    "flags": [
+     "finale_done"
+    ]
+   },
+   "after": "signal_decoded"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "first_dawn_whisper",
+   "once": true,
+   "when": {
+    "playTime": 4
+   },
+   "do": [
+    {
+     "whisper": "Cold. The boat rocks. The tower is silent above you."
+    }
+   ]
+  },
+  {
+   "id": "see_highmark",
+   "once": true,
+   "when": {
+    "playTime": 40
+   },
+   "do": [
+    {
+     "whisper": "To the north, on the horizon: Highmark. Still dry. Still lit."
+    }
+   ]
+  },
+  {
+   "id": "sounding_near",
+   "once": true,
+   "when": {
+    "near": [
+     96,
+     -128,
+     60
+    ]
+   },
+   "do": [
+    {
+     "whisper": "The water here is black. The seabed simply stops."
+    },
+    {
+     "audio": "deepMoan"
+    }
+   ]
+  },
+  {
+   "id": "night_one",
+   "once": true,
+   "when": {
+    "hourFrom": 20.3
+   },
+   "do": [
+    {
+     "whisper": "Night. Lanterns on the rafts. One lamp burning in a far tower window."
+    }
+   ]
+  },
+  {
+   "id": "gulls_quiet",
+   "once": false,
+   "cooldown": 300,
+   "when": {
+    "night": true,
+    "chance": 0.002
+   },
+   "do": [
+    {
+     "event": "gulls:silence"
+    },
+    {
+     "delay": 8,
+     "audio": "deepMoan"
+    }
+   ]
+  },
+  {
+   "id": "portage_voices",
+   "once": true,
+   "when": {
+    "near": [
+     318,
+     250,
+     150
+    ]
+   },
+   "do": [
+    {
+     "whisper": "Voices. Hammering. Somebody is cooking. Portage."
+    }
+   ]
+  },
+  {
+   "id": "festival_dusk",
+   "once": true,
+   "when": {
+    "hourFrom": 18.2,
+    "near": [
+     318,
+     250,
+     500
+    ]
+   },
+   "do": [
+    {
+     "whisper": "On Portage they are lighting paper lanterns and setting them on the water. One for each name."
+    },
+    {
+     "event": "music:festival"
+    }
+   ]
+  },
+  {
+   "id": "fog_night",
+   "once": true,
+   "when": {
+    "hourFrom": 21.0
+   },
+   "do": [
+    {
+     "weather": "fog"
+    },
+    {
+     "call": "patrolFogRun"
+    },
+    {
+     "delay": 6,
+     "whisper": "Fog rolls in fast. Somewhere in it, a big engine. A searchlight smears across the white. Cut your engine (C) and get behind something."
+    }
+   ]
+  },
+  {
+   "id": "storm_midnight",
+   "once": true,
+   "when": {
+    "hourFrom": 23.2
+   },
+   "do": [
+    {
+     "weather": "storm"
+    },
+    {
+     "whisper": "The wind turns. Every rope on Portage starts to sing."
+    }
+   ]
+  }
+ ],
+ "sideThreads": [
+  {
+   "id": "ward9",
+   "text": "Ward 9's flooded basement, where Teo says the growth comes up. A rope and hook would reach the window.",
+   "doneWhen": {
+    "flags": [
+     "found_teo_tag"
+    ]
+   },
+   "after": "teo_bag"
+  },
+  {
+   "id": "festival",
+   "text": "Lantern night on Portage at dusk. Write a name on the paper.",
+   "doneWhen": {
+    "flags": [
+     "festival_seen"
+    ]
+   }
+  },
+  {
+   "id": "step_up",
+   "text": "The red lamp, or a tag that lets you tie up with everyone else. Sal and Madam Vance both sell a way up.",
+   "doneWhen": {
+    "flags": [
+     "standing_6"
+    ]
+   },
+   "after": "dock_refused"
+  },
+  {
+   "id": "lowrow",
+   "text": "Low Row tore loose in the storm. Bring it home.",
+   "doneWhen": {
+    "flags": [
+     "saved_lowrow"
+    ]
+   },
+   "after": "towing_lowrow"
+  }
+ ]
 }

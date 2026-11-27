@@ -54,6 +54,10 @@ export class Boat {
     this.wakeTimer = 0;
     this.speed = 0;
     this.leakTimer = 0;
+    this.upgrades = {};
+    this.mods = { thrust: 1, noise: 1, fuel: 1, damage: 1 };
+    this.spotOn = false;
+    this.engineOff = false;
     this.build();
     ctx.scene.add(this.group);
     // boarding prompt
@@ -118,8 +122,41 @@ export class Boat {
     this.light.layers.enableAll();
     this.group.add(this.light);
     this.seat = new THREE.Vector3(0, 0.55, 1.75);
+    // upgrade visuals
+    const pg = [];
+    for (const sx of [-1, 1]) { const g = boxGeometry(0.04, 0.45, 3.2); g.translate(sx * 0.97, 0.25, 0.4); pg.push(prepGeometry(g, [0.35, 0.36, 0.36])); }
+    this.platesMesh = new THREE.Mesh(mergeGeometries(pg), mat('metal'));
+    this.platesMesh.visible = false;
+    this.group.add(this.platesMesh);
+    this.spotLamp = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.3, 10), mat('metal'));
+    this.spotLamp.rotation.x = Math.PI / 2; this.spotLamp.position.set(0, 0.85, -2.2); this.spotLamp.visible = false;
+    this.group.add(this.spotLamp);
+    this.spot = new THREE.SpotLight(0xf2f4ff, 0, 90, 0.22, 0.4, 1.2);
+    this.spot.layers.enableAll();
+    this.spot.position.set(0, 0.9, -2.3);
+    this.spotTarget = new THREE.Object3D(); this.spotTarget.position.set(0, -1.5, -30);
+    this.group.add(this.spot, this.spotTarget); this.spot.target = this.spotTarget;
   }
 
+  applyUpgrade(id) {
+    if (id === 'engine_quiet') delete this.upgrades.engine_strong;
+    if (id === 'engine_strong') delete this.upgrades.engine_quiet;
+    this.upgrades[id] = true;
+    const u = this.upgrades, m = this.mods;
+    m.thrust = (u.engine_quiet ? 0.9 : 1) * (u.engine_strong ? 1.35 : 1) * (u.hull_plate ? 0.93 : 1);
+    m.noise = u.engine_quiet ? 0.4 : u.engine_strong ? 1.5 : 1;
+    m.fuel = u.engine_strong ? 1.4 : 1;
+    m.damage = u.hull_plate ? 0.45 : 1;
+    this.platesMesh.visible = !!u.hull_plate;
+    this.spotLamp.visible = !!u.spotlight;
+    this.ctx.events.emit('boat:upgrade', id);
+  }
+  // How far the boat can be heard (metres). Engines carry; paddles barely do.
+  noise() {
+    if (this.tied) return 0;
+    if (this.paddling || this.engineOff) return Math.abs(this.throttle) > 0.1 ? 14 : 0;
+    return (25 + Math.abs(this.throttle) * 120) * this.mods.noise;
+  }
   board() {
     const p = this.ctx.player;
     p.mode = 'boat';
@@ -160,15 +197,20 @@ export class Boat {
       const boost = input.held.sprint && !this.paddling ? 1.5 : 1;
       this.throttle = damp(this.throttle, fwd * boost, 2.5, dt);
       this.rudder = damp(this.rudder, turn, 4, dt);
-      if (!this.paddling && Math.abs(this.throttle) > 0.05) this.fuel = Math.max(0, this.fuel - Math.abs(this.throttle) * dt * 0.012 * boost);
-      if (input.pressed('light') && this.hasLanternRig) { this.lantern = !this.lantern; this.ctx.events.emit('lantern', this.lantern); }
+      if (!this.paddling && !this.engineOff && Math.abs(this.throttle) > 0.05) this.fuel = Math.max(0, this.fuel - Math.abs(this.throttle) * dt * 0.012 * boost * this.mods.fuel);
+      if (input.pressed('crouch')) { this.engineOff = !this.engineOff; this.ctx.ui.toast(this.engineOff ? 'Engine cut. Paddling quietly.' : 'Engine started.'); this.ctx.events.emit('boat:engine', !this.engineOff); }
+      if (input.pressed('light')) {
+        if (this.upgrades.spotlight && (!this.hasLanternRig || this.lantern)) { this.spotOn = !this.spotOn; if (this.spotOn) this.lantern = false; }
+        else if (this.hasLanternRig) { this.lantern = !this.lantern; this.spotOn = false; }
+        this.ctx.events.emit('lantern', this.lantern || this.spotOn);
+      }
     } else {
       this.throttle = damp(this.throttle, 0, 2, dt);
       this.rudder = damp(this.rudder, 0, 2, dt);
     }
     const fwdDir = new THREE.Vector3(-Math.sin(this.heading), 0, -Math.cos(this.heading));
     const side = new THREE.Vector3(-fwdDir.z, 0, fwdDir.x);
-    const maxThrust = this.paddling ? 1.2 : 4.2; // m/s^2
+    const maxThrust = this.paddling || this.engineOff ? 1.2 : 4.2 * this.mods.thrust; // m/s^2
     const leak = this.hull < 30 ? 0.7 : 1;
     if (!this.tied) {
       this.vel.addScaledVector(fwdDir, this.throttle * maxThrust * leak * dt);
@@ -187,7 +229,7 @@ export class Boat {
       this.pos.addScaledVector(this.vel, dt);
       const impact = collision.resolveHull(this.pos, 1.3, this.vel);
       if (impact > 1.2) {
-        const dmg = (impact - 1.2) * 4;
+        const dmg = (impact - 1.2) * 4 * this.mods.damage;
         this.hull = Math.max(0, this.hull - dmg);
         this.ctx.events.emit('boat:impact', { speed: impact, pos: this.pos.clone() });
       }
@@ -232,5 +274,6 @@ export class Boat {
     const lit = this.lantern && this.hasLanternRig;
     this.lanternMesh.visible = lit;
     this.light.intensity = lit ? 6 + Math.sin(performance.now() * 0.013) * 0.4 : 0;
+    this.spot.intensity = this.spotOn && this.upgrades.spotlight ? 400 : 0;
   }
 }

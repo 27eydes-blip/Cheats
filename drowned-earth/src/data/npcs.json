@@ -1,64 +1,100 @@
 {
-  "_doc": "NPCs. raft = platform id in rafts.json. schedule entries: from/to hour (to < from wraps past midnight), do = animation/activity, at = structure spot kind on that raft or pos = [x, z]. role: trader | mechanic | elder | lookout | water | resident. talk = lines; a line may require a story flag (if) or set one (set). The first unseen matching line is spoken, then they cycle the rest.",
+  "_doc": "NPCs. raft = platform id (rafts.json). schedule: from/to hours (wrap past midnight when to < from), do = activity, at = spot kind or pos = [x,z]. talk lines: if = story flag required, set = flag raised, minTier/maxTier = player Standing range (7 = Deep-Born, lower = higher standing), once = only ever said once. shop = trade.json id. step = a Standing step this NPC can grant (standing.json). role 'respect' marks people who treat every tier the same.",
   "npcs": [
-    { "id": "odile", "name": "Odile", "raft": "market", "role": "trader", "shop": "market_general", "spawn": [-2, 0.6],
+    { "id": "oru", "name": "Madam Oru Vance", "raft": "market", "role": "leader", "shop": "portage_exchange", "step": "trader_permit", "spawn": [1.5, 0.8],
+      "coat": [0.5, 0.18, 0.12], "pants": [0.15, 0.13, 0.12], "headwear": "hat", "respect": true,
+      "schedule": [ { "from": 7, "to": 18, "do": "sell", "pos": [1.6, 0.6] }, { "from": 18, "to": 21.5, "do": "festival", "pos": [0, -3.4] }, { "from": 21.5, "to": 7, "do": "sleep", "pos": [6, 2.6] } ],
+      "talk": [
+        { "text": "You're Teo's sister. Sit. No, closer than that, I don't bite and I don't catch things. Your brother owed me nothing. That's rare. I liked him.", "once": true, "set": "met_oru" },
+        { "text": "The red lamp dock is an insult and I didn't build it. Highmark's inspector likes to see it lit. Use my dock when you've a tag that won't start an argument." },
+        { "text": "A yellow permit would open the Outer Harbor to you. It would also close half the doors on this raft. I sell both kinds of key." },
+        { "if": "heard_signal", "text": "Lowlight numbers? Don't say them out loud on my deck. Ask the Keeper. She reads that sort of thing like scripture." },
+        { "text": "Highmark sells us our own fish back in sealed tins. I take a margin. Somebody has to keep the lamps lit." }
+      ] },
+    { "id": "ruel", "name": "Dockmaster Ruel", "raft": "market", "role": "dockmaster", "spawn": [-3, -3.6],
+      "coat": [0.3, 0.28, 0.22], "pants": [0.2, 0.2, 0.2], "headwear": "hood",
+      "schedule": [ { "from": 0, "to": 24, "do": "watch", "pos": [-3.6, -3.4] } ],
+      "talk": [
+        { "minTier": 7, "text": "Not here, diver. Deep-Born tie up at the red lamp round the back. It's not my rule. I just get fined for it." },
+        { "maxTier": 6, "text": "Rope's on the bollard. Mind the gap, the barge breathes." }
+      ] },
+    { "id": "odile", "name": "Odile", "raft": "market", "role": "trader", "shop": "odile_stall", "spawn": [-2, 0.6],
       "coat": [0.45, 0.25, 0.2], "pants": [0.2, 0.2, 0.22], "headwear": "hood",
-      "schedule": [ { "from": 6, "to": 20, "do": "sell", "pos": [-2, 0.4] }, { "from": 20, "to": 6, "do": "sleep", "pos": [-6, 2.6] } ],
+      "schedule": [ { "from": 6, "to": 18, "do": "sell", "pos": [-2, 0.4] }, { "from": 18, "to": 21.5, "do": "festival", "pos": [-5, -3.2] }, { "from": 21.5, "to": 6, "do": "sleep", "pos": [-6, 2.6] } ],
       "talk": [
-        { "text": "Morning. Stay on that side of the table, if you don't mind. Nothing personal." },
-        { "text": "Scrap for supplies. The sealed tins come from Highmark. Don't ask what they cost us." },
-        { "text": "If you find copper or batteries, I'll give you better than the Wardens would." },
-        { "text": "Sealed goods are counted. Every tin. Someone always comes to count." }
+        { "minTier": 7, "text": "Prices are prices. Yours are a bit more. Divers bring the wet in with them, and I've stock to think of." },
+        { "maxTier": 6, "text": "Morning. Stay that side of the table, if you don't mind. Nothing personal." },
+        { "text": "The sealed tins come from Highmark. Don't ask what they cost us." },
+        { "text": "Copper and batteries, I'll pay fair. Fairer than the Wardens." }
       ] },
-    { "id": "bram", "name": "Bram", "raft": "repair", "role": "mechanic", "shop": "repair", "spawn": [-2, -2],
-      "coat": [0.3, 0.32, 0.25], "pants": [0.3, 0.27, 0.2], "headwear": "hat",
-      "schedule": [ { "from": 7, "to": 19, "do": "hammer", "pos": [-2, -2] }, { "from": 19, "to": 22, "do": "sit", "pos": [2, 0] }, { "from": 22, "to": 7, "do": "sleep", "pos": [1, 1] } ],
+    { "id": "dela", "name": "Dela", "raft": "market", "role": "resident", "spawn": [6, 0.8],
+      "coat": [0.6, 0.5, 0.35], "pants": [0.3, 0.25, 0.2],
+      "schedule": [ { "from": 6, "to": 10, "do": "cook", "at": "cook" }, { "from": 10, "to": 16, "do": "laundry", "pos": [0, 7] }, { "from": 16, "to": 18.2, "do": "cook", "at": "cook" }, { "from": 18.2, "to": 21.5, "do": "festival", "pos": [3, -3.4] }, { "from": 21.5, "to": 6, "do": "sleep", "pos": [-7, 6] } ],
+      "talk": [ { "text": "Fish stew. Mostly stew. Some fish." }, { "text": "My brother took a Ward conscription. He sends a letter every month. It's the same letter every month." }, { "if": "festival_seen", "text": "You lit one for someone. Good. The water should know their names." } ] },
+    { "id": "keeper", "name": "The Keeper", "raft": "chapel", "role": "elder", "spawn": [0, 1], "respect": true,
+      "coat": [0.82, 0.8, 0.74], "pants": [0.6, 0.58, 0.55], "headwear": "hood", "scale": 0.92,
+      "schedule": [ { "from": 5, "to": 21.5, "do": "pray", "at": "pray" }, { "from": 21.5, "to": 5, "do": "sleep", "pos": [-2, 4] } ],
       "talk": [
-        { "text": "That hull of yours is mostly patches holding hands. Use the bench if you've got the parts." },
-        { "text": "Hook and rope? Rope from fibre, a hook from scrap. Bench does the rest." },
-        { "text": "Fuel's dear. Highmark sells it back to us by the cup. We sold it to them by the barrel, once." }
-      ] },
-    { "id": "ansel", "name": "Mother Ansel", "raft": "chapel", "role": "elder", "spawn": [0, 1],
-      "coat": [0.55, 0.52, 0.45], "pants": [0.35, 0.33, 0.3], "headwear": "hood", "scale": 0.95,
-      "schedule": [ { "from": 5, "to": 21, "do": "pray", "at": "pray" }, { "from": 21, "to": 5, "do": "sleep", "pos": [-2, 4] } ],
-      "talk": [
-        { "text": "You came out of Linden Court? Then you're one of the quiet ones. Welcome to Kettle Drift. Keep your distance and we'll get on." },
-        { "text": "If you hear a voice on the radio that isn't Highmark's, write the numbers down. Some of us still listen.", "set": "met_ansel" },
-        { "if": "heard_signal", "text": "Those numbers. That's the Sounding, where the plaza fell in. The Unmoored put a buoy there. Lower their hydrophone, and listen. Go at night if you must go at all.", "set": "signal_decoded" },
-        { "text": "We don't dive at night. Not because of the dark." },
-        { "text": "Highmark says the sea is just the sea. Highmark doesn't live on it." }
+        { "text": "Deep-Born. You stand a little apart, like they taught you. Stand where you like here. The tide does not read wristbands.", "once": true },
+        { "if": "heard_signal", "text": "Nine six, one two eight, minus. That is the plaza that fell. The Sounding. Lowlight left an ear on a red buoy there. Lower it at night, child, and do not hurry what you hear.", "set": "signal_decoded" },
+        { "text": "Your brother asked me once what the Deep wants. I told him: what anything wants. To be heard. He wrote that down. I wish he hadn't." },
+        { "text": "The tide is a judge. It doesn't hate anyone. That's what makes it frightening." },
+        { "if": "finale_done", "text": "So. It has finished counting. Now we find out what it counts to." }
       ] },
     { "id": "pell", "name": "Pell", "raft": "lookout", "role": "lookout", "spawn": [0, 0],
       "coat": [0.25, 0.3, 0.38], "pants": [0.22, 0.22, 0.24], "headwear": "hat",
       "schedule": [ { "from": 0, "to": 24, "do": "watch", "pos": [1, 1] } ],
       "talk": [
-        { "text": "Wardens pass at night. Red light, then the searchlight. If it finds you, keep your hands where they can see them." },
-        { "text": "I counted the lighthouse once. Every forty seconds. It never misses." },
-        { "text": "Gulls go quiet before it happens. Before the sound. You'll notice." }
+        { "text": "Wardens pass at night. Red light first, then the searchlight. Cut your engine, kill your lamp, sit behind something big. They hunt by noise as much as eyes." },
+        { "text": "The Beacon comes round every fifteen seconds. Some nights, a while after it passes, the water hums back." },
+        { "text": "Gulls go quiet before the sound. You'll notice." }
       ] },
-    { "id": "wren", "name": "Wren", "raft": "garden", "role": "resident", "spawn": [-1, -1.5],
-      "coat": [0.35, 0.45, 0.3], "pants": [0.3, 0.28, 0.22], "scale": 0.85,
-      "schedule": [ { "from": 6, "to": 12, "do": "garden", "at": "garden" }, { "from": 12, "to": 13, "do": "sit", "pos": [3, 3] }, { "from": 13, "to": 19, "do": "garden", "pos": [-1, 1.6] }, { "from": 19, "to": 6, "do": "sleep", "pos": [3, 3.5] } ],
-      "talk": [ { "text": "Beans, kale, a bit of potato. Salt's the enemy. Rain's the friend." }, { "text": "Mum says not to stand close to anyone. I don't mind. You look tired." } ] },
-    { "id": "hollis", "name": "Hollis", "raft": "water", "role": "water", "shop": "water", "spawn": [0.5, 1.5],
+    { "id": "ivo", "name": "Ivo", "raft": "water", "role": "water", "shop": "water", "spawn": [0.5, 1.5],
       "coat": [0.4, 0.42, 0.45], "pants": [0.25, 0.25, 0.28], "mask": true,
       "schedule": [ { "from": 6, "to": 21, "do": "repair", "pos": [0.5, 1.5] }, { "from": 21, "to": 6, "do": "sleep", "pos": [-1, 1.8] } ],
-      "talk": [ { "text": "Boiled, filtered, and tested. Two scrap a bottle. Highmark water's cleaner and you'll pay in other ways." }, { "text": "Mask's habit. I know it's gone. Habits outlive reasons." } ] },
-    { "id": "tamsin", "name": "Tamsin", "raft": "market", "role": "resident", "spawn": [6, 0.8],
-      "coat": [0.6, 0.5, 0.35], "pants": [0.3, 0.25, 0.2],
-      "schedule": [ { "from": 6, "to": 10, "do": "cook", "at": "cook" }, { "from": 10, "to": 16, "do": "laundry", "at": "laundry" }, { "from": 16, "to": 21, "do": "cook", "at": "cook" }, { "from": 21, "to": 6, "do": "sleep", "pos": [-7, 6] } ],
-      "talk": [ { "text": "Fish stew. Mostly stew. Some fish." }, { "text": "My brother went to Highmark on a work permit. Writes every month. Same letter every month." } ] },
+      "talk": [ { "text": "Boiled, filtered, tested. Highmark water is cleaner and you'll pay in other ways." }, { "text": "Mask's habit. I know it's gone. Habits outlive reasons." } ] },
+    { "id": "moss", "name": "Moss", "raft": "garden", "role": "resident", "spawn": [-1, -1.5],
+      "coat": [0.35, 0.45, 0.3], "pants": [0.3, 0.28, 0.22], "scale": 0.8,
+      "schedule": [ { "from": 6, "to": 12, "do": "garden", "at": "garden" }, { "from": 12, "to": 13, "do": "sit", "pos": [3, 3] }, { "from": 13, "to": 18.2, "do": "garden", "pos": [-1, 1.6] }, { "from": 18.2, "to": 21, "do": "festival", "pos": [0, 4.6] }, { "from": 21, "to": 6, "do": "sleep", "pos": [3, 3.5] } ],
+      "talk": [ { "text": "Mum says not to stand close to divers. I don't mind. Is it dark down there? Like, properly dark?" }, { "text": "Beans, kale, potatoes. Salt's the enemy. Rain's the friend." } ] },
+    { "id": "maud", "name": "Maud", "raft": "sleep1", "role": "resident", "spawn": [-2, 1.2],
+      "coat": [0.5, 0.3, 0.35], "pants": [0.3, 0.27, 0.25], "scale": 0.97,
+      "schedule": [ { "from": 7, "to": 12, "do": "laundry", "at": "laundry" }, { "from": 12, "to": 18.2, "do": "sit", "pos": [0, 1.5] }, { "from": 18.2, "to": 21, "do": "festival", "pos": [2.5, -2] }, { "from": 21, "to": 7, "do": "sleep", "pos": [-2.5, 0.5] } ],
+      "talk": [
+        { "text": "Ward 9 was where they kept the ones who stopped talking. My sister nursed there." },
+        { "text": "They sealed it with people inside. That's not a rumour, love. That's paperwork." },
+        { "if": "saved_lowrow", "text": "You brought my whole house back through a storm. I'll not forget it. Nobody on Low Row will." }
+      ] },
     { "id": "corr", "name": "Corr", "raft": "sleep2", "role": "resident", "spawn": [5, 1],
       "coat": [0.28, 0.28, 0.3], "pants": [0.2, 0.2, 0.2], "headwear": "hood",
       "schedule": [ { "from": 8, "to": 18, "do": "fish", "pos": [7.5, 3] }, { "from": 18, "to": 23, "do": "sit", "pos": [5, -1] }, { "from": 23, "to": 8, "do": "sleep", "pos": [4.5, 2.2] } ],
-      "talk": [ { "text": "Fish don't come up near the Sounding any more. Not since the lights." }, { "text": "If you're smuggling, I didn't see you. If you're not, you should be." } ] },
-    { "id": "maud", "name": "Maud", "raft": "sleep1", "role": "resident", "spawn": [-2, 1.2],
-      "coat": [0.5, 0.3, 0.35], "pants": [0.3, 0.27, 0.25], "scale": 0.97,
-      "schedule": [ { "from": 7, "to": 12, "do": "laundry", "at": "laundry" }, { "from": 12, "to": 20, "do": "sit", "pos": [0, 1.5] }, { "from": 20, "to": 7, "do": "sleep", "pos": [-2.5, 0.5] } ],
-      "talk": [ { "text": "Ward 9 was where they kept the ones who stopped talking. My sister was a nurse there." }, { "text": "They sealed it with people inside. That's not a rumour, love. That's paperwork." } ] },
-    { "id": "jory", "name": "Jory", "raft": "dock", "role": "resident", "spawn": [1, 1],
+      "talk": [ { "text": "Fish don't come up near the Sounding any more. Not since the lights." }, { "text": "There's a channel on 3.3 at night. Lowlight. If you're asking, you didn't hear it from me." } ] },
+    { "id": "sal", "name": "Sal", "raft": "dock", "role": "fixer", "shop": "night_market", "step": "drifter_tag", "spawn": [1, 1],
       "coat": [0.35, 0.35, 0.25], "pants": [0.25, 0.25, 0.25],
-      "schedule": [ { "from": 6, "to": 22, "do": "idle", "pos": [1.5, 1.5] }, { "from": 22, "to": 6, "do": "sit", "pos": [2, 1] } ],
-      "talk": [ { "text": "Tie up wherever. Pay what you like. Mother Ansel's on the Quiet Deck if you need her." }, { "text": "There's a bunk on the Stacks for anyone who needs one. Sleep's free. Dreams cost extra." } ] }
+      "schedule": [ { "from": 0, "to": 24, "do": "idle", "pos": [1.5, 1.5] } ],
+      "talk": [
+        { "minTier": 7, "text": "Tired of the red lamp? I can cut that tally off your sleeve and sell you nothing to wear instead. Drifters don't get much, but they get the orange dock." },
+        { "text": "Night market opens when the Wardens are elsewhere. Which is most nights, if you know where elsewhere is." }
+      ] },
+    { "id": "koa", "name": "Elder Tamsin Koa", "raft": "gt_plots", "role": "leader", "shop": "greentide", "spawn": [0, 7.4], "respect": true,
+      "coat": [0.4, 0.55, 0.38], "pants": [0.35, 0.32, 0.25], "headwear": "hat", "scale": 0.95,
+      "schedule": [ { "from": 6, "to": 19, "do": "sell", "pos": [0, 7.4] }, { "from": 19, "to": 6, "do": "sleep", "pos": [-4, 5] } ],
+      "talk": [
+        { "text": "I catalogued seeds on Highmark for eleven years. Then I read the ration projections. I left with what fit in my coat lining.", "once": true },
+        { "text": "Everything here grows in borrowed rain. We sell cheap because the alternative is selling to Highmark." },
+        { "if": "finale_done", "text": "The kale turned toward the south last night. All of it. Toward the Sounding." }
+      ] },
+    { "id": "bram", "name": "Bram Hollis", "raft": "rh_rig", "role": "mechanic", "shop": "rusthold", "spawn": [-2, -2],
+      "coat": [0.3, 0.32, 0.25], "pants": [0.3, 0.27, 0.2], "headwear": "hat",
+      "schedule": [ { "from": 6, "to": 20, "do": "hammer", "pos": [-2, -2] }, { "from": 20, "to": 23, "do": "sit", "pos": [4, 8] }, { "from": 23, "to": 6, "do": "sleep", "pos": [1, 9] } ],
+      "talk": [
+        { "text": "That hull is patches holding hands. Bench is yours if you've parts. Rusthold doesn't check wrists. Just hands." },
+        { "text": "Rope from fibre, hook from scrap, the bench does the rest. Quiet engine's dear but worth it if you like your nights unsearched." },
+        { "text": "Before the Rise I fixed lifts. Now I fix the things that keep us afloat. Someday I'd like to fix a lift again." }
+      ] },
+    { "id": "ada", "name": "Ada", "raft": "rh_rig", "role": "resident", "spawn": [3, 2],
+      "coat": [0.55, 0.45, 0.15], "pants": [0.25, 0.22, 0.2],
+      "schedule": [ { "from": 7, "to": 19, "do": "repair", "pos": [3, -2] }, { "from": 19, "to": 7, "do": "sit", "pos": [5, 10] } ],
+      "talk": [ { "text": "Bram's teaching me welds. I'm better at it than him. Don't tell him." }, { "text": "You're Teo's sister? He left a dive bag here once. Bram kept it. Ask him." } ] }
   ]
 }

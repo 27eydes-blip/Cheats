@@ -20,9 +20,23 @@ export function loadData() {
     raftPieces: get('raftPieces') || {},
     trade: get('trade') || {},
     story: get('story') || {},
+    standing: get('standing') || { tiers: {}, steps: {} },
+    life: loadLife(optional),
   };
   validate(data);
   return data;
+}
+
+// Life-sim content: every life_*.json file is merged (events concatenated).
+function loadLife(all) {
+  const life = { events: [], births: {}, careers: {}, names: {}, relationships: {}, scenes: {} };
+  for (const [path, mod] of Object.entries(all)) {
+    if (!path.startsWith('./life')) continue;
+    const d = mod.default;
+    if (d.events) life.events.push(...d.events);
+    for (const k of ['births', 'careers', 'names', 'relationships', 'scenes', 'activities', 'world']) if (d[k]) life[k] = Object.assign(life[k] || {}, d[k]);
+  }
+  return life;
 }
 
 function validate(d) {

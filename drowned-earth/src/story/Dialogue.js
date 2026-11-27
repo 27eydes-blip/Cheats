@@ -1,19 +1,30 @@
-// Talking to NPCs: picks the next line (respecting flags), shows it as a
-// subtitle with a murmur voice, then opens a shop / bench for traders.
+// Talking to NPCs. Picks the next line that fits story flags and the player's
+// Standing, shows it as a subtitle with a murmur voice, then offers the NPC's
+// shop or Standing step. Lines marked `once` are never repeated.
 export class Dialogue {
   constructor(ctx) { this.ctx = ctx; this.seen = ctx.state.seenLines || (ctx.state.seenLines = {}); }
+  lineFits(l) {
+    const c = this.ctx, tier = c.standing.shown;
+    if (l.if && !c.story.flag(l.if)) return false;
+    if (l.minTier && tier < l.minTier) return false;
+    if (l.maxTier && tier > l.maxTier) return false;
+    if (l.once && this.seen[l._key]) return false;
+    return true;
+  }
   talk(npc) {
     const d = npc.def, ctx = this.ctx;
-    const lines = d.talk.filter((l) => !l.if || ctx.story.flag(l.if));
-    const key = (l) => d.id + ':' + d.talk.indexOf(l);
-    // newly unlocked (flag-gated) lines take priority, then lines in order
-    let line = lines.find((l) => l.if && !this.seen[key(l)]) || lines.find((l) => !this.seen[key(l)]);
-    if (!line) { const n = (this.seen[d.id + ':cyc'] = ((this.seen[d.id + ':cyc'] || 0) + 1)); line = lines[n % lines.length]; }
-    this.seen[key(line)] = true;
+    d.talk.forEach((l, i) => (l._key = d.id + ':' + i));
+    const lines = d.talk.filter((l) => this.lineFits(l));
+    if (!lines.length) return;
+    let line = lines.find((l) => (l.if || l.minTier || l.maxTier) && !this.seen[l._key]) || lines.find((l) => !this.seen[l._key]);
+    if (!line) { const n = (this.seen[d.id + ':cyc'] = (this.seen[d.id + ':cyc'] || 0) + 1); const pool = lines.filter((l) => !l.once); line = pool[n % pool.length] || lines[0]; }
+    this.seen[line._key] = true;
     if (line.set) ctx.story.setFlag(line.set);
     const dur = 2.5 + line.text.length * 0.05;
     ctx.ui.subtitle(`${d.name}: ${line.text}`, dur, 'speech');
     ctx.audio?.speak(npc.worldPos(), dur, d.scale || 1);
-    if (d.shop) setTimeout(() => ctx.ui.openShop(d.shop), 600);
+    ctx.events.emit('talk', { npc: d.id, respect: !!d.respect });
+    if (d.respect && ctx.standing.shown === 7) ctx.story.setFlag('respected');
+    if (d.shop || d.step) setTimeout(() => ctx.ui.openShop(d.shop, d.step, d.name), 700);
   }
 }

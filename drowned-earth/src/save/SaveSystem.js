@@ -2,11 +2,13 @@ import * as THREE from 'three';
 
 // Versioned localStorage saves. Bump SAVE_VERSION and add a migration whenever
 // the format changes; old saves are upgraded step by step on load.
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const KEY = 'drowned-earth.save';
 const MIGRATIONS = {
   // v1 → v2: boat storage + radio state were added
   1: (s) => ({ ...s, version: 2, boat: { ...s.boat, storage: {} }, radio: { index: -1 } }),
+  // v2 → v3: Standing, economy, heat, boat upgrades, life-sim
+  2: (s) => ({ ...s, version: 3, standing: null, economy: null, heat: null, boat: { ...s.boat, upgrades: {} }, life: null }),
 };
 
 export class SaveSystem {
@@ -17,11 +19,12 @@ export class SaveSystem {
     return {
       version: SAVE_VERSION, savedAt: Date.now(), seed: c.worldMap.seed,
       player: { pos: c.player.position.toArray(), yaw: c.player.yaw, pitch: c.player.pitch, mode: c.player.mode === 'climb' ? 'foot' : c.player.mode },
-      boat: { pos: c.boat.pos.toArray(), heading: c.boat.heading, fuel: c.boat.fuel, hull: c.boat.hull, lantern: c.boat.hasLanternRig, tied: c.boat.tied ? { pos: c.boat.tied.pos.toArray(), step: c.boat.tied.step.toArray(), facing: c.boat.tied.facing } : null, storage: c.boatStorage.toJSON() },
+      boat: { pos: c.boat.pos.toArray(), heading: c.boat.heading, fuel: c.boat.fuel, hull: c.boat.hull, lantern: c.boat.hasLanternRig, upgrades: c.boat.upgrades, tied: c.boat.tied ? { pos: c.boat.tied.pos.toArray(), step: c.boat.tied.step.toArray(), facing: c.boat.tied.facing } : null, storage: c.boatStorage.toJSON() },
       time: { hour: c.time.hour, day: c.time.day }, weather: { state: c.weather.state, hoursLeft: c.weather.hoursLeft, idx: c.weather.scheduleIdx },
       survival: c.survival.toJSON(), inventory: c.inventory.toJSON(),
       flags: c.state.flags, looted: [...c.state.looted], logs: [...c.state.logs], playTime: c.state.playTime, seen: c.state.seenLines,
       story: c.story.toJSON(), trade: c.trade.stock, radio: { index: c.radio.index },
+      standing: c.standing.toJSON(), economy: c.economy.toJSON(), heat: c.heat.toJSON(), life: c.life?.toJSON?.() || null,
     };
   }
   save(reason = 'auto') {
@@ -49,6 +52,10 @@ export class SaveSystem {
     c.survival.load(s.survival); c.inventory.load(s.inventory); c.boatStorage.load(s.boat.storage);
     Object.keys(c.state.flags).forEach((k) => delete c.state.flags[k]); Object.assign(c.state.flags, s.flags);
     c.state.looted = new Set(s.looted); c.state.logs = new Set(s.logs); c.state.playTime = s.playTime; c.state.seenLines = s.seen || {};
+    c.standing.load(s.standing); c.economy.load(s.economy); c.heat.load(s.heat);
+    for (const u of Object.keys(s.boat.upgrades || {})) c.boat.applyUpgrade(u);
+    if (s.life && c.life) c.life.load(s.life);
+    c.events.emit('standing', c.standing.shown);
     c.story.load(s.story); c.trade.stock = s.trade || {}; c.radio.index = s.radio?.index ?? -1;
     c.chunks.update(c.player.position.x, c.player.position.z, true);
     c.events.emit('loaded');

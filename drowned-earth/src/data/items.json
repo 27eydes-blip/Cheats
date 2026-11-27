@@ -1,35 +1,451 @@
 {
-  "_doc": "Items. value = barter worth in scrap. weight in kg. use = effect when used from the inventory (needs deltas: thirst, hunger, warmth, fatigue are 0..100 where 100 is fully satisfied). sealed = Highmark ration seal. tags drive crafting and trade filters.",
-  "items": {
-    "scrap":        { "name": "Scrap metal", "desc": "Cut sheet, bolts, brackets. The currency of the drift.", "value": 1, "weight": 0.5, "tags": ["material", "currency"] },
-    "fibre":        { "name": "Plant fibre", "desc": "Stripped from drowned trees and raft gardens.", "value": 1, "weight": 0.1, "tags": ["material"] },
-    "cloth":        { "name": "Cloth", "desc": "Clean enough to filter through.", "value": 1, "weight": 0.2, "tags": ["material"] },
-    "tape":         { "name": "Duct tape", "desc": "Half a roll. Holds the world together.", "value": 3, "weight": 0.2, "tags": ["material"] },
-    "copper":       { "name": "Copper wire", "desc": "Stripped from walls. Traders love it.", "value": 4, "weight": 0.3, "tags": ["salvage"] },
-    "battery":      { "name": "Battery", "desc": "Some charge left. Powers the flashlight.", "value": 4, "weight": 0.3, "tags": ["salvage"], "use": { "battery": 100 } },
-    "glass_jar":    { "name": "Glass jar", "desc": "Unbroken. Rare.", "value": 2, "weight": 0.4, "tags": ["material"] },
-    "charcoal":     { "name": "Charcoal", "desc": "From a cold stove. Filters water.", "value": 1, "weight": 0.2, "tags": ["material"] },
-    "bottle":       { "name": "Empty bottle", "desc": "Plastic. Fill it with rain.", "value": 1, "weight": 0.1, "tags": ["container"] },
-    "dirty_water":  { "name": "Dirty water", "desc": "Rain and rust. Drinking it is a gamble.", "value": 0, "weight": 1, "tags": ["drink"], "use": { "thirst": 18, "sick": 0.35 }, "returns": "bottle" },
-    "clean_water":  { "name": "Clean water", "desc": "Filtered. Tastes of charcoal.", "value": 3, "weight": 1, "tags": ["drink"], "use": { "thirst": 40 }, "returns": "bottle" },
-    "hm_water":     { "name": "Highmark water", "desc": "A sealed bottle. 'SUPPLY AUTHORITY — RATION 1 OF 7'.", "value": 6, "weight": 1, "tags": ["drink"], "sealed": true, "use": { "thirst": 60 } },
-    "ration_bar":   { "name": "Ration bar", "desc": "Pressed grain, Highmark seal. 'Order and supply.'", "value": 5, "weight": 0.2, "tags": ["food"], "sealed": true, "use": { "hunger": 40 } },
-    "canned_fish":  { "name": "Tinned fish", "desc": "Pre-Rise. The label has dissolved.", "value": 4, "weight": 0.4, "tags": ["food"], "use": { "hunger": 30, "thirst": -5 } },
-    "kelp":         { "name": "Dried kelp", "desc": "Salty, chewy, raft-grown.", "value": 2, "weight": 0.1, "tags": ["food"], "use": { "hunger": 14, "thirst": -8 } },
-    "stew":         { "name": "Fish stew", "desc": "Hot. From Tamsin's pot.", "value": 4, "weight": 0.5, "tags": ["food"], "use": { "hunger": 45, "warmth": 25, "thirst": 10 } },
-    "tea":          { "name": "Kelp tea", "desc": "Warm and faintly green.", "value": 2, "weight": 0.3, "tags": ["drink"], "use": { "thirst": 20, "warmth": 30 } },
-    "fuel":         { "name": "Fuel can", "desc": "Three litres for the outboard.", "value": 8, "weight": 3, "tags": ["fuel"], "use": { "boatFuel": 3 } },
-    "medicine":     { "name": "Medicine", "desc": "Highmark Health Authority. Counted, sealed, rare.", "value": 12, "weight": 0.1, "tags": ["medical"], "sealed": true, "use": { "sick": -1, "fatigue": 10 } },
-    "bandage":      { "name": "Bandage", "desc": "Boiled cloth strips.", "value": 2, "weight": 0.1, "tags": ["medical"], "use": { "fatigue": 5 } },
-    "hull_patch":   { "name": "Hull patch", "desc": "Scrap plate and tape. Apply aboard the boat.", "value": 5, "weight": 1.2, "tags": ["repair"], "use": { "hull": 25 } },
-    "rope":         { "name": "Rope", "desc": "Twisted fibre, about ten metres.", "value": 3, "weight": 0.6, "tags": ["material"] },
-    "rope_hook":    { "name": "Rope and hook", "desc": "A grapple from bent rebar. Reaches high windows.", "value": 7, "weight": 1.2, "tags": ["tool"] },
-    "water_filter": { "name": "Water filter", "desc": "Bottle, cloth, charcoal. Turns dirty water clean.", "value": 5, "weight": 0.4, "tags": ["tool"] },
-    "lantern_parts":{ "name": "Lantern parts", "desc": "A cracked housing and a wick.", "value": 3, "weight": 0.4, "tags": ["material"] },
-    "oil":          { "name": "Lamp oil", "desc": "Rendered fish oil. Smells of it.", "value": 3, "weight": 0.5, "tags": ["material"] },
-    "lantern":      { "name": "Boat lantern", "desc": "Rig it on the boat's pole (F while piloting).", "value": 9, "weight": 0.8, "tags": ["tool"] },
-    "warm_coat":    { "name": "Oilskin coat", "desc": "Patched, waterproof-ish. Keeps the cold off.", "value": 10, "weight": 1.5, "tags": ["clothing"] },
-    "permit_blank": { "name": "Blank work permit", "desc": "Highmark watermark. Unsigned. Dangerous to carry.", "value": 15, "weight": 0.05, "tags": ["contraband"], "sealed": true },
-    "photo":        { "name": "Photograph", "desc": "A family on a balcony. Linden Court, before.", "value": 0, "weight": 0.01, "tags": ["keepsake"] }
+ "_doc": "Items. value = barter worth in scrap. weight in kg. use = effect when used from the inventory (needs deltas: thirst, hunger, warmth, fatigue are 0..100 where 100 is fully satisfied). sealed = Highmark ration seal. tags drive crafting and trade filters.",
+ "items": {
+  "scrap": {
+   "name": "Scrap metal",
+   "desc": "Cut sheet, bolts, brackets. The currency of the drift.",
+   "value": 1,
+   "weight": 0.5,
+   "tags": [
+    "material",
+    "currency"
+   ]
+  },
+  "fibre": {
+   "name": "Plant fibre",
+   "desc": "Stripped from drowned trees and raft gardens.",
+   "value": 1,
+   "weight": 0.1,
+   "tags": [
+    "material"
+   ]
+  },
+  "cloth": {
+   "name": "Cloth",
+   "desc": "Clean enough to filter through.",
+   "value": 1,
+   "weight": 0.2,
+   "tags": [
+    "material"
+   ]
+  },
+  "tape": {
+   "name": "Duct tape",
+   "desc": "Half a roll. Holds the world together.",
+   "value": 3,
+   "weight": 0.2,
+   "tags": [
+    "material"
+   ]
+  },
+  "copper": {
+   "name": "Copper wire",
+   "desc": "Stripped from walls. Traders love it.",
+   "value": 4,
+   "weight": 0.3,
+   "tags": [
+    "salvage"
+   ]
+  },
+  "battery": {
+   "name": "Battery",
+   "desc": "Some charge left. Powers the flashlight.",
+   "value": 4,
+   "weight": 0.3,
+   "tags": [
+    "salvage"
+   ],
+   "use": {
+    "battery": 100
+   }
+  },
+  "glass_jar": {
+   "name": "Glass jar",
+   "desc": "Unbroken. Rare.",
+   "value": 2,
+   "weight": 0.4,
+   "tags": [
+    "material"
+   ]
+  },
+  "charcoal": {
+   "name": "Charcoal",
+   "desc": "From a cold stove. Filters water.",
+   "value": 1,
+   "weight": 0.2,
+   "tags": [
+    "material"
+   ]
+  },
+  "bottle": {
+   "name": "Empty bottle",
+   "desc": "Plastic. Fill it with rain.",
+   "value": 1,
+   "weight": 0.1,
+   "tags": [
+    "container"
+   ]
+  },
+  "dirty_water": {
+   "name": "Dirty water",
+   "desc": "Rain and rust. Drinking it is a gamble.",
+   "value": 0,
+   "weight": 1,
+   "tags": [
+    "drink"
+   ],
+   "use": {
+    "thirst": 18,
+    "sick": 0.35
+   },
+   "returns": "bottle"
+  },
+  "clean_water": {
+   "name": "Clean water",
+   "desc": "Filtered. Tastes of charcoal.",
+   "value": 3,
+   "weight": 1,
+   "tags": [
+    "drink"
+   ],
+   "use": {
+    "thirst": 40
+   },
+   "returns": "bottle"
+  },
+  "hm_water": {
+   "name": "Highmark water",
+   "desc": "A sealed bottle. 'SUPPLY AUTHORITY \u2014 RATION 1 OF 7'.",
+   "value": 6,
+   "weight": 1,
+   "tags": [
+    "drink"
+   ],
+   "sealed": true,
+   "use": {
+    "thirst": 60
+   }
+  },
+  "ration_bar": {
+   "name": "Ration bar",
+   "desc": "Pressed grain, Highmark seal. 'Order and supply.'",
+   "value": 5,
+   "weight": 0.2,
+   "tags": [
+    "food"
+   ],
+   "sealed": true,
+   "use": {
+    "hunger": 40
+   }
+  },
+  "canned_fish": {
+   "name": "Tinned fish",
+   "desc": "Pre-Rise. The label has dissolved.",
+   "value": 4,
+   "weight": 0.4,
+   "tags": [
+    "food"
+   ],
+   "use": {
+    "hunger": 30,
+    "thirst": -5
+   }
+  },
+  "kelp": {
+   "name": "Dried kelp",
+   "desc": "Salty, chewy, raft-grown.",
+   "value": 2,
+   "weight": 0.1,
+   "tags": [
+    "food"
+   ],
+   "use": {
+    "hunger": 14,
+    "thirst": -8
+   }
+  },
+  "stew": {
+   "name": "Fish stew",
+   "desc": "Hot. From Tamsin's pot.",
+   "value": 4,
+   "weight": 0.5,
+   "tags": [
+    "food"
+   ],
+   "use": {
+    "hunger": 45,
+    "warmth": 25,
+    "thirst": 10
+   }
+  },
+  "tea": {
+   "name": "Kelp tea",
+   "desc": "Warm and faintly green.",
+   "value": 2,
+   "weight": 0.3,
+   "tags": [
+    "drink"
+   ],
+   "use": {
+    "thirst": 20,
+    "warmth": 30
+   }
+  },
+  "fuel": {
+   "name": "Fuel can",
+   "desc": "Three litres for the outboard.",
+   "value": 8,
+   "weight": 3,
+   "tags": [
+    "fuel"
+   ],
+   "use": {
+    "boatFuel": 3
+   }
+  },
+  "medicine": {
+   "name": "Medicine",
+   "desc": "Highmark Health Authority. Counted, sealed, rare.",
+   "value": 12,
+   "weight": 0.1,
+   "tags": [
+    "medical",
+    "sealed"
+   ],
+   "sealed": true,
+   "use": {
+    "sick": -1,
+    "fatigue": 10
+   }
+  },
+  "bandage": {
+   "name": "Bandage",
+   "desc": "Boiled cloth strips.",
+   "value": 2,
+   "weight": 0.1,
+   "tags": [
+    "medical"
+   ],
+   "use": {
+    "fatigue": 5
+   }
+  },
+  "hull_patch": {
+   "name": "Hull patch",
+   "desc": "Scrap plate and tape. Apply aboard the boat.",
+   "value": 5,
+   "weight": 1.2,
+   "tags": [
+    "repair"
+   ],
+   "use": {
+    "hull": 25
+   }
+  },
+  "rope": {
+   "name": "Rope",
+   "desc": "Twisted fibre, about ten metres.",
+   "value": 3,
+   "weight": 0.6,
+   "tags": [
+    "material"
+   ]
+  },
+  "rope_hook": {
+   "name": "Rope and hook",
+   "desc": "A grapple from bent rebar. Reaches high windows.",
+   "value": 7,
+   "weight": 1.2,
+   "tags": [
+    "tool"
+   ]
+  },
+  "water_filter": {
+   "name": "Water filter",
+   "desc": "Bottle, cloth, charcoal. Turns dirty water clean.",
+   "value": 5,
+   "weight": 0.4,
+   "tags": [
+    "tool"
+   ]
+  },
+  "lantern_parts": {
+   "name": "Lantern parts",
+   "desc": "A cracked housing and a wick.",
+   "value": 3,
+   "weight": 0.4,
+   "tags": [
+    "material"
+   ]
+  },
+  "oil": {
+   "name": "Lamp oil",
+   "desc": "Rendered fish oil. Smells of it.",
+   "value": 3,
+   "weight": 0.5,
+   "tags": [
+    "material"
+   ]
+  },
+  "lantern": {
+   "name": "Boat lantern",
+   "desc": "Rig it on the boat's pole (F while piloting).",
+   "value": 9,
+   "weight": 0.8,
+   "tags": [
+    "tool"
+   ]
+  },
+  "warm_coat": {
+   "name": "Oilskin coat",
+   "desc": "Patched, waterproof-ish. Keeps the cold off.",
+   "value": 10,
+   "weight": 1.5,
+   "tags": [
+    "clothing"
+   ]
+  },
+  "permit_blank": {
+   "name": "Blank work permit",
+   "desc": "Highmark watermark. Unsigned. Dangerous to carry.",
+   "value": 15,
+   "weight": 0.05,
+   "tags": [
+    "contraband",
+    "sealed"
+   ],
+   "sealed": true
+  },
+  "photo": {
+   "name": "Photograph",
+   "desc": "A family on a balcony. Linden Court, before.",
+   "value": 0,
+   "weight": 0.01,
+   "tags": [
+    "keepsake"
+   ]
+  },
+  "seal": {
+   "name": "Ration Seal",
+   "desc": "A wax-and-foil Highmark seal. Proof you were allowed to eat. Scarce currency.",
+   "value": 12,
+   "weight": 0.01,
+   "tags": [
+    "currency",
+    "sealed"
+   ]
+  },
+  "salt": {
+   "name": "Salt",
+   "desc": "Raft barter. Dried in trays on every deck in the Drift.",
+   "value": 2,
+   "weight": 0.2,
+   "tags": [
+    "currency",
+    "food"
+   ]
+  },
+  "glass": {
+   "name": "Glass",
+   "desc": "Smooth deep-glass from the drowned zones. Everyone wants it; nobody says why it's warm.",
+   "value": 18,
+   "weight": 0.05,
+   "tags": [
+    "currency",
+    "relic"
+   ]
+  },
+  "drifter_tag": {
+   "name": "Drifter tag",
+   "desc": "Nothing on your wrist, officially. Orange docks will take you.",
+   "value": 0,
+   "weight": 0,
+   "tags": [
+    "standing"
+   ]
+  },
+  "trader_permit": {
+   "name": "Trader permit (yellow)",
+   "desc": "Highmark Outer Harbor permit, stamped. Raft-folk notice it.",
+   "value": 0,
+   "weight": 0,
+   "tags": [
+    "standing"
+   ]
+  },
+  "forged_tag": {
+   "name": "Forged yellow tag",
+   "desc": "Good work. Not perfect work. Wear it from the pack (Use).",
+   "value": 10,
+   "weight": 0,
+   "tags": [
+    "contraband"
+   ],
+   "use": {
+    "forge": 4
+   }
+  },
+  "festival_lantern": {
+   "name": "Paper lantern",
+   "desc": "Oiled paper on a scrap of float. For the dusk festival.",
+   "value": 1,
+   "weight": 0.1,
+   "tags": [
+    "keepsake"
+   ]
+  },
+  "dive_tank": {
+   "name": "Spare air bottle",
+   "desc": "Doubles your breath underwater. Clinks when you move (louder).",
+   "value": 20,
+   "weight": 3,
+   "tags": [
+    "gear"
+   ],
+   "use": {
+    "tank": 1
+   }
+  },
+  "teo_bag": {
+   "name": "Teo's dive bag",
+   "desc": "Oilskin, his initials burned into the strap. Inside: a cracked depth gauge and a recorder.",
+   "value": 0,
+   "weight": 1,
+   "tags": [
+    "keepsake"
+   ],
+   "use": {
+    "log": "teo_02"
+   }
+  },
+  "teo_tag": {
+   "name": "Teo's dive tag",
+   "desc": "Stamped steel. T. CALLOWAY-ASHE \u00b7 DEEP-BORN \u00b7 212 DIVES. Found in Ward 9's flooded basement.",
+   "value": 0,
+   "weight": 0.01,
+   "tags": [
+    "keepsake"
+   ]
+  },
+  "pressure_suit": {
+   "name": "Pressure suit (stub)",
+   "desc": "Not in stage 1. Lets you below the Dark Shelf.",
+   "value": 60,
+   "weight": 8,
+   "tags": [
+    "gear"
+   ]
+  },
+  "growth_sample": {
+   "name": "Glow sample",
+   "desc": "A sliver of the growth in a jar. Warm. Faintly pulsing.",
+   "value": 9,
+   "weight": 0.2,
+   "tags": [
+    "relic",
+    "contraband"
+   ]
   }
+ }
 }

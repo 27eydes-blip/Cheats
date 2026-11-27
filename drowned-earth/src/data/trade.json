@@ -1,15 +1,38 @@
 {
-  "_doc": "Shops. sells: item → price in scrap and stock. buys: tag or item ids the trader will take, at value * buyRate. Faction attitude can modify prices later.",
+  "_doc": "Shops. raft = whose market (economy sim tracks prices per raft). sells: item -> {price, stock, cur?} (cur: scrap | seal | salt | glass, default scrap). buys: item ids or tags the trader will take at value * buyRate. standingMod: override price multiplier by player tier (else standing.json priceMod). services: special actions. Prices drift with the economy simulation (survival/Economy.js).",
+  "currencies": { "scrap": "Scrap", "seal": "Ration Seal", "salt": "Salt", "glass": "Glass" },
   "shops": {
-    "market_general": { "name": "Odile's stall", "faction": "raftfolk", "buyRate": 0.8,
-      "sells": { "ration_bar": { "price": 6, "stock": 4 }, "canned_fish": { "price": 4, "stock": 3 }, "kelp": { "price": 2, "stock": 6 }, "stew": { "price": 4, "stock": 3 }, "tea": { "price": 2, "stock": 4 },
-                 "fibre": { "price": 1, "stock": 9 }, "tape": { "price": 4, "stock": 2 }, "oil": { "price": 3, "stock": 3 }, "lantern_parts": { "price": 4, "stock": 1 }, "glass_jar": { "price": 3, "stock": 2 }, "battery": { "price": 5, "stock": 2 } },
-      "buys": ["salvage", "food", "material", "medical", "contraband", "clothing", "keepsake"] },
-    "repair": { "name": "Bram's bench", "faction": "raftfolk", "buyRate": 0.7,
-      "sells": { "fuel": { "price": 9, "stock": 3 }, "hull_patch": { "price": 6, "stock": 2 }, "rope": { "price": 3, "stock": 3 }, "tape": { "price": 4, "stock": 2 } },
-      "buys": ["salvage", "material"], "services": { "repair_hull": { "name": "Repair hull (+40%)", "price": 8 } } },
-    "water": { "name": "Still House", "faction": "raftfolk", "buyRate": 0.6,
-      "sells": { "clean_water": { "price": 2, "stock": 8 }, "hm_water": { "price": 7, "stock": 2 }, "charcoal": { "price": 1, "stock": 5 }, "bottle": { "price": 1, "stock": 5 } },
-      "buys": ["container", "drink"] }
-  }
+    "portage_exchange": { "name": "Vance's Exchange", "raft": "portage", "buyRate": 0.85, "standingMod": { "7": 1.0, "6": 1.0, "5": 1.0, "4": 0.95 },
+      "sells": { "ration_bar": { "price": 6, "stock": 4 }, "hm_water": { "price": 7, "stock": 2 }, "medicine": { "price": 2, "stock": 1, "cur": "seal" }, "fuel": { "price": 10, "stock": 2 }, "seal": { "price": 1, "stock": 3, "cur": "glass" }, "salt": { "price": 2, "stock": 6 }, "oil": { "price": 3, "stock": 3 }, "lantern_parts": { "price": 4, "stock": 1 } },
+      "buys": ["salvage", "food", "material", "medical", "clothing", "keepsake", "relic", "contraband"] },
+    "odile_stall": { "name": "Odile's stall", "raft": "portage", "buyRate": 0.8,
+      "sells": { "canned_fish": { "price": 4, "stock": 3 }, "kelp": { "price": 2, "stock": 6 }, "stew": { "price": 4, "stock": 3 }, "tea": { "price": 2, "stock": 4 }, "fibre": { "price": 1, "stock": 9 }, "tape": { "price": 4, "stock": 2 }, "glass_jar": { "price": 3, "stock": 2 }, "battery": { "price": 5, "stock": 2 }, "festival_lantern": { "price": 2, "stock": 6 } },
+      "buys": ["salvage", "food", "material"] },
+    "night_market": { "name": "Sal's night market", "raft": "portage", "buyRate": 0.9, "standingMod": { "7": 1.1, "6": 1.0 },
+      "sells": { "forged_tag": { "price": 14, "stock": 1 }, "medicine": { "price": 15, "stock": 1 }, "fuel": { "price": 8, "stock": 2 }, "salt": { "price": 2, "stock": 4 } },
+      "buys": ["contraband", "salvage", "relic", "medical", "sealed"] },
+    "water": { "name": "Still House", "raft": "portage", "buyRate": 0.6,
+      "sells": { "clean_water": { "price": 2, "stock": 8 }, "charcoal": { "price": 1, "stock": 5 }, "bottle": { "price": 1, "stock": 5 } },
+      "buys": ["container", "drink"] },
+    "greentide": { "name": "Koa's seed table", "raft": "greentide", "buyRate": 0.7, "standingMod": { "7": 1.0, "6": 1.0 },
+      "sells": { "kelp": { "price": 1, "stock": 8 }, "clean_water": { "price": 1, "stock": 6 }, "tea": { "price": 1, "stock": 6 }, "fibre": { "price": 1, "stock": 12 }, "cloth": { "price": 1, "stock": 4 }, "charcoal": { "price": 1, "stock": 4 }, "salt": { "price": 1, "stock": 8, "cur": "scrap" } },
+      "buys": ["material", "container", "keepsake", "salt"] },
+    "rusthold": { "name": "Bram's bench", "raft": "rusthold", "buyRate": 0.75, "standingMod": { "7": 1.0, "6": 1.0 },
+      "sells": { "fuel": { "price": 7, "stock": 4 }, "hull_patch": { "price": 5, "stock": 3 }, "rope": { "price": 3, "stock": 3 }, "tape": { "price": 3, "stock": 3 }, "battery": { "price": 4, "stock": 3 }, "dive_tank": { "price": 2, "stock": 1, "cur": "glass" }, "teo_bag": { "price": 0, "stock": 1 } },
+      "buys": ["salvage", "material", "relic"],
+      "services": {
+        "repair_hull": { "name": "Repair hull (+40%)", "price": 6 },
+        "engine_quiet": { "name": "Baffled engine — quieter, slightly slower", "price": 16, "upgrade": "engine_quiet" },
+        "engine_strong": { "name": "Rebored engine — faster, louder, thirstier", "price": 16, "upgrade": "engine_strong" },
+        "hull_plate": { "name": "Plate the hull — fewer leaks, heavier", "price": 14, "upgrade": "hull_plate" },
+        "spotlight": { "name": "Bow spotlight (F while piloting)", "price": 10, "upgrade": "spotlight" }
+      } }
+  },
+  "rumours": [
+    { "text": "Storm on the way: food prices up across the Drift.", "when": "storm", "fx": { "food": 1.3 } },
+    { "text": "Greentide harvest in. Kelp and greens cheap there this week.", "when": "random", "raft": "greentide", "fx": { "food": 0.7 } },
+    { "text": "Ward crackdown: contraband scarce, medicine dear.", "when": "heat", "fx": { "contraband": 1.5, "medical": 1.4 } },
+    { "text": "Highmark cut the ration this week. Sealed goods hoarded.", "when": "ration_cut", "fx": { "sealed": 1.4, "food": 1.15 } },
+    { "text": "A salvage crew found copper in the Cask Street tunnels. Salvage prices sliding.", "when": "random", "fx": { "salvage": 0.8 } }
+  ]
 }

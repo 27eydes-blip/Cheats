@@ -47,6 +47,9 @@ import { SaveSystem } from '../save/SaveSystem.js';
 import { Birds } from '../ai/Birds.js';
 import { Patrol } from '../ai/Patrol.js';
 import { DeepShapes } from '../ai/DeepShapes.js';
+import { Standing } from '../society/Standing.js';
+import { Economy } from '../society/Economy.js';
+import { Heat } from '../society/Heat.js';
 
 // The game: owns the renderer, scenes and every system, and runs the loop.
 // Systems receive a shared `ctx` so they can find each other without imports
@@ -110,6 +113,9 @@ export class Game {
     ctx.trade = new Trade(ctx);
     ctx.survival = new Survival(ctx);
     ctx.story = new Story(ctx);
+    ctx.standing = new Standing(ctx);
+    ctx.economy = new Economy(ctx);
+    ctx.heat = new Heat(ctx);
     ctx.radio = new Radio(ctx);
     ctx.dialogue = new Dialogue(ctx);
     ctx.boat = new Boat(ctx);
@@ -128,7 +134,7 @@ export class Game {
     ctx.deep = new DeepShapes(ctx);
     ctx.save = new SaveSystem(ctx);
     ctx.touch = new TouchControls(ctx);
-    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.patrol, ctx.deep, ctx.highmark, ctx.save];
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat];
     this.wireEvents();
     this.newGame();
     applyDebugParams(ctx);
@@ -197,7 +203,9 @@ export class Game {
     events.on('craft', (r) => { if (r.id === 'lantern') { this.ctx.boat.hasLanternRig = true; ui.whisper('You rig the lantern on the boat pole. F lights it while piloting.'); } });
     events.on('flashlight', (on) => audio.play('ui'));
     events.on('objective:done', () => story.checkObjectives());
-    events.on('log:read', () => audio.play('page'));
+    events.on('log:read', () => { audio.play('page'); audio.music?.setMoment('discovery'); });
+    events.on('music:moment', (k) => audio.music?.setMoment(k));
+    events.on('music:festival', () => audio.music?.setMoment('festival'));
   }
 
   onResize() {
@@ -225,6 +233,8 @@ export class Game {
   update(dt) {
     const ctx = this.ctx;
     ctx.state.playTime += dt;
+    this.minuteT = (this.minuteT || 0) + dt;
+    if (this.minuteT > 5) { this.minuteT = 0; ctx.events.emit('tick:minute'); }
     const prevHour = ctx.time.hour;
     ctx.time.update(dt);
     let dh = ctx.time.hour - prevHour; if (dh < 0) dh += 24;

@@ -85,23 +85,19 @@
     },
     {
       "state": "overcast",
-      "hours": 2.5
+      "hours": 2.4
     },
     {
       "state": "rain",
-      "hours": 1.8
+      "hours": 1.4
     },
     {
       "state": "overcast",
-      "hours": 2
+      "hours": 1.5
     },
     {
       "state": "clear",
-      "hours": 4
-    },
-    {
-      "state": "fog",
-      "hours": 3
+      "hours": 5
     }
   ],
   "transitionHours": 0.6

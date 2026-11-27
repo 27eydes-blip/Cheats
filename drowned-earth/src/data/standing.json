@@ -1,0 +1,18 @@
+{
+  "_doc": "The Order of the World. tier 1 = highest. dockLight = color of dock lamps that accept this tier and above (a dock accepts tiers <= its standingMax). priceMod multiplies shop prices for a customer of this tier (shops may override). patrol = how Tide Ward stops treat this tier. tone = default NPC register. wristband = HUD/world color.",
+  "tiers": {
+    "1": { "name": "Concord", "short": "Concord", "wristband": "#e8dcae", "dockLight": "#f4f1e6", "priceMod": 0.6, "patrol": "salute", "tone": "bow", "desc": "Highmark's ruling families. Never seen on the rafts." },
+    "2": { "name": "Highmark Citizen", "short": "Citizen", "wristband": "#5b86c8", "dockLight": "#5b86c8", "priceMod": 0.75, "patrol": "wave", "tone": "formal", "desc": "Archivists, physicians, engineers, provisioners. Steady rations, housing, fear of losing it all." },
+    "3": { "name": "Tide Ward", "short": "Ward", "wristband": "#15171c", "dockLight": "#2a3a66", "priceMod": 0.85, "patrol": "wave", "tone": "fearful", "desc": "Marshal, captains, wardens, deckhands. Many are raft-born conscripts." },
+    "4": { "name": "Licensed Trader", "short": "Trader", "wristband": "#e0b43a", "dockLight": "#e0b43a", "priceMod": 0.9, "patrol": "check", "tone": "cautious", "desc": "Raft-born with a Highmark permit. Outer Harbor access, cheaper fuel. Raft-folk call them informers." },
+    "5": { "name": "Raft-folk", "short": "Raft-folk", "wristband": "#4f8a4a", "dockLight": "#58b060", "priceMod": 1.0, "patrol": "search", "tone": "friendly", "desc": "Free crew of the raft cities. Reduced rations tied to labour and loyalty." },
+    "6": { "name": "Drifter", "short": "Drifter", "wristband": "#d0742c", "dockLight": "#e07a30", "priceMod": 1.2, "patrol": "search", "tone": "cautious", "desc": "Solo boaters and exiles. No bracelet. Night markets only." },
+    "7": { "name": "Deep-Born", "short": "Deep-Born", "wristband": "#7a1e1e", "dockLight": "#8a1a14", "priceMod": 1.45, "patrol": "seize", "tone": "distant", "desc": "Divers and salvagers. The only ones who go beneath. Needed, feared, kept at a distance." }
+  },
+  "reputations": ["portage", "greentide", "rusthold", "vigil", "lowlight", "highmark", "tide_ward", "deep_born"],
+  "steps": {
+    "drifter_tag": { "toTier": 6, "item": "drifter_tag", "cost": { "scrap": 6 }, "rep": { "deep_born": -10, "portage": 2 }, "desc": "Cut your Deep-Born tally off and wear nothing. Orange docks open; the divers will say you're ashamed of them." },
+    "trader_permit": { "toTier": 4, "item": "trader_permit", "cost": { "scrap": 18, "seal": 1 }, "rep": { "portage": -12, "lowlight": -15, "highmark": 10, "tide_ward": 5 }, "desc": "A yellow Highmark permit. Green and yellow docks, cheaper fuel, friendlier patrols. You'll be expected to report what you see." }
+  },
+  "forgery": { "caughtChance": 0.45, "fine": { "scrap": 10 }, "heat": 35, "desc": "A forged tag shows a higher tier until someone checks it against the Ward's ledger." }
+}

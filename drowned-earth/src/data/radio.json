@@ -1,25 +1,57 @@
 {
-  "_doc": "Radio stations. The boat radio scans stations with R. A station broadcasts its lines in order on a loop; gap = seconds between lines. 'night' stations only come in after dark. Lines can set a story flag the first time they are heard.",
+  "_doc": "Boat radio stations (R cycles; off is after the last). hours = [from, to] when the station is on air (wraps midnight), otherwise you hear static. voice: calm | voice | hymn | numbers | song | static. Lines may require (if) or exclude (ifNot) a story flag, or require heat (minHeat), so broadcasts change as the world changes. sets: line index → flag raised when heard.",
   "stations": [
-    { "id": "highmark", "name": "88.1 — Highmark Supply Authority", "voice": "calm", "gap": 9,
+    { "id": "highmark", "name": "88.1 — Highmark Official", "voice": "calm", "gap": 9,
       "lines": [
-        "This is the Highmark Supply Authority. The time is now. The tide is steady.",
-        "Ration collection for the Orrin Bay districts will take place on the third day. Please have your tally ready.",
-        "Citizens are reminded that work permits are available to those who demonstrate reliable labour.",
-        "Tide Warden vessels operate for your protection. Please comply with all instructions.",
-        "There is no evidence of renewed illness. Keep two arms apart as a courtesy.",
-        "Reports of sounds or lights in the deep water are the result of settling structures. There is no cause for concern.",
-        "Order and supply. Supply and order. Highmark is with you.",
-        "[a soft chime] This has been the Highmark Supply Authority."
+        { "text": "This is Highmark Official. Chancellor Idris Calloway wishes every vessel a safe and orderly day." },
+        { "text": "Ration collection for the Orrin Bay districts is on the third day. Have your tally and your wristband ready." },
+        { "text": "Work permits are available to raft-born who demonstrate reliable labour. Yellow is a colour of trust." },
+        { "text": "Tide Ward vessels operate for your protection. Please comply with inspections promptly." },
+        { "text": "There is no evidence of renewed illness. Keeping two arms apart remains a courtesy." },
+        { "text": "Reports of lights in the deep water are settling structures and marine phosphorescence. There is no cause for concern.", "ifNot": "finale_done" },
+        { "text": "A brief fault interrupted the Beacon overnight. Engineers have resolved it. There is no cause for concern.", "if": "finale_done" },
+        { "text": "Smuggling endangers supply for everyone. Report unregistered craft to any Ward vessel.", "minHeat": 30 },
+        { "text": "Order and supply. Supply and order. Highmark is with you." }
       ] },
-    { "id": "unmoored", "name": "3.3 — (unregistered)", "voice": "numbers", "gap": 6, "nightBoost": true,
+    { "id": "freevoice", "name": "101.7 — Raft Free Voice", "voice": "voice", "gap": 8,
       "lines": [
-        "[static] ...the Unmoored. If you can hear this, you are not alone on the water.",
-        "Numbers follow. Write them down.",
-        "Nine six. One two eight. Minus. Nine six. One two eight. Minus.",
-        "The place where the plaza fell. Lower the ear at night. Listen to what Highmark listens to.",
-        "Nine six. One two eight. Minus. [static] ...counting down. It is counting down.",
-        "Do not trust the Wardens. Do not trust the seal. Trust the water. It does not lie about how deep it is."
-      ], "sets": { "2": "heard_signal" } }
+        { "text": "Free Voice, broadcasting from a raft that isn't on any Ward chart. Hello, Drift." },
+        { "text": "Portage prices this week: kelp cheap, sealed tins dear. Greentide's practically giving greens away. Rusthold fuel's the fairest in the Wreck." },
+        { "text": "Highmark says the ration is steady. Count your bars. Then count your neighbours." },
+        { "text": "Somebody on Low Row lost their whole house in a storm last year. If it happens again, throw a line. That's all any of us has." },
+        { "text": "The Ward had a boat out past Portage last night with its engine baffled. Listen harder than you look." },
+        { "text": "We heard a diver went to the Sounding. Whatever you heard down there, tell us. We'll say it out loud so you don't have to.", "if": "finale_done" }
+      ] },
+    { "id": "vigil", "name": "63.0 — The Vigil's Evensong", "voice": "hymn", "gap": 10, "hours": [17, 23],
+      "lines": [
+        { "text": "♪ Lay the lamp upon the water, let the water judge the flame ♪" },
+        { "text": "The Keeper says: the tide does not hate. It weighs." },
+        { "text": "♪ What we gave the deep, the deep remembers; what it gives back, it gives by name ♪" },
+        { "text": "Be still tonight. The Deep is listening, and it is not unkind to the still." }
+      ] },
+    { "id": "lowlight", "name": "3.3 — (coded channel)", "voice": "numbers", "gap": 6, "hours": [19, 5.5],
+      "lines": [
+        { "text": "[static] ...Lowlight. If you can hear this, you are not alone on the water." },
+        { "text": "Numbers follow. Write them down." },
+        { "text": "Nine six. One two eight. Minus. Nine six. One two eight. Minus." },
+        { "text": "The plaza that fell. Lower the ear at night. Listen to what Highmark listens to." },
+        { "text": "Wardens on the south lane tonight. Engines off past the Stacks. Marlow says: be dull, be dark, be gone." },
+        { "text": "Nine six. One two eight. Minus. [static] ...counting down." }
+      ], "sets": { "2": "heard_signal" } },
+    { "id": "nightsongs", "name": "77.7 — Night Songs", "voice": "song", "gap": 14, "hours": [21, 4],
+      "lines": [
+        { "text": "Night Songs. Old records, older voices. This is Marisol. Tie up, turn down, stay a while." },
+        { "text": "♪ Hold the light for me, hold it till I'm home, the sea is wide but it's not as wide as you ♪" },
+        { "text": "A request came in by bottle, if you can believe it. From a diver called Teo. For his little sister, wherever she's tied up tonight. He says: keep the lamp lit. He says he's sorry about the boat." },
+        { "text": "♪ And if the water rises, and the morning doesn't come, hold the light for me, hold it till I'm home ♪" },
+        { "text": "That's the hour. Sleep dry if you can." }
+      ], "sets": { "2": "teo_song" } },
+    { "id": "static", "name": "—.— (between stations)", "voice": "static", "gap": 18,
+      "lines": [
+        { "text": "[static]" },
+        { "text": "[static] ...two hundred and twelve... [static]" },
+        { "text": "[static]" },
+        { "text": "[a woman's voice, very far away, says your name. Then static.]", "if": "finale_done" }
+      ] }
   ]
 }

@@ -144,6 +144,20 @@ export class Highmark {
     const facing = Math.abs(Math.cos(this.beam.rotation.y - this.toDistrictAngle));
     this.flare.material.opacity = (0.25 + night * 0.75) * fogK * (0.35 + 0.65 * Math.pow(facing, 8)) * (this.ctx.state.flags.lighthouseStopped ? 0.1 : 1);
     this.flare.scale.setScalar(0.02 + 0.05 * Math.pow(facing, 8) * night);
+    // The Beacon passes over the district; some nights, the Deep answers.
+    if (facing > 0.995 && !this.peak) {
+      this.peak = true; this.passes = (this.passes || 0) + 1;
+      if (night > 0.6 && this.passes % 3 === 0 && !this.ctx.state.flags.lighthouseStopped) {
+        setTimeout(() => {
+          this.ctx.audio?.play('answerTone');
+          this.ctx.events.emit('shake', 0.12);
+          const p = this.ctx.player.position;
+          for (let i = 0; i < 3; i++) this.ctx.water.ripple(p.x + (Math.random() - 0.5) * 30, p.z + (Math.random() - 0.5) * 30, 0.6, 2.5);
+          if (!this.ctx.state.flags.heard_answer) { this.ctx.state.flags.heard_answer = true; this.ctx.ui.whisper('The Beacon sweeps over you. A few seconds later, from very far below, the water hums back.'); }
+        }, 2600);
+      }
+    }
+    if (facing < 0.9) this.peak = false;
     this.patrolMat.opacity = night * fogK;
     const pos = this.patrolPts.geometry.attributes.position;
     this.patrols.forEach((p, i) => { p.a += p.s * dt; pos.setXYZ(i, Math.cos(p.a) * p.r, 4, Math.sin(p.a) * p.r / 1.3); });

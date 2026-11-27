@@ -57,10 +57,10 @@ export class Synth {
       },
     };
   }
-  chug(add) {
+  chug(add, f = 29, rate = 9.5) {
     const ac = this.ac;
-    const o = add(ac.createOscillator()); o.type = 'sawtooth'; o.frequency.value = 29;
-    const lfo = add(ac.createOscillator()); lfo.frequency.value = 9.5; const lg = this.gain(0.5);
+    const o = add(ac.createOscillator()); o.type = 'sawtooth'; o.frequency.value = f;
+    const lfo = add(ac.createOscillator()); lfo.frequency.value = rate; const lg = this.gain(0.5);
     const g = this.gain(0.5); lfo.connect(lg).connect(g.gain);
     const lp = this.filt('lowpass', 260, 3);
     o.connect(lp).connect(g); o.start(); lfo.start();
@@ -173,9 +173,9 @@ export class Synth {
     o.start(t); o.stop(t + dur + 1);
     this.done([g, dest], dur + 1.5);
   }
-  deepTone(dest, dur) {
+  deepTone(dest, dur, peak = 1) {
     const ac = this.ac, t = ac.currentTime;
-    const g = this.gain(); this.env(g, t, 4, 1.0, 5, t + dur - 5);
+    const g = this.gain(); this.env(g, t, Math.min(4, dur * 0.3), peak, Math.min(5, dur * 0.4), t + dur - Math.min(5, dur * 0.4));
     for (const [f, v] of [[27.5, 1], [41.2, 0.6], [55, 0.5], [82.4, 0.2], [27.9, 0.8]]) { const o = ac.createOscillator(); o.frequency.value = f; const og = this.gain(v); o.connect(og).connect(g); o.start(t); o.stop(t + dur + 1); }
     const r = this.src('brown', t, dur); const rg = this.gain(0.8); r.connect(this.filt('lowpass', 90, 1)).connect(rg).connect(g);
     g.connect(dest);
@@ -260,6 +260,34 @@ export class Synth {
     g.gain.setTargetAtTime(0.0001, t, 0.05);
     o.start(t0); o.stop(t + 0.3);
     this.done([out], t - t0 + 0.6);
+  }
+  breath(dest) {
+    const ac = this.ac, t = ac.currentTime;
+    const s = this.src('pink', t, 1.6); const g = this.gain(); this.env(g, t, 0.5, 0.05, 0.9);
+    s.connect(this.filt('bandpass', 700, 1.2)).connect(g).connect(dest); this.done([g], 2);
+    this.bubbles(dest, 4);
+  }
+  // A lone voice singing an old tune (Night Songs station / the Vigil's hymn)
+  sing(dest, dur, pitch = 1) {
+    const ac = this.ac, t0 = ac.currentTime + 0.1;
+    const tune = [62, 65, 67, 69, 67, 65, 62, 60, 62, 64, 65, 62];
+    const o = ac.createOscillator(); o.type = 'sawtooth';
+    const vib = ac.createOscillator(); vib.frequency.value = 5.2; const vg = this.gain(4); vib.connect(vg).connect(o.frequency);
+    const f1 = this.filt('bandpass', 700, 6), f2 = this.filt('bandpass', 1150, 8);
+    const g = this.gain(0.0001); o.connect(f1).connect(g); o.connect(f2).connect(g);
+    const out = this.gain(0.5); g.connect(out).connect(dest);
+    let t = t0, i = Math.floor(Math.random() * 4);
+    while (t < t0 + dur) {
+      const n = tune[i++ % tune.length], len = 0.45 + (i % 3 === 0 ? 0.5 : 0);
+      o.frequency.setTargetAtTime(440 * Math.pow(2, (n - 69) / 12) * pitch, t, 0.04);
+      const v = VOWELS[(i * 3) % VOWELS.length];
+      f1.frequency.setTargetAtTime(v[0], t, 0.05); f2.frequency.setTargetAtTime(v[1], t, 0.05);
+      g.gain.setTargetAtTime(0.5, t, 0.05); g.gain.setTargetAtTime(0.08, t + len * 0.85, 0.05);
+      t += len;
+    }
+    g.gain.setTargetAtTime(0.0001, t, 0.1);
+    o.start(t0); vib.start(t0); o.stop(t + 0.5); vib.stop(t + 0.5);
+    this.done([out], t - t0 + 1);
   }
   numbersVoice(dest, dur) {
     const ac = this.ac, t0 = ac.currentTime + 0.1;

@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { Builder } from '../Builder.js';
 import { InstanceBatch } from '../Props.js';
-import { storey, windowsAlong, container, logItem, sign } from '../Architecture.js';
+import { storey, windowsAlong, container, logItem, sign, slabWithHole, ladder } from '../Architecture.js';
+import { mat } from '../Materials.js';
+import { G } from '../WorldShader.js';
 import { signMaterial } from '../Materials.js';
 
 // St. Aldren General. The ER at the waterline is open through the smashed
@@ -51,9 +53,16 @@ export function buildHospital(ctx, def) {
 
   // Ward 9 wing
   const wx0 = mx1, wx1 = mx1 + 22, wz0 = cz - 20, wz1 = cz + 10;
-  b.box(wx0, base, wz0, wx1, 3.55, wz1, 'facade', { color: [0.7, 0.7, 0.65], meta, faces: ['px', 'nx', 'pz', 'nz'] });
+  // the wing's flooded basement, reached by a service shaft from the ward floor
+  const sh = [wx0 + 14, wz1 - 4.6, wx0 + 16.6, wz1 - 2];
+  b.box(wx0, base, wz0, wx1, -6.4, wz1, 'facade', { color: [0.7, 0.7, 0.65], meta, faces: ['px', 'nx', 'pz', 'nz'] });
+  storey(b, wx0, wz0, wx1, wz1, -6.1, -0.4, { color: [0.3, 0.34, 0.32], floorKey: 'tile', floorColor: [0.25, 0.3, 0.28] });
+  slabWithHole(b, wx0, wz0, wx1, wz1, -0.4, 3.55, ...sh, 'facade', [0.7, 0.7, 0.65]);
+  for (const [x0, z0, x1, z1] of [[sh[0] - 0.2, sh[1] - 0.2, sh[2] + 0.2, sh[1]], [sh[0] - 0.2, sh[3], sh[2] + 0.2, sh[3] + 0.2], [sh[0] - 0.2, sh[1], sh[0], sh[3]], [sh[2], sh[1], sh[2] + 0.2, sh[3]]]) b.box(x0, -0.4, z0, x1, 3.55, z1, 'concrete', { color: [0.3, 0.32, 0.3] });
+  ladder(b, (sh[0] + sh[2]) / 2, sh[1] + 0.3, -6.1, 3.85, 0, { id: 'w9shaft', prompt: 'Climb the shaft', topStep: new THREE.Vector3((sh[0] + sh[2]) / 2, 3.86, sh[1] - 1.2) });
   const winZ = cz - 5;
   storey(b, wx0, wz0, wx1, wz1, 3.85, 7.15, {
+    hole: sh,
     color: [0.74, 0.74, 0.7], floorKey: 'tile', floorColor: [0.55, 0.6, 0.58],
     openings: { px: [{ at: winZ, w: 1.8, h: 1.7, bottom: 0.7 }], pz: windowsAlong(wx0, wx1, 4.5, 1.4, 1.2, 1.1), nz: windowsAlong(wx0, wx1, 4.5, 1.4, 1.2, 1.1) },
   });
@@ -92,11 +101,55 @@ export function buildHospital(ctx, def) {
   const em = { pos: new THREE.Vector3(entr + 7, 0, mz1 + 3), step: new THREE.Vector3(entr, 0.46, mz1 - 1.5), facing: 0 };
   b.interact({ kind: 'mooring', mode: 'boat', pos: em.pos.clone().setY(0.8), radius: 10, requireLook: false, prompt: 'Tie up at the entrance', onUse: (c) => c.boat.tieUp(em) });
 
+  // the basement: growth, a dim glow, a Bloomwalker, and Teo's tag
+  const bx = wx0 + 5, bzc = cz - 8;
+  for (let i = 0; i < 60; i++) {
+    const a = i * 2.4, r = 1 + (i % 9) * 0.55;
+    const onWall = i % 3 === 0;
+    inst.add('growth', 'glow', onWall ? wx0 + 0.45 : bx + Math.cos(a) * r, onWall ? -5.5 + (i % 7) * 0.7 : -6.05 + (i % 2) * 0.1, onWall ? bzc + Math.sin(a) * 4 : bzc + Math.sin(a) * r, { s: 0.35 + (i % 4) * 0.25, ry: a });
+  }
+  for (let i = 0; i < 14; i++) inst.add('growth', 'glow', bx + (i % 5) - 2, -0.55, bzc + Math.floor(i / 5) - 1, { s: 0.3 + (i % 3) * 0.2, rx: Math.PI }); // hanging from the ceiling
+  b.box(bx - 2, -6.1, bzc + 6, bx + 1, -5.3, bzc + 7, 'metal', { color: [0.5, 0.52, 0.5] }); // overturned bed
+  b.interact({ id: 'log:teo_03', kind: 'log', pos: new THREE.Vector3(bx - 0.5, -5.6, bzc + 6.5), radius: 2.4,
+    prompt: (c) => (c.story.hasLog('teo_03') ? 'Read the note again' : 'Something hangs on the bed frame: a dive tag'),
+    onUse: (c) => { if (!c.inventory.has('teo_tag')) c.inventory.add('teo_tag', 1); c.story.openLog('teo_03'); c.events.emit('music:moment', 'discovery'); } });
+  const gl = new THREE.PointLight(0x58ffd0, 0, 16, 1.6); gl.position.set(bx - origin.x, -4.5, bzc - origin.z); gl.layers.enableAll(); b.object(gl);
+  const walker = bloomwalker();
+  walker.position.set(bx + 6 - origin.x, -3.6, bzc + 2 - origin.z);
+  b.object(walker);
   for (let i = 0; i < 12; i++) inst.add(i % 4 ? 'plank' : 'mattress', i % 4 ? 'woodFloat' : 'fabricFloat', cx - 30 + i * 5, 0, mz1 + 6 + (i % 3) * 4, { ry: i, color: [0.75, 0.72, 0.65] });
   for (const im of inst.build(origin)) b.object(im);
   return {
     group: b.build('St Aldren'), colliders: b.colliders, interactables: b.interactables,
     audio: [{ type: 'creak', pos: [cx, 10, mz1], seed: 3 }, { type: 'drip', pos: [wx0 + 8, 5, cz] }, { type: 'hum', pos: [wx0 + 10, 5, cz - 5], freq: 50 }],
-    interiors: [[mx0, 0, mz0, mx1, 3.8, mz1], [wx0, 3.8, wz0, wx1, 7.2, wz1]],
+    interiors: [[mx0, 0, mz0, mx1, 3.8, mz1], [wx0, 3.8, wz0, wx1, 7.2, wz1], [wx0, -6.5, wz0, wx1, -0.3, wz1]],
+    updaters: [(dt) => {
+      const t = (walker.userData.t = (walker.userData.t || 0) + dt);
+      walker.position.y = -3.6 + Math.sin(t * 0.4) * 0.25;
+      walker.rotation.y = Math.sin(t * 0.13) * 0.6 + (ctx.input.held.sprint ? 0.4 : 0);
+      walker.rotation.z = Math.sin(t * 0.21) * 0.15;
+      const near = ctx.player.position.distanceTo(walker.getWorldPosition(new THREE.Vector3()));
+      gl.intensity = (2.5 + Math.sin(t * 1.3) * 0.8 + G.uGlow.value * 5) * (near < 30 ? 1 : 0);
+      if (near < 9 && !ctx.state.flags.saw_bloomwalker) { ctx.state.flags.saw_bloomwalker = true; ctx.ui.whisper('Someone is standing in the water. Was someone. The growth has made a lantern of them. They do not move toward you. Be quiet.'); ctx.events.emit('music:moment', 'dread'); }
+    }],
   };
+}
+
+// A drowned figure overgrown with glow. Still, upright, uncanny; never gory.
+function bloomwalker() {
+  const g = new THREE.Group();
+  const body = new THREE.MeshStandardMaterial({ color: 0x1c2624, roughness: 0.9 });
+  const glow = mat('glow');
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.6, 4, 8), body); torso.position.y = 1.1;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 6), body); head.position.y = 1.65; head.rotation.x = 0.4;
+  const legs = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.7, 4, 6), body); legs.position.y = 0.45;
+  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.6, 3, 5), body); armL.position.set(-0.3, 1.0, 0.1); armL.rotation.z = 0.2;
+  const armR = armL.clone(); armR.position.x = 0.3; armR.rotation.z = -0.25; armR.rotation.x = -0.4;
+  g.add(torso, head, legs, armL, armR);
+  for (let i = 0; i < 16; i++) {
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.05 + (i % 3) * 0.03, 5, 4), glow);
+    const a = i * 2.1; p.position.set(Math.cos(a) * 0.22, 0.4 + (i / 16) * 1.35, Math.sin(a) * 0.2);
+    g.add(p);
+  }
+  return g;
 }

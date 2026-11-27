@@ -32,7 +32,7 @@ export class Story {
     this.checkObjectives();
   }
   objectives() {
-    const list = this.ctx.data.story.objectives || [];
+    const list = [...(this.ctx.data.story.objectives || []), ...(this.ctx.data.story.sideThreads || []).map((o) => ({ ...o, side: true }))];
     return list.filter((o) => !o.after || this.flag(o.after)).map((o) => ({ ...o, done: this.isDone(o) }));
   }
   isDone(o) {
@@ -46,7 +46,7 @@ export class Story {
       const key = 'obj:' + o.id;
       if (o.done && !this.flags[key]) { this.flags[key] = true; this.ctx.events.emit('objective:done', o); }
     }
-    const cur = this.objectives().find((o) => !o.done);
+    const cur = this.objectives().find((o) => !o.done && !o.side);
     if (cur && this.current !== cur.id) { this.current = cur.id; this.ctx.ui?.note?.(cur.text); }
   }
   update(dt) {
@@ -74,6 +74,8 @@ export class Story {
       if (a.audio) ctx.audio?.play(a.audio);
       if (a.event) ctx.events.emit(a.event);
       if (a.flag) this.setFlag(a.flag);
+      if (a.weather) { ctx.weather.set(a.weather); ctx.weather.hoursLeft = a.hours || 2.2; }
+      if (a.call === 'patrolFogRun' && ctx.settings.difficulty !== 'calm') ctx.patrol.startFogRun();
     }
     // diving deep into the Sounding once you know what it is also starts the end
     if (!this.finale && this.flag('signal_decoded') && !this.flag('finale_done') && ctx.player.depth > 14 && Math.hypot(pp.x - 96, pp.z + 128) < 50) this.startFinale();

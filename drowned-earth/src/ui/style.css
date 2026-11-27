@@ -71,3 +71,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #070b0d; col
 .ttop .tbtn { width: 46px; height: 46px; font-size: 10px; }
 @media (max-width: 640px) { .subtitle { font-size: 15px; bottom: 30%; } .whisper { font-size: 14px; } .note { max-width: 60vw; } .wrist { width: 96px; height: 96px; left: 14px; bottom: 172px; } .wrist .depth { top: 32px; font-size: 18px; } .wrist .lbl { top: 56px; } }
 @media (max-width: 900px), (max-height: 500px) { .boatgauge { bottom: auto; top: 66px; right: 14px; font-size: 11px; } .toast { top: auto; bottom: 46%; right: 14px; } }
+
+.wristband { position: absolute; left: 18px; bottom: 18px; display: flex; align-items: center; gap: 8px; font: 11px ui-monospace, monospace; letter-spacing: .12em; color: var(--dim); text-shadow: 0 1px 4px #000; text-transform: uppercase; }
+.wristband i { width: 34px; height: 10px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 1px 6px rgba(0,0,0,.6); }
+.wristband .tally { color: #b88; letter-spacing: 0; }
+.touch.on ~ .wristband, body.touchmode .wristband { bottom: auto; top: 14px; left: 14px; }
+.heatmark { position: absolute; left: 18px; bottom: 38px; font: 11px ui-monospace, monospace; color: #e07a5f; letter-spacing: .1em; opacity: 0; transition: opacity .6s; text-shadow: 0 1px 4px #000; }
+.caption { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); font: italic 13px Georgia, serif; color: #cfd6d0; background: rgba(0,0,0,.35); padding: 2px 8px; opacity: 0; transition: opacity .3s; white-space: nowrap; }
+.result p { margin: 8px 0; }

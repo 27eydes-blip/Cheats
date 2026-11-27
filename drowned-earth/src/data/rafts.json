@@ -1,68 +1,951 @@
 {
-  "_doc": "Raft communities. Platform positions are relative to the community center; pieces and structures relative to the platform center (x right, z back, ry radians). Bridges join named anchor points between platforms.",
-  "communities": {
-    "kettle_drift": {
-      "name": "Kettle Drift",
-      "leader": "Mother Ansel",
-      "faction": "raftfolk",
-      "drift": { "radius": 6, "period": 600 },
-      "platforms": [
-        { "id": "market", "name": "Market Barge", "pos": [0, 0], "ry": 0.1,
-          "pieces": [{ "piece": "barge", "x": 0, "z": 0 }, { "piece": "plankdeck", "x": 0, "z": 6.4 }],
-          "structures": [
-            { "type": "stall", "x": -6, "z": -1.5, "ry": 0, "color": [0.7, 0.3, 0.2] },
-            { "type": "stall", "x": -2, "z": -1.5, "ry": 0, "color": [0.25, 0.45, 0.55] },
-            { "type": "stall", "x": 2, "z": -1.5, "ry": 0, "color": [0.75, 0.65, 0.3] },
-            { "type": "stove", "x": 6, "z": 1.5 },
-            { "type": "lantern", "x": -8, "z": 2.5 }, { "type": "lantern", "x": 0, "z": 2.5 }, { "type": "lantern", "x": 8, "z": 2.5 },
-            { "type": "container", "x": 5.5, "z": -2.2, "ry": 0, "color": [0.55, 0.2, 0.12] },
-            { "type": "laundry", "x": 0, "z": 7, "ry": 0 }
-          ] },
-        { "id": "garden", "name": "Green Deck", "pos": [-26, -10], "ry": -0.25,
-          "pieces": [{ "piece": "cardeck", "x": 0, "z": 0 }],
-          "structures": [
-            { "type": "garden", "x": -4, "z": -3 }, { "type": "garden", "x": 1, "z": -3 }, { "type": "garden", "x": -4, "z": 0 }, { "type": "garden", "x": 1, "z": 0 },
-            { "type": "garden", "x": -4, "z": 3 }, { "type": "rain", "x": 5, "z": -2.5 }, { "type": "rain", "x": 5, "z": 2.5 }, { "type": "lantern", "x": 0, "z": 4.2 }
-          ] },
-        { "id": "repair", "name": "Patchwork", "pos": [24, -12], "ry": 0.35,
-          "pieces": [{ "piece": "rigdeck", "x": 0, "z": 0 }, { "piece": "hulldeck", "x": 0, "z": 7, "ry": 0 }],
-          "structures": [
-            { "type": "workbench", "x": -2, "z": -3 }, { "type": "generator", "x": 3, "z": -3.5 }, { "type": "tank", "x": 3, "z": 2.5 },
-            { "type": "container", "x": -1.5, "z": 2.8, "ry": 0, "color": [0.2, 0.35, 0.5] }, { "type": "lantern", "x": 4.2, "z": -0.5 }
-          ] },
-        { "id": "lookout", "name": "The Crow", "pos": [6, -30], "ry": 0,
-          "pieces": [{ "piece": "rigdeck", "x": 0, "z": 0 }],
-          "structures": [{ "type": "tower", "x": 0, "z": 0 }, { "type": "lantern", "x": 3.8, "z": 3.8 }] },
-        { "id": "sleep1", "name": "Low Row", "pos": [-22, 16], "ry": 0.15,
-          "pieces": [{ "piece": "pontoon", "x": -3.2, "z": 0 }, { "piece": "pontoon", "x": 3.2, "z": 0 }],
-          "structures": [{ "type": "shack", "x": -2.5, "z": -1.5, "color": [0.45, 0.42, 0.35] }, { "type": "shack", "x": 3, "z": 1.2, "ry": 3.14, "color": [0.35, 0.45, 0.42] }, { "type": "lantern", "x": 0, "z": 2.6 }, { "type": "laundry", "x": 0.5, "z": -2.8 }] },
-        { "id": "sleep2", "name": "The Stacks", "pos": [-4, 26], "ry": -0.1,
-          "pieces": [{ "piece": "barge", "x": 0, "z": 0 }],
-          "structures": [
-            { "type": "container", "x": -5, "z": -1.8, "color": [0.6, 0.5, 0.15] }, { "type": "container", "x": 2, "z": -1.8, "color": [0.25, 0.4, 0.3] },
-            { "type": "container", "x": -5, "z": 1.8, "color": [0.5, 0.5, 0.48] }, { "type": "bed", "x": 4.5, "z": 2.2 }, { "type": "lantern", "x": 7.5, "z": 0 }, { "type": "stove", "x": 6.5, "z": -2.5 }
-          ] },
-        { "id": "chapel", "name": "Quiet Deck", "pos": [22, 18], "ry": 0.5,
-          "pieces": [{ "piece": "plankdeck", "x": 0, "z": 0 }, { "piece": "plankdeck", "x": 0, "z": 5.2 }],
-          "structures": [{ "type": "mast", "x": 0, "z": 2.5, "color": [0.75, 0.7, 0.6] }, { "type": "lantern", "x": -3, "z": 0 }, { "type": "lantern", "x": 3, "z": 5 }] },
-        { "id": "dock", "name": "Visitor Dock", "pos": [-38, 6], "ry": 0.3,
-          "pieces": [{ "piece": "plankdeck", "x": 0, "z": 0 }, { "piece": "hulldeck", "x": -6, "z": 0, "ry": 1.57 }],
-          "structures": [{ "type": "lantern", "x": 2.5, "z": 2 }, { "type": "stall", "x": 1.8, "z": -1, "ry": 1.57, "color": [0.4, 0.4, 0.38] }],
-          "mooring": { "x": -10.5, "z": 0, "facing": -1.57, "stepX": -6, "stepZ": 0 } },
-        { "id": "water", "name": "Still House", "pos": [-20, -32], "ry": 0.2,
-          "pieces": [{ "piece": "pontoon", "x": 0, "z": 0 }],
-          "structures": [{ "type": "tank", "x": -1.2, "z": 0 }, { "type": "rain", "x": 1.8, "z": -1 }, { "type": "lantern", "x": 2, "z": 2.2 }] }
-      ],
-      "bridges": [
-        ["market", [-9, 0], "garden", [7, 2]],
-        ["market", [9, -1], "repair", [-5, 1]],
-        ["market", [3, -4], "lookout", [0, 5]],
-        ["market", [-4, 8.9], "sleep2", [-2, -4]],
-        ["garden", [-3, 5], "sleep1", [0, -3]],
-        ["market", [8, 6], "chapel", [-2, -2.5]],
-        ["sleep1", [-6.2, 0], "dock", [4, 0]],
-        ["garden", [-2, -5], "water", [1, 3]]
-      ]
+ "_doc": "Raft communities. Platform positions are relative to the community center; pieces and structures relative to the platform center (x right, z back, ry radians). Bridges join named anchor points between platforms.",
+ "communities": {
+  "portage": {
+   "name": "Portage",
+   "leader": "Madam Oru Vance",
+   "faction": "portage",
+   "drift": {
+    "radius": 6,
+    "period": 600
+   },
+   "platforms": [
+    {
+     "id": "market",
+     "name": "The Exchange",
+     "pos": [
+      0,
+      0
+     ],
+     "ry": 0.1,
+     "pieces": [
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "piece": "plankdeck",
+       "x": 0,
+       "z": 6.4
+      }
+     ],
+     "structures": [
+      {
+       "type": "stall",
+       "x": -6,
+       "z": -1.5,
+       "ry": 0,
+       "color": [
+        0.7,
+        0.3,
+        0.2
+       ]
+      },
+      {
+       "type": "stall",
+       "x": -2,
+       "z": -1.5,
+       "ry": 0,
+       "color": [
+        0.25,
+        0.45,
+        0.55
+       ]
+      },
+      {
+       "type": "stall",
+       "x": 2,
+       "z": -1.5,
+       "ry": 0,
+       "color": [
+        0.75,
+        0.65,
+        0.3
+       ]
+      },
+      {
+       "type": "stove",
+       "x": 6,
+       "z": 1.5
+      },
+      {
+       "type": "lantern",
+       "x": -8,
+       "z": 2.5
+      },
+      {
+       "type": "lantern",
+       "x": 0,
+       "z": 2.5
+      },
+      {
+       "type": "lantern",
+       "x": 8,
+       "z": 2.5
+      },
+      {
+       "type": "container",
+       "x": 5.5,
+       "z": -2.2,
+       "ry": 0,
+       "color": [
+        0.55,
+        0.2,
+        0.12
+       ]
+      },
+      {
+       "type": "laundry",
+       "x": 0,
+       "z": 7,
+       "ry": 0
+      },
+      {
+       "type": "stack",
+       "x": 7.6,
+       "z": 1.2,
+       "levels": 3,
+       "color": [
+        0.3,
+        0.4,
+        0.5
+       ]
+      }
+     ],
+     "mooring": {
+      "x": -3,
+      "z": -5.2,
+      "facing": 3.14159,
+      "stepX": -3,
+      "stepZ": -3,
+      "standingMax": 5,
+      "name": "Exchange Dock"
+     }
+    },
+    {
+     "id": "garden",
+     "name": "Rooftop Plots",
+     "pos": [
+      -26,
+      -10
+     ],
+     "ry": -0.25,
+     "pieces": [
+      {
+       "piece": "cardeck",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "garden",
+       "x": -4,
+       "z": -3
+      },
+      {
+       "type": "garden",
+       "x": 1,
+       "z": -3
+      },
+      {
+       "type": "garden",
+       "x": -4,
+       "z": 0
+      },
+      {
+       "type": "garden",
+       "x": 1,
+       "z": 0
+      },
+      {
+       "type": "garden",
+       "x": -4,
+       "z": 3
+      },
+      {
+       "type": "rain",
+       "x": 5,
+       "z": -2.5
+      },
+      {
+       "type": "rain",
+       "x": 5,
+       "z": 2.5
+      },
+      {
+       "type": "lantern",
+       "x": 0,
+       "z": 4.2
+      }
+     ]
+    },
+    {
+     "id": "repair",
+     "name": "Patchwork",
+     "pos": [
+      24,
+      -12
+     ],
+     "ry": 0.35,
+     "pieces": [
+      {
+       "piece": "rigdeck",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "piece": "hulldeck",
+       "x": 0,
+       "z": 7,
+       "ry": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "generator",
+       "x": 3,
+       "z": -3.5
+      },
+      {
+       "type": "tank",
+       "x": 3,
+       "z": 2.5
+      },
+      {
+       "type": "container",
+       "x": -1.5,
+       "z": 2.8,
+       "ry": 0,
+       "color": [
+        0.2,
+        0.35,
+        0.5
+       ]
+      },
+      {
+       "type": "lantern",
+       "x": 4.2,
+       "z": -0.5
+      },
+      {
+       "type": "stack",
+       "x": -2.5,
+       "z": -2.5,
+       "levels": 2,
+       "color": [
+        0.6,
+        0.5,
+        0.15
+       ]
+      }
+     ]
+    },
+    {
+     "id": "lookout",
+     "name": "The Crow",
+     "pos": [
+      6,
+      -30
+     ],
+     "ry": 0,
+     "pieces": [
+      {
+       "piece": "rigdeck",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "tower",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "type": "lantern",
+       "x": 3.8,
+       "z": 3.8
+      }
+     ]
+    },
+    {
+     "id": "sleep1",
+     "name": "Low Row",
+     "pos": [
+      -22,
+      16
+     ],
+     "ry": 0.15,
+     "pieces": [
+      {
+       "piece": "pontoon",
+       "x": -3.2,
+       "z": 0
+      },
+      {
+       "piece": "pontoon",
+       "x": 3.2,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "shack",
+       "x": -2.5,
+       "z": -1.5,
+       "color": [
+        0.45,
+        0.42,
+        0.35
+       ]
+      },
+      {
+       "type": "shack",
+       "x": 3,
+       "z": 1.2,
+       "ry": 3.14,
+       "color": [
+        0.35,
+        0.45,
+        0.42
+       ]
+      },
+      {
+       "type": "lantern",
+       "x": 0,
+       "z": 2.6
+      },
+      {
+       "type": "laundry",
+       "x": 0.5,
+       "z": -2.8
+      }
+     ]
+    },
+    {
+     "id": "sleep2",
+     "name": "The Stacks",
+     "pos": [
+      -4,
+      26
+     ],
+     "ry": -0.1,
+     "pieces": [
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "container",
+       "x": -5,
+       "z": -1.8,
+       "color": [
+        0.6,
+        0.5,
+        0.15
+       ]
+      },
+      {
+       "type": "container",
+       "x": 2,
+       "z": -1.8,
+       "color": [
+        0.25,
+        0.4,
+        0.3
+       ]
+      },
+      {
+       "type": "container",
+       "x": -5,
+       "z": 1.8,
+       "color": [
+        0.5,
+        0.5,
+        0.48
+       ]
+      },
+      {
+       "type": "bed",
+       "x": 4.5,
+       "z": 2.2
+      },
+      {
+       "type": "lantern",
+       "x": 7.5,
+       "z": 0
+      },
+      {
+       "type": "stove",
+       "x": 6.5,
+       "z": -2.5
+      },
+      {
+       "type": "stack",
+       "x": -5,
+       "z": 0,
+       "levels": 2,
+       "color": [
+        0.55,
+        0.2,
+        0.12
+       ]
+      }
+     ]
+    },
+    {
+     "id": "chapel",
+     "name": "Vigil Mission",
+     "pos": [
+      22,
+      18
+     ],
+     "ry": 0.5,
+     "pieces": [
+      {
+       "piece": "plankdeck",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "piece": "plankdeck",
+       "x": 0,
+       "z": 5.2
+      }
+     ],
+     "structures": [
+      {
+       "type": "mast",
+       "x": 0,
+       "z": 2.5,
+       "color": [
+        0.75,
+        0.7,
+        0.6
+       ]
+      },
+      {
+       "type": "lantern",
+       "x": -3,
+       "z": 0
+      },
+      {
+       "type": "lantern",
+       "x": 3,
+       "z": 5
+      }
+     ]
+    },
+    {
+     "id": "dock",
+     "name": "Drifters' Mooring",
+     "pos": [
+      -38,
+      6
+     ],
+     "ry": 0.3,
+     "pieces": [
+      {
+       "piece": "plankdeck",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "piece": "hulldeck",
+       "x": -6,
+       "z": 0,
+       "ry": 1.57
+      }
+     ],
+     "structures": [
+      {
+       "type": "lantern",
+       "x": 2.5,
+       "z": 2
+      },
+      {
+       "type": "stall",
+       "x": 1.8,
+       "z": -1,
+       "ry": 1.57,
+       "color": [
+        0.4,
+        0.4,
+        0.38
+       ]
+      }
+     ],
+     "mooring": {
+      "x": -10.5,
+      "z": 0,
+      "facing": -1.57,
+      "stepX": -6,
+      "stepZ": 0,
+      "standingMax": 6,
+      "name": "Drifters' Mooring"
+     }
+    },
+    {
+     "id": "water",
+     "name": "Still House",
+     "pos": [
+      -20,
+      -32
+     ],
+     "ry": 0.2,
+     "pieces": [
+      {
+       "piece": "pontoon",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "tank",
+       "x": -1.2,
+       "z": 0
+      },
+      {
+       "type": "rain",
+       "x": 1.8,
+       "z": -1
+      },
+      {
+       "type": "lantern",
+       "x": 2,
+       "z": 2.2
+      }
+     ]
+    },
+    {
+     "id": "redlamp",
+     "name": "Quarantine Dock",
+     "pos": [
+      34,
+      40
+     ],
+     "ry": 0.6,
+     "pieces": [
+      {
+       "piece": "plankdeck",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "lantern",
+       "x": 2.6,
+       "z": 1.6
+      },
+      {
+       "type": "shack",
+       "x": -1.6,
+       "z": -0.6,
+       "color": [
+        0.35,
+        0.2,
+        0.18
+       ]
+      }
+     ],
+     "mooring": {
+      "x": 5.6,
+      "z": 0,
+      "facing": 1.5708,
+      "stepX": 2.5,
+      "stepZ": 0,
+      "standingMax": 7,
+      "name": "Quarantine Dock"
+     }
     }
+   ],
+   "bridges": [
+    [
+     "market",
+     [
+      -9,
+      0
+     ],
+     "garden",
+     [
+      7,
+      2
+     ]
+    ],
+    [
+     "market",
+     [
+      9,
+      -1
+     ],
+     "repair",
+     [
+      -5,
+      1
+     ]
+    ],
+    [
+     "market",
+     [
+      3,
+      -4
+     ],
+     "lookout",
+     [
+      0,
+      5
+     ]
+    ],
+    [
+     "market",
+     [
+      -4,
+      8.9
+     ],
+     "sleep2",
+     [
+      -2,
+      -4
+     ]
+    ],
+    [
+     "garden",
+     [
+      -3,
+      5
+     ],
+     "sleep1",
+     [
+      0,
+      -3
+     ]
+    ],
+    [
+     "market",
+     [
+      8,
+      6
+     ],
+     "chapel",
+     [
+      -2,
+      -2.5
+     ]
+    ],
+    [
+     "sleep1",
+     [
+      -6.2,
+      0
+     ],
+     "dock",
+     [
+      4,
+      0
+     ]
+    ],
+    [
+     "garden",
+     [
+      -2,
+      -5
+     ],
+     "water",
+     [
+      1,
+      3
+     ]
+    ],
+    [
+     "redlamp",
+     [
+      -3.9,
+      0
+     ],
+     "sleep2",
+     [
+      7,
+      3.5
+     ]
+    ]
+   ],
+   "color": [
+    0.75,
+    0.42,
+    0.2
+   ],
+   "festival": {
+    "from": 18.2,
+    "to": 21.5,
+    "boats": 28,
+    "center": [
+     0,
+     -14
+    ]
+   }
+  },
+  "greentide_barge": {
+   "name": "Greentide Seedboat",
+   "leader": "Elder Tamsin Koa",
+   "faction": "greentide",
+   "color": [
+    0.35,
+    0.6,
+    0.3
+   ],
+   "drift": {
+    "radius": 4,
+    "period": 700
+   },
+   "platforms": [
+    {
+     "id": "gt_plots",
+     "name": "Seed Deck",
+     "pos": [
+      0,
+      0
+     ],
+     "ry": 0.2,
+     "pieces": [
+      {
+       "piece": "cardeck",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "piece": "pontoon",
+       "x": 0,
+       "z": 8
+      }
+     ],
+     "structures": [
+      {
+       "type": "garden",
+       "x": -4,
+       "z": -3
+      },
+      {
+       "type": "garden",
+       "x": 1,
+       "z": -3
+      },
+      {
+       "type": "garden",
+       "x": -4,
+       "z": 0
+      },
+      {
+       "type": "garden",
+       "x": 1,
+       "z": 0
+      },
+      {
+       "type": "garden",
+       "x": -4,
+       "z": 3
+      },
+      {
+       "type": "garden",
+       "x": 1,
+       "z": 3
+      },
+      {
+       "type": "rain",
+       "x": 5,
+       "z": -2.5
+      },
+      {
+       "type": "rain",
+       "x": 5,
+       "z": 2.5
+      },
+      {
+       "type": "stall",
+       "x": 0,
+       "z": 8,
+       "color": [
+        0.35,
+        0.55,
+        0.3
+       ]
+      },
+      {
+       "type": "lantern",
+       "x": -5.5,
+       "z": 4.5
+      },
+      {
+       "type": "mast",
+       "x": 4,
+       "z": 8.5,
+       "color": [
+        0.6,
+        0.75,
+        0.55
+       ]
+      }
+     ],
+     "mooring": {
+      "x": -9,
+      "z": 0,
+      "facing": -1.5708,
+      "stepX": -5.5,
+      "stepZ": 0,
+      "standingMax": 6,
+      "name": "Seed Deck"
+     }
+    },
+    {
+     "id": "gt_still",
+     "name": "Rain House",
+     "pos": [
+      13,
+      -6
+     ],
+     "ry": -0.3,
+     "pieces": [
+      {
+       "piece": "pontoon",
+       "x": 0,
+       "z": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "tank",
+       "x": -1,
+       "z": 0
+      },
+      {
+       "type": "rain",
+       "x": 1.8,
+       "z": -1
+      },
+      {
+       "type": "lantern",
+       "x": 2,
+       "z": 2.2
+      }
+     ]
+    }
+   ],
+   "bridges": [
+    [
+     "gt_plots",
+     [
+      6.8,
+      -3
+     ],
+     "gt_still",
+     [
+      -2.8,
+      1
+     ]
+    ]
+   ]
+  },
+  "rusthold_tender": {
+   "name": "Rusthold Tender",
+   "leader": "Bram Hollis",
+   "faction": "rusthold",
+   "color": [
+    0.85,
+    0.65,
+    0.15
+   ],
+   "drift": {
+    "radius": 3,
+    "period": 800
+   },
+   "platforms": [
+    {
+     "id": "rh_rig",
+     "name": "The Tender",
+     "pos": [
+      0,
+      0
+     ],
+     "ry": -0.4,
+     "pieces": [
+      {
+       "piece": "rigdeck",
+       "x": 0,
+       "z": 0
+      },
+      {
+       "piece": "barge",
+       "x": 0,
+       "z": 9,
+       "ry": 0
+      }
+     ],
+     "structures": [
+      {
+       "type": "workbench",
+       "x": -2,
+       "z": -3
+      },
+      {
+       "type": "generator",
+       "x": 3,
+       "z": -3.5
+      },
+      {
+       "type": "tank",
+       "x": 3,
+       "z": 2.5
+      },
+      {
+       "type": "tower",
+       "x": -2.5,
+       "z": 2.5
+      },
+      {
+       "type": "stack",
+       "x": -5,
+       "z": 9,
+       "levels": 2,
+       "color": [
+        0.75,
+        0.55,
+        0.12
+       ]
+      },
+      {
+       "type": "stove",
+       "x": 5,
+       "z": 9
+      },
+      {
+       "type": "lantern",
+       "x": 7.5,
+       "z": 11
+      },
+      {
+       "type": "lantern",
+       "x": 4.2,
+       "z": -0.5
+      }
+     ],
+     "mooring": {
+      "x": 9.2,
+      "z": 9,
+      "facing": 1.5708,
+      "stepX": 6.5,
+      "stepZ": 9,
+      "standingMax": 7,
+      "name": "Tender Ramp"
+     }
+    }
+   ],
+   "bridges": []
   }
+ }
 }

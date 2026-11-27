@@ -66,6 +66,7 @@ export class Collision {
     const boxes = this.query(pos.x - radius - 1, pos.z - radius - 1, pos.x + radius + 1, pos.z + radius + 1, this._tmp || (this._tmp = []));
     this._resolve(pos, radius, height, vel, stepHeight, boxes, result, null);
     for (const body of this.bodies) {
+      if (body.disabled) continue;
       const o = body.object;
       _v.copy(pos);
       const wp = o.getWorldPosition(new THREE.Vector3());
@@ -153,6 +154,7 @@ export class Collision {
       if (vn < 0) { vel.x -= vn * h.nx * 1.3; vel.z -= vn * h.nz * 1.3; impact = Math.max(impact, -vn); }
     }
     for (const body of this.bodies) {
+      if (body.disabled) continue;
       const o = body.object;
       _inv.copy(o.matrixWorld).invert();
       _v.set(pos.x, 0, pos.z).applyMatrix4(_inv);

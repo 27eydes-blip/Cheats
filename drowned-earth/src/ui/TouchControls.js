@@ -29,7 +29,7 @@ export class TouchControls {
       const up = () => { input.release(a); b.classList.remove('held'); };
       b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
     });
-    const enable = () => { input.usingTouch = true; root.classList.add('on'); };
+    const enable = () => { input.usingTouch = true; root.classList.add('on'); document.body.classList.add('touchmode'); };
     addEventListener('touchstart', enable, { once: true, passive: true });
     if (ctx.settings.isMobile || ctx.params.has('touch')) enable();
   }

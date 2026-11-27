@@ -74,6 +74,14 @@ export function buildStructure(b, st, deck, rng, out) {
       out.spots.push({ x: x, z: z + 2, kind: 'container' });
       break;
     }
+    case 'stack': {
+      const cols = [col, [0.55, 0.2, 0.12], [0.2, 0.35, 0.5], [0.6, 0.5, 0.15], [0.3, 0.42, 0.3], [0.5, 0.5, 0.48]];
+      for (let l = 0; l < (st.levels || 2); l++) {
+        const off = (rng.next() - 0.5) * 0.5;
+        b.boxR(x + off, y + 1.3 + l * 2.6, z, 6, 2.55, 2.45, ry + (rng.next() - 0.5) * 0.06, 'container', { color: rng.pick(cols), collide: true });
+      }
+      break;
+    }
     case 'stall': {
       for (const [px, pz] of [[-1.4, -0.9], [1.4, -0.9], [-1.4, 0.9], [1.4, 0.9]]) b.box(x + px - 0.05, y, z + pz - 0.05, x + px + 0.05, y + 2.3, z + pz + 0.05, 'wood', { color: [0.4, 0.33, 0.25], collide: false });
       b.boxR(x, y + 2.35, z, 3.2, 0.06, 2.2, ry, 'fabric', { color: col, rx: 0.12 });

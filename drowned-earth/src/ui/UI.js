@@ -17,6 +17,12 @@ export class UI {
     this.wrist = root.appendChild(el('div', 'wrist', `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#1d3833" stroke-width="6"/><circle class="o2" cx="60" cy="60" r="50" fill="none" stroke="#6fe0be" stroke-width="6" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="0" transform="rotate(-90 60 60)"/></svg><div class="depth">0.0</div><div class="lbl">M · O₂</div>`));
     this.boatEl = root.appendChild(el('div', 'boatgauge'));
     this.fadeEl = root.appendChild(el('div', 'fade'));
+    this.wristband = root.appendChild(el('div', 'wristband'));
+    this.heatEl = root.appendChild(el('div', 'heatmark'));
+    this.captionEl = root.appendChild(el('div', 'caption'));
+    ctx.events.on('standing', () => this.renderWristband());
+    ctx.events.on('caption', (c) => this.caption(c));
+    setTimeout(() => this.renderWristband(), 0);
     this.fpsEl = ctx.params.has('stats') ? root.appendChild(el('div', 'fps')) : null;
     this.panel = null;
     this.timers = {};
@@ -24,6 +30,17 @@ export class UI {
     this.whisperQueue = [];
   }
   get open() { return !!this.panel; }
+  renderWristband() {
+    const st = this.ctx.standing; if (!st) return;
+    const info = st.info();
+    const tally = st.shown === 7 ? '<span class="tally">' + 'I'.repeat(Math.min(12, st.dives)).replace(/(IIII)/g, '$1 ') + '</span>' : '';
+    this.wristband.innerHTML = `<i style="background:${info.wristband}"></i><b>${info.short}${st.forged != null ? ' ?' : ''}</b>${tally}`;
+    this.wristband.title = info.desc;
+  }
+  caption(c) {
+    if (!this.ctx.settings.captions) return;
+    this.captionEl.textContent = c; this.show(this.captionEl, 'cap', 2200);
+  }
   // ---- HUD feedback ----
   show(elm, key, ms) { elm.style.opacity = 1; clearTimeout(this.timers[key]); if (ms) this.timers[key] = setTimeout(() => (elm.style.opacity = 0), ms); }
   whisper(text) {
@@ -83,6 +100,8 @@ export class UI {
       const r = this.ctx.renderer.info.render;
       this.fpsEl.textContent = `${this.ctx.game.fps.toFixed(0)} fps · ${this.ctx.settings.quality} · ${this.ctx.chunks.stats.loaded} chunks · ${this.ctx.time.clockString()} · ${this.ctx.weather.state}`;
     }
+    const heat = this.ctx.heat?.value || 0;
+    if (this.ctx.game.frame % 20 === 0) { this.heatEl.style.opacity = heat > 8 ? 1 : 0; this.heatEl.textContent = 'WARD ' + '▮'.repeat(Math.ceil(heat / 20)) + '▯'.repeat(5 - Math.ceil(heat / 20)) + (this.ctx.patrol?.state === 'chase' ? ' · PURSUED' : ''); }
     // hotkeys
     if (input.pressed('pause')) this.panel ? this.close() : this.openPause();
     if (!this.panel) {
@@ -161,24 +180,58 @@ export class UI {
     this.openPanel('craft', render(), bind);
     this.currentStation = station;
   }
-  openShop(shopId) {
-    const { trade, inventory, data } = this.ctx;
-    const shop = data.trade.shops[shopId];
-    if (!shop) return;
+  openShop(shopId, stepId, who) {
+    const { trade, inventory, data, standing } = this.ctx;
+    const shop = shopId ? data.trade.shops[shopId] : null;
+    const curName = (c) => ({ scrap: 'scrap', seal: 'seal', salt: 'salt', glass: 'glass' }[c] || c);
+    const wallet = () => ['scrap', 'seal', 'salt', 'glass'].map((c) => `${inventory.count(c)} ${curName(c)}`).join(' · ');
     const render = () => {
-      const sells = Object.entries(shop.sells).map(([id, e]) => this.itemRow(id, 1, `<span style="color:var(--dim);font-size:12px">${trade.stockOf(shopId, id)} left</span><button class="btn" data-buy="${id}" ${trade.stockOf(shopId, id) > 0 && inventory.has('scrap', e.price) ? '' : 'disabled'}>${e.price} scrap</button>`)).join('');
+      let html = `<button class="btn close" data-close>Leave</button><h2>${esc(shop ? shop.name : who)}</h2><div class="sub">${wallet()}${shop && standing.priceMod(shop) > 1.05 ? ` · <span style="color:#d99">${standing.info().short} price ×${standing.priceMod(shop).toFixed(2)}</span>` : ''}</div>`;
+      if (stepId) {
+        const st = data.standing.steps[stepId];
+        const cost = Object.entries(st.cost).map(([k, n]) => `${n} ${curName(k)}`).join(' + ');
+        const can = standing.canStep(stepId);
+        const owned = standing.tier <= st.toTier;
+        html += `<h3>Standing</h3><div class="row"><div class="name">${esc(data.standing.tiers[String(st.toTier)].name)} ${owned ? '(yours)' : ''}<small>${esc(st.desc)}</small></div><button class="btn" data-step="${stepId}" ${can ? '' : 'disabled'}>${owned ? 'Held' : cost}</button></div>`;
+      }
+      if (!shop) return html;
+      const services = Object.entries(shop.services || {}).map(([sid, sv]) => `<div class="row"><div class="name">${esc(sv.name)}${sv.upgrade && this.ctx.boat.upgrades[sv.upgrade] ? ' ✓' : ''}</div><button class="btn" data-svc="${sid}" ${inventory.has('scrap', sv.price) && !(sv.upgrade && this.ctx.boat.upgrades[sv.upgrade]) ? '' : 'disabled'}>${sv.price} scrap</button></div>`).join('');
+      const sells = Object.keys(shop.sells).map((id) => { const p = trade.price(shopId, id), c = trade.cur(shopId, id); return this.itemRow(id, 1, `<span style="color:var(--dim);font-size:12px">${trade.stockOf(shopId, id)} left</span><button class="btn" data-buy="${id}" ${trade.canBuy(shopId, id) ? '' : 'disabled'}>${p ? p + ' ' + curName(c) : 'take'}</button>`); }).join('');
       const buys = inventory.list().filter(({ id }) => trade.sellPrice(shopId, id) > 0).map(({ id, n }) => this.itemRow(id, n, `<button class="btn" data-sell="${id}">Sell ${trade.sellPrice(shopId, id)}</button>`)).join('') || '<div class="sub">Nothing they want.</div>';
-      const services = Object.entries(shop.services || {}).map(([sid, sv]) => `<div class="row"><div class="name">${esc(sv.name)}</div><button class="btn" data-svc="${sid}" ${inventory.has('scrap', sv.price) ? '' : 'disabled'}>${sv.price} scrap</button></div>`).join('');
-      return `<button class="btn close" data-close>Leave</button><h2>${esc(shop.name)}</h2><div class="sub">You have ${inventory.count('scrap')} scrap. Two arms apart across the table.</div>${services ? '<h3>Services</h3>' + services : ''}<h3>For sale</h3>${sells}<h3>They'll take</h3>${buys}`;
+      return html + `${services ? '<h3>Services</h3>' + services : ''}<h3>For sale</h3>${sells}<h3>They'll take</h3>${buys}`;
     };
     const bind = (p) => {
-      p.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => { trade.buy(shopId, b.dataset.buy); this.ctx.audio?.play('pickup'); p.innerHTML = render(); bind(p); }));
+      p.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => { if (trade.buy(shopId, b.dataset.buy)) this.ctx.audio?.play('pickup'); p.innerHTML = render(); bind(p); }));
       p.querySelectorAll('[data-sell]').forEach((b) => b.addEventListener('click', () => { trade.sell(shopId, b.dataset.sell); this.ctx.audio?.play('ui'); p.innerHTML = render(); bind(p); }));
       p.querySelectorAll('[data-svc]').forEach((b) => b.addEventListener('click', () => { if (trade.service(shopId, b.dataset.svc)) this.toast('Done.'); p.innerHTML = render(); bind(p); }));
+      p.querySelectorAll('[data-step]').forEach((b) => b.addEventListener('click', () => { standing.step(b.dataset.step); p.innerHTML = render(); bind(p); }));
       p.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => this.close()));
     };
     this.openPanel('shop', render(), bind);
     this.ctx.paused = true;
+  }
+  showBoard(name, lines, rumours) {
+    const r = (rumours || []).slice(0, 5).map((x) => `<div class="row"><div class="name"><small>Day ${x.day}</small>${esc(x.text)}</div></div>`).join('') || '<div class="sub">No news worth chalk.</div>';
+    this.openPanel('log', `<button class="btn close" data-close>Close</button><h2>${esc(name)} — ration board</h2><div class="logtext" style="font-family:ui-monospace,monospace">${lines.map(esc).join('\n')}</div><h3>Chalked underneath</h3>${r}`);
+  }
+  openInspection(patrol) {
+    const { inventory, standing } = this.ctx;
+    const bribe = Math.max(4, 12 - (7 - standing.shown) * 2);
+    const html = `<h2>Tide Ward inspection</h2><div class="sub">A navy launch bumps alongside. Searchlight in your eyes. "${standing.shown >= 6 ? 'Wrist. Now. Then step back from the locker.' : 'Evening. Wrist, please, and we\'ll have you on your way.'}"</div>
+      <div class="tabs"><button class="btn" data-a="comply">Show your wrist and let them search</button><button class="btn" data-a="bribe" ${inventory.has('scrap', bribe) ? '' : 'disabled'}>Fold ${bribe} scrap into your palm</button><button class="btn" data-a="flee">Open the throttle</button></div><div class="result"></div>`;
+    const p = this.openPanel('inspect', html);
+    const finish = (lines, outcome) => {
+      p.querySelector('.tabs').remove();
+      p.querySelector('.result').innerHTML = lines.map((l) => `<p class="logtext">${esc(l)}</p>`).join('') + '<button class="btn big" data-done>Carry on</button>';
+      p.querySelector('[data-done]').addEventListener('click', () => { this.close(); patrol.endStop(outcome); });
+    };
+    p.querySelector('[data-a="comply"]').addEventListener('click', () => { const r = patrol.inspect(); finish(r.lines, r.seized.length ? 'seized' : 'clean'); });
+    p.querySelector('[data-a="bribe"]').addEventListener('click', () => {
+      const ok = Math.random() < (standing.shown >= 7 ? 0.55 : 0.75);
+      if (ok) { inventory.remove('scrap', bribe); this.ctx.heat.add(4, 'bribe'); finish(['The Warden looks at the scrap, then at the dark water, then pockets it. "Didn\'t see you."'], 'bribed'); }
+      else { this.ctx.heat.add(12, 'attempted bribe'); const r = patrol.inspect(); finish(['"Put that away before I write it down." They search anyway.', ...r.lines], 'searched'); }
+    });
+    p.querySelector('[data-a="flee"]').addEventListener('click', () => { this.close(); this.ctx.heat.add(30, 'fled an inspection'); patrol.setState('chase'); this.ctx.boat.vel.addScaledVector(new (this.ctx.boat.pos.constructor)(-Math.sin(this.ctx.boat.heading), 0, -Math.cos(this.ctx.boat.heading)), 6); this.ctx.events.emit('music:moment', 'danger'); });
   }
   showLog(id, log, first) {
     const body = log.form === 'recording'

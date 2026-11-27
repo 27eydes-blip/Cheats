@@ -25,6 +25,8 @@ export class Loot {
     const inv = this.ctx.inventory;
     for (const { item, n } of items) inv.add(item, n, true);
     this.ctx.events.emit('loot', { id, type, items });
+    if (id === 'c:linden:basement' || id.endsWith(':deep') || id.includes('hold')) this.ctx.story.setFlag('first_salvage');
+    if (this.ctx.player.headUnder) this.ctx.standing.dives = Math.min(40, this.ctx.standing.dives + 1);
     const names = items.map(({ item, n }) => `${this.ctx.data.items.items[item].name}${n > 1 ? ' ×' + n : ''}`);
     this.ctx.ui.toast(names.length ? 'Found: ' + names.join(', ') : 'Nothing useful.');
   }

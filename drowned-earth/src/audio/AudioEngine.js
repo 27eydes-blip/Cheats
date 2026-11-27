@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Synth } from './Synth.js';
+import { Music } from './Music.js';
 
 // All sound is synthesized with WebAudio: ambience beds driven by weather and
 // depth, spatial emitters streamed by distance, one-shots, NPC murmur voices
@@ -42,6 +43,7 @@ export class AudioEngine {
     this.listener = ac.listener;
     this.hrtf = this.g.settings.quality !== 'low';
     this.beds();
+    this.music = new Music(this);
   }
   impulse(sec, decay) {
     const ac = this.ac, len = ac.sampleRate * sec;
@@ -109,7 +111,8 @@ export class AudioEngine {
       case 'hum': { for (const h of [1, 2, 3]) { const o = add(ac.createOscillator()); o.frequency.value = (def.freq || 50) * h; const g = ac.createGain(); g.gain.value = 0.06 / h; o.connect(g).connect(out); o.start(); } out.base = 0.5; break; }
       case 'deepHum': { const o = add(ac.createOscillator()); o.frequency.value = 38; const o2 = add(ac.createOscillator()); o2.frequency.value = 57.3; const g = ac.createGain(); g.gain.value = 0.5; o.connect(g); o2.connect(g); g.connect(out); o.start(); o2.start(); out.base = (def.gain || 1) * 0.8; break; }
       case 'generator': { const n = s.chug(add); n.connect(out); out.base = 0.35; break; }
-      case 'crowd': { const n = s.murmur(add, 5); n.connect(out); out.base = 0.5; out.dayOnly = true; break; }
+      case 'patrolEngine': { const n = s.chug(add, 22, 6); n.connect(out); out.base = 0.9; break; }
+      case 'crowd': { const n = s.murmur(add, 5); n.connect(out); out.base = 0.5 * (def.gain ?? 1); out.dayOnly = true; break; }
       case 'fire': { const src = add(this.noiseSrc('brown')); const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300; src.connect(f).connect(out); out.base = 0.25; out.crackle = true; break; }
       case 'lap': { const src = add(this.noiseSrc('pink')); const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 600; f.Q.value = 1.2; src.connect(f).connect(out); out.base = 0.0; out.lap = true; break; }
       default: out.base = 0;
@@ -123,13 +126,13 @@ export class AudioEngine {
       const def = e.def;
       const pos = this.posOf(def);
       const d = pos.distanceTo(cam);
-      const range = def.type === 'deepHum' ? 160 : def.type === 'crowd' ? 140 : 90;
+      const range = def.type === 'deepHum' ? 160 : def.type === 'crowd' ? 140 : def.type === 'patrolEngine' ? 260 : 90;
       const isOneShotType = ['creak', 'drip', 'ropes', 'chimes'].includes(def.type);
       if (isOneShotType) {
         if (d > range) continue;
         e.timer -= dt;
         if (e.timer <= 0) {
-          if (def.type === 'creak') { e.timer = 7 + Math.random() * 16; this.synth.creak(this.panner(pos.clone(), 6, 1), def.heavy); }
+          if (def.type === 'creak') { e.timer = 7 + Math.random() * 16; this.synth.creak(this.panner(pos.clone(), 6, 1), def.heavy); this.cap('creak', d); }
           else if (def.type === 'drip') { e.timer = 0.7 + Math.random() * 2.5; this.synth.drip(this.panner(pos.clone(), 2, 1.5)); }
           else if (def.type === 'ropes') { e.timer = 1.5 + Math.random() * 4; const off = new THREE.Vector3((Math.random() - 0.5) * 60, 1, (Math.random() - 0.5) * 60).add(pos); this.synth.ropeCreak(this.panner(off, 3, 1.4)); }
           else if (def.type === 'chimes') { e.timer = 0.4 + Math.random() * (3 - wind * 2.5); if (Math.random() < 0.3 + wind) this.synth.chime(this.panner(pos.clone(), 3, 1.3)); }
@@ -137,7 +140,7 @@ export class AudioEngine {
         continue;
       }
       if (d > range + 10) { if (e.node) { this.killNode(e.node); e.node.parts.forEach((x) => { try { x.stop(); } catch { /**/ } }); e.node = null; } continue; }
-      if (!e.node && d < range) e.node = this.continuousNode(def, pos);
+      if (!e.node && d < range) { e.node = this.continuousNode(def, pos); this.cap(def.type, d); }
       if (!e.node) continue;
       const n = e.node;
       n.panner.positionX.setTargetAtTime(pos.x, t, 0.05); n.panner.positionY.setTargetAtTime(pos.y, t, 0.05); n.panner.positionZ.setTargetAtTime(pos.z, t, 0.05);
@@ -180,38 +183,54 @@ export class AudioEngine {
     set(this.drone.gain, droneK, 0.8);
     // engine
     const boat = g.boat, piloting = g.player.mode === 'boat';
-    const rpm = piloting && !boat.paddling ? 0.2 + Math.abs(boat.throttle) : 0;
+    const rpm = piloting && !boat.paddling && !boat.engineOff ? 0.2 + Math.abs(boat.throttle) : 0;
     this.engine.setRpm(rpm, boat.pos.distanceTo(cam.position));
-    if (piloting && boat.paddling && Math.abs(boat.throttle) > 0.2) { this.paddleT = (this.paddleT || 0) - dt; if (this.paddleT <= 0) { this.paddleT = 1.1; this.synth.splash(this.panner(boat.pos.clone(), 2, 1), 0.3); } }
+    if (piloting && (boat.paddling || boat.engineOff) && Math.abs(boat.throttle) > 0.2) { this.paddleT = (this.paddleT || 0) - dt; if (this.paddleT <= 0) { this.paddleT = 1.1; this.synth.splash(this.panner(boat.pos.clone(), 2, 1), 0.3); } }
     // occasional far sounds
     const T = this.timers;
     T.foghorn -= dt; T.moan -= dt; T.gull -= dt;
     this.gullSilence = Math.max(0, this.gullSilence - dt);
-    if (T.foghorn <= 0) { T.foghorn = 70 + Math.random() * 90; const a = Math.random() * 6.28; this.synth.foghorn(this.panner(cam.position.clone().add(new THREE.Vector3(Math.cos(a) * 600, 10, Math.sin(a) * 600)), 200, 0.3)); }
+    if (T.foghorn <= 0) { T.foghorn = 70 + Math.random() * 90; this.cap('foghorn'); const a = Math.random() * 6.28; this.synth.foghorn(this.panner(cam.position.clone().add(new THREE.Vector3(Math.cos(a) * 600, 10, Math.sin(a) * 600)), 200, 0.3)); }
     if (T.moan <= 0) { T.moan = (under ? 25 : 70) + Math.random() * 80; if (under || g.time.out.night > 0.5 || Math.random() < 0.3) this.play('deepMoan'); }
     if (T.gull <= 0) {
       T.gull = 2 + Math.random() * 7;
       if (!under && this.gullSilence <= 0 && g.time.out.night < 0.5 && w.rain < 0.5) {
         const p = g.birds?.randomBirdPos() || cam.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 120, 30, (Math.random() - 0.5) * 120));
-        this.synth.gull(this.panner(p, 12, 1));
+        this.synth.gull(this.panner(p, 12, 1)); if (Math.random() < 0.3) this.cap('gull');
       }
     }
     // rain drops on surfaces
     if (w.rain > 0.1 && !under) { T.drops -= dt; if (T.drops <= 0) { T.drops = 0.05 / w.rain; this.synth.tick(this.world, 0.03 * w.rain); } }
     // radio static level
-    if (this.radioOn) set(this.radioStatic.g.gain, this.radioVoice === 'numbers' ? 0.07 + (1 - g.time.out.night) * 0.06 : 0.025);
+    if (this.radioOn) set(this.radioStatic.g.gain, this.radioVoice === 'static' ? 0.2 : this.radioVoice === 'numbers' ? 0.07 + (1 - g.time.out.night) * 0.06 : 0.025);
     this.updateEmitters(dt, cam.position);
+    this.music?.update(dt);
+    // your own breathing underwater; ear pressure at depth thresholds
+    if (under) { this.br = (this.br || 0) - dt; if (this.br <= 0) { this.br = 3.4; this.synth.breath(this.master); } }
+    const band = Math.floor(depth / 10);
+    if (under && band > (this.lastBand ?? 0)) this.play('earPop');
+    this.lastBand = under ? band : 0;
     // heartbeat on low oxygen
     const s = g.survival;
     if (s && g.player.headUnder && s.oxygen < 35) { this.hb = (this.hb || 0) - dt; if (this.hb <= 0) { this.hb = 0.5 + s.oxygen / 60; this.synth.heartbeat(this.master); } }
   }
+  cap(type, d = 0) {
+    const C = { creak: '[metal groans]', crowd: '[voices, bargaining]', generator: '[a generator chugs]', patrolEngine: '[a patrol engine, somewhere]', deepHum: '[a low hum from below]', fire: '[a fire crackles]', whistle: '[wind through broken glass]', gull: '[gulls]', foghorn: '[a distant foghorn]', moan: '[something vast, far below]', thunder: '[thunder]', tone: '[a deep tone shakes the water]', loudspeaker: '[a loudspeaker]', heartbeat: '[your heartbeat]' };
+    if (C[type] && d < 120) this.game.ctx.events.emit('caption', C[type]);
+  }
+  loudspeaker(pos, dur) { if (this.started) { this.synth.voice(this.panner(pos.clone().setY(3), 30, 0.6), dur, 0.75, true); this.cap('loudspeaker'); } }
   // ---- one-shots ----
   play(name, opts = {}) {
     if (!this.started) return;
     const s = this.synth, g = this.g, cam = g.camera.position;
     switch (name) {
-      case 'deepMoan': s.moan(this.panner(cam.clone().add(new THREE.Vector3((Math.random() - 0.5) * 200, -80, (Math.random() - 0.5) * 200)), 60, 0.4)); break;
-      case 'deepTone': s.deepTone(this.master, 22); break;
+      case 'answerTone': s.deepTone(this.master, 8, 0.35); this.cap('tone'); break;
+      case 'ropeSnap': s.thud(this.world, 3); s.creak(this.world, true); break;
+      case 'chimeSwell': for (let i = 0; i < 5; i++) setTimeout(() => s.chime(this.ui), i * 380); break;
+      case 'earPop': s.thud(this.master, 0.6); break;
+      case 'breath': s.breath(this.master); break;
+      case 'deepMoan': this.cap('moan'); s.moan(this.panner(cam.clone().add(new THREE.Vector3((Math.random() - 0.5) * 200, -80, (Math.random() - 0.5) * 200)), 60, 0.4)); break;
+      case 'deepTone': s.deepTone(this.master, 22); this.cap('tone'); break;
       case 'hydrophone': s.clicks(this.master, 9); break;
       case 'thunder': s.thunder(this.world, opts.dist || 1000); break;
       case 'pickup': s.click(this.ui, 900); s.click(this.ui, 1300, 0.06); break;
@@ -239,6 +258,8 @@ export class AudioEngine {
   radioSpeak(voice, dur) {
     if (!this.started || !this.radioOn) return;
     if (voice === 'numbers') this.synth.numbersVoice(this.radioIn, dur);
+    else if (voice === 'song') this.synth.sing(this.radioIn, dur);
+    else if (voice === 'hymn') { this.synth.sing(this.radioIn, dur, 0.8); this.synth.sing(this.radioIn, dur, 1.2); }
     else this.synth.voice(this.radioIn, dur, 0.85, true);
   }
 }

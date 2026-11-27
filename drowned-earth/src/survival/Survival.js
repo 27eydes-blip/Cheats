@@ -78,6 +78,9 @@ export class Survival {
   useItem(id) {
     const inv = this.ctx.inventory, d = inv.def(id);
     if (!d?.use || !inv.has(id)) return false;
+    if (d.use.log) { this.ctx.story.openLog(d.use.log); return true; }
+    if (d.use.forge) { if (this.ctx.standing.forged != null) { this.ctx.ui.toast('Already wearing it.'); return false; } this.ctx.standing.wearForged(d.use.forge); return true; }
+    if (d.use.tank) { if (this.tanks) { this.ctx.ui.toast('The spare bottle is already rigged.'); return false; } this.tanks = 1; this.oxygenSeconds = 95; inv.remove(id); this.ctx.ui.whisper('You strap the spare bottle to your back. Twice the breath. It knocks against your ribs when you swim fast.'); return true; }
     if ((d.use.boatFuel || d.use.hull) && this.ctx.player.mode !== 'boat' && !this.nearBoat()) { this.ctx.ui.toast('You need to be at the boat.'); return false; }
     inv.remove(id);
     if (d.returns) inv.add(d.returns, 1, true);
@@ -120,6 +123,6 @@ export class Survival {
       ui.whisper(`You come to in the boat, coughing.${lost ? ' Some scrap is gone.' : ''} You don't remember climbing in.`);
     }, 2.5);
   }
-  toJSON() { return { thirst: this.thirst, hunger: this.hunger, warmth: this.warmth, rest: this.rest, sick: this.sick, battery: this.battery }; }
+  toJSON() { return { thirst: this.thirst, hunger: this.hunger, warmth: this.warmth, rest: this.rest, sick: this.sick, battery: this.battery, tanks: this.tanks || 0, oxygenSeconds: this.oxygenSeconds }; }
   load(o) { Object.assign(this, o || {}); }
 }
