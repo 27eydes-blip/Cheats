@@ -1,0 +1,90 @@
+[
+ {
+  "name": "c1-siltwolves-warning",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "pos": "0,5,0",
+   "mode": "foot"
+  },
+  "frames": 40,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,m=c.creatures,k=m.byId('sw_court');const V=c.player.position.constructor;c.time.hour=17.5;c.time.frozen=true;c.time.update(0);for(let i=0;i<200&&k.place.roof&&!k.homed;i++){c.player.teleport(new V(k.home.x+20,30,k.home.z));g.step(2);await new Promise(r=>setTimeout(r,0));}const p=new V(k.home.x+Math.cos(0.6)*9,k.home.y+0.1,k.home.z+Math.sin(0.6)*9);c.player.mode='foot';c.player.teleport(p);const look=()=>{const v=k.pos.clone().sub(c.player.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y+0.4,Math.hypot(v.x,v.z))*0.8;};look();k.setState('warning','shot');k.threat=0.8;;for(let i=0;i<60;i++){g.step(1);k.state!=='warning'&&k.setState('warning','shot');c.player.position.copy(p);look();}})()"
+ },
+ {
+  "name": "c2-gullrat-raid-night",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "flashlight": "1",
+   "pos": "0,5,0",
+   "mode": "foot"
+  },
+  "frames": 40,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,m=c.creatures,k=m.byId('gr_portage');const V=c.player.position.constructor;c.time.hour=23.2;c.time.frozen=true;c.time.update(0);for(let i=0;i<200&&k.place.roof&&!k.homed;i++){c.player.teleport(new V(k.home.x+20,30,k.home.z));g.step(2);await new Promise(r=>setTimeout(r,0));}const p=new V(k.home.x+Math.cos(2.4)*4,k.home.y+0.1,k.home.z+Math.sin(2.4)*4);c.player.mode='foot';c.player.teleport(p);const look=()=>{const v=k.pos.clone().sub(c.player.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y+0.4,Math.hypot(v.x,v.z))*0.8;};look();k.setState('attack','shot');k.threat=0.8;;for(let i=0;i<60;i++){g.step(1);k.state!=='attack'&&k.setState('attack','shot');c.player.position.copy(p);look();}})()"
+ },
+ {
+  "name": "c3-netweaver-street-dive",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "flashlight": "1",
+   "pos": "0,5,0",
+   "mode": "foot"
+  },
+  "frames": 40,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,m=c.creatures,k=m.byId('nw_street');const V=c.player.position.constructor;c.time.hour=13;c.time.frozen=true;c.time.update(0);for(let i=0;i<200&&k.place.roof&&!k.homed;i++){c.player.teleport(new V(k.home.x+20,30,k.home.z));g.step(2);await new Promise(r=>setTimeout(r,0));}const p=new V(k.home.x+Math.cos(0.3)*9,k.home.y-1,k.home.z+Math.sin(0.3)*9);c.player.mode='swim';c.player.teleport(p);const look=()=>{const v=k.pos.clone().sub(c.player.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y+0.4,Math.hypot(v.x,v.z))*0.8;};look();k.setState('alert','shot');k.threat=0.8;;for(let i=0;i<60;i++){g.step(1);k.state!=='alert'&&k.setState('alert','shot');c.player.position.copy(p);look();}})()"
+ },
+ {
+  "name": "c4-listener-crawl",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "pos": "0,5,0",
+   "mode": "foot"
+  },
+  "frames": 40,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,m=c.creatures,k=m.byId('ls_cask');const V=c.player.position.constructor;c.time.hour=13;c.time.frozen=true;c.time.update(0);for(let i=0;i<200&&k.place.roof&&!k.homed;i++){c.player.teleport(new V(k.home.x+20,30,k.home.z));g.step(2);await new Promise(r=>setTimeout(r,0));}const p=new V(k.home.x+Math.cos(1.2)*12,k.home.y+0.5,k.home.z+Math.sin(1.2)*12);c.player.mode='swim';c.player.teleport(p);const look=()=>{const v=k.pos.clone().sub(c.player.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y+0.4,Math.hypot(v.x,v.z))*0.8;};look();k.setState('warning','shot');k.threat=0.8;;for(let i=0;i<60;i++){g.step(1);k.state!=='warning'&&k.setState('warning','shot');c.player.position.copy(p);look();}})()"
+ },
+ {
+  "name": "c5-bloomwalker",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "flashlight": "1",
+   "pos": "0,5,0",
+   "mode": "foot"
+  },
+  "frames": 40,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,m=c.creatures,k=m.byId('bw_street');const V=c.player.position.constructor;c.time.hour=14;c.time.frozen=true;c.time.update(0);for(let i=0;i<200&&k.place.roof&&!k.homed;i++){c.player.teleport(new V(k.home.x+20,30,k.home.z));g.step(2);await new Promise(r=>setTimeout(r,0));}const p=new V(k.home.x+Math.cos(0.8)*4.5,k.home.y+0.4,k.home.z+Math.sin(0.8)*4.5);c.player.mode='swim';c.player.teleport(p);const look=()=>{const v=k.pos.clone().sub(c.player.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y+0.4,Math.hypot(v.x,v.z))*0.8;};look();k.setState('warning','shot');k.threat=0.8;;for(let i=0;i<60;i++){g.step(1);k.state!=='warning'&&k.setState('warning','shot');c.player.position.copy(p);look();}})()"
+ },
+ {
+  "name": "c6-needlefish-frenzy",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "pos": "0,5,0",
+   "mode": "foot"
+  },
+  "frames": 40,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,m=c.creatures,k=m.byId('nf_court');const V=c.player.position.constructor;c.time.hour=12;c.time.frozen=true;c.time.update(0);for(let i=0;i<200&&k.place.roof&&!k.homed;i++){c.player.teleport(new V(k.home.x+20,30,k.home.z));g.step(2);await new Promise(r=>setTimeout(r,0));}const p=new V(k.home.x+Math.cos(0.9)*3.5,k.home.y+0.3,k.home.z+Math.sin(0.9)*3.5);c.player.mode='swim';c.player.teleport(p);const look=()=>{const v=k.pos.clone().sub(c.player.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y+0.4,Math.hypot(v.x,v.z))*0.8;};look();k.setState('attack','shot');k.threat=0.8;;for(let i=0;i<60;i++){g.step(1);k.state!=='attack'&&k.setState('attack','shot');c.player.position.copy(p);look();}})()"
+ },
+ {
+  "name": "c7-debug-overlay",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "creatures": "debug",
+   "pos": "0,5,0",
+   "mode": "foot"
+  },
+  "frames": 40,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,m=c.creatures,k=m.byId('sw_court');const V=c.player.position.constructor;c.time.hour=15;c.time.frozen=true;c.time.update(0);for(let i=0;i<200&&k.place.roof&&!k.homed;i++){c.player.teleport(new V(k.home.x+20,30,k.home.z));g.step(2);await new Promise(r=>setTimeout(r,0));}const p=new V(k.home.x+Math.cos(0.6)*30,k.home.y+6,k.home.z+Math.sin(0.6)*30);c.player.mode='foot';c.player.teleport(p);const look=()=>{const v=k.pos.clone().sub(c.player.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y+0.4,Math.hypot(v.x,v.z))*0.8;};look();k.setState('alert','shot');k.threat=0.8;;for(let i=0;i<60;i++){g.step(1);k.state!=='alert'&&k.setState('alert','shot');c.player.position.copy(p);look();}})()"
+ }
+]
