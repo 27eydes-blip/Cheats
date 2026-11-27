@@ -1,0 +1,108 @@
+{
+  "_doc": "Weather states. Values are blended during transitions. fog = exp2 density in the near world (farFog = density for the far layer, Highmark), wind 0..1, waves = amplitude multiplier, rain 0..1, cloud 0..1 cover, lightning = mean strikes per minute, warmth = added to body cold rate (negative = colder).",
+  "states": {
+    "mist": {
+      "cloud": 0.35,
+      "fog": 0.004,
+      "farFog": 0.00012,
+      "wind": 0.15,
+      "waves": 0.4,
+      "rain": 0,
+      "lightning": 0,
+      "warmth": -0.3,
+      "cloudDark": 0.1,
+      "weight": 1
+    },
+    "clear": {
+      "cloud": 0.18,
+      "fog": 0.00035,
+      "farFog": 4e-05,
+      "wind": 0.3,
+      "waves": 0.6,
+      "rain": 0,
+      "lightning": 0,
+      "warmth": 0.2,
+      "cloudDark": 0.0,
+      "weight": 3
+    },
+    "overcast": {
+      "cloud": 0.85,
+      "fog": 0.0007,
+      "farFog": 7e-05,
+      "wind": 0.45,
+      "waves": 0.8,
+      "rain": 0,
+      "lightning": 0,
+      "warmth": -0.2,
+      "cloudDark": 0.5,
+      "weight": 2
+    },
+    "fog": {
+      "cloud": 0.7,
+      "fog": 0.009,
+      "farFog": 0.0004,
+      "wind": 0.08,
+      "waves": 0.3,
+      "rain": 0,
+      "lightning": 0,
+      "warmth": -0.5,
+      "cloudDark": 0.3,
+      "weight": 1.2
+    },
+    "rain": {
+      "cloud": 0.95,
+      "fog": 0.0018,
+      "farFog": 0.00014,
+      "wind": 0.6,
+      "waves": 1.0,
+      "rain": 0.65,
+      "lightning": 0.1,
+      "warmth": -0.8,
+      "cloudDark": 0.75,
+      "weight": 1.5
+    },
+    "storm": {
+      "cloud": 1.0,
+      "fog": 0.003,
+      "farFog": 0.0002,
+      "wind": 1.0,
+      "waves": 1.6,
+      "rain": 1.0,
+      "lightning": 2.5,
+      "warmth": -1.2,
+      "cloudDark": 1.0,
+      "weight": 0.6
+    }
+  },
+  "schedule": [
+    {
+      "state": "mist",
+      "hours": 1.6
+    },
+    {
+      "state": "clear",
+      "hours": 4
+    },
+    {
+      "state": "overcast",
+      "hours": 2.5
+    },
+    {
+      "state": "rain",
+      "hours": 1.8
+    },
+    {
+      "state": "overcast",
+      "hours": 2
+    },
+    {
+      "state": "clear",
+      "hours": 4
+    },
+    {
+      "state": "fog",
+      "hours": 3
+    }
+  ],
+  "transitionHours": 0.6
+}

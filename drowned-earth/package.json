@@ -1,0 +1,20 @@
+{
+  "name": "drowned-earth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drowned Earth — a quiet first-person exploration-survival game set on a flooded future Earth.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:shots": "node scripts/screenshots.mjs",
+    "validate:data": "node scripts/validate-data.mjs"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "vite": "6.4.6"
+  }
+}

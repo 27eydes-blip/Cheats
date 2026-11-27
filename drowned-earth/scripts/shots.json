@@ -1,0 +1,8 @@
+[
+  { "name": "01-dawn-start", "params": { "time": "6.1" } },
+  { "name": "02-midday-boat", "params": { "time": "12.5", "weather": "clear", "boat": "-150,140,-0.9" } },
+  { "name": "03-dusk", "params": { "time": "18.7", "weather": "clear", "boat": "40,180,0.4" } },
+  { "name": "04-night", "params": { "time": "22.5", "weather": "clear", "boat": "160,240,-0.2" } },
+  { "name": "05-underwater", "params": { "time": "12", "weather": "clear", "pos": "-230,-4,150", "mode": "swim", "yaw": "2.4", "pitch": "-0.2" } },
+  { "name": "06-rafts", "params": { "time": "16.5", "weather": "clear", "boat": "230,180,-2.4" } }
+]

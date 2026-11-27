@@ -1,0 +1,44 @@
+{
+  "_doc": "World atlas. Regions drive procedural chunk generation; landmarks are hand-built scenes placed by id. Coordinates are meters, x = east, z = south (north is -z). Sea level is y = 0.",
+  "worldSeed": 1729,
+  "regions": [
+    {
+      "id": "lantern_ward",
+      "name": "Lantern Ward",
+      "city": "Orrin Bay",
+      "type": "drowned_city",
+      "center": [0, 0],
+      "halfSize": [520, 520],
+      "falloff": 260,
+      "streetDepth": -7.5,
+      "blockPitch": 64,
+      "streetWidth": 16,
+      "heightRange": [14, 120],
+      "vines": 0.7,
+      "ambience": "city"
+    },
+    {
+      "id": "orrin_outskirts",
+      "name": "Orrin Bay Outskirts",
+      "type": "sunken_ruins",
+      "center": [0, 0],
+      "radius": 2600,
+      "seabed": -18,
+      "density": 0.18,
+      "ambience": "open"
+    }
+  ],
+  "defaultRegion": { "id": "open_sea", "name": "Open Sea", "type": "open_ocean", "seabed": -60, "ambience": "ocean" },
+  "landmarks": [
+    { "id": "linden_court", "name": "Linden Court", "kind": "start_tower", "pos": [-262, 222], "clear": 34, "rot": 0 },
+    { "id": "st_aldren", "name": "St. Aldren General", "kind": "hospital", "pos": [-210, -250], "clear": 62, "rot": 0 },
+    { "id": "cask_street", "name": "Cask Street Station", "kind": "subway", "pos": [48, 70], "clear": 30, "rot": 0 },
+    { "id": "calla_morrow", "name": "MV Calla Morrow", "kind": "cargo_ship", "pos": [268, -300], "clear": 80, "rot": 0.62 },
+    { "id": "kettle_drift", "name": "Kettle Drift", "kind": "raft_community", "pos": [318, 250], "clear": 150, "rot": 0 },
+    { "id": "the_sounding", "name": "The Sounding", "kind": "sinkhole", "pos": [96, -128], "clear": 56, "rot": 0 },
+    { "id": "lone_window", "name": "Vesper House", "kind": "lone_window", "pos": [-430, -415], "clear": 26, "rot": 0 }
+  ],
+  "farLandmarks": [
+    { "id": "highmark", "name": "Highmark", "kind": "highmark", "pos": [-1800, -13500] }
+  ]
+}
