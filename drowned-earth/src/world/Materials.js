@@ -31,6 +31,7 @@ export function initMaterials() {
   lib.set('emissiveWarm', new THREE.MeshBasicMaterial({ color: 0xffb060, toneMapped: true }));
   lib.set('emissiveCold', new THREE.MeshBasicMaterial({ color: 0xbfe6ff }));
   lib.set('black', new THREE.MeshBasicMaterial({ color: 0x020303 }));
+  lib.set('obsidian', std({ color: 0x1a2224, roughness: 0.35, metalness: 0.6 }, { noUnderwater: true }));
   // floating debris variants: displaced by waves on the GPU
   lib.set('woodFloat', std({ map: rep('wood', 0.5), roughness: 0.9 }, { bob: true }));
   lib.set('plasticFloat', std({ roughness: 0.5 }, { bob: true }));

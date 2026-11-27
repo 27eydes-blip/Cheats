@@ -69,4 +69,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #070b0d; col
 .tbtn.held { background: rgba(220,216,204,.25); }
 .ttop { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; pointer-events: none; }
 .ttop .tbtn { width: 46px; height: 46px; font-size: 10px; }
-@media (max-width: 640px) { .subtitle { font-size: 15px; bottom: 30%; } .whisper { font-size: 14px; } .note { max-width: 60vw; } .wrist { width: 96px; height: 96px; left: 14px; bottom: auto; top: 54px; } .wrist .depth { top: 32px; font-size: 18px; } .wrist .lbl { top: 56px; } .boatgauge { bottom: 170px; } }
+@media (max-width: 640px) { .subtitle { font-size: 15px; bottom: 30%; } .whisper { font-size: 14px; } .note { max-width: 60vw; } .wrist { width: 96px; height: 96px; left: 14px; bottom: 172px; } .wrist .depth { top: 32px; font-size: 18px; } .wrist .lbl { top: 56px; } }
+@media (max-width: 900px), (max-height: 500px) { .boatgauge { bottom: auto; top: 66px; right: 14px; font-size: 11px; } .toast { top: auto; bottom: 46%; right: 14px; } }

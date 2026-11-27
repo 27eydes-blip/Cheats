@@ -25,11 +25,11 @@ export function buildSounding(ctx, def) {
   const ringR = 16;
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2;
-    b.boxR(cx + Math.cos(a) * ringR, deepY + 9, cz + Math.sin(a) * ringR, 2.2, 22, 4.5, -a, 'black', { collide: false, rz: 0.12 * Math.sin(i * 1.7) });
+    b.boxR(cx + Math.cos(a) * ringR, deepY + 9, cz + Math.sin(a) * ringR, 2.2, 22, 4.5, -a, 'obsidian', { collide: false, rz: 0.12 * Math.sin(i * 1.7), color: [0.5, 0.55, 0.55] });
   }
-  b.box(cx - 12, deepY - 1, cz - 12, cx + 12, deepY, cz + 12, 'black', { collide: false });
+  b.box(cx - 12, deepY - 1, cz - 12, cx + 12, deepY, cz + 12, 'obsidian', { collide: false, color: [0.4, 0.45, 0.45] });
   // light veins on the structure: a separate material so the finale can drive it
-  const veinMat = new THREE.MeshBasicMaterial({ color: 0x3affd0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  const veinMat = new THREE.MeshBasicMaterial({ color: 0x3affd0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: true });
   const veins = new THREE.Group();
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2;
@@ -97,7 +97,7 @@ export function buildSounding(ctx, def) {
     }
     const glow = G.uGlow.value;
     veinMat.opacity = Math.min(1, glow * 1.2 + 0.03 * (0.5 + 0.5 * Math.sin(t * 0.4)));
-    veinLight.intensity = glow * 900;
+    veinLight.intensity = glow * 2500;
   });
   return { group, colliders: b.colliders, interactables: b.interactables, updaters, audio: [{ type: 'deepHum', pos: [cx, -40, cz], gain: 1.4 }] };
 }
