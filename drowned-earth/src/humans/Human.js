@@ -143,7 +143,7 @@ export class Human {
     if (kit.proxies[brow].tex.map) kit.bind(browMat, 'map', kit.proxies[brow].tex.map, true);
     add(brow, browMat, { detail: true, exprKey: brow, lift: 0.003 });
     if (!phone) {
-      const lashMat = cardMaterial([0.02, 0.018, 0.016], 0.05);
+      const lashMat = cardMaterial([0.02, 0.018, 0.016], 0.05, 0.75);
       const lash = kit.proxies[p.lash] ? p.lash : 'lash1';
       if (kit.proxies[lash].tex.map) kit.bind(lashMat, 'map', kit.proxies[lash].tex.map, true);
       add(lash, lashMat, { detail: true, exprKey: lash, lift: 0.0012 });
