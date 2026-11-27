@@ -138,7 +138,7 @@ export class Human {
       this.eyes.castShadow = false;
     }
     const hairCol = srgb(p.look?.hairColor || [0.1, 0.08, 0.06]);
-    const browMat = cardMaterial(hairCol.map((c) => Math.min(1, c * 1.6 + 0.02)), 0.05);
+    const browMat = cardMaterial(hairCol.map((c) => Math.min(c * 1.6 + 0.02, c * 0.7 + 0.02)), 0.05); // dark brows need a lift, grey ones must not glow
     const brow = kit.proxies[p.brow] ? p.brow : 'brow1';
     if (kit.proxies[brow].tex.map) kit.bind(browMat, 'map', kit.proxies[brow].tex.map, true);
     add(brow, browMat, { detail: true, exprKey: brow, lift: 0.003 });
