@@ -8,3 +8,4 @@
 **/dsh-plugin-browserskill/src/client/bsk-ui.nomodule.css
 # Hunt (hunt/) is a separate project with its own style and its own CI (.github/workflows/hunt.yml).
 hunt/**
+reaping-floor/**
