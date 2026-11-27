@@ -18,7 +18,7 @@ export const HEROES = {
   wren: {
     name: 'Wren Calloway-Ashe', sex: 0.42, age: 24, muscle: 0.62, weight: 0.38, race: { caucasian: 0.5, asian: 0.3, african: 0.2 }, height: 0.99,
     dials: { 'nose/nose-hump-incr': 0.25, 'chin/chin-prominent-incr': 0.2, 'cheek/l-cheek-bones-incr': 0.3, 'cheek/r-cheek-bones-incr': 0.3, 'eyes/l-eye-scale-incr': 0.15, 'eyes/r-eye-scale-incr': 0.15, 'asym/asym-nose-1-l': 0.3 },
-    skin: 'young_caucasian_female', eyes: 'bluegreen', brow: 'brow7', lash: 'lash2', hair: 'short02',
+    skin: 'young_asian_female', eyes: 'bluegreen', brow: 'brow7', lash: 'lash2', hair: 'short02',
     look: { hairColor: H.darkBrown, tone: [0.86, 0.76, 0.66], freckles: 0.8, weathered: 0.6, scar: [[0.035, -0.035], [0.052, -0.062]], salt: 0.7, wear: 0.7, patches: 1 },
     clothes: ['female_sportsuit01', 'shoes05'], clothTints: [[0.42, 0.38, 0.32], [0.3, 0.28, 0.26]], emotion: 'calm', tier: 7,
   },

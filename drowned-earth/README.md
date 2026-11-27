@@ -97,6 +97,14 @@ compresses geometry with meshopt, simplifies every model to a triangle budget an
 (≈18 %), and trims the animation library to the clips the game uses. Download size: ≈ 6 MB of 1k
 materials (+ ≈ 25 MB of 2k on Ultra), 6 MB of HDRIs, 23 MB of models, 9 MB of characters.
 
+### People
+
+Raft-folk and heroes are built at runtime from MakeHuman's CC0 assets (see `PROGRESS.md` §I).
+Inspect them in the character viewer: `?viewer=1&who=bram&light=dusk&shot=close&emotion=amused&talk=1`
+(`who` = a hero id or `npc1…npc24`; `light` = day, overcast, dusk, night, rain, backlit; `shot` =
+close, mid, full; `row=1` for a crowd lineup). `node scripts/viewer-shots.mjs out/` renders a gallery.
+Rebuild the kit with `MH_DATA=/path/to/makehuman/data node scripts/humans/build.mjs`.
+
 ### Debug URL parameters
 
 `?skipintro=1&time=21.5&freeze=1&weather=storm&quality=ultra&stats=1&pause=1&touch=1&debug=1&noassets=1&dynres=0`
