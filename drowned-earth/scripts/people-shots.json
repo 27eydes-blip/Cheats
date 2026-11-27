@@ -1,0 +1,63 @@
+[
+ {
+  "name": "p1-kit-wolf-roof",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "18.6",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 20,
+  "wait": 600,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,S=c.society;S.toggleDebug();const sc=S.d.scenarios['wolf_roof'];const cr=c.creatures.byId(sc.creature);for(let i=0;i<200&&cr.place.roof&&!cr.homed;i++){c.player.teleport(cr.home.clone().add({x:20,y:30,z:0}));g.step(2);await new Promise(q=>setTimeout(q,0));}const a=S.forceScenario('wolf_roof',true);const V=c.player.position.constructor;const up=c.player.update.bind(c.player);const hold=c.player.position.clone();const hm=c.player.mode;c.player.update=(dt)=>{up(dt);c.player.position.copy(hold);c.player.mode=hm;c.player.velocity.set(0,0,0);};for(let i=0;i<420&&a&&!a.done;i++){g.step(1);const v=a.pos.clone().sub(c.camera.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y,Math.hypot(v.x,v.z));if(i%20==0)await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "p2-corr-netweaver",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "21.5",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 20,
+  "wait": 600,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,S=c.society;S.toggleDebug();const sc=S.d.scenarios['drunk_dive'];const cr=c.creatures.byId(sc.creature);for(let i=0;i<200&&cr.place.roof&&!cr.homed;i++){c.player.teleport(cr.home.clone().add({x:20,y:30,z:0}));g.step(2);await new Promise(q=>setTimeout(q,0));}const a=S.forceScenario('drunk_dive',true);const V=c.player.position.constructor;const up=c.player.update.bind(c.player);const hold=c.player.position.clone();const hm=c.player.mode;c.player.update=(dt)=>{up(dt);c.player.position.copy(hold);c.player.mode=hm;c.player.velocity.set(0,0,0);};for(let i=0;i<330&&a&&!a.done;i++){g.step(1);const v=a.pos.clone().sub(c.camera.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y,Math.hypot(v.x,v.z));if(i%20==0)await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "p3-tamsin-crab",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "16",
+   "freeze": "1",
+   "pos": "0,5,0",
+   "mode": "foot",
+   "agegate": "off"
+  },
+  "frames": 20,
+  "wait": 600,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,S=c.society;S.toggleDebug();const sc=S.d.scenarios['crab_nest'];const cr=c.creatures.byId(sc.creature);for(let i=0;i<200&&cr.place.roof&&!cr.homed;i++){c.player.teleport(cr.home.clone().add({x:20,y:30,z:0}));g.step(2);await new Promise(q=>setTimeout(q,0));}const a=S.forceScenario('crab_nest',true);const V=c.player.position.constructor;const up=c.player.update.bind(c.player);const hold=c.player.position.clone();const hm=c.player.mode;c.player.update=(dt)=>{up(dt);c.player.position.copy(hold);c.player.mode=hm;c.player.velocity.set(0,0,0);};for(let i=0;i<300&&a&&!a.done;i++){g.step(1);const v=a.pos.clone().sub(c.camera.position);c.player.yaw=Math.atan2(-v.x,-v.z);c.player.pitch=Math.atan2(v.y,Math.hypot(v.x,v.z));if(i%20==0)await new Promise(q=>setTimeout(q,0));}})()"
+ },
+ {
+  "name": "p4-portage-life",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "17.5",
+   "freeze": "1",
+   "pos": "318,1.5,252",
+   "mode": "foot",
+   "yaw": "0.3",
+   "agegate": "off",
+   "people": "debug"
+  },
+  "frames": 40,
+  "wait": 1500
+ }
+]

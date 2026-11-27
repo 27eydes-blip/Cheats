@@ -93,6 +93,7 @@ export class NPC {
     this.root.scale.setScalar(def.scale || 1);
   }
   currentTask() {
+    if (this.override) return this.override; // the Society bends the routine
     const h = this.ctx.time.hour;
     let best = this.def.schedule[0];
     for (const s of this.def.schedule) if (h >= s.from && h < s.to) best = s;
@@ -127,7 +128,7 @@ export class NPC {
     const dist = Math.hypot(dx, dz);
     let moving = false;
     if (dist > 0.15) {
-      const sp = this.backoff > 0 ? 1.4 : 1.0;
+      const sp = (this.backoff > 0 ? 1.4 : 1.0) * (this.speedK ?? 1);
       const step = Math.min(dist, sp * dt);
       this.local.x += (dx / dist) * step; this.local.z += (dz / dist) * step;
       // stay on deck

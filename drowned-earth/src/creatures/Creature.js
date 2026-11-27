@@ -79,6 +79,36 @@ export class Creature {
     if (this.kind === 'siltwolf' && S.running && d < sp.alertR) add(0.75, 'running');
     s *= 1 + this.wary * 0.5 + (this.ctx.state.glow || 0) * 0.15;
     this.threat += (s - this.threat) * Math.min(1, dt * (s > this.threat ? 6 : 1.2));
+    // NPCs out in the world: weigh each actor near the territory the same way
+    // (closeness, noise, light, blood); the most provoking one becomes the prey
+    let prey = null;
+    for (const a of this.mgr.actors || []) {
+      if (!a.alive || a.safe) continue;
+      const da = this.pos.distanceTo(a.pos);
+      if (da > sp.alertR * 1.6) continue;
+      const dh = Math.hypot(a.pos.x - this.home.x, a.pos.z - this.home.z);
+      let sa = 0, wa = '';
+      const addA = (v, w) => { if (v > sa) { sa = v; wa = w; } };
+      if (da < sp.warnR) addA(0.65 + (sp.warnR - da) / sp.warnR * 0.4, 'too close');
+      else if (dh < sp.territoryR && sp.temperament !== 'ambusher') addA(0.32, 'territory');
+      addA((se.hearing || 0) * a.noise * Math.max(0, 1 - da / (sp.alertR * 1.6)), 'noise');
+      if (a.light && se.light > 0) addA(se.light * 0.6 * Math.max(0, 1 - da / 22), 'light');
+      if (a.food && se.food) addA(se.food * a.food * Math.max(0, 1 - da / sp.alertR), 'food');
+      if (a.blood && se.blood) addA(se.blood * a.blood * Math.max(0, 1 - da / (sp.alertR * 2)), 'blood');
+      if (this.kind === 'siltwolf' && a.running && da < sp.alertR) addA(0.75, 'running');
+      if (this.prey === a) sa *= 1.3; // stays on the one it was already after
+      if (sa > s) { s = sa; why = wa; prey = a; }
+    }
+    if (prey) {
+      s *= 1 + this.wary * 0.5;
+      this.threat += (s - this.threat) * Math.min(1, dt * (s > this.threat ? 6 : 1.2));
+      const da = this.pos.distanceTo(prey.pos), dh = Math.hypot(prey.pos.x - this.home.x, prey.pos.z - this.home.z);
+      this.prey = prey;
+      this.perceived = { d: da, dHome: dh, inTerritory: dh < sp.territoryR, why: why + ` (${prey.name})` };
+      return why;
+    }
+    if (this.prey && this.state !== 'attack') this.prey = null;
+    if (this.prey && (!this.prey.alive || this.prey.safe)) this.prey = null;
     this.perceived = { d, dHome, inTerritory, why };
     return why;
   }
@@ -146,10 +176,15 @@ export class Creature {
     if (off.length() > maxR) { off.setLength(maxR); this.pos.x = this.home.x + off.x; this.pos.z = this.home.z + off.z; }
   }
   // hurt the player if close enough and ready
+  preyPos() { return this.prey ? this.prey.pos : this.ctx.player.position; }
   strike(range, opts = {}) {
-    const d = this.pos.distanceTo(this.ctx.player.position);
+    const d = this.pos.distanceTo(this.preyPos());
     if (d > range || this.cool > 0) return false;
     this.cool = this.spec.rate * (0.8 + Math.random() * 0.4);
+    if (this.prey) { this.prey.hit(this.spec.damage * (opts.k || 1), { bleed: this.spec.bleed, source: this.kind, lethal: !!this.spec.lethal, breaks: opts.breaks, creature: this }); this.mgr.logTransition(this, 'attack', 'attack', 'struck ' + this.prey.name);
+      // territorial, not hungry: once the intruder is down, it usually breaks off
+      if (this.prey?.downed && !this.spec.lethal && Math.random() < 0.6) this.setState('return', 'intruder down');
+      return true; }
     this.ctx.injury.hit(this.spec.damage * (opts.k || 1), { bleed: this.spec.bleed, source: this.kind, what: this.spec.name.toLowerCase(), lethal: !!this.spec.lethal, breaks: opts.breaks, dirty: true });
     this.mgr.noteSeen(this, 'hurt');
     return true;

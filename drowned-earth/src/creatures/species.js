@@ -33,7 +33,7 @@ export function gullrat(mgr, c) {
       // follow the raft they live on
       mgr.resolveHome(c);
       nest.position.copy(c.home).add(_v.set(0, 0.05, 0));
-      let goal = c.state === 'attack' ? mgr.ctx.player.position : c.state === 'warning' ? _v.copy(mgr.ctx.player.position).lerp(c.home, 0.4) : wanderGoal(c, c.spec.territoryR * 0.6, 0.4);
+      let goal = c.state === 'attack' ? (c.prey ? c.prey.pos : mgr.ctx.player.position) : c.state === 'warning' ? _v.copy((c.prey ? c.prey.pos : mgr.ctx.player.position)).lerp(c.home, 0.4) : wanderGoal(c, c.spec.territoryR * 0.6, 0.4);
       if (c.lure) goal = c.lure;
       if (c.state === 'return' || !c.awake) goal = c.home;
       c.steer(goal, c.spec.speed * (c.state === 'attack' ? 1 : 0.4), dt, { keepY: true, maxR: c.spec.territoryR + c.spec.leash });
@@ -126,7 +126,7 @@ export function siltwolf(mgr, c) {
     move(c, dt) {
       if (!mgr.resolveHome(c)) return;
       den.position.copy(c.home);
-      const p = mgr.ctx.player.position;
+      const p = (c.prey ? c.prey.pos : mgr.ctx.player.position);
       let goal;
       if (c.state === 'attack') goal = p;
       else if (c.state === 'warning') goal = _v.copy(c.home).lerp(p, 0.45); // stand between you and the den
@@ -139,7 +139,7 @@ export function siltwolf(mgr, c) {
     },
     attack(c) { if (c.strike(1.7, { breaks: 0.18 })) mgr.sound('growl', c.pos, 1); },
     animate(c, dt) {
-      const p = mgr.ctx.player.position;
+      const p = (c.prey ? c.prey.pos : mgr.ctx.player.position);
       const moving = c.state === 'attack' ? 1 : c.state === 'idle' || c.state === 'return' ? 0.3 : 0.1;
       pack.forEach((w, i) => {
         const spread = Math.min(c.state === 'warning' ? 1.4 : 1, (c.roofR ?? 99) / 4);
@@ -180,7 +180,7 @@ export function needlefish(mgr, c) {
   return {
     group,
     move(c, dt) {
-      const p = mgr.ctx.player.position;
+      const p = (c.prey ? c.prey.pos : mgr.ctx.player.position);
       let goal = c.state === 'attack' ? p : c.lure || wanderGoal(c, c.spec.territoryR * 0.6, 0.2);
       // slow swimmers make them scatter away
       if (c.state === 'alert' && c.perceived.d < 6 && mgr.senses.noise < 0.1) goal = _v.copy(c.pos).add(_w.copy(c.pos).sub(p).setLength(4));
@@ -238,7 +238,7 @@ export function netweaver(mgr, c) {
     // it doesn't chase: the threads lash at whatever is near and stings what they touch
     attack(c) { /* stinging is handled in animate by thread contact */ },
     animate(c, dt) {
-      const p = mgr.ctx.player.position;
+      const p = (c.prey ? c.prey.pos : mgr.ctx.player.position);
       const want = c.state === 'attack' ? 1 : c.state === 'warning' ? 0.6 : c.state === 'alert' ? 0.25 : 0;
       flare += (want - flare) * Math.min(1, dt * 3);
       group.position.copy(c.pos);
@@ -339,14 +339,15 @@ export function bloomwalker(mgr, c) {
   return {
     group: g,
     move(c, dt) {
-      const p = mgr.ctx.player.position, S = mgr.senses;
+      const p = (c.prey ? c.prey.pos : mgr.ctx.player.position), S = mgr.senses;
       // turns toward light and warmth; otherwise drifts upright in place
       let goal = c.state === 'attack' || (c.state === 'warning' && S.light > 0) ? p : c.state === 'return' ? c.home : wanderGoal(c, 2, 0.02);
       c.steer(goal, c.spec.speed * (c.state === 'attack' ? 1.1 : 0.4), dt, { maxR: c.spec.territoryR + c.spec.leash });
       c.pos.y = c.home.y + Math.sin(c.t * 0.4) * 0.3;
     },
     attack(c) {
-      const d = c.pos.distanceTo(mgr.ctx.player.position);
+      const d = c.pos.distanceTo((c.prey ? c.prey.pos : mgr.ctx.player.position));
+      if (c.prey) { c.strike(1.5); return; }
       if (d < 1.4 && !mgr.struggle && c.cool <= 0) mgr.startStruggle(c);
     },
     animate(c, dt) {

@@ -762,7 +762,7 @@
     {
      "if": "heard_teo",
      "once": true,
-     "text": "You're Teo's sister. Same scowl. His dive bag's been under my bench since the spring. It's yours \u2014 it's on the table. Don't listen to it here. Bram doesn't do crying on the rig."
+     "text": "You're Teo's sister. Same scowl. His dive bag's been under my bench since the spring. It's yours — it's on the table. Don't listen to it here. Bram doesn't do crying on the rig."
     },
     {
      "text": "That hull is patches holding hands. Bench is yours if you've parts. Rusthold doesn't check wrists. Just hands."
@@ -820,6 +820,321 @@
     },
     {
      "text": "You're Teo's sister? He left a dive bag here once. Bram kept it. Ask him."
+    }
+   ]
+  },
+  {
+   "id": "kit",
+   "name": "Kit Marrow",
+   "raft": "repair",
+   "role": "scavenger",
+   "spawn": [
+    2,
+    0
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "haul",
+     "pos": [
+      2,
+      0
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      2,
+      0
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "hollis",
+   "name": "Hollis Pike",
+   "raft": "dock",
+   "role": "fisher",
+   "spawn": [
+    1,
+    2
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "fish",
+     "pos": [
+      1,
+      2
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      1,
+      2
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "nell",
+   "name": "Nell Asante",
+   "raft": "garden",
+   "role": "cook",
+   "spawn": [
+    0,
+    2
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "cook",
+     "pos": [
+      0,
+      2
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      0,
+      2
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "brin",
+   "name": "Brin Okoye",
+   "raft": "sleep1",
+   "role": "rope-maker",
+   "spawn": [
+    1,
+    -1
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "repair",
+     "pos": [
+      1,
+      -1
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      1,
+      -1
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "tamsin",
+   "name": "Tamsin Reyes",
+   "raft": "market",
+   "role": "glass trader",
+   "spawn": [
+    -5,
+    1
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "sell",
+     "pos": [
+      -5,
+      1
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      -5,
+      1
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "osk",
+   "name": "Old Osk",
+   "raft": "chapel",
+   "role": "net-mender",
+   "spawn": [
+    1,
+    1
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "sit",
+     "pos": [
+      1,
+      1
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      1,
+      1
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "juno",
+   "name": "Juno Vale",
+   "raft": "sleep2",
+   "role": "runner",
+   "spawn": [
+    2,
+    1
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "idle",
+     "pos": [
+      2,
+      1
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      2,
+      1
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "perrin",
+   "name": "Perrin Lusk",
+   "raft": "lookout",
+   "role": "signaller",
+   "spawn": [
+    1,
+    1
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "watch",
+     "pos": [
+      1,
+      1
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      1,
+      1
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
+    }
+   ]
+  },
+  {
+   "id": "ama",
+   "name": "Ama Boateng",
+   "raft": "water",
+   "role": "water-boiler",
+   "spawn": [
+    0,
+    1
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 21,
+     "do": "cook",
+     "pos": [
+      0,
+      1
+     ]
+    },
+    {
+     "from": 21,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      0,
+      1
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Busy. Always busy. Ask me later."
     }
    ]
   }

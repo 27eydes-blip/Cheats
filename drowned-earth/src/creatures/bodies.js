@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BODIES as BASIC } from './species.js';
 import { quadruped, gullModel, needlefishGeometry, needlefishMaterial, SILTWOLF, GULLRAT } from './Models.js';
 import { buildJelly } from './Jelly.js';
-import { spikeGeometry, bloomCluster, setBloomGlow, attachAtVertex, pickVertices, tickGrowths, weed } from './Mutate.js';
+import { spikeGeometry, bloomCluster, setBloomGlow, attachAtVertex, pickVertices, tickGrowths, weed, mutantMaterial, spike, barnacles, glowEye } from './Mutate.js';
 import { Person } from '../humans/Person.js';
 import { generatePerson } from '../humans/Roster.js';
 import { extraArms, deadSkin } from './HumanMutate.js';
@@ -70,7 +70,7 @@ function siltwolf(mgr, c) {
     onState: base.onState,
     animate(cc, dt) {
       den.position.copy(cc.home);
-      const p = mgr.ctx.player.position;
+      const p = (c.prey ? c.prey.pos : mgr.ctx.player.position);
       const t = cc.t;
       pack.forEach((w, i) => {
         const roofK = Math.min(1, (cc.roofR ?? 99) / 4);
@@ -134,7 +134,7 @@ function gullrat(mgr, c) {
       group.visible = cc.awake;
       if (!cc.awake) return;
       const agitated = cc.state === 'attack' || cc.state === 'warning';
-      const pl = mgr.ctx.player.position;
+      const pl = (c.prey ? c.prey.pos : mgr.ctx.player.position);
       for (const m of members) {
         m.ph += dt * (agitated ? 4 : 1);
         const r = agitated ? 0.9 : 1.6;
@@ -205,7 +205,7 @@ function netweaver(mgr, c) {
     move: BASIC.netweaver(mgr, c).move,
     attack() {},
     animate(cc, dt) {
-      const p = mgr.ctx.player.position;
+      const p = (c.prey ? c.prey.pos : mgr.ctx.player.position);
       const want = cc.state === 'attack' ? 1 : cc.state === 'warning' ? 0.6 : cc.state === 'alert' ? 0.25 : 0;
       flare += (want - flare) * Math.min(1, dt * 3);
       jelly.group.position.copy(cc.pos);
@@ -213,10 +213,11 @@ function netweaver(mgr, c) {
       const local = jelly.group.worldToLocal(_v.copy(p));
       jelly.update(dt, flare, local);
       // brushing the threads always stings, whatever its state (same rule as before)
-      if (cc.cool <= 0 && jelly.touches(local, flare)) {
+      if (cc.cool <= 0 && (jelly.touches(local, flare) || (flare > 0.8 && local.length() < 3.2))) {
         cc.cool = cc.spec.rate;
-        mgr.ctx.injury.hit(cc.spec.damage * (cc.state === 'attack' ? 1 : 0.6), { source: 'netweaver', what: 'a net-weaver' });
-        mgr.ctx.survival.oxygen = Math.max(0, mgr.ctx.survival.oxygen - 22);
+        if (cc.prey) cc.prey.hit(cc.spec.damage * (cc.state === 'attack' ? 1 : 0.6), { source: 'netweaver', creature: cc });
+        else { mgr.ctx.injury.hit(cc.spec.damage * (cc.state === 'attack' ? 1 : 0.6), { source: 'netweaver', what: 'a net-weaver' });
+        mgr.ctx.survival.oxygen = Math.max(0, mgr.ctx.survival.oxygen - 22); }
         mgr.sound('sting', p, 1);
         if (cc.state !== 'attack') cc.setState('attack', 'touched');
         mgr.noteSeen(cc, 'hurt');
@@ -317,7 +318,7 @@ function bloomwalker(mgr, c) {
       // drifting upright, arms loose; when it wants you it reaches
       person.play(reach ? 'Push_Loop' : 'Idle_Loop', 1.2);
       if (person.current) person.current.timeScale = reach ? 0.35 : 0.18;
-      person.update(dt, cc.state === 'idle' ? null : mgr.ctx.player.position);
+      person.update(dt, cc.state === 'idle' ? null : (c.prey ? c.prey.pos : mgr.ctx.player.position));
       const glow = 0.8 + Math.sin(cc.t * 1.3) * 0.2 + (cc.state === 'attack' ? 0.9 : 0) - (cc.saltT > 0 ? 0.6 : 0);
       setBloomGlow(glow); tickGrowths(cc.t);
       light.intensity = cc.state === 'idle' ? 0.5 : 1.2;
@@ -343,12 +344,87 @@ function denStain() {
   return _stain;
 }
 
-const MODEL = { siltwolf, gullrat, needlefish, netweaver, listener, bloomwalker };
+// ---------------------------------------------------------------- tide crabs
+// An armoured scavenger the size of a car: a ridged, barnacled carapace, eight
+// jointed legs that walk in alternating sets, and two heavy claws that rise in
+// warning and snap when it attacks. It guards a nest of sea-glass.
+function tide_crab(mgr, c) {
+  const g = new THREE.Group();
+  const look = { fur: 0x5a3a2a, furLight: 0x8a6a4a, dark: 0x22140e, skin: 0x7a4a3a, algae: 0x3a4a24, glow: 0xff8040, wet: 0.8, mange: 0, algaeAmt: 0.7, veins: 0.3, noiseScale: 1.6, bump: 0.03, lightPart: 9, darkPart: 9 };
+  const shellM = mutantMaterial(look);
+  const withPart = (geo) => { geo.setAttribute('aPart', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count), 1)); return geo; };
+  // carapace: a wide flattened dome with a ridged front edge and spines
+  const cg = new THREE.SphereGeometry(1, 40, 20); const P = cg.attributes.position;
+  for (let i = 0; i < P.count; i++) { let x = P.getX(i), y = P.getY(i), z = P.getZ(i); const a = Math.atan2(z, x); const rim = 1 + 0.06 * Math.sin(a * 11) * Math.max(0, 1 - Math.abs(y) * 3); P.setXYZ(i, x * 1.25 * rim, y * (y > 0 ? 0.42 : 0.22), z * 0.95 * rim - (z > 0.6 ? (z - 0.6) * 0.3 : 0)); }
+  cg.computeVertexNormals();
+  const shell = new THREE.Mesh(withPart(cg), shellM); shell.position.y = 0.7; shell.castShadow = true; g.add(shell);
+  for (let k = 0; k < 4; k++) { const s = spike(0.25, 0.06, 0.2, k + 70); s.position.set(-0.6 + k * 0.4, 1.0, -0.6); s.rotation.x = -0.6; g.add(s); }
+  for (let k = 0; k < 3; k++) { const b = barnacles(0.3, 8, k + 80); b.position.set(-0.6 + k * 0.6, 1.05, 0.2 - k * 0.15); g.add(b); }
+  // eyes on stalks
+  for (const sx of [-0.22, 0.22]) { const st = new THREE.Mesh(withPart(new THREE.CylinderGeometry(0.03, 0.04, 0.3, 6)), shellM); st.position.set(sx, 1.0, -0.85); g.add(st); const e = glowEye(0.05, 0xffa040); e.position.set(sx, 1.17, -0.85); g.add(e); }
+  // legs: two tapered segments per leg, hinged at the knee
+  const legs = [];
+  const seg = (len, r0, r1) => { const gg = new THREE.CylinderGeometry(r1, r0, len, 8, 4); gg.translate(0, -len / 2, 0); return withPart(gg); };
+  for (const side of [-1, 1]) for (let k = 0; k < 4; k++) {
+    const hip = new THREE.Group(); hip.position.set(side * 1.05, 0.7, -0.45 + k * 0.32);
+    const upper = new THREE.Mesh(seg(0.75, 0.09, 0.07), shellM); upper.rotation.z = side * -1.1; hip.add(upper);
+    const knee = new THREE.Group(); knee.position.set(side * 0.66, -0.34, 0); hip.add(knee);
+    const lower = new THREE.Mesh(seg(0.85, 0.065, 0.02), shellM); lower.rotation.z = side * -0.25; knee.add(lower);
+    g.add(hip); legs.push({ hip, knee, side, k });
+  }
+  // claws: an arm and a heavy two-part pincer
+  const claws = [];
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Group(); arm.position.set(side * 0.75, 0.75, -0.8);
+    const fore = new THREE.Mesh(seg(0.6, 0.12, 0.1), shellM); fore.rotation.x = Math.PI / 2 + 0.3; arm.add(fore);
+    const hand = new THREE.Group(); hand.position.set(0, -0.15, -0.6); arm.add(hand);
+    const palm = new THREE.Mesh(withPart(new THREE.SphereGeometry(0.22, 16, 10).scale(1, 0.75, 1.5)), shellM); hand.add(palm);
+    const fixedF = new THREE.Mesh(seg(0.5, 0.09, 0.015), shellM); fixedF.rotation.x = Math.PI / 2; fixedF.position.set(0, -0.05, -0.25); hand.add(fixedF);
+    const dactyl = new THREE.Group(); dactyl.position.set(0, 0.08, -0.25); hand.add(dactyl);
+    const df = new THREE.Mesh(seg(0.45, 0.07, 0.012), shellM); df.rotation.x = Math.PI / 2; dactyl.add(df);
+    g.add(arm); claws.push({ arm, dactyl, side });
+  }
+  g.scale.setScalar(c.spec.size || 1.1);
+  // the nest: sea-glass in a scraped hollow
+  const nest = new THREE.Group();
+  const glassM = new THREE.MeshStandardMaterial({ color: 0x7ac0a8, roughness: 0.15, transparent: true, opacity: 0.8 });
+  for (let i = 0; i < 26; i++) { const sh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05 + Math.random() * 0.06, 0), glassM); sh.position.set((Math.random() - 0.5) * 1.6, 0.03, (Math.random() - 0.5) * 1.6); sh.rotation.set(Math.random() * 3, Math.random() * 3, 0); nest.add(sh); }
+  const group = new THREE.Group(); group.add(g, nest);
+  let walk = 0, snap = 0, last = new THREE.Vector3();
+  return {
+    group,
+    focus: () => _v.copy(g.position).setY(g.position.y + 0.8),
+    move(cc, dt) {
+      const p = cc.preyPos();
+      let goal = cc.state === 'attack' ? p : cc.state === 'warning' ? _v.copy(cc.home).lerp(p, 0.3) : cc.state === 'return' ? cc.home : _v.copy(cc.home).add(_w.set(Math.sin(cc.t * 0.07) * 2, 0, Math.cos(cc.t * 0.05) * 2));
+      cc.steer(goal, (cc.spec.speed || 1.6) * (cc.state === 'attack' ? 1 : 0.35), dt, { keepY: true, maxR: cc.spec.territoryR + cc.spec.leash });
+    },
+    attack(cc) { if (cc.strike(1.9, { breaks: 0.3 })) { snap = 1; mgr.sound('huff', cc.pos, 0.8); } },
+    onState(cc, s) { if (s === 'warning') mgr.sound('chitter', cc.pos, 1); },
+    animate(cc, dt) {
+      nest.position.copy(cc.home);
+      g.position.copy(cc.pos); g.position.y = cc.home.y;
+      const sp = last.distanceTo(cc.pos) / Math.max(dt, 1e-3); last.copy(cc.pos);
+      walk += dt * (1 + sp * 4);
+      // crabs walk sideways: face the threat, scuttle across it
+      const p = cc.preyPos();
+      const want = cc.state === 'idle' || cc.state === 'return' ? cc.heading : Math.atan2(p.x - cc.pos.x, p.z - cc.pos.z) + Math.PI;
+      g.rotation.y += Math.atan2(Math.sin(want - g.rotation.y), Math.cos(want - g.rotation.y)) * Math.min(1, dt * 3);
+      for (const L of legs) { const ph = walk * 6 + (L.k % 2 ? Math.PI : 0) + (L.side > 0 ? Math.PI / 2 : 0); const m = Math.min(1, sp * 0.8); L.hip.rotation.y = Math.sin(ph) * 0.35 * m; L.hip.rotation.z = Math.max(0, Math.cos(ph)) * 0.25 * m * L.side; L.knee.rotation.z = -Math.max(0, Math.cos(ph)) * 0.3 * m * L.side; }
+      const raise = cc.state === 'warning' ? 1 : cc.state === 'attack' ? 0.8 : cc.state === 'alert' ? 0.4 : 0;
+      snap = Math.max(0, snap - dt * 3);
+      for (const C of claws) { C.arm.rotation.x = -raise * 0.9 + Math.sin(cc.t * 2 + C.side) * 0.05; C.dactyl.rotation.x = -0.35 * (raise > 0.5 ? 0.5 + 0.5 * Math.sin(cc.t * 9) : 0.2) + snap * 0.5; }
+      shellM.userData.u.uTime.value = cc.t;
+    },
+  };
+}
+
+const MODEL = { tide_crab, siltwolf, gullrat, needlefish, netweaver, listener, bloomwalker };
 // pick the model body when the models loaded, else the simple one
 export function makeBody(mgr, c) {
   const k = c.kind;
   const lib = mgr.ctx.creatureModels;
-  try { if (MODEL[k] && (lib || k === 'netweaver')) return MODEL[k](mgr, c); } catch (e) { console.warn('[creatures] model body failed for', k, e); }
-  return BASIC[k](mgr, c);
+  try { if (MODEL[k] && (lib || k === 'netweaver' || k === 'tide_crab')) return MODEL[k](mgr, c); } catch (e) { console.warn('[creatures] model body failed for', k, e); }
+  return BASIC[k] ? BASIC[k](mgr, c) : MODEL[k](mgr, c);
 }
 void _w; void _y;

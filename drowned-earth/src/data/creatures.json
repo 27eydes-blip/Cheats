@@ -248,13 +248,45 @@
   },
   "tide_crab": {
    "name": "Tide Crabs",
-   "kind": "stub",
+   "kind": "armoured",
+   "count": 1,
    "temperament": "protective",
-   "habitat": "drowned lobbies",
-   "notes": [
-    "Armoured scavengers the size of a car. Slow. They only fight what steps on them."
+   "habitat": "drowned lobbies and shallow ledges, on a nest of sea-glass",
+   "territoryR": 7,
+   "alertR": 10,
+   "warnR": 3.5,
+   "leash": 5,
+   "warnTime": 3.0,
+   "size": 1.1,
+   "senses": {
+    "hearing": 0.3,
+    "vision": 0.5,
+    "light": 0.2,
+    "blood": 0.2,
+    "food": 0.3,
+    "vibration": 0.9
+   },
+   "damage": 14,
+   "bleed": 0.12,
+   "rate": 1.4,
+   "speed": 1.6,
+   "active": "any",
+   "health": 120,
+   "signs": [
+    "Sea-glass heaped in a hollow",
+    "Scrape marks on lobby tiles",
+    "Claw-snapped rebar"
    ],
-   "stub": true
+   "weak": [
+    "They are slow: walk away and they settle",
+    "Never step on the nest",
+    "A spear to the eye-stalks makes them back off"
+   ],
+   "notes": [
+    "Armoured scavengers the size of a car. They hoard sea-glass, and people trade sea-glass.",
+    "They only fight what threatens the nest. They will fight it for a long time.",
+    "Greedy raft-folk raid the nests. Some come back with glass."
+   ]
   },
   "spore_heron": {
    "name": "Spore Herons",
@@ -409,6 +441,14 @@
    "x": -238,
    "z": 198,
    "depth": 6
+  },
+  {
+   "species": "tide_crab",
+   "id": "tc_portage",
+   "x": 262,
+   "z": 214,
+   "depth": 0.6,
+   "nest": "glass"
   }
  ],
  "encounters": {

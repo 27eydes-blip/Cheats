@@ -1,0 +1,678 @@
+{
+ "_doc": "Living NPCs. people: personality and life for each named NPC (id matches npcs.json). traits are 0..1 sliders: caution (0 reckless..1 cautious), curiosity, industry (0 lazy..1 hardworking), warmth (0 suspicious..1 friendly), greed (0 generous..1 greedy), courage (0 cowardly..1 brave), talk (0 quiet..1 talkative), superstition, honesty (0 sneaky..1 honest), temper (0 calm..1 hot-tempered). Missing traits are seeded from the id. job: work activity + where (platform spot). bunk: platform. friends, rival, family, partner: ids. habit: one of habits{}. fear, want, secret: text. speech: blunt | rambling | formal | joking | nervous. habits: risky or ordinary pastimes; risky ones name a scenario. scenarios: emergent incidents' routes (waypoints relative to the creature's home, metres) — the system decides who goes, when, and what happens. talk: conversation templates by topic. stubs: people not yet simulated.",
+ "people": {
+  "oru": {
+   "traits": {
+    "caution": 0.7,
+    "warmth": 0.6,
+    "greed": 0.5,
+    "courage": 0.7,
+    "talk": 0.7,
+    "honesty": 0.6,
+    "temper": 0.4
+   },
+   "job": "trade",
+   "bunk": "market",
+   "friends": [
+    "odile",
+    "dela",
+    "osk"
+   ],
+   "rival": "sal",
+   "habit": "gambling",
+   "fear": "Portage sinking while she sleeps",
+   "want": "a seat on the Concord's supply board",
+   "secret": "She sold Highmark the tide charts in the first year.",
+   "speech": "formal"
+  },
+  "ruel": {
+   "traits": {
+    "caution": 0.8,
+    "warmth": 0.4,
+    "courage": 0.6,
+    "talk": 0.3,
+    "temper": 0.6
+   },
+   "job": "watch",
+   "bunk": "market",
+   "friends": [
+    "pell",
+    "hollis"
+   ],
+   "rival": "juno",
+   "habit": "tinkering",
+   "fear": "a boat he waved in sinking Portage",
+   "want": "one quiet night",
+   "secret": "He can't swim.",
+   "speech": "blunt"
+  },
+  "odile": {
+   "traits": {
+    "caution": 0.5,
+    "warmth": 0.8,
+    "greed": 0.6,
+    "talk": 0.9,
+    "curiosity": 0.7
+   },
+   "job": "trade",
+   "bunk": "market",
+   "friends": [
+    "oru",
+    "tamsin",
+    "nell"
+   ],
+   "rival": "dela",
+   "habit": "gossip",
+   "fear": "being forgotten",
+   "want": "a stall with a roof",
+   "secret": "Her 'sealed' tins are refilled.",
+   "speech": "rambling"
+  },
+  "dela": {
+   "traits": {
+    "caution": 0.6,
+    "warmth": 0.7,
+    "industry": 0.9,
+    "talk": 0.6
+   },
+   "job": "cook",
+   "bunk": "market",
+   "friends": [
+    "oru",
+    "nell",
+    "maud"
+   ],
+   "rival": "odile",
+   "family": [
+    "juno"
+   ],
+   "habit": "praying",
+   "fear": "the children going hungry",
+   "want": "an oven",
+   "secret": "Juno is not her niece. Juno is her daughter.",
+   "speech": "joking"
+  },
+  "keeper": {
+   "traits": {
+    "caution": 0.8,
+    "warmth": 0.6,
+    "superstition": 0.9,
+    "talk": 0.4,
+    "temper": 0.1
+   },
+   "job": "pray",
+   "bunk": "chapel",
+   "friends": [
+    "osk",
+    "maud"
+   ],
+   "rival": null,
+   "habit": "praying",
+   "fear": "the Deep's song",
+   "want": "everyone home before dark",
+   "secret": "He hears it too.",
+   "speech": "formal"
+  },
+  "pell": {
+   "traits": {
+    "caution": 0.6,
+    "curiosity": 0.8,
+    "talk": 0.3,
+    "courage": 0.5
+   },
+   "job": "watch",
+   "bunk": "lookout",
+   "friends": [
+    "ruel",
+    "perrin"
+   ],
+   "rival": "kit",
+   "habit": "tinkering",
+   "fear": "heights, privately",
+   "want": "a real telescope",
+   "secret": "He's been logging lights under the Sounding.",
+   "speech": "nervous"
+  },
+  "ivo": {
+   "traits": {
+    "caution": 0.4,
+    "industry": 0.8,
+    "greed": 0.4,
+    "courage": 0.6,
+    "temper": 0.5
+   },
+   "job": "repair",
+   "bunk": "water",
+   "friends": [
+    "ama",
+    "brin"
+   ],
+   "rival": "hollis",
+   "habit": "tinkering",
+   "fear": "the pumps failing",
+   "want": "spare parts that fit",
+   "secret": "He drinks the clean water first.",
+   "speech": "blunt"
+  },
+  "moss": {
+   "traits": {
+    "caution": 0.6,
+    "warmth": 0.9,
+    "industry": 0.7,
+    "talk": 0.5
+   },
+   "job": "garden",
+   "bunk": "garden",
+   "friends": [
+    "nell",
+    "keeper"
+   ],
+   "rival": null,
+   "habit": "praying",
+   "fear": "blight",
+   "want": "one apple tree",
+   "secret": "She hides seed in the chapel.",
+   "speech": "rambling"
+  },
+  "maud": {
+   "traits": {
+    "caution": 0.8,
+    "warmth": 0.5,
+    "talk": 0.8,
+    "superstition": 0.7,
+    "industry": 0.3
+   },
+   "job": "laundry",
+   "bunk": "sleep1",
+   "friends": [
+    "dela",
+    "keeper"
+   ],
+   "rival": "odile",
+   "habit": "gossip",
+   "fear": "storms",
+   "want": "her son to write",
+   "secret": "Her son is in the Ward.",
+   "speech": "rambling"
+  },
+  "corr": {
+   "traits": {
+    "caution": 0.2,
+    "warmth": 0.7,
+    "industry": 0.3,
+    "courage": 0.6,
+    "talk": 0.8,
+    "temper": 0.4
+   },
+   "job": "fish",
+   "bunk": "sleep2",
+   "friends": [
+    "hollis",
+    "kit",
+    "juno"
+   ],
+   "rival": "ruel",
+   "habit": "drinking",
+   "fear": "nothing, he says",
+   "want": "one more round",
+   "secret": "He owes Lowlight eighty scrap.",
+   "speech": "joking"
+  },
+  "sal": {
+   "traits": {
+    "caution": 0.5,
+    "warmth": 0.3,
+    "greed": 0.8,
+    "honesty": 0.2,
+    "talk": 0.4
+   },
+   "job": "trade",
+   "bunk": "dock",
+   "friends": [
+    "juno"
+   ],
+   "rival": "oru",
+   "habit": "gambling",
+   "fear": "the Ward ledger",
+   "want": "a forger's press of her own",
+   "secret": "She forges Standing tags.",
+   "speech": "blunt"
+  },
+  "kit": {
+   "traits": {
+    "caution": 0.1,
+    "curiosity": 0.9,
+    "industry": 0.6,
+    "greed": 0.7,
+    "courage": 0.8,
+    "temper": 0.6,
+    "talk": 0.6
+   },
+   "job": "haul",
+   "bunk": "repair",
+   "friends": [
+    "corr",
+    "juno"
+   ],
+   "rival": "pell",
+   "habit": "scavenging",
+   "fear": "being ordinary",
+   "want": "a hydrofoil",
+   "secret": "He's been on the wolf roof before. Twice.",
+   "speech": "joking"
+  },
+  "hollis": {
+   "traits": {
+    "caution": 0.5,
+    "industry": 0.7,
+    "warmth": 0.5,
+    "talk": 0.3
+   },
+   "job": "fish",
+   "bunk": "dock",
+   "friends": [
+    "corr",
+    "ruel"
+   ],
+   "rival": "ivo",
+   "habit": "night fishing",
+   "fear": "needlefish frenzies",
+   "want": "a bigger net",
+   "secret": "He saw Teo's boat the night it vanished.",
+   "speech": "blunt"
+  },
+  "nell": {
+   "traits": {
+    "caution": 0.6,
+    "warmth": 0.9,
+    "industry": 0.8,
+    "talk": 0.7
+   },
+   "job": "cook",
+   "bunk": "garden",
+   "friends": [
+    "dela",
+    "moss",
+    "odile"
+   ],
+   "rival": null,
+   "partner": "brin",
+   "habit": "cooking",
+   "fear": "fire on the water",
+   "want": "salt that isn't Highmark's",
+   "secret": "She feeds Lowlight runners for free.",
+   "speech": "joking"
+  },
+  "brin": {
+   "traits": {
+    "caution": 0.5,
+    "warmth": 0.6,
+    "industry": 0.8,
+    "courage": 0.7,
+    "talk": 0.2
+   },
+   "job": "repair",
+   "bunk": "sleep1",
+   "friends": [
+    "ivo",
+    "osk"
+   ],
+   "rival": null,
+   "partner": "nell",
+   "habit": "tinkering",
+   "fear": "losing Nell",
+   "want": "a proper wedding",
+   "secret": "He's building Nell a ring out of a propeller.",
+   "speech": "blunt"
+  },
+  "tamsin": {
+   "traits": {
+    "caution": 0.35,
+    "greed": 0.85,
+    "curiosity": 0.6,
+    "courage": 0.5,
+    "honesty": 0.4,
+    "talk": 0.6
+   },
+   "job": "trade",
+   "bunk": "market",
+   "friends": [
+    "odile",
+    "sal"
+   ],
+   "rival": "oru",
+   "habit": "glass raiding",
+   "fear": "debt",
+   "want": "a full jar of sea-glass",
+   "secret": "She owes the Brokers more than her stall is worth.",
+   "speech": "formal"
+  },
+  "osk": {
+   "traits": {
+    "caution": 0.9,
+    "warmth": 0.7,
+    "industry": 0.5,
+    "superstition": 0.8,
+    "talk": 0.5
+   },
+   "job": "repair",
+   "bunk": "chapel",
+   "friends": [
+    "keeper",
+    "oru",
+    "brin"
+   ],
+   "rival": null,
+   "habit": "praying",
+   "fear": "the bell that rings by itself",
+   "want": "to see the coast once more",
+   "secret": "He was a Concord engineer.",
+   "speech": "rambling"
+  },
+  "juno": {
+   "traits": {
+    "caution": 0.3,
+    "curiosity": 0.8,
+    "courage": 0.7,
+    "talk": 0.7,
+    "honesty": 0.5,
+    "temper": 0.5
+   },
+   "job": "haul",
+   "bunk": "sleep2",
+   "friends": [
+    "kit",
+    "corr",
+    "sal"
+   ],
+   "rival": "ruel",
+   "family": [
+    "dela"
+   ],
+   "habit": "running",
+   "fear": "being stuck on Portage forever",
+   "want": "to run for Lowlight",
+   "secret": "She already does.",
+   "speech": "joking"
+  },
+  "perrin": {
+   "traits": {
+    "caution": 0.7,
+    "warmth": 0.5,
+    "talk": 0.2,
+    "industry": 0.6
+   },
+   "job": "watch",
+   "bunk": "lookout",
+   "friends": [
+    "pell"
+   ],
+   "rival": null,
+   "habit": "reading",
+   "fear": "missing a signal",
+   "want": "a radio that works",
+   "secret": "He reads the coded channel.",
+   "speech": "nervous"
+  },
+  "ama": {
+   "traits": {
+    "caution": 0.6,
+    "warmth": 0.8,
+    "industry": 0.9,
+    "talk": 0.6
+   },
+   "job": "cook",
+   "bunk": "water",
+   "friends": [
+    "ivo",
+    "nell"
+   ],
+   "rival": null,
+   "habit": "praying",
+   "fear": "the Sickness coming back",
+   "want": "a clinic",
+   "secret": "She was a nurse at St. Aldren.",
+   "speech": "formal"
+  }
+ },
+ "habits": {
+  "scavenging": {
+   "hour": 18.5,
+   "risky": true,
+   "scenario": "wolf_roof",
+   "need": "greed",
+   "desc": "goes over the rooftops for salvage"
+  },
+  "drinking": {
+   "hour": 23,
+   "risky": true,
+   "scenario": "drunk_dive",
+   "need": "social",
+   "desc": "drinks at the Anchor and goes home the long way"
+  },
+  "glass raiding": {
+   "hour": 16,
+   "risky": true,
+   "scenario": "crab_nest",
+   "need": "greed",
+   "desc": "wades out for sea-glass"
+  },
+  "night fishing": {
+   "hour": 21,
+   "risky": false,
+   "desc": "fishes off the dock after dark"
+  },
+  "gambling": {
+   "hour": 20,
+   "risky": false,
+   "desc": "plays bones at the Red Lamp"
+  },
+  "praying": {
+   "hour": 19,
+   "risky": false,
+   "desc": "prays at the chapel"
+  },
+  "tinkering": {
+   "hour": 19,
+   "risky": false,
+   "desc": "takes something apart"
+  },
+  "gossip": {
+   "hour": 17,
+   "risky": false,
+   "desc": "trades news"
+  },
+  "cooking": {
+   "hour": 17,
+   "risky": false,
+   "desc": "cooks for whoever's hungry"
+  },
+  "reading": {
+   "hour": 21,
+   "risky": false,
+   "desc": "reads by lamplight"
+  },
+  "running": {
+   "hour": 22,
+   "risky": false,
+   "desc": "runs packages between rafts"
+  }
+ },
+ "scenarios": {
+  "wolf_roof": {
+   "creature": "sw_court",
+   "danger": 0.55,
+   "lethal": 0.25,
+   "route": [
+    [
+     26,
+     0,
+     8
+    ],
+    [
+     5,
+     0,
+     2
+    ],
+    [
+     -2,
+     0,
+     -1
+    ],
+    [
+     -24,
+     0,
+     -6
+    ]
+   ],
+   "loot": "scrap",
+   "medium": "roof",
+   "go": "{name} takes the rooftop shortcut past the old water tank. It's faster. There are wolves.",
+   "warned": "Kit— don't. The wolves have pups up there."
+  },
+  "drunk_dive": {
+   "creature": "nw_street",
+   "danger": 0.5,
+   "lethal": 0.2,
+   "route": [
+    [
+     16,
+     5.6,
+     10
+    ],
+    [
+     4,
+     -0.5,
+     2
+    ],
+    [
+     1.4,
+     -2.2,
+     0.3
+    ],
+    [
+     12,
+     5.6,
+     -10
+    ]
+   ],
+   "medium": "water",
+   "go": "{name} drops his bottle off the plank bridge and goes in after it. Into the flooded street. At night.",
+   "warned": "Corr, leave it! There's a weaver down there!"
+  },
+  "crab_nest": {
+   "creature": "tc_portage",
+   "danger": 0.45,
+   "lethal": 0.12,
+   "route": [
+    [
+     14,
+     0,
+     9
+    ],
+    [
+     1.2,
+     0,
+     0.6
+    ],
+    [
+     0.4,
+     0,
+     0.2
+    ],
+    [
+     14,
+     0,
+     -8
+    ]
+   ],
+   "loot": "glass",
+   "medium": "wade",
+   "go": "{name} wades out to the drowned lobby with an empty jar. The crab's nest glitters.",
+   "warned": "Tamsin, it's nesting. Leave the glass."
+  }
+ },
+ "talk": {
+  "greet": {
+   "blunt": [
+    "What.",
+    "You again.",
+    "Make it quick."
+   ],
+   "rambling": [
+    "Oh! You. I was just thinking about — well, never mind, what was it —",
+    "Hello, hello, sit, the wind's been at me all day, you'd not believe it."
+   ],
+   "formal": [
+    "Good day.",
+    "A pleasure, as ever."
+   ],
+   "joking": [
+    "If it isn't the Drift's least punctual hero.",
+    "Back already? Did the sea spit you out?"
+   ],
+   "nervous": [
+    "Oh — hi. Sorry. Hi.",
+    "You startled me. Not your fault. Everything startles me."
+   ]
+  },
+  "thanks": [
+   "You pulled me out. I won't forget it.",
+   "I'd be in the water still if it weren't for you.",
+   "I owe you. Whatever you need."
+  ],
+  "resent": [
+   "You stood there and watched.",
+   "I saw you on the bridge. You didn't even shout."
+  ],
+  "injured": [
+   "Still can't put weight on it. Doesn't matter. Work's work.",
+   "The scar itches when it rains. Which is always."
+  ],
+  "grief": [
+   "{dead} used to sit just there. I keep looking.",
+   "They're saying it was the {creature}. I keep thinking: if I'd gone with {dead}…",
+   "We buried {dead} at sea. Well. We gave {dead} back."
+  ],
+  "warn": [
+   "Don't go near the {place}. Not after what happened.",
+   "The {creature} at the {place} is nesting. Everybody knows. Well. Everybody does now."
+  ],
+  "gossip": [
+   "Did you hear about {who}? At the {place}. With the {creature}.",
+   "{who} came back from the {place} with half a jar of glass and a limp.",
+   "They say {who} went past the {creature} on purpose. Showing off."
+  ],
+  "argue": [
+   "You owe me for the rope, {who}.",
+   "That's my spot, {who}, and you know it.",
+   "Say that again, {who}. Go on."
+  ],
+  "flirt": [
+   "You've got fish scales in your hair, {who}. Suits you.",
+   "Walk me to the bridge, {who}? It's dark. I'm not scared. I just want you to."
+  ],
+  "joke": [
+   "What's the difference between Highmark and the tide? The tide gives some of it back.",
+   "Lumi Vale says rations are a lifestyle. So's drowning."
+  ],
+  "bargain": [
+   "Two salt for the net. Final offer.",
+   "One salt and I'll tell you where the good kelp is."
+  ],
+  "weather": [
+   "Storm's coming. My knees say so.",
+   "Glass is falling. Tie everything down twice."
+  ]
+ },
+ "stubs": [
+  {
+   "id": "greentide",
+   "note": "Greentide's people get personalities next pass (data only)."
+  },
+  {
+   "id": "rusthold",
+   "note": "Rusthold's welders: same."
+  }
+ ]
+}

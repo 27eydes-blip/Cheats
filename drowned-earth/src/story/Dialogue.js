@@ -21,6 +21,9 @@ export class Dialogue {
     const d = npc.def, ctx = this.ctx;
     d.talk.forEach((l, i) => (l._key = d.id + ':' + i));
     const lines = d.talk.filter((l) => this.lineFits(l));
+    // living NPCs speak from what they remember, in their own voice
+    const own = ctx.society?.lineFor(npc);
+    if (own && (Math.random() < 0.6 || !lines.length)) lines.unshift({ text: own, _key: d.id + ':own:' + Math.random() });
     if (!lines.length) return;
     let line = lines.find((l) => (l.if || l.minTier || l.maxTier) && !this.seen[l._key]) || lines.find((l) => !this.seen[l._key]);
     if (!line) { const n = (this.seen[d.id + ':cyc'] = (this.seen[d.id + ':cyc'] || 0) + 1); const pool = lines.filter((l) => !l.once); line = pool[n % pool.length] || lines[0]; }

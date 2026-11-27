@@ -28,7 +28,7 @@ export class Creatures {
     if (ctx.params.get('creatures') !== 'off') {
       for (const place of this.data.placements) {
         const spec = this.data.species[place.species];
-        if (!spec || spec.stub || !BODIES[place.species]) continue;
+        if (!spec || spec.stub || !(BODIES[place.species] || place.species === 'tide_crab')) continue;
         if (only && only !== place.species && only !== place.id) continue;
         this.spawn(spec, place);
       }
