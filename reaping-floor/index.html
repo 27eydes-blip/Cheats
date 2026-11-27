@@ -2248,14 +2248,16 @@ if (typeof module !== 'undefined') module.exports = RF;
     if (L.phase === 'draft' && curTab === 'home') return showDraft();
     if (L.phase === 'fa' && curTab === 'home') return showFA();
     const f = { home: hubHome, roster: hubRoster, table: hubTable, stats: hubStats, archive: hubArchive }[curTab] || hubHome;
-    setUI('<div class="scr">' + f() + '</div>', { tabs: true, keepScroll: 0 });
+    let body;
+    try { body = f(); } catch (e) { console.error(e); body = '<div class="card" style="margin-top:20px"><div class="mid red">THIS SCREEN FAILED TO LOAD</div><p class="small dim">' + esc(e && e.message || e) + '</p><button class="btn alt slim" data-act="roster">TRY THE ROSTER AGAIN</button></div>'; }
+    setUI('<div class="scr">' + body + '</div>', { tabs: true, keepScroll: 0 });
     if (L.news && L.news.length && curTab === 'home') { toast(L.news.join(' '), 4200); L.news = []; save(); }
     if (curTab === 'home' && L.story.length) setTimeout(() => { if (modal.classList.contains('hidden') && screen === 'hub') showStory(); }, 350);
   }
   function teamCard(id) {
     const t = L.teams[id], TM = TEAMS[id], pay = RF.payroll(L, id), cap = RF.capOf(L, id);
     const strk = t.strk ? (t.strk > 0 ? 'W' + t.strk : 'L' + -t.strk) : '-';
-    return '<div class="card edge"><div class="row">' + emb(id, 'l') + '<div class="col grow"><span class="kicker" style="font-size:10px">' + esc(TM.city.toUpperCase()) + '</span><span class="big ell">' + esc(TM.name) + '</span><div class="row" style="gap:6px;margin-top:4px;flex-wrap:wrap">' + dchip(t.d) + '<span class="chip">#' + rankOf(id) + ' OF 50</span></div></div><div class="col" style="align-items:flex-end"><span class="big">' + recStr(t) + '</span><span class="tiny dim">RECORD</span></div></div>' +
+    return '<div class="card edge" data-act="roster" style="cursor:pointer"><div class="row">' + emb(id, 'l') + '<div class="col grow"><span class="kicker" style="font-size:10px">' + esc(TM.city.toUpperCase()) + '</span><span class="big ell">' + esc(TM.name) + '</span><div class="row" style="gap:6px;margin-top:4px;flex-wrap:wrap">' + dchip(t.d) + '<span class="chip">#' + rankOf(id) + ' OF 50</span></div></div><div class="col" style="align-items:flex-end"><span class="big">' + recStr(t) + '</span><span class="tiny dim">RECORD</span></div></div>' +
       '<div class="stats"><div class="stat"><b>' + t.pf + '</b><span>PF</span></div><div class="stat"><b>' + t.pa + '</b><span>PA</span></div><div class="stat"><b>' + strk + '</b><span>STREAK</span></div><div class="stat"><b class="gold">' + t.titles + '</b><span>TITLES</span></div></div>' +
       '<div class="rbar" style="margin-top:10px"><span>Payroll</span><div class="bar ' + (pay > cap ? '' : 'steel') + '"><i style="width:' + Math.min(100, (pay / cap) * 100) + '%"></i></div><b style="width:auto;font-size:13px">' + fmt1(pay) + '/' + cap + 'M</b></div></div>';
   }
@@ -2342,6 +2344,16 @@ if (typeof module !== 'undefined') module.exports = RF;
     h += '<div style="margin-top:14px"><button class="btn gold" data-act="todraft">BEGIN THE HARVEST</button></div><div class="small dim" style="text-align:center;margin-top:6px">The draft, then free agency, then Year ' + (L.year + 1) + '.</div>';
     return h;
   }
+  ACT.roster = () => { closeModal(); curTab = 'roster'; lockerView = 'roster'; showHub(); };
+  // any team's roster, from the standings
+  ACT.teamview = (d) => {
+    const id = +d.id;
+    if (id === L.user) return ACT.roster();
+    RF.ensureNumbers(L, id);
+    const lu = RF.lineup(L, id), st = new Set(lu.slice(0, 5).map((p) => p.id));
+    const ps = L.teams[id].ro.map((x) => L.P[x]).sort((a, b) => st.has(b.id) - st.has(a.id) || b.o - a.o);
+    openModal('<div class="row">' + emb(id, 'm') + '<div class="col grow"><span class="mid ell">' + esc(tname(id)) + '</span><span class="tiny dim">' + recStr(L.teams[id]) + ' · ' + DIS[L.teams[id].d].name + ' · payroll ' + fmt1(RF.payroll(L, id)) + 'M</span></div></div><div class="list" style="margin-top:10px">' + ps.map((p) => rosterRow(p).replace('class="li"', 'class="li' + (st.has(p.id) ? ' me' : '') + '"')).join('') + '</div><div style="margin-top:12px"><button class="btn alt slim" data-act="close">CLOSE</button></div>');
+  };
   ACT.qlen = (d) => { L.set.qlen = +d.v; save(); ui.querySelectorAll('[data-act=qlen]').forEach((b) => b.classList.toggle('on', +b.dataset.v === L.set.qlen)); };
   ACT.sim = () => {
     const g = RF.userGame(L); if (!g) return;
@@ -2485,7 +2497,7 @@ if (typeof module !== 'undefined') module.exports = RF;
     const ids = RF.standings(L, tableView || undefined);
     h += '<div class="list" style="margin-top:10px">' + ids.map((id, i) => {
       const t = L.teams[id];
-      return '<div class="li' + (id === L.user ? ' me' : '') + (!tableView && i === 8 ? ' cut' : '') + '" style="cursor:default;min-height:46px"><span class="rk">' + (i + 1) + '</span>' + emb(id, 's') + '<div class="col grow"><span class="ell small"><b>' + TEAMS[id].ab + '</b> ' + esc(TEAMS[id].city) + '</span>' + (tableView ? '' : '<span class="tiny dim">D' + t.d + ' ' + DIS[t.d].short + (t.titles ? ' · ' + t.titles + '★' : '') + '</span>') + '</div><span class="num" style="min-width:48px">' + recStr(t) + '</span><span class="small dim" style="width:40px;text-align:right">' + (t.pf - t.pa > 0 ? '+' : '') + (t.pf - t.pa) + '</span></div>';
+      return '<div class="li' + (id === L.user ? ' me' : '') + (!tableView && i === 8 ? ' cut' : '') + '" data-act="teamview" data-id="' + id + '" style="min-height:46px"><span class="rk">' + (i + 1) + '</span>' + emb(id, 's') + '<div class="col grow"><span class="ell small"><b>' + TEAMS[id].ab + '</b> ' + esc(TEAMS[id].city) + '</span>' + (tableView ? '' : '<span class="tiny dim">D' + t.d + ' ' + DIS[t.d].short + (t.titles ? ' · ' + t.titles + '★' : '') + '</span>') + '</div><span class="num" style="min-width:48px">' + recStr(t) + '</span><span class="small dim" style="width:40px;text-align:right">' + (t.pf - t.pa > 0 ? '+' : '') + (t.pf - t.pa) + '</span></div>';
     }).join('') + '</div>';
     if (!tableView) h += '<div class="tiny dim" style="margin-top:6px">Top 8 make the bracket (dashed line). Each district\'s best team is promoted, its worst relegated.</div>';
     return h;
@@ -2530,7 +2542,7 @@ if (typeof module !== 'undefined') module.exports = RF;
     openModal('<div class="story"><div class="kicker">' + (s === 0 ? 'PROLOGUE · ' + esc(TEAMS[L.user].city.toUpperCase()) : 'UPRISING · STAGE ' + s) + '</div><div class="st">' + S.t + '</div>' + S.p.map((x) => '<p>' + esc(x) + '</p>').join('') + (s === 4 ? '<p class="gold small">Citadel ref favor shrinks to +1%. The Ruins are no longer whistled against. The broadcast is ours.</p>' : '') + '<button class="btn' + (s >= 4 ? ' gold' : '') + '" data-act="storyok" style="margin-top:10px">' + (s >= 4 ? 'TEAR IT DOWN' : 'CONTINUE') + '</button></div>', true);
     if (s === 4) { SND.play('boom'); SND.play('horn'); }
   }
-  ACT.storyok = () => { delete modal.dataset.lock; closeModal(); if (L && L.story.length) setTimeout(showStory, 200); else if (screen === 'hub' && curTab === 'home') showHub(); };
+  ACT.storyok = () => { delete modal.dataset.lock; closeModal(); if (L && L.story.length && screen === 'hub' && curTab === 'home') setTimeout(showStory, 200); else if (screen === 'hub' && curTab === 'home') showHub(); };
   function closeStory() { delete modal.dataset.lock; closeModal(); }
   ACT.creator = () => {
     if (L.created === L.year) { toast('You already created a player this year.'); return; }
@@ -2783,10 +2795,15 @@ if (typeof module !== 'undefined') module.exports = RF;
     if (!G || G.paused || G.done) return;
     G.paused = true;
     ui.classList.remove('hidden');
-    ui.innerHTML = '<div class="pausebox fade-in"><div class="kicker" style="text-align:center">BROADCAST PAUSED</div><div class="big" style="text-align:center;font-size:30px">' + esc(TEAMS[G.ids[0]].city) + ' ' + G.m.score[0] + ' · ' + G.m.score[1] + ' ' + esc(TEAMS[G.ids[1]].city) + '</div><button class="btn" data-act="resume">RESUME</button><button class="btn alt" data-act="simend">SKIP TO FINAL</button><p class="small dim" style="text-align:center">You watch from the owner\'s box. 1x / 2x / 4x change the broadcast speed. Big plays get an instant replay; tap to skip it.</p></div>';
+    ui.innerHTML = '<div class="pausebox fade-in"><div class="kicker" style="text-align:center">BROADCAST PAUSED</div><div class="big" style="text-align:center;font-size:30px">' + esc(TEAMS[G.ids[0]].city) + ' ' + G.m.score[0] + ' · ' + G.m.score[1] + ' ' + esc(TEAMS[G.ids[1]].city) + '</div><button class="btn" data-act="resume">RESUME</button><button class="btn alt" data-act="boxscore">YOUR LINEUP · BOX SCORE</button><button class="btn alt" data-act="simend">SKIP TO FINAL</button><p class="small dim" style="text-align:center">You watch from the owner\'s box. 1x / 2x / 4x change the broadcast speed. Big plays get an instant replay; tap to skip it.</p></div>';
   }
   function resumeGame() { if (!G) return; G.paused = false; ui.innerHTML = ''; ui.classList.add('hidden'); }
   ACT.resume = resumeGame;
+  ACT.boxscore = () => {
+    const m = G.m;
+    const row = (mp) => { const s = m.ps[mp.id], p = mp.p; return '<div class="li" style="cursor:default;padding:4px 10px 4px 4px' + (mp.on ? ';box-shadow:inset 3px 0 0 var(--red2)' : '') + '"><img src="' + portraitURL(p, 40, 56) + '" style="width:40px;height:56px;border-radius:6px" alt=""><span class="num" style="min-width:34px;text-align:left">#' + p.no + '</span><div class="col grow"><span class="small ell"><b>' + esc(p.n) + '</b>' + (mp.dead ? ' <span class="chip d5">FALLEN</span>' : mp.bin > 0 ? ' <span class="chip">SIN BIN</span>' : mp.on ? ' <span class="chip on">ON</span>' : '') + '</span><span class="tiny dim">' + RF.ROLE_NAME[p.ro] + ' · ' + ftin(p.ht) + ' · ' + lbs(p.wt) + ' lb · stamina ' + Math.round(mp.stam * 100) + '%</span></div><div class="col" style="align-items:flex-end"><span class="num">' + s.pts + '</span><span class="tiny dim">' + s.chk + ' CHK</span></div></div>'; };
+    ui.innerHTML = '<div class="scr notabs" style="background:rgba(3,3,4,.94)"><div class="row">' + emb(G.ids[0], 'm') + '<div class="col grow"><span class="kicker" style="font-size:10px">LIVE · YOUR LINEUP</span><span class="mid">' + esc(tname(G.ids[0])) + ' ' + m.score[0] + ' · ' + m.score[1] + '</span></div></div><div class="list" style="margin-top:10px">' + m.all[0].slice().sort((a, b) => b.on - a.on || m.ps[b.id].pts - m.ps[a.id].pts).map(row).join('') + '</div><div style="margin-top:12px"><button class="btn" data-act="resume">BACK TO THE GAME</button></div></div>';
+  };
   ACT.simend = () => {
     if (!G || G.simming) return;
     const m = G.m; m.human = -1; G.simming = true; G.paused = true; ui.classList.remove('hidden');
