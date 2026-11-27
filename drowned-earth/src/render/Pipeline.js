@@ -304,7 +304,7 @@ void main() {
     rays = pow(rays, 3.0) * smoothstep(1.2, 0.0, length(dir)) * uSunVis * (1.0 - uIndoor);
     float distFade = 1.0 - exp(-viewZ * 0.09);
     col += uUnderColor * rays * 2.4 * distFade * exp(-uCamDepth * 0.13);
-    col += uUnderColor * rnd(floor(vUv * 180.0 + uTime * 0.6)) * 0.02;
+    col += uUnderColor * (rnd(gl_FragCoord.xy + fract(uTime) * 61.0) - 0.5) * 0.012; // fine silt grain, per pixel
   } else {
     // low mist that hugs the water: exponential height fog integrated along the view ray
     vec3 wp = d >= 0.99999 ? uCamPos + normalize(worldAt(uv, 0.5) - uCamPos) * 2500.0 : worldAt(uv, d);

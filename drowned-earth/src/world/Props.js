@@ -168,7 +168,7 @@ const defs = {
   ]),
   railing: () => merge([part(box(0.05, 1, 0.05), [1, 1, 1], { y: 0.5 }), part(box(0.05, 0.05, 2), [1, 1, 1], { y: 1, z: 1 })]),
   lantern: () => merge([part(box(0.22, 0.3, 0.22), [0.2, 0.18, 0.14], { y: -0.15 }), part(new THREE.ConeGeometry(0.2, 0.12, 4), [0.2, 0.18, 0.14], { y: 0.05, ry: Math.PI / 4 })]),
-  growth: () => merge([0, 1, 2, 3].map((i) => { const g = new THREE.SphereGeometry(0.22 - i * 0.035, 7, 5); g.scale(1, 1.5 + i * 0.2, 1); return part(g, [1, 1, 1], { x: [0, 0.22, -0.18, 0.05][i], y: [0, -0.08, -0.1, 0.25][i], z: [0, 0.1, -0.12, 0.18][i] }); })),
+  growth: () => merge([0, 1, 2, 3].map((i) => { const g = new THREE.SphereGeometry(0.22 - i * 0.035, 14, 10); g.scale(1, 1.5 + i * 0.2, 1); return part(g, [1, 1, 1], { x: [0, 0.22, -0.18, 0.05][i], y: [0, -0.08, -0.1, 0.25][i], z: [0, 0.1, -0.12, 0.18][i] }); })),
 };
 
 export function propGeometry(name) {
