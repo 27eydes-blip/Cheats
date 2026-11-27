@@ -199,7 +199,7 @@ var RF = (function () {
   const BODY = { S: [183, 195, 85, 98], D: [198, 212, 105, 125], K: [175, 188, 75, 88], W: [172, 186, 70, 84], E: [188, 200, 100, 115] };
 
   // shot model knobs (tuned with tests/engine.test.mjs to ~20-40 points a team on 3:00 quarters)
-  const TUNE = { dunk: 0.31, dunkK: 0.001, mid: 0.23, midDrop: 0.13, deep: 0.14, deepDrop: 0.08, shtK: 0.0012, press: 64, pressMin: 0.32, ev: 0.55, rimMin: 240, rimVar: 160, gather: 0.45, block: 0.8, guardR: 170, spd0: 104, spdK: 0.4, chkRate: 0.15, rimChk: 3, strip: 0.4, chkCD: 1.8, chkK: 0.003, intT: 0.28, intK: 0.36, refK: 0.25, refFoul: 2, rsens: 0.3, form: 0.08 };
+  const TUNE = { dunk: 0.31, dunkK: 0.001, mid: 0.23, midDrop: 0.13, deep: 0.14, deepDrop: 0.08, shtK: 0.0012, press: 64, pressMin: 0.32, ev: 0.55, rimMin: 240, rimVar: 160, gather: 0.45, block: 0.8, guardR: 170, spd0: 104, spdK: 0.4, chkRate: 0.15, rimChk: 3, strip: 0.4, chkCD: 1.8, chkK: 0.003, intT: 0.28, intK: 0.36, refK: 0.25, refFoul: 2, rsens: 0.3, form: 0.08, death: 0.006, qsDeath: 0.2 };
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const hyp = Math.hypot;
   function mulberry(seed) {
@@ -399,8 +399,9 @@ var RF = (function () {
       ev: [], all: [[], []], pl: [], ball: null, chain: emptyChain(), lastPoss: -1, fire: [false, false], lastScorer: -1, streak: 0,
       fury: [0, 0], furyT: [0, 0], ps: {}, inbound: -1, endAfterDead: false, periodAfterDead: false, goOT: false, winner: -1, refCall: false,
       stats: { shots: 0, checks: 0, fouls: 0, pulses: 0, turnovers: 0, passes: 0, kinds: { dunk: 0, mid: 0, deep: 0 }, mult: [0, 0, 0, 0, 0], otLen: 0, maxIdle: 0 },
-      idle: 0,
+      idle: 0, deaths: [],
     };
+    m.teamIds = o.teamIds || [-1, -1];
     m.form = [0, 1].map(() => clamp(1 + gauss(m.rng) * TUNE.form, 0.8, 1.2)); // nightly form: some nights the rim is kind
     for (let t = 0; t < 2; t++) {
       o.rosters[t].forEach((p, i) => {
@@ -443,7 +444,7 @@ var RF = (function () {
         if (!mp.on || mp.stam > 0.55) continue;
         let best = null, bs = -1;
         for (const c of m.all[t]) {
-          if (c.on || c.bin > 0 || c.stam < 0.8) continue;
+          if (c.on || c.dead || c.bin > 0 || c.stam < 0.8) continue;
           const sc = (c.ro === mp.ro ? 25 : 0) + c.p.o + c.stam * 10;
           if (sc > bs) { bs = sc; best = c; }
         }
@@ -589,6 +590,9 @@ var RF = (function () {
       m.ps[mp.id].chk++; m.stats.checks++;
       tgt.vx += (dx / dd) * 220; tgt.vy += (dy / dd) * 220;
       if (m.rng() < 0.004) tgt.hurt = true;
+      // the Reaping Floor is lethal: a heavy hit can kill. More likely from Enforcers, in Fury, and on exhausted bodies
+      const dp = TUNE.death * (carrier ? 1.2 : 1) * (mp.ro === 'E' ? 1.4 : 1) * (fury ? 1.6 : 1) * (0.7 + (1 - tgt.stam) * 1.2);
+      if (m.rng() < dp) { m.ps[mp.id].chk++; m.stats.checks++; fall(m, mp, tgt); return; }
       if (carrier) {
         tgt.stun = 0.85;
         Object.assign(b, { mode: 'free', own: null, vx: (dx / dd) * 150 + (m.rng() - 0.5) * 120, vy: (dy / dd) * 150 + (m.rng() - 0.5) * 120, passTeam: -1, hold: 0 });
@@ -601,6 +605,24 @@ var RF = (function () {
         furyAdd(m, tgt.team, 6);
       }
     } else { mp.stun = 0.35; m.ev.push({ type: 'whiff', team: t, x: mp.x, y: mp.y }); }
+  }
+  function fall(m, mp, tgt) {
+    const b = m.ball;
+    tgt.dead = true; tgt.on = false; tgt.stun = 0; tgt.vx = tgt.vy = 0;
+    if (b.own === tgt) Object.assign(b, { mode: 'free', own: null, vx: 0, vy: 0, passTeam: -1, hold: 0 });
+    if (b.target === tgt) b.target = null;
+    m.deaths.push({ id: tgt.id, n: tgt.p.n, team: tgt.team, by: mp.p.n, byTeam: mp.team, x: tgt.x, y: tgt.y, q: m.q });
+    m.ev.push({ type: 'death', team: mp.team, vt: tgt.team, x: tgt.x, y: tgt.y, by: mp.p.n, vic: tgt.p.n, ro: tgt.ro });
+    // a replacement walks on from the bench; with nobody left the team plays a man down
+    let sub = null;
+    for (const c of m.all[tgt.team]) if (!c.on && !c.dead && c.bin <= 0 && (!sub || c.stam + c.p.o / 100 > sub.stam + sub.p.o / 100)) sub = c;
+    if (sub) { sub.on = sub.played = true; const P = frame(tgt.team, 22, 520); sub.x = P.x; sub.y = P.y; sub.vx = sub.vy = 0; }
+    refreshField(m); assignMarks(m);
+    if (m.ctrl === tgt) m.ctrl = null;
+    furyAdd(m, tgt.team, 40);
+    // play stops: the body is carried off, the fallen player's team restarts with the ball
+    m.chain = emptyChain();
+    if (m.state === 'play') { m.state = 'dead'; m.stateT = 3.2; m.inbound = tgt.team; }
   }
   function foul(m, mp, tgt) {
     m.stats.fouls++; m.ps[mp.id].fl++;
@@ -1085,6 +1107,11 @@ var RF = (function () {
       st.forEach((p) => { p.st.fga += R() < 0.5 ? 1 : 0; if (R() < (p.ro === 'E' ? 0.9 : 0.35)) p.st.chk += 1 + Math.floor(R() * 2); if (R() < (p.ro === 'E' ? 0.25 : 0.08)) p.st.fl++; });
       if (R() < 0.03 && st.length) { const v = st[Math.floor(R() * st.length)]; v.inj = Math.max(v.inj, ri(L, 1, 3)); }
     }
+    // deaths at the same rate the full simulation produces; the hitters' district makes them likelier
+    for (let t = 0; t < 2; t++) {
+      const other = t ? a : b, om = t ? ma : mb, pool = lus[t].slice(0, 10);
+      if (pool.length && R() < TUNE.qsDeath * (om.fury ? 1.25 : 1)) killPlayer(L, pool[Math.floor(R() * pool.length)].id, other, L.phase === 'playoffs');
+    }
     return [sum(sc[0]), sum(sc[1])];
   }
 
@@ -1163,7 +1190,7 @@ var RF = (function () {
     }
     const upset = won && L.teams[opp].d < L.teams[L.user].d;
     L.res.push({ yr: L.year, wk: L.week, opp, u, o, po, rd: po ? L.po.rd : -1 });
-    return { won, u, o, opp, delta: L.upr - before, stageUp, upset, po };
+    return { won, u, o, opp, delta: L.upr - before, stageUp, upset, po, before };
   }
   function applyMatchStats(L, m) {
     for (let t = 0; t < 2; t++) {
@@ -1173,13 +1200,46 @@ var RF = (function () {
         const s = m.ps[mp.id];
         p.st.gp++; p.st.pts += s.pts; p.st.dk += s.dk; p.st.fg += s.fg; p.st.fga += s.fga; p.st.chk += s.chk; p.st.fl += s.fl;
         if (mp.hurt) p.inj = Math.max(p.inj, ri(L, 1, 2));
+        if (mp.dead) killPlayer(L, mp.id, m.deaths.find((d) => d.id === mp.id).byTeam === 0 ? m.teamIds[0] : m.teamIds[1], L.phase === 'playoffs');
       }
     }
+  }
+  function bumpUprising(L, delta) {
+    L.upr = clamp(L.upr + delta, 0, 100);
+    const st = stageOf(L.upr);
+    if (st > L.stage) {
+      for (let s = L.stage + 1; s <= st; s++) L.story.push(s);
+      L.stage = st;
+      if (st >= 4 && !L.wall) { L.wall = true; L.wallYear = L.year; }
+      return st;
+    }
+    return null;
+  }
+  // a player dies: off the roster for good, onto the memorial. A fallen player of yours feeds the uprising.
+  function killPlayer(L, pid, by, po) {
+    const p = L.P[pid]; if (!p || p.tm < 0) return null;
+    const t = L.teams[p.tm];
+    t.ro.splice(t.ro.indexOf(pid), 1);
+    const rec = { n: p.n, ro: p.ro, age: p.age, o: p.o, tm: p.tm, d: t.d, by: by, yr: L.year, wk: po ? -1 : L.week, gp: p.cr.gp + p.st.gp, pts: p.cr.pts + p.st.pts };
+    if (!L.fallen) L.fallen = [];
+    L.fallen.push(rec);
+    if (L.fallen.length > 400) L.fallen.shift();
+    if (p.tm === L.user) { L.weekFallen = (L.weekFallen || []).concat([rec]); bumpUprising(L, 3); }
+    delete L.P[pid];
+    return rec;
+  }
+  function refillRosters(L) {
+    for (const t of L.teams) {
+      if (t.id === L.user) { while (t.ro.length < 12) { const p = filler(L, t.id); L.news.push(p.n + ' (' + ROLE_NAME[p.ro] + ') is sent from the district camps to fill a dead man\'s place.'); } }
+      else while (t.ro.length < 16) filler(L, t.id);
+    }
+    if (L.news.length > 30) L.news.splice(0, L.news.length - 30);
   }
   function tickInjuries(L) { for (const t of L.teams) for (const id of t.ro) { const p = L.P[id]; if (p.inj > 0) p.inj--; } }
   // play out one week. us = [userScore, oppScore] from a played match (m), or null to auto-sim the user's game too
   function advanceWeek(L, us, m) {
     if (L.phase !== 'season') return null;
+    const upr0 = L.upr;
     const pairs = L.sched[L.week];
     let info = null;
     L.lastRes = [];
@@ -1197,6 +1257,9 @@ var RF = (function () {
       L.lastRes.push([a, b, sa, sb]);
     }
     tickInjuries(L);
+    refillRosters(L);
+    if (info) { info.fallen = L.weekFallen || []; info.delta = L.upr - upr0; }
+    L.weekFallen = [];
     L.week++;
     if (L.week >= 16) startPlayoffs(L);
     return info;
@@ -1208,6 +1271,7 @@ var RF = (function () {
   }
   function advancePlayoffs(L, us, m) {
     if (L.phase !== 'playoffs') return null;
+    const upr0 = L.upr;
     const po = L.po, winners = [], rec = [];
     let info = null;
     for (const [a, b] of po.games) {
@@ -1224,6 +1288,9 @@ var RF = (function () {
     }
     po.log.push(rec);
     tickInjuries(L);
+    refillRosters(L);
+    if (info) { info.fallen = L.weekFallen || []; info.delta = L.upr - upr0; }
+    L.weekFallen = [];
     if (winners.length === 1) {
       po.champ = winners[0]; L.teams[po.champ].titles++;
       if (info) info.champion = po.champ === L.user;
@@ -1505,7 +1572,7 @@ var RF = (function () {
     TUNE, W, H, HOOPS, DUNK_R, DEEP_R, SIN_BIN, HOLD_MAX, DT, ROLES, ROLE_NAME, RATS, RAT_NAME, DISTRICTS, TEAMS, STAGES, PO_NAMES, QS, SAVE_KEY, OLD_KEY,
     mulberry, hashStr, clamp, createMatch, step, simMatch, chainN, possTeam, shotProb, teamMods, modsFor, refOf, lineup, standings, stageOf, userGame,
     newLeague, advanceWeek, advancePlayoffs, startDraft, draftAI, draftPick, finishDraft, signFA, releasePlayer, finishFA, continueOffseason,
-    createCustom, payroll, capOf, salaryFor, ovrOf, playerValue, quickSim, teamRating, applyMatchStats, serialize, deserialize, migrateV1, makePlayer,
+    createCustom, killPlayer, fall, payroll, capOf, salaryFor, ovrOf, playerValue, quickSim, teamRating, applyMatchStats, serialize, deserialize, migrateV1, makePlayer,
   };
 })();
 if (typeof module !== 'undefined') module.exports = RF;
@@ -1860,6 +1927,7 @@ if (typeof module !== 'undefined') module.exports = RF;
         case 'pulse': [0, 0.12].forEach((d) => this.tone('square', 230, 230, 0.08, 0.15, t + d)); break;
         case 'tap': this.tone('triangle', 330, 300, 0.07, 0.12); break;
         case 'horn': this.brass(t, [98, 146.8], 1.4, 0.16, this.sfx); break;
+        case 'toll': [0, 1.1].forEach((d) => { [110, 220.5, 331, 441.7].forEach((f, i) => this.tone('sine', f, f * 0.995, 2.6, [0.4, 0.18, 0.1, 0.06][i], t + 0.15 + d)); }); break;
       }
     },
   };
@@ -1896,6 +1964,7 @@ if (typeof module !== 'undefined') module.exports = RF;
     pulse: ['The ball pulses. Greed is punished.', 'Held too long. The ball bites.', 'Release it or lose it. Lost.'],
     quarter: ['End of the quarter. Hydration is permitted.', 'The horn. Breathe while it is free.', 'Quarter over. The cameras rest. You do not.'],
     ot: ['Sudden death. The phrase is not a metaphor.', 'Overtime. First score lives.', 'Tied. The Citadel demands an ending.'],
+    death: ['{vic} does not get up. The Citadel thanks the family.', 'A life spent on the Reaping Floor. Play resumes shortly.', '{vic} falls. The broadcast does not cut away.', 'Silence for {vic}. Three seconds. That is the allotted time.', '{by} hit {vic}. {vic} is gone. The crowd was told to cheer.'],
     refcall: ['The refs decide. They always could.', 'Overtime ends by decree. The Citadel thanks you.'],
     win: ['{city} survives. For now.', 'A victory for {city}. The districts will hear of this.'],
     loss: ['{city} is eliminated. Order holds.', 'The floor claims {city}. Next.'],
@@ -2116,6 +2185,7 @@ if (typeof module !== 'undefined') module.exports = RF;
     if (L.phase === 'fa' && curTab === 'home') return showFA();
     const f = { home: hubHome, roster: hubRoster, table: hubTable, stats: hubStats, archive: hubArchive }[curTab] || hubHome;
     setUI('<div class="scr">' + f() + '</div>', { tabs: true, keepScroll: 0 });
+    if (L.news && L.news.length && curTab === 'home') { toast(L.news.join(' '), 4200); L.news = []; save(); }
     if (curTab === 'home' && L.story.length) setTimeout(() => { if (modal.classList.contains('hidden') && screen === 'hub') showStory(); }, 350);
   }
   function teamCard(id) {
@@ -2154,11 +2224,13 @@ if (typeof module !== 'undefined') module.exports = RF;
   }
   function aroundLeague() {
     if (!L.lastRes || !L.lastRes.length) return '';
+    const fl = (L.fallen || []).filter((f) => f.yr === L.year && (L.phase === 'season' ? f.wk === L.week - 1 : f.wk < 0)).slice(-4).reverse();
+    const deadHTML = fl.length ? '<h2 class="sec">THE FALLEN THIS WEEK</h2><div class="list">' + fl.map((f) => '<div class="li' + (f.tm === L.user ? ' me' : '') + '" style="cursor:default;min-height:44px">' + emb(f.tm, 's') + '<span class="grow ell small"><b>† ' + esc(f.n) + '</b> <span class="dim">' + TEAMS[f.tm].ab + ' ' + RF.ROLE_NAME[f.ro] + ', ' + f.age + '</span></span></div>').join('') + '</div>' : '';
     const up = L.lastRes.filter(([a, b, sa, sb]) => { const w = sa > sb ? a : b, l = sa > sb ? b : a; return L.teams[w].d > L.teams[l].d + 1; }).slice(0, 3);
     const rest = L.lastRes.filter((g) => up.indexOf(g) < 0 && g[0] !== L.user && g[1] !== L.user).slice(0, 4 - up.length);
     return '<h2 class="sec">AROUND THE ARENA</h2><div class="list">' + up.concat(rest).map(([a, b, sa, sb]) => {
       return '<div class="li" style="cursor:default;min-height:44px">' + emb(a, 's') + '<span class="grow ell small">' + TEAMS[a].ab + ' <b>' + sa + '</b> · <b>' + sb + '</b> ' + TEAMS[b].ab + '</span>' + emb(b, 's') + (L.teams[sa > sb ? a : b].d > L.teams[sa > sb ? b : a].d + 1 ? '<span class="chip d5">UPSET</span>' : '') + '</div>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + deadHTML;
   }
   function bracketHTML() {
     const po = L.po; if (!po) return '';
@@ -2287,9 +2359,13 @@ if (typeof module !== 'undefined') module.exports = RF;
     if (!L.hist.length) h += '<div class="card small dim">Your first season is still being written.</div>';
     else h += '<div class="list">' + L.hist.slice().reverse().map((s) => '<div class="li" style="cursor:default">' + '<span class="rk" style="width:34px">Y' + s.yr + '</span><div class="col grow"><span class="small"><b>' + s.w + '-' + s.l + '</b> · #' + s.rank + ' · ' + esc(s.po) + '</span><span class="tiny dim">D' + s.d + (s.d2 !== s.d ? ' → D' + s.d2 : '') + ' · Champion ' + esc(TEAMS[s.champ].city) + ' · Uprising ' + s.upr + '</span></div>' + emb(s.champ, 's') + '</div>').join('') + '</div>';
     h += '<h2 class="sec">MOST TITLES</h2><div class="list">' + L.teams.filter((t) => t.titles).sort((a, b) => b.titles - a.titles).slice(0, 6).map((t) => '<div class="li" style="cursor:default;min-height:44px">' + emb(t.id, 's') + '<span class="grow small ell">' + esc(tname(t.id)) + '</span><span class="num gold">' + t.titles + '</span></div>').join('') + (L.teams.some((t) => t.titles) ? '' : '<div class="li small dim">No Grand Slam has been won yet.</div>') + '</div>';
+    const fl = (L.fallen || []).slice().reverse();
+    const mineF = fl.filter((f) => f.tm === L.user);
+    h += '<h2 class="sec">THE FALLEN</h2><div class="card small dim" style="margin-bottom:8px">' + fl.length + ' dead on the Reaping Floor · ' + mineF.length + ' of them yours.</div>';
+    if (fl.length) h += '<div class="list">' + fl.slice(0, 12).map((f) => '<div class="li' + (f.tm === L.user ? ' me' : '') + '" style="cursor:default;min-height:44px">' + emb(f.tm, 's') + '<div class="col grow"><span class="small ell"><b>† ' + esc(f.n) + '</b> <span class="dim">' + RF.ROLE_NAME[f.ro] + ', ' + f.age + '</span></span><span class="tiny dim">Year ' + f.yr + (f.wk >= 0 ? ' · week ' + (f.wk + 1) : ' · playoffs') + (f.by >= 0 ? ' · vs ' + TEAMS[f.by].ab : '') + '</span></div><span class="tiny dim">' + f.pts + ' PTS</span></div>').join('') + '</div>';
     h += '<h2 class="sec">THE STORY SO FAR</h2><div class="list">' + STORY.slice(0, L.stage + 1).map((s, i) => '<button class="li" data-act="story" data-v="' + i + '"><span class="chip ' + (i >= 2 ? 'd5' : 'd1') + '">' + (i * 25) + '</span><span class="grow mid" style="font-size:16px">' + s.t + '</span></button>').join('') + '</div>';
     h += '<h2 class="sec">THE WORLD</h2><div class="card small dim">The old world burned. Fifty cities survived behind walls and were sorted by wealth into five districts. The Citadel hosts the Games and broadcasts them everywhere: a spectacle that keeps the hungry watching instead of marching. The sport is SLAM. The announcer is THE VOICE. The arena is the Reaping Floor.</div>';
-    h += '<h2 class="sec">HOW TO SLAM</h2><div class="card small" style="line-height:1.5"><b>Score:</b> dunk inside the ring 2 · mid shot 3 · deep shot past the ash line 5.<br><b>Chain:</b> carry (C), throw (T), kick (K) and wall bounce (W) in one possession multiply the score, up to x4.<br><b>Pulse:</b> hold the ball 3 seconds and it bites. Release it.<br><b>ON FIRE:</b> two scores in a row: +10% accuracy, +7% speed.<br><b>Checks:</b> strip the carrier. Fouls send you to the sin bin for 30 seconds.<br><b>Fury</b> (Scrap and Ruins): fills as you take hits and give up points. 10 seconds of red rage.<br><b>Controls:</b> left thumb moves. SHOOT (checks on defense), THROW, KICK, CHECK, SWITCH. Push the stick at a side wall and pass to bank it. Keys: WASD, J shoot, K throw, L kick, ; check, Q switch.</div>';
+    h += '<h2 class="sec">HOW TO SLAM</h2><div class="card small" style="line-height:1.5"><b>Score:</b> dunk inside the ring 2 · mid shot 3 · deep shot past the ash line 5.<br><b>Chain:</b> carry (C), throw (T), kick (K) and wall bounce (W) in one possession multiply the score, up to x4.<br><b>Pulse:</b> hold the ball 3 seconds and it bites. Release it.<br><b>ON FIRE:</b> two scores in a row: +10% accuracy, +7% speed.<br><b>Checks:</b> strip the carrier. Fouls send you to the sin bin for 30 seconds. Heavy hits can kill: the dead leave your roster for good.<br><b>Fury</b> (Scrap and Ruins): fills as you take hits and give up points. 10 seconds of red rage.<br><b>Controls:</b> left thumb moves. SHOOT (checks on defense), THROW, KICK, CHECK, SWITCH. Push the stick at a side wall and pass to bank it. Keys: WASD, J shoot, K throw, L kick, ; check, Q switch.</div>';
     return h;
   }
   ACT.story = (d) => showStory(+d.v);
@@ -2442,11 +2518,11 @@ if (typeof module !== 'undefined') module.exports = RF;
   function startGame() {
     const g = RF.userGame(L); if (!g) return;
     const opp = g.opp, home = g.home ? L.user : opp;
-    const m = RF.createMatch({ rosters: [RF.lineup(L, L.user), RF.lineup(L, opp)], mods: [RF.teamMods(L, L.user), RF.teamMods(L, opp)], qlen: L.set.qlen, seed: (Math.random() * 1e9) | 0, human: 0 });
+    const m = RF.createMatch({ rosters: [RF.lineup(L, L.user), RF.lineup(L, opp)], mods: [RF.teamMods(L, L.user), RF.teamMods(L, opp)], qlen: L.set.qlen, seed: (Math.random() * 1e9) | 0, human: 0, teamIds: [L.user, opp] });
     G = {
       m, ids: [L.user, opp], g, kits: [kit(L.user, false, opp), kit(opp, true, L.user)], field: buildField(home, L.user, opp),
       cam: { x: 200, y: 640, z: 1 }, parts: [], texts: [], bigs: [], banner: null, shake: 0, stopT: 0, slowT: 0, zoomT: 0, zoomP: null,
-      acc: 0, paused: false, done: false, doneT: 0, tick: { txt: '', t: 0 }, trail: [], hoopFlash: [0, 0], joy: null, btnId: {}, press: {}, keys: {}, err: false,
+      marks: [], acc: 0, paused: false, done: false, doneT: 0, tick: { txt: '', t: 0 }, trail: [], hoopFlash: [0, 0], joy: null, btnId: {}, press: {}, keys: {}, err: false,
       poorer: L.teams[L.user].d > L.teams[opp].d,
     };
     setTicker(voice('start', { city: TEAMS[L.user].city, opp: TEAMS[opp].city }));
@@ -2495,6 +2571,19 @@ if (typeof module !== 'undefined') module.exports = RF;
       case 'check': G.stopT = 0.06; G.shake = Math.max(G.shake, 6); burst(e.x, e.y, ['#ffffff', '#ffd27a'], 12, 160, 0.4); SND.play('check'); if (Math.random() < 0.3) setTicker(voice('check', vars(e))); break;
       case 'strip': G.stopT = 0.11; G.shake = Math.max(G.shake, 10); burst(e.x, e.y, ['#ffffff', '#ff2a3a', '#ffd27a'], 20, 220, 0.5); ring(e.x, e.y, 40, '#ff2a3a'); SND.play('check'); floatText('STRIPPED!', e.x, e.y - 22, me ? '#9df07a' : '#ff5d68', 18); if (Math.random() < 0.5) setTicker(voice('strip', vars(e))); break;
       case 'whiff': SND.play('whiff'); break;
+      case 'death': {
+        const mine = e.vt === 0;
+        G.stopT = 0.3; G.slowT = 1.2; G.shake = Math.max(G.shake, 14);
+        G.zoomT = 1.6; G.zoomP = { x: e.x, y: e.y };
+        burst(e.x, e.y, ['#8a8d93', '#3a3d44', '#5e0a10'], 26, 120, 1.4);
+        ring(e.x, e.y, 70, '#5e0a10');
+        G.marks.push({ x: e.x, y: e.y, n: e.vic, team: e.vt });
+        bigText('FALLEN', '#ff2a3a', e.vic.toUpperCase());
+        SND.play('check'); SND.play('toll');
+        setTicker(voice('death', vars(e)));
+        if (mine) G.fallenMine = (G.fallenMine || 0) + 1;
+        break;
+      }
       case 'foul': SND.play('whistle'); floatText(e.bin ? 'FOUL · SIN BIN' : 'FOUL', e.x, e.y - 24, '#ffd27a', 15); setTicker(voice('foul', vars(e))); break;
       case 'chain': SND.play('chain', e.n); if (e.n >= 3) floatText('CHAIN x' + e.n, m.ball.x, m.ball.y - 20, e.n >= 4 ? '#ff2a3a' : '#ffb347', 16); break;
       case 'fire': bigText('ON FIRE!', '#ff8a2a'); SND.play('fire'); setTicker(voice('fire', vars(e))); break;
@@ -2652,6 +2741,11 @@ if (typeof module !== 'undefined') module.exports = RF;
     c.fillStyle = '#0b0b0d'; c.fillRect(-60, -60, W + 120, H + 120);
     c.drawImage(G.field, 0, 0, W, H);
     for (let t = 0; t < 2; t++) drawHoop(c, t);
+    for (const k of G.marks) { // where a player fell: a chalk cross that stays for the rest of the game
+      c.save(); c.translate(k.x, k.y); c.strokeStyle = 'rgba(220,220,225,.55)'; c.lineWidth = 2.2; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(0, -11); c.lineTo(0, 11); c.moveTo(-7, -4); c.lineTo(7, -4); c.stroke();
+      c.fillStyle = 'rgba(200,200,205,.55)'; c.font = 'bold 6px Arial'; c.textAlign = 'center'; c.fillText(k.n.toUpperCase(), 0, 19); c.restore();
+    }
     const b = m.ball;
     // shadows
     c.fillStyle = 'rgba(0,0,0,.45)';
@@ -2889,6 +2983,14 @@ if (typeof module !== 'undefined') module.exports = RF;
       if (best) h += '<div class="stats"><div class="stat"><b class="gold" style="font-size:16px">' + esc(best.mp.p.n) + '</b><span>TOP SCORER · ' + best.s.pts + ' PTS</span></div></div>';
       h += '<div class="stats"><div class="stat"><b>' + m.stats.kinds.dunk + '</b><span>SLAMS</span></div><div class="stat"><b>' + m.stats.kinds.deep + '</b><span>DEEP</span></div><div class="stat"><b>' + m.stats.checks + '</b><span>CHECKS</span></div><div class="stat"><b>' + m.stats.fouls + '</b><span>FOULS</span></div></div></div>';
     }
+    const fallenHere = m ? m.deaths : [];
+    const mineSim = !m && info.fallen ? info.fallen : [];
+    if (fallenHere.length || mineSim.length) {
+      h += '<div class="card" style="margin-top:10px;border-color:#5e0a10;text-align:left"><div class="kicker" style="color:#ff5d68">THE FALLEN</div>';
+      h += fallenHere.map((d) => '<div class="row" style="margin-top:8px">' + emb(d.team === 0 ? L.user : opp, 's') + '<div class="col grow"><span class="small"><b>† ' + esc(d.n) + '</b></span><span class="tiny dim">' + (d.q === 5 ? 'Overtime' : 'Q' + d.q) + ' · hit by ' + esc(d.by) + '</span></div></div>').join('');
+      h += mineSim.map((d) => '<div class="row" style="margin-top:8px">' + emb(L.user, 's') + '<div class="col grow"><span class="small"><b>† ' + esc(d.n) + '</b></span><span class="tiny dim">' + RF.ROLE_NAME[d.ro] + ', ' + d.age + '</span></div></div>').join('');
+      h += '<div class="tiny dim" style="margin-top:8px">The dead leave the roster for good. Every one of yours feeds the uprising.</div></div>';
+    }
     h += '<div class="card" style="margin-top:10px"><div class="row"><div class="col grow"><span class="tiny dim">RECORD</span><span class="big">' + recStr(ut) + '</span></div><div class="col" style="align-items:flex-end"><span class="tiny dim">UPRISING</span><span class="big ' + (info.delta > 0 ? 'red' : 'dim') + '">' + (info.delta > 0 ? '+' : '') + info.delta + '</span></div></div>' + (info.upset ? '<div class="small red" style="margin-top:6px">An upset over a richer district. The districts noticed.</div>' : '') + (info.stageUp != null ? '<div class="small gold" style="margin-top:6px">The uprising reaches: ' + RF.STAGES[info.stageUp].n.toUpperCase() + '</div>' : '') + '</div>';
     h += '<div style="margin-top:16px"><button class="btn" data-act="cont">CONTINUE</button></div></div>';
     setUI(h);
@@ -2948,6 +3050,11 @@ if (typeof module !== 'undefined') module.exports = RF;
       m.chain = { team: 0, s: { C: 1, T: 1, K: 1, W: 0 } }; m.lastPoss = 0; m.ctrl = p;
       const keep = m.form[0]; m.form[0] = 9; setTimeout(() => { m.form[0] = keep; }, 120); G.banner = null; G.bigs = []; G.texts = [];
       m.inp.shoot = true;
+    },
+    kill() { // force a fatal hit right now (screenshot hook)
+      const m = G.m, vic = m.pl.find((q) => q.team === 1 && m.ball.own !== q) || m.pl.find((q) => q.team === 1), hit = m.pl.find((q) => q.team === 0 && q.ro === 'E') || m.pl.find((q) => q.team === 0);
+      G.banner = null; G.bigs = []; G.texts = []; m.state = 'play';
+      RF.fall(m, hit, vic); drainEvents();
     },
     finish() { if (G) { G.m.human = -1; while (G.m.state !== 'final') { RF.step(G.m, RF.DT); G.m.ev.length = 0; } finishGame(); } },
     result: showResult,

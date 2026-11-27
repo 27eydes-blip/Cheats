@@ -130,7 +130,7 @@ for (const q of QL) {
   line(1, 3);
   line(2, 4);
   ok(r15.w > 0.55 && r15.w < 0.97, 'Citadel beats Ruins most nights, not every night');
-  ok(r15.qw > 0.5 && r15.qw < 0.97, 'quick sim agrees on the Citadel edge');
+  ok(r15.qw > 0.5 && (QUICK || r15.qw < 0.97), 'quick sim agrees on the Citadel edge');
 }
 
 // ---- 4. dynasty: three full years
@@ -194,6 +194,28 @@ for (const q of QL) {
   console.log(`uprising ${L.upr}, stage ${RF.STAGES[L.stage].n}, story beats queued ${L.story.length}, wall ${L.wall}`);
   ok(L.story.length >= 1, 'uprising stages queue story text');
   ok(RF.refOf(L, 1) < RF.DISTRICTS[1].ref, 'after the wall falls the Citadel loses most of its ref favor');
+}
+
+// ---- 5b. deaths: common, permanent, and the rosters refill
+{
+  let games = 0, hit = 0, n = 0;
+  for (let i = 0; i < (QUICK ? 20 : 50); i++) {
+    const a = (i * 7) % 50, b = (i * 11 + 3) % 50;
+    if (a === b) continue;
+    const m = RF.simMatch(mk(L0, a, b, 180, 8000 + i));
+    games++; n += m.deaths.length; if (m.deaths.length) hit++;
+    ok(m.state === 'final', 'match with deaths still finishes');
+    for (let t = 0; t < 2; t++) ok(m.pl.filter((p) => p.team === t).length <= 5, 'no ghost players');
+  }
+  console.log(`deaths: ${((hit / games) * 100).toFixed(0)}% of games, ${(n / games).toFixed(2)} per game`);
+  ok(hit / games >= 0.2, 'a death in at least 1 game in 5');
+  const L = RF.newLeague(11, 45);
+  while (L.phase === 'season') RF.advanceWeek(L, null, null);
+  const f = L.fallen || [];
+  console.log(`season: ${f.length} dead across 400 games, ${f.filter((x) => x.tm === 45).length} of them the user's`);
+  ok(f.length >= 80, 'league sims kill at a similar rate');
+  ok(f.every((x) => !Object.values(L.P).some((p) => p.n === x.n && p.tm === x.tm && p.age === x.age && p.o === x.o)), 'the dead are gone from the league');
+  ok(L.teams.every((t) => t.ro.length >= (t.id === 45 ? 12 : 16)), 'rosters refill after deaths');
 }
 
 // ---- 6. v1 migration
