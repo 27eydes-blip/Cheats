@@ -332,14 +332,14 @@
   {
    "species": "siltwolf",
    "id": "sw_court",
-   "x": -205,
+   "x": -177,
    "z": 288,
    "roof": true
   },
   {
    "species": "siltwolf",
    "id": "sw_cask",
-   "x": 92,
+   "x": 90,
    "z": 150,
    "roof": true
   },

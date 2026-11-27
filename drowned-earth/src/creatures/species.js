@@ -116,7 +116,7 @@ export function siltwolf(mgr, c) {
       else if (c.state === 'return') goal = c.home;
       else goal = wanderGoal(c, c.spec.territoryR * 0.55, 0.05);
       if (c.lure && c.state !== 'attack') goal = c.lure;
-      c.steer(goal, c.spec.speed * (c.state === 'attack' ? 1 : c.state === 'warning' ? 0.35 : 0.18), dt, { keepY: true, maxR: c.spec.territoryR + c.spec.leash });
+      c.steer(goal, c.spec.speed * (c.state === 'attack' ? 1 : c.state === 'warning' ? 0.35 : 0.18), dt, { keepY: true, maxR: Math.min(c.roofR ?? 99, c.spec.territoryR + c.spec.leash) });
       c.pos.y = c.home.y;
     },
     attack(c) { if (c.strike(1.7, { breaks: 0.18 })) mgr.sound('growl', c.pos, 1); },
@@ -124,10 +124,10 @@ export function siltwolf(mgr, c) {
       const p = mgr.ctx.player.position;
       const moving = c.state === 'attack' ? 1 : c.state === 'idle' || c.state === 'return' ? 0.3 : 0.1;
       pack.forEach((w, i) => {
-        const spread = c.state === 'warning' ? 1.4 : 1;
+        const spread = Math.min(c.state === 'warning' ? 1.4 : 1, (c.roofR ?? 99) / 4);
         // circle when warning, otherwise loosely around the leader
         const circ = c.state === 'warning' ? c.t * 0.6 + i * 2.1 : 0;
-        const tx = c.pos.x + (c.state === 'warning' ? Math.cos(circ) * 2.4 : w.off.x * spread), tz = c.pos.z + (c.state === 'warning' ? Math.sin(circ) * 2.4 : w.off.z * spread);
+        const tx = c.pos.x + (c.state === 'warning' ? Math.cos(circ) * Math.min(2.4, (c.roofR ?? 99) * 0.5) : w.off.x * spread), tz = c.pos.z + (c.state === 'warning' ? Math.sin(circ) * Math.min(2.4, (c.roofR ?? 99) * 0.5) : w.off.z * spread);
         const ox = w.p.x, oz = w.p.z;
         w.p.x += (tx - w.p.x) * Math.min(1, dt * 3); w.p.z += (tz - w.p.z) * Math.min(1, dt * 3); w.p.y = c.pos.y;
         const vx = w.p.x - ox, vz = w.p.z - oz;

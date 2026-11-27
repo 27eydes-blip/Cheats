@@ -74,6 +74,10 @@ export class Creatures {
       const g = this.ctx.collision.groundAt(pl.x, pl.z, 120);
       if (!Number.isFinite(g) || g < 1) return false;
       c.home.y = g; c.pos.copy(c.home); c.homed = true;
+      // how far the roof reaches: they keep to it
+      let r = 40;
+      for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283; for (let s = 1; s < 40; s += 0.5) { const y = this.ctx.collision.groundAt(pl.x + Math.cos(a) * s, pl.z + Math.sin(a) * s, 120); if (Math.abs(y - g) > 0.4) { r = Math.min(r, s - 1.2); break; } } }
+      c.roofR = Math.max(3, r);
     }
     return true;
   }
