@@ -142,6 +142,8 @@ export class Deep {
     // listeners
     let nearest = Infinity;
     const calm = this.ctx.settings.difficulty === 'calm';
+    // the bestiary's Listeners hold the same places now; the old ones stand down
+    if (this.ctx.creatures?.byKind('listener').length && !this.retired) { this.retired = true; for (const L of this.listeners) L.g.visible = false; this.listeners = []; }
     for (const L of this.listeners) {
       L.t += dt; L.cool = Math.max(0, L.cool - dt);
       const a = L.a;

@@ -146,7 +146,7 @@ export class Effects {
     } else this.breath.material.opacity = 0;
     // flashlight
     const on = player.flashlight;
-    this.flash.intensity = on ? (survival && survival.battery <= 0 ? 0 : 60) : 0;
+    this.flash.intensity = on ? (survival && survival.battery <= 0 ? 0 : 32) : 0;
     this.flash.position.copy(camera.position).addScaledVector(new THREE.Vector3(0.25, -0.2, 0).applyQuaternion(camera.quaternion), 1);
     this.flashTarget.position.copy(camera.position).addScaledVector(player.forward, 10);
     this.flashTarget.updateMatrixWorld();

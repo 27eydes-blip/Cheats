@@ -49,6 +49,7 @@ export class Fish {
       p: new THREE.Vector3(), v: new THREE.Vector3(1, 0, 0), k: 0.6 + Math.random() * 0.8, scale: 0.7 + Math.random() * 0.8,
     }));
     this.placed = false;
+    this.useGeometry = (g) => { this.mesh.geometry = g; this.jumper.geometry = g.clone().scale(2.4, 2.4, 2.4); };
     // a fish leaping clear of the surface now and then
     this.jumper = new THREE.Mesh(fishGeometry().scale(2.4, 2.4, 2.4), mat);
     this.jumper.visible = false;

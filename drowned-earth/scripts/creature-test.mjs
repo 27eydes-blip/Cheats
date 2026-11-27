@@ -19,7 +19,7 @@ const TESTS = {
     const c = S.c('sw_court'); await S.homed(c);
     S.place(c, 34, 'foot'); S.time(13);
     await S.walk(c, 3.0, 'toward', 26);        // into the alert ring
-    await S.walk(c, 3.0, 'toward', 17);         // past warning radius
+    await S.walk(c, 3.0, 'toward', 13.5);       // to the edge of its warning radius
     await S.idle(1.5);
     await S.walk(c, 1.6, 'away', 30);          // back away slowly
     await S.idle(3);
@@ -109,7 +109,7 @@ const KIT = `
     aim(c) { const p = ctx.player.position; const v = c.pos.clone().sub(p); ctx.player.yaw = Math.atan2(-v.x, -v.z); ctx.player.pitch = Math.atan2(v.y, Math.hypot(v.x, v.z)); },
     async homed(c) { for (let i = 0; i < 300 && !c.homed; i++) { ctx.player.teleport(new V(c.home.x + 20, 30, c.home.z)); g.step(3); await new Promise(r => setTimeout(r, 0)); } },
     press(a) { ctx.input.justPressed.add(a); g.update(1/30); ctx.input.justPressed.delete(a); },
-    async idle(sec) { const n = Math.round(sec * 30); for (let i = 0; i < n; i++) { ctx.input.move.x = ctx.input.move.y = 0; g.step(1); if (i % 30 === 0) await new Promise(r => setTimeout(r, 0)); } },
+    async idle(sec) { const n = Math.round(sec * 30); const hold = ctx.player.position.clone(); for (let i = 0; i < n; i++) { ctx.input.move.x = ctx.input.move.y = 0; g.step(1); ctx.player.position.copy(hold); ctx.player.velocity.set(0, 0, 0); if (i % 30 === 0) await new Promise(r => setTimeout(r, 0)); } },
     // move the player directly (keeps the test independent of collision): toward / away / past
     async walk(c, speed, how, until, sprint = false, crouch = false) {
       ctx.input.held.sprint = sprint; ctx.input.held.crouch = crouch;

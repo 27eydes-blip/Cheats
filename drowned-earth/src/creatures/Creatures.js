@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Creature } from './Creature.js';
 import { BODIES } from './species.js';
+import { makeBody } from './bodies.js';
 
 // The territorial bestiary: spawns the placed creatures near the player,
 // runs their senses + state machines, keeps the journal bestiary, handles
@@ -48,7 +49,7 @@ export class Creatures {
   }
   spawn(spec, place) {
     const c = new Creature(this, spec, place, null);
-    c.body = BODIES[place.species](this, c);
+    c.body = makeBody(this, c);
     c.body.group.visible = false;
     this.group.add(c.body.group);
     this.list.push(c);

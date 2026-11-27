@@ -58,7 +58,7 @@ export class Creature {
     if (se.vision > 0 && d < sp.alertR * 1.3) {
       const fwd = _f.set(Math.sin(this.heading), 0, Math.cos(this.heading));
       const to = _t.copy(p).sub(this.pos).setY(0).normalize();
-      const inCone = fwd.dot(to) > 0.3 || d < sp.warnR;
+      const inCone = fwd.dot(to) > 0.3 || d < sp.warnR * 1.5; // peripheral: close movement is always seen
       const dim = this.ctx.time.out.night > 0.6 && S.light <= 0 ? 0.45 : 1; // harder to see you in the dark
       const crouch = this.ctx.input.held.crouch ? 0.55 : 1;
       if (inCone) add(se.vision * (1 - d / (sp.alertR * 1.3)) * dim * crouch, 'sight');
