@@ -17,9 +17,10 @@ Five a side on a walled 40 x 90 yard floor with one hoop per team.
 - **Checks** strip the carrier; **fouls** cost 30 seconds in the sin bin.
 - **Fury** (the Scrap and the Ruins): fills as you take hits and concede; 10 seconds of red rage.
 
-Controls: left thumb moves (the stick appears where you touch). SHOOT (it checks when you defend), THROW, KICK,
-CHECK, SWITCH, and pause. Push the stick at a side wall while passing to bank it off the boards.
-Keyboard: WASD/arrows, J shoot, K throw, L kick, `;` check, Q switch, P/Esc pause.
+You don't play the games by hand: you run the club and watch every game as a live broadcast. The camera follows
+the ball and tightens near the rings, the ball carrier gets a name tag and a lower-third, big plays (slams, deep
+shots, chains of 3+) get an instant replay, and 1x / 2x / 4x / SKIP set the pace. Keys: 1 2 3 speed, P pause,
+Space skips a replay. Heavy hits can kill; the dead leave the roster for good.
 
 ## Dynasty
 

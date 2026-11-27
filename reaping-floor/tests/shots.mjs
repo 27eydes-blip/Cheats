@@ -75,13 +75,14 @@ await RF(() => window.__RF.step(24));
 await wait(400);
 await shot('12-game-midplay');
 // touch: drag the joystick and press SHOOT/THROW for real
-await page.touchscreen.tap(330, 640);
-await wait(200);
 await RF(() => window.__RF.dunk());
 await wait(700);
 await shot('13-game-dunk');
 await wait(1300);
 await shot('14-game-score-banner');
+await wait(1700);
+await shot('14a-instant-replay');
+await RF(() => { window.__RF.G.replay = null; window.__RF.G.replayQ = null; });
 await RF(() => window.__RF.kill());
 await wait(900);
 await shot('14b-game-fallen');
