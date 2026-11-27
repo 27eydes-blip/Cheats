@@ -129,7 +129,7 @@ export function skinMaterial(look, exprU, opts = {}) {
           float back = pow(max(dot(Vw, uSunDir), 0.0), 4.0) * thin * thin * smoothstep(-0.2, 0.3, -ndlBack(Nw, uSunDir));
           float ndl = dot(Nw, uSunDir);
           float edge = smoothstep(-0.35, 0.05, ndl) * smoothstep(0.4, 0.0, ndl);
-          outgoingLight += diffuseColor.rgb * uSunColor * (vec3(1.0, 0.3, 0.18) * back * 0.7 + vec3(0.12, 0.035, 0.02) * edge);
+          outgoingLight += diffuseColor.rgb * uSunColor * (vec3(1.0, 0.3, 0.18) * back * 0.7 + vec3(0.045, 0.02, 0.014) * edge);
         }
         #include <opaque_fragment>`);
   };
