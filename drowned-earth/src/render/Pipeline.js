@@ -269,7 +269,7 @@ void main() {
     float h = rnd(cell); vec2 c = (vec2(rnd(cell + 3.1), rnd(cell + 7.7)) - 0.5) * 0.6;
     float r = 0.12 + 0.22 * h; float dd = length(f - c);
     float drop = smoothstep(r, r * 0.6, dd) * step(1.0 - uWetLens, h);
-    uv += (f - c) * drop * 0.035;
+    uv += (f - c) * drop * 0.012; // a drop bends what's behind it — gently
   }
   float d = texture2D(tDepth, uv).x;
   // subtle chromatic aberration toward the frame edges

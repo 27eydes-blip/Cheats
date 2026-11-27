@@ -100,7 +100,9 @@ void main() {
   float ripFoam;
   vec3 rip = ripples(vW.xz, ripFoam);
   float rr = rainRings(vW.xz);
-  vec2 fw = fineWaves(vW.xz, uTime, 0.35 + uWind) * detailFade;
+  // fade the fine octaves out where they'd be smaller than a pixel (blocky glints otherwise)
+  float pix = length(fwidth(vW.xz));
+  vec2 fw = fineWaves(vW.xz, uTime, 0.35 + uWind) * detailFade * clamp(1.0 - (pix - 0.02) * 12.0, 0.0, 1.0);
   vec3 N = normalize(vN + detail * 0.22 + rip + vec3(rr * 0.3, 0.0, rr * 0.3) - vec3(fw.x, 0.0, fw.y));
   bool below = uUnder > 0.5;
   if (below) N = -N;
@@ -137,7 +139,7 @@ void main() {
       refl = mix(refl, rf.rgb, rf.a * 0.92);
     }
     // sun glitter / moon path
-    float spec = pow(max(dot(R, uSunDir), 0.0), 700.0) * 30.0 + pow(max(dot(R, uSunDir), 0.0), 60.0) * 0.6;
+    float spec = pow(max(dot(R, uSunDir), 0.0), mix(700.0, 180.0, clamp(pix * 8.0, 0.0, 1.0))) * mix(30.0, 8.0, clamp(pix * 8.0, 0.0, 1.0)) + pow(max(dot(R, uSunDir), 0.0), 60.0) * 0.6;
     refl += uSunColor * spec * (1.0 - uCloud * 0.85);
     // point lights (lanterns, searchlights) streak on the water
     for (int i = 0; i < 4; i++) {
