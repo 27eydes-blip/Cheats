@@ -252,8 +252,8 @@ export function ambientFishGeometry(lib) {
   g.computeBoundingBox();
   const bb = g.boundingBox, L = bb.max.x - bb.min.x;
   g.translate(-bb.max.x, -(bb.max.y + bb.min.y) / 2, -(bb.max.z + bb.min.z) / 2);
-  g.scale(0.33 / L, 0.33 / L * 0.8, 0.33 / L * 0.8);
-  g.translate(0.16, 0, 0);
+  g.scale(0.24 / L, 0.24 / L * 0.8, 0.24 / L * 0.8); // ~25 cm: small shoaling fish
+  g.translate(0.12, 0, 0);
   g.computeVertexNormals();
   return g;
 }

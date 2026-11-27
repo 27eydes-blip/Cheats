@@ -1,0 +1,270 @@
+{
+  "_doc": "Bars and the night economy. Each bar sits on a raft platform (community + platform) as a 'bar' structure. open = [from, to] hours (wraps midnight); busy = hour the crowd peaks. drinks: id -> {name, price, cur, strength 0..1, mood, homebrew (smuggling product), banned (Highmark tax/ban), desc}. bartender: a person with memory (visits, tab, favours) and a dialogue tree: nodes with text (may use {name}, {tab}, {visits}) and options [{text, go | do, if, ifNot, cost}]. do = order | rumour | game:<id> | tab | confess | leave | job | door. regulars: people who drink here, with a line or two and what they can lead to. band: procedural style (shanty, garden, forge, hymn, smoke, lounge). games: house games available. vice: per-drink addiction weight and hangover. mature: true marks content that has a clean alternative (see mature in data). All text is original to this world.",
+  "currencyNames": { "scrap": "scrap", "salt": "salt", "seal": "ration seals", "glass": "glass" },
+  "vice": {
+    "drunkPerStrength": 0.32, "soberPerHour": 0.22, "hangoverAt": 0.55,
+    "habitPerDrink": 0.04, "habitDecayPerDay": 0.05, "habitWarn": 0.45, "habitHard": 0.75,
+    "brawlChance": 0.08, "robChance": 0.05, "recruitChance": 0.1
+  },
+  "drinks": {
+    "rum_ration":   { "name": "Ration Rum", "price": 3, "cur": "scrap", "strength": 0.35, "desc": "Highmark-bonded. Tastes like a promise somebody else made." },
+    "bilge_gin":    { "name": "Bilge Gin", "price": 2, "cur": "scrap", "strength": 0.5, "homebrew": true, "banned": true, "desc": "Distilled in a pressure cooker on a raft nobody will name. Tastes like a fire in a rope shop." },
+    "salt_beer":    { "name": "Salt Beer", "price": 1, "cur": "salt", "strength": 0.2, "desc": "Thin, cloudy, honest. Brewed from ration barley and spite." },
+    "kelp_wine":    { "name": "Kelp Wine", "price": 2, "cur": "scrap", "strength": 0.3, "desc": "Green-gold. It shouldn't be good. It is." },
+    "greenwater":   { "name": "Greenwater", "price": 4, "cur": "scrap", "strength": 0.55, "homebrew": true, "desc": "Seaweed spirit, triple-run. The Greentide elders pretend not to know who makes it." },
+    "sour_tide":    { "name": "Sour Tide", "price": 2, "cur": "salt", "strength": 0.25, "desc": "Fermented plum from the last plum tree in Orrin Bay. Everybody knows exactly which tree." },
+    "slag":         { "name": "Slag", "price": 2, "cur": "scrap", "strength": 0.6, "homebrew": true, "banned": true, "desc": "Rusthold's own. Served in a welding cup. You don't sip Slag, you survive it." },
+    "coolant":      { "name": "Coolant", "price": 3, "cur": "scrap", "strength": 0.4, "desc": "Blue. Not actual coolant. Mostly not actual coolant." },
+    "tea_still":    { "name": "Still Water Tea", "price": 0, "cur": "scrap", "strength": 0, "desc": "Free at the Vigil. It tastes of smoke and somebody's grandmother." },
+    "tea_bitter":   { "name": "Bitterleaf", "price": 1, "cur": "salt", "strength": 0, "desc": "Keeps you awake through a night watch and through most conversations." },
+    "fog_gin":      { "name": "Fog Gin, no ice, stirred twice", "price": 5, "cur": "scrap", "strength": 0.45, "homebrew": true, "banned": true, "desc": "The drink is fine. The order is a password." },
+    "drowned_rat":  { "name": "A Drowned Rat", "price": 3, "cur": "scrap", "strength": 0.5, "homebrew": true, "desc": "Black rum, bitter salt, a lime that came from somewhere it shouldn't have." },
+    "gold_seal":    { "name": "Gold Seal Reserve", "price": 2, "cur": "seal", "strength": 0.3, "banned": false, "desc": "Highmark's luxury brandy, sold to raft-folk at a 'heritage discount'. The bottle has a picture of the Chancellor smiling at it." }
+  },
+  "bars": [
+    {
+      "id": "brass_anchor", "name": "The Brass Anchor", "community": "portage", "platform": "anchor",
+      "sign": "THE BRASS ANCHOR", "signColor": "#ffb347", "signColor2": "#ff5a3c", "style": "trader", "band": "shanty", "bandName": "The Bilge Pumps",
+      "open": [16, 3], "busy": 21, "rowdy": 0.7,
+      "drinks": ["salt_beer", "rum_ration", "bilge_gin", "gold_seal", "drowned_rat"],
+      "games": ["tide_cards", "bones", "last_rope", "bargain_pit"],
+      "blurb": "Loud, hot, packed. A bargaining pit in the middle where traders shout prices at each other like it's a sport. It is a sport.",
+      "bartender": {
+        "id": "haddie", "name": "Haddie Brass", "age": 52, "sex": 0.1, "tone": "loud",
+        "intro": "You're new. New drinks first round at full price. That's not a rule, I just like it.",
+        "tree": {
+          "start": { "text": "{greet} What'll it be?", "options": [
+            { "text": "Something to drink.", "do": "order" },
+            { "text": "What's the word on the water?", "do": "rumour" },
+            { "text": "Who's running cards tonight?", "go": "games" },
+            { "text": "Put it on my tab.", "do": "tab", "if": "tabOpen" },
+            { "text": "Settle my tab. ({tab} scrap)", "do": "paytab", "if": "owes" },
+            { "text": "Anyone hiring?", "go": "work" },
+            { "text": "Just looking.", "do": "leave" }
+          ]},
+          "games": { "text": "Quill's on the cards. Bones by the pit if you like dice. And if you've got a stomach, the boys are doing Last Rope at the back.", "options": [
+            { "text": "Deal me in. (Tide Cards)", "do": "game:tide_cards" },
+            { "text": "Roll the bones.", "do": "game:bones" },
+            { "text": "Last Rope. Let's go.", "do": "game:last_rope" },
+            { "text": "Get in the pit. (bargaining)", "do": "game:bargain_pit" },
+            { "text": "Maybe later.", "go": "start" }
+          ]},
+          "work": { "text": "You can carry crates, you can pour, or you can keep your mouth shut for money. Which of those are you good at?", "options": [
+            { "text": "I'll pour. (work a shift)", "do": "job:pour" },
+            { "text": "Keep my mouth shut? I'm listening.", "do": "job:quiet", "if": "heat1" },
+            { "text": "Never mind.", "go": "start" }
+          ]}
+        },
+        "greets": [
+          "Ah, there's my favourite disappointment.",
+          "Back again. The Anchor always gets them back.",
+          "Wipe your boots. No, I'm joking, the floor's been sticky since the flood.",
+          "You look like you've been arguing with the sea. Who won?"
+        ],
+        "greetsTab": [ "Your tab's at {tab}. I'm not saying anything. I'm just saying the number." ],
+        "greetsRegular": [ "{visits} nights. You're furniture now. I'm going to start polishing you." ]
+      },
+      "regulars": [
+        { "id": "quill", "name": "Quill Marrow", "role": "card sharp", "seat": "cards", "lines": ["Tide Cards is a game of skill. Mostly the skill of knowing when to leave.", "I never cheat. I simply remember better than everyone else, out loud, with my hands."], "leads": "game:tide_cards" },
+        { "id": "lumi", "name": "Lumi Vale", "role": "ration influencer", "seat": "bar", "satire": true, "lines": ["Hi! Do you want to be in my broadcast? Just hold this Gold Seal and say 'heritage' with your eyes.", "Highmark sends me one free crate a week to say rations are 'a lifestyle'. It's honestly so empowering.", "Don't film my left side. That's my 'pre-flood' side."] },
+        { "id": "dockmother", "name": "Dockmother Ree", "role": "retired diver", "seat": "corner", "lines": ["The Calla Morrow sang the night she sank. Didn't hear it? Course you didn't. You weren't drowning.", "Buy an old woman a drink and she'll tell you where the Ward don't look."], "leads": "rumour" },
+        { "id": "bruno", "name": "Bruno Tack", "role": "dock muscle", "seat": "pit", "lines": ["You looking at me or the wall behind me? Choose carefully.", "I used to be a lifeguard. Then the whole world needed one."], "brawler": true }
+      ],
+      "rumours": [
+        "A Highmark supply barge runs the east channel every fifth night. Two guards and a captain who drinks.",
+        "Somebody's been forging ration seals so good the Ward's started weighing them.",
+        "There's a hatch at the bottom of the old lighthouse. People go down and come back dressed better.",
+        "Lumi Vale's crate last week had real oranges. Nobody's seen an orange since the Rise.",
+        "Rusthold's Syndicate wants a pilot who doesn't ask what's in the hold."
+      ]
+    },
+    {
+      "id": "fermentary", "name": "The Fermentary", "community": "greentide_barge", "platform": "gt_fermentary",
+      "sign": "THE FERMENTARY", "signColor": "#9be28a", "signColor2": "#f0e080", "style": "garden", "band": "garden", "bandName": "Sorrel & the Long Rows",
+      "open": [15, 1], "busy": 20, "rowdy": 0.15,
+      "drinks": ["kelp_wine", "greenwater", "sour_tide", "salt_beer"],
+      "games": ["seed_count"],
+      "blurb": "A garden under glass and tarp. Jars of things fermenting along every shelf, gently. People talk quietly here because the plants are listening (they are not).",
+      "bartender": {
+        "id": "sorrel", "name": "Sorrel Ndiaye", "age": 38, "sex": 0.9, "tone": "calm",
+        "intro": "Sit anywhere the moss isn't. Kelp wine is this year's. Greenwater is from a year we don't talk about.",
+        "tree": {
+          "start": { "text": "{greet} Thirsty, or just tired?", "options": [
+            { "text": "Thirsty.", "do": "order" },
+            { "text": "Tired. Tell me something good.", "do": "rumour" },
+            { "text": "Who makes the Greenwater?", "go": "still" },
+            { "text": "Settle up. ({tab} scrap)", "do": "paytab", "if": "owes" },
+            { "text": "I'll go.", "do": "leave" }
+          ]},
+          "still": { "text": "Nobody. It condenses out of the air on certain nights. If a Ward officer asks, it's vinegar. If you want to carry a crate of 'vinegar' to Portage, Haddie pays well.", "options": [
+            { "text": "I'll carry it. (smuggling run)", "do": "job:vinegar" },
+            { "text": "Vinegar. Got it.", "go": "start" }
+          ]}
+        },
+        "greets": [ "The weather's turning. You can taste it in the wine.", "You found us again. Good. People who find us twice usually stay.", "Mind the jar by your elbow. It's older than both of us." ],
+        "greetsTab": [ "You owe the garden {tab}. The garden is patient. I'm less patient." ],
+        "greetsRegular": [ "{visits} visits. The tomatoes recognise you." ]
+      },
+      "regulars": [
+        { "id": "koa_visit", "name": "Old Juniper", "role": "seed-keeper", "seat": "table", "lines": ["There's a seed in my pocket from before the Rise. I'll plant it when I'm sure there's a world to plant it in."] },
+        { "id": "teagan", "name": "Teagan Moss", "role": "Highmark defector", "seat": "bar", "lines": ["I wrote the ration jingles. 'Order and supply.' Yeah. That was me. I'm drinking about it."], "leads": "radio" }
+      ],
+      "rumours": [
+        "The Greentide still runs on the full moon. The Ward pretends it's fog.",
+        "There's a Highmark auditor who trades seed counts for Greenwater. Cheap man. Very thirsty.",
+        "Somebody saw lanternfish making a pattern under the old lighthouse. Three short, one long."
+      ]
+    },
+    {
+      "id": "hot_rivet", "name": "The Hot Rivet", "community": "rusthold_tender", "platform": "rh_rivet",
+      "sign": "THE HOT RIVET", "signColor": "#ff7a2a", "signColor2": "#ffe36a", "style": "forge", "band": "forge", "bandName": "The Pipe Choir",
+      "open": [17, 4], "busy": 23, "rowdy": 0.85,
+      "drinks": ["slag", "coolant", "salt_beer", "rum_ration"],
+      "games": ["arm_wrestle", "bones"],
+      "blurb": "A counter made of a steel I-beam that's still warm from the forge next door. Sparks fall from the ceiling as decoration. Arm-wrestling table by the door, scarred like a butcher's block.",
+      "bartender": {
+        "id": "marta", "name": "Big Marta Kowal", "age": 44, "sex": 0.85, "tone": "blunt",
+        "intro": "Slag or Coolant. Don't ask what's in them. Don't touch the counter, it's hot. Do arm-wrestle me, I'm bored.",
+        "tree": {
+          "start": { "text": "{greet}", "options": [
+            { "text": "Pour something.", "do": "order" },
+            { "text": "Arm-wrestle you? Fine.", "do": "game:arm_wrestle" },
+            { "text": "What's the Syndicate up to?", "do": "rumour" },
+            { "text": "Pay my tab. ({tab} scrap)", "do": "paytab", "if": "owes" },
+            { "text": "Need a job.", "go": "work" },
+            { "text": "Out.", "do": "leave" }
+          ]},
+          "work": { "text": "Syndicate pays for hulls, engines and pilots who don't scream. You got a boat? You got nerve? Pick one and come back with the other.", "options": [
+            { "text": "Put me in touch.", "do": "job:syndicate" },
+            { "text": "Later.", "go": "start" }
+          ]}
+        },
+        "greets": [ "Sit. Not there. That stool bites.", "You again. Good. The last one cried.", "Sparks are free. Everything else costs." ],
+        "greetsTab": [ "{tab} scrap. I've broken arms for less. Not yours. Yet." ],
+        "greetsRegular": [ "{visits} nights. The Pipe Choir wrote you a song. It's mostly clanging." ]
+      },
+      "regulars": [
+        { "id": "welder_jax", "name": "Jax Fontaine", "role": "Syndicate welder", "seat": "bar", "lines": ["Every boat in Orrin Bay has a little Rusthold in it. Sometimes a lot. Sometimes a bomb."], "leads": "job:syndicate" },
+        { "id": "ward_off", "name": "Off-Duty Warden Pike", "role": "Tide Ward, drinking alone", "seat": "corner", "lines": ["I'm not here. You're not here. Buy me a Slag and we both stay not here.", "Patrols change shift at the second bell. Twenty minutes where nobody watches the east channel. You didn't hear that."], "leads": "bribe" }
+      ],
+      "rumours": [
+        "The Syndicate's building a boat that can outrun a Ward interceptor. Hydrofoil. Stolen plans.",
+        "Warden Pike drinks here on his off nights. He's cheaper than a lawyer.",
+        "Somebody's been melting down Highmark padlocks and selling them back to Highmark."
+      ]
+    },
+    {
+      "id": "quiet_cup", "name": "The Quiet Cup", "community": "vigil", "platform": "vg_cup",
+      "sign": "THE QUIET CUP", "signColor": "#ffd9a0", "signColor2": "#ffffff", "style": "candle", "band": "hymn", "bandName": "the Evening Office",
+      "open": [18, 6], "busy": 22, "rowdy": 0, "dry": true,
+      "drinks": ["tea_still", "tea_bitter"],
+      "games": ["confess"],
+      "blurb": "A candlelit tea house on the Vigil. No alcohol, no raised voices. People come here to say things out loud once, to someone who won't repeat them.",
+      "bartender": {
+        "id": "amon", "name": "Brother Amon", "age": 61, "sex": 1, "tone": "gentle",
+        "intro": "Tea is free. Sitting is free. Talking is free. Leaving is free. We are terrible at business.",
+        "tree": {
+          "start": { "text": "{greet}", "options": [
+            { "text": "Tea, please.", "do": "order" },
+            { "text": "I want to say something. Just once.", "do": "game:confess" },
+            { "text": "I've been drinking too much.", "go": "help", "if": "habit" },
+            { "text": "Is there anything I should know?", "do": "rumour" },
+            { "text": "I'll sit a while, then go.", "do": "leave" }
+          ]},
+          "help": { "text": "Then you've already done the hard part, which is noticing. Come and sit with us at the second bell. No speeches. Just people, and tea, and nobody pretending.", "options": [
+            { "text": "I'll come. (start the Vigil circle)", "do": "counsel" },
+            { "text": "Not yet.", "go": "start" }
+          ]}
+        },
+        "greets": [ "Welcome. Your shoulders are up by your ears. Put them down.", "Sit. The candle doesn't mind who you are.", "The sea is loud tonight. In here, it isn't." ],
+        "greetsTab": [ "There is no tab here. There never will be." ],
+        "greetsRegular": [ "You've come {visits} times. You're one of the quiet ones now." ]
+      },
+      "regulars": [
+        { "id": "widow_ash", "name": "Ash Okonkwo", "role": "lighter of lanterns", "seat": "table", "lines": ["I light one lantern a night for everyone I lost. It takes a while."] },
+        { "id": "tideholder", "name": "A Tideholder", "role": "Vigil keeper of debts", "seat": "corner", "lines": ["The Vigil holds what the city drops. Debts. Secrets. Children. We are very good at holding things.", "If you owe Lowlight, we can talk to Lowlight. Quietly."], "leads": "job:tideholder" }
+      ],
+      "rumours": [
+        "The Tideholders keep a ledger of every debt in the Drift. Even Highmark's.",
+        "Someone confessed to being on the Calla Morrow the night she sank. The Vigil kept it.",
+        "There is a woman who runs a place under the water. She comes to the Vigil once a year, masked, and lights a lantern."
+      ]
+    },
+    {
+      "id": "drowned_rat", "name": "The Drowned Rat", "community": "lowlight", "platform": "ll_rat",
+      "sign": "THE DROWNED RAT", "signColor": "#56f0c8", "signColor2": "#ff3e9a", "style": "smoke", "band": "smoke", "bandName": "the Saw & the Squeezebox",
+      "open": [20, 5], "busy": 1, "rowdy": 0.5, "hidden": true,
+      "drinks": ["drowned_rat", "bilge_gin", "fog_gin", "rum_ration"],
+      "games": ["tide_cards", "bones"],
+      "blurb": "Fog inside and out. Low ceiling, painted ships on every surface, a bookcase that is very obviously a door. Smugglers drink here because the Ward can't find it twice.",
+      "bartender": {
+        "id": "fenn", "name": "Mister Fenn", "age": 67, "sex": 1, "tone": "dry",
+        "intro": "You found the Rat. Congratulations. Most people find the bottom of the channel first.",
+        "tree": {
+          "start": { "text": "{greet}", "options": [
+            { "text": "A Drowned Rat.", "do": "order" },
+            { "text": "Fog gin, no ice. Stirred twice.", "do": "door", "if": "knowsCode" },
+            { "text": "Anyone need a pilot?", "do": "job:lowlight" },
+            { "text": "What's moving tonight?", "do": "rumour" },
+            { "text": "Pay my tab. ({tab} scrap)", "do": "paytab", "if": "owes" },
+            { "text": "I was never here.", "do": "leave" }
+          ]}
+        },
+        "greets": [ "Mm.", "You again. Sit with your back to the wall like everyone else.", "Keep your voice under the saw." ],
+        "greetsTab": [ "You owe the Rat {tab}. The Rat remembers. I'm the Rat." ],
+        "greetsRegular": [ "{visits} nights. People here are starting to forget you're not one of us. That's a compliment." ]
+      },
+      "regulars": [
+        { "id": "vesna", "name": "Vesna Kade", "role": "Lowlight pilot", "seat": "bar", "lines": ["I've outrun the Ward forty-one times. Forty-two if you count the time I was technically in a fridge."], "leads": "job:lowlight" },
+        { "id": "silent_mo", "name": "Silent Mo", "role": "forger", "seat": "booth", "lines": ["…", "(He slides you a ration seal. It's perfect. He takes it back.)"], "leads": "job:forgery" }
+      ],
+      "rumours": [
+        "The coded channel says 'three short, one long' every night at the second bell. Under the lamp, they say.",
+        "Ask Fenn for a fog gin, no ice, stirred twice. If he likes you, the bookcase opens.",
+        "There's a Highmark family running guns out of the Concord. They call themselves the Sundials."
+      ]
+    }
+  ],
+  "games": {
+    "tide_cards": { "name": "Tide Cards", "stake": [1, 10], "cur": "scrap", "desc": "High-low with a deck of salvaged playing cards. Call the next card higher or lower; keep going to double, or bank it." },
+    "bones": { "name": "Bones", "stake": [1, 6], "cur": "scrap", "desc": "Three knuckle-bones. Beat the house's roll." },
+    "last_rope": { "name": "Last Rope", "stake": [0, 0], "desc": "A drinking game. Drink when the rope creaks. The last one standing takes the pot (and the hangover)." },
+    "bargain_pit": { "name": "The Bargaining Pit", "stake": [3, 3], "cur": "scrap", "desc": "Shout a price at the right moment. Too early and you're a mark; too late and someone else wins." },
+    "arm_wrestle": { "name": "Arm-Wrestling", "stake": [2, 8], "cur": "scrap", "desc": "Tap in rhythm to hold your arm; push when the opponent tires." },
+    "seed_count": { "name": "Seed Count", "stake": [0, 0], "desc": "Guess the seeds in the jar. Win a cutting. Lose nothing." },
+    "confess": { "name": "Confession", "stake": [0, 0], "desc": "Say it once. Choose what." }
+  },
+  "jobs": {
+    "pour": { "name": "Work a shift behind the bar", "pay": [6, 12], "hours": 4, "desc": "Pour drinks, take abuse, overhear everything.", "gives": "rumours" },
+    "quiet": { "name": "Hold a package overnight", "pay": [15, 15], "heat": 6, "desc": "Somebody's package. Somebody else's problem. Yours until morning." },
+    "vinegar": { "name": "Carry 'vinegar' to Portage", "cargo": "greenwater_crate", "from": "greentide_barge", "to": "portage", "pay": [24, 24], "heat": 10, "desc": "A crate of Greenwater to Haddie at the Brass Anchor. If the Ward stops you, it's vinegar." },
+    "syndicate": { "name": "Syndicate engine run", "cargo": "engine_parts", "from": "rusthold_tender", "to": "lowlight", "pay": [30, 30], "heat": 14, "desc": "Engine parts to Lowlight, the long way round." },
+    "lowlight": { "name": "Fog run", "cargo": "sealed_bag", "from": "lowlight", "to": "portage", "pay": [28, 28], "heat": 16, "desc": "A sealed bag to a stall in Portage. Don't open it." },
+    "forgery": { "name": "Paper for Mo", "cargo": "blank_seals", "from": "portage", "to": "lowlight", "pay": [20, 20], "heat": 12, "desc": "Blank seal stock lifted off a Highmark clerk. Mo needs it before the moon's down." },
+    "tideholder": { "name": "Carry a debt-letter", "cargo": "debt_letter", "from": "vigil", "to": "lowlight", "pay": [8, 8], "heat": 0, "desc": "A letter that forgives somebody's debt. Lowlight will not like reading it." }
+  },
+  "cargo": {
+    "greenwater_crate": { "name": "Crate of 'vinegar'", "contraband": true, "weight": 3 },
+    "engine_parts": { "name": "Syndicate engine parts", "contraband": true, "weight": 4 },
+    "sealed_bag": { "name": "Sealed bag (Lowlight)", "contraband": true, "weight": 1 },
+    "blank_seals": { "name": "Blank seal stock", "contraband": true, "weight": 1 },
+    "debt_letter": { "name": "Vigil debt-letter", "contraband": false, "weight": 0.1 }
+  },
+  "crowdLines": [
+    "—and I said, mate, that's not a fish, that's your boot.",
+    "Highmark's raising the salt tax again. On salt. On the sea!",
+    "Two scrap says she wins. Three says she breaks his arm.",
+    "Have you heard Lumi's new jingle? I can't get it out of my head. I've tried a nail.",
+    "Don't drink the gin. No, drink the gin, just not the green gin.",
+    "My cousin swears she saw lights under the Sounding again.",
+    "Another round for the table that isn't paying!",
+    "Ward boat went past an hour ago. Searchlight and everything. Very pretty.",
+    "He sold me a map to the Cathedral. It was a menu.",
+    "If the Concord's so glamorous why do they all smell like mildew and cologne?"
+  ],
+  "brawl": {
+    "starts": ["Somebody throws a stool. Somebody else throws the person who threw the stool.", "A card falls out of a sleeve. The table goes quiet, then very loud.", "Two dockhands disagree about whose turn it was to be wrong."],
+    "outcomes": ["You catch an elbow and taste copper. The bartender pours you one on the house for 'stopping a stool with your face'.", "You stay out of it. Mostly. Your drink doesn't survive.", "You end it with one good shove. People buy you drinks. The bouncer writes your name down."]
+  },
+  "hangover": ["Your head is a bell somebody is still ringing.", "Daylight is a personal insult.", "You remember the first half of the night. The second half is a rumour."]
+}

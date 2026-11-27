@@ -148,7 +148,7 @@ function gullrat(mgr, c) {
         m.h += angTo(m.h, look) * Math.min(1, dt * 6);
         if (m.gull) {
           // gulls lift off and wheel when the swarm is up
-          const wantY = agitated ? 1.0 + Math.sin(m.ph * 0.7) * 0.5 : 0;
+          const wantY = agitated ? 3.2 + Math.sin(m.ph * 0.7) * 0.8 : 0; // wheel overhead, out of reach
           m.y += (wantY - m.y) * Math.min(1, dt * 2);
           m.anim.play(agitated ? 'Run' : m.speed > 0.1 ? 'Walk' : 'Idle', 0.25, { speed: agitated ? 1.6 : 1 });
         } else m.anim.play(agitated && m.p.distanceTo(pl) < 0.8 ? 'Attack' : m.speed > 1.2 ? 'Gallop' : m.speed > 0.08 ? 'Walk' : m.ph % 6 < 2 ? 'Eating' : 'Idle', 0.2, { speed: m.speed > 1.2 ? 2.2 : 1.6 });

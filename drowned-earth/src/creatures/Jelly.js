@@ -64,9 +64,12 @@ export function buildJelly({ radius = 1.6, threads = 6, count = 48 } = {}) {
         totalEmissiveRadiance += vec3(0.25, 0.85, 0.95) * (gon2 * 0.6 + can2 * 0.35) * (0.25 + uFlare * 2.2 * wave);`);
   };
   bellM.customProgramCacheKey = () => 'jellybell';
-  const bell = new THREE.Mesh(bellG, bellM);
-  bell.renderOrder = 3;
-  group.add(bell);
+  // two passes so the bell sorts against itself: inside surfaces first, then the outside
+  bellM.side = THREE.BackSide;
+  const bellIn = new THREE.Mesh(bellG, bellM); bellIn.renderOrder = 3;
+  const bellOutM = bellM.clone(); bellOutM.side = THREE.FrontSide; bellOutM.onBeforeCompile = bellM.onBeforeCompile; bellOutM.customProgramCacheKey = () => 'jellybellF';
+  const bell = new THREE.Mesh(bellG, bellOutM); bell.renderOrder = 4;
+  group.add(bellIn, bell);
 
   // ---- oral arms: four frilled curtains hanging from the centre
   const armM = new THREE.MeshStandardMaterial({ color: 0xe8c8d4, roughness: 0.3, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false });

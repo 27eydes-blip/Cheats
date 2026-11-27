@@ -339,7 +339,7 @@ export function weed(len, count, seed = 1) {
   }
   const g = mergeGeos(geos);
   if (!_weedMat) {
-    _weedMat = new THREE.MeshStandardMaterial({ color: 0x2c3a1c, roughness: 0.4, side: THREE.DoubleSide });
+    _weedMat = new THREE.MeshStandardMaterial({ color: 0x18200f, roughness: 0.75, side: THREE.DoubleSide });
     _weedMat.userData.t = { value: 0 };
     _weedMat.onBeforeCompile = (sh) => {
       sh.uniforms.uT = _weedMat.userData.t;
