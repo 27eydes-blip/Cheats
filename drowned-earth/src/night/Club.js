@@ -109,6 +109,7 @@ export class Club {
     hull.rotation.y = F.heading; hull.rotation.z = 0.06;
     hull.position.set(F.pos[0], -F.depth + 2.5, F.pos[1]);
     this.ctx.scene.add(hull);
+    this.wreck = hull;
     // a row of portholes that glow amber when the Club is open
     const pm = new THREE.MeshBasicMaterial({ color: 0xffa040, toneMapped: false });
     this.portholeM = pm;
@@ -480,6 +481,7 @@ export class Club {
     this.t += dt;
     const near = this.ctx.player.position.distanceTo(this.origin) < 80;
     this.saloon.visible = near || this.state.inside;
+    this.wreck.visible = !this.state.inside; // from inside, the saloon is the hull
     this.cU.uT.value = this.t;
     // the signal: three short, one long (5 s cycle), at night only
     const night = this.ctx.time.out.night, c = this.t % 5;
