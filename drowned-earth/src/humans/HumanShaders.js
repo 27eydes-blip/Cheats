@@ -194,7 +194,7 @@ export function eyeMaterial() {
           float lid = smoothstep(0.1, 0.75, Nw.y);
           float inIris = 1.0 - smoothstep(uIrisR * 0.95, uIrisR * 1.05, r);
           // iris: deeper and less saturated than the source art, with a dark limbal ring
-          vec3 irisC = mix(vec3(dot(eyeTex.rgb, vec3(0.3, 0.59, 0.11))), eyeTex.rgb, 0.7) * 0.62;
+          vec3 irisC = mix(vec3(dot(eyeTex.rgb, vec3(0.3, 0.59, 0.11))), eyeTex.rgb, 0.95) * 0.72;
           irisC *= 1.0 - 0.55 * smoothstep(uIrisR * 0.72, uIrisR * 0.98, r);
           vec3 ec = mix(eyeTex.rgb * vec3(0.74, 0.71, 0.68), irisC, inIris); // sclera: warm, never paper-white
           ec *= mix(1.0, 0.55, lid);
