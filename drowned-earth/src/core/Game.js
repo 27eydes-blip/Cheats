@@ -51,6 +51,10 @@ import { Life } from '../life/Life.js';
 import { LifeUI } from '../life/LifeUI.js';
 import { Scenarios } from '../life/Scenarios.js';
 import { Deep } from '../deep/Deep.js';
+import { Journal } from '../ui/Journal.js';
+import { Photo } from '../ui/Photo.js';
+import { DebugPanel } from '../ui/DebugPanel.js';
+import { Onboarding } from '../ui/Onboarding.js';
 import { Standing } from '../society/Standing.js';
 import { Economy } from '../society/Economy.js';
 import { Heat } from '../society/Heat.js';
@@ -139,11 +143,15 @@ export class Game {
     ctx.abyss = new Deep(ctx);
     ctx.save = new SaveSystem(ctx);
     ctx.touch = new TouchControls(ctx);
+    ctx.journal = new Journal(ctx);
+    ctx.photo = new Photo(ctx);
+    ctx.debug = new DebugPanel(ctx);
+    ctx.onboarding = new Onboarding(ctx);
     ctx.life = new Life(ctx);
     ctx.lifeUI = new LifeUI(ctx, ctx.life);
     ctx.scenarios = new Scenarios(ctx);
     ctx.ui.applyAccessibility();
-    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss];
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding];
     this.ambientSystems = [ctx.fx, ctx.birds, ctx.highmark, ctx.abyss];
     this.wireEvents();
     this.newGame();
@@ -202,7 +210,8 @@ export class Game {
   resetStory() {
     const ctx = this.ctx, st = ctx.state;
     for (const k of Object.keys(st.flags)) delete st.flags[k];
-    st.looted.clear(); st.logs.clear(); st.playTime = 0;
+    st.looted.clear(); st.logs.clear(); st.playTime = 0; st.glow = ctx.data.deep.glow.start; ctx.abyss.refreshGrowth();
+    st.explored.clear(); st.route.length = 0; st.discovered.clear(); st.notes.length = 0; st.met = {}; st.hints = ctx.onboarding.done = {};
     for (const k of Object.keys(st.seenLines || {})) delete st.seenLines[k];
     ctx.inventory.items = {}; ctx.boatStorage.items = {};
     ctx.standing = new Standing(ctx); ctx.economy = new Economy(ctx); ctx.heat = new Heat(ctx);
@@ -277,7 +286,9 @@ export class Game {
     const paused = ctx.paused;
     ctx.input.poll();
     if (!paused || ctx.mode !== 'play') this.update(dt);
+    else if (ctx.photoMode) { ctx.input.poll(); ctx.player.look(ctx.input.look.x, ctx.input.look.y); ctx.rig.update(0); }
     ctx.ui.update(dt);
+    ctx.debug.update(dt);
     this.render(dt);
     ctx.input.endFrame();
     this.frame++;
@@ -334,6 +345,15 @@ export class Game {
     u.uUnder.value = ctx.atmosphere.underwater ? 1 : 0;
     u.uCamDepth.value = Math.max(0, -cam.position.y);
     u.uIndoor.value = ctx.atmosphere.indoor;
+    const lens = ctx.settings.lensFx && ctx.mode === 'play';
+    this.wasUnder = this.wasUnder ?? false;
+    if (this.wasUnder && !ctx.atmosphere.underwater) this.wet = 1;
+    this.wasUnder = ctx.atmosphere.underwater;
+    this.wet = Math.max(ctx.atmosphere.underwater ? 0 : ctx.weather.cur.rain * 0.6, (this.wet || 0) - 0.004);
+    u.uWetLens.value = lens && ctx.player.mode !== 'boat' ? this.wet : lens && ctx.rig.thirdPerson ? 0 : this.wet * 0.5;
+    u.uTunnel.value = ctx.player.headUnder ? Math.max(0, (30 - ctx.survival.oxygen) / 30) : 0;
+    u.uCondense.value = lens ? Math.max(0, ctx.survival.coldness() - 0.5) * 0.5 : 0;
+    u.uGrain.value = lens ? 0.025 : 0;
     u.uUnderColor.value.copy(ctx.atmosphere.fog.color).multiplyScalar(4);
     u.uFlash.value = ctx.weather.flash * 0.25;
     // underwater shafts fan down from the surface above, leaning toward the sun

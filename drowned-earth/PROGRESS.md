@@ -31,3 +31,10 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 - **Listeners**: pale, many-limbed shapes that drift in two areas and hunt by sound only (fast swimming, a clinking spare tank, the boat engine overhead, the sonar pinger). They keep their distance from a still, quiet diver. Contact is dread, not damage: a shake, a moan, air knocked out of you, and it lets you go. The music falls silent when one is near.
 - **The glow creeps**: 520 growth points from the Sounding pit out across the city; the depth they reach rises with a world glow level (+7%/day, +25% after the finale), so after day 2–3 it reaches the drowned streets.
 - Dive gear: spare air bottle (double breath, louder), sonar pinger (finds salvage, wakes things), pressure suit stubbed.
+
+### E/F. Journal, photo mode, debug, onboarding, lens — done
+- **Journal** (J): tabs for On your mind (Teo thread + side threads + your own notes), a **hand-drawn chart** that fills in as you explore (fog of war, your pencil route, landmark doodles, compass, Highmark's bearing), Writing (logs), Photos, People met, Rumours, Help.
+- **Photo mode** (K / Photo button): freezes the world, hides the HUD, free look, five filters (memory, silver, cold, lantern), depth of field focused on screen centre, photos kept in the journal (12, localStorage).
+- **Debug panel** (\` or `?debug=1`): FPS, draw calls, triangles, memory, time, weather, Standing, heat, glow, patrol state, position; teleport to every landmark; time/weather/heat/scrap/glow/tier/finale buttons.
+- **Onboarding**: no text dump; one-time context hints that adapt to touch or keyboard (look, climb in, stairs, dive, flashlight, board, steer, Standing, patrols, photo/journal). Help page holds all controls.
+- **Lens & post**: droplets on the lens after surfacing and in rain, condensation at the edges when cold, tunnel vision on low air, soft bloom on lanterns and the Beacon, film grain (all behind the "Film grain & lens effects" option).

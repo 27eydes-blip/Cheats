@@ -8,7 +8,7 @@ export class TouchControls {
     root.innerHTML = `<div class="lookzone"></div><div class="stick"><i></i></div>
       <div class="tbtns"><div class="tbtn" data-a="light">Light</div><div class="tbtn" data-a="crouch">Crouch</div><div class="tbtn" data-a="sprint">Sprint</div>
       <div class="tbtn" data-a="radio">Radio</div><div class="tbtn" data-a="dive">Dive</div><div class="tbtn" data-a="use">Use</div></div>
-      <div class="ttop"><div class="tbtn" data-a="view">View</div><div class="tbtn" data-a="inventory">Pack</div><div class="tbtn" data-a="pause">Menu</div></div>`;
+      <div class="ttop"><div class="tbtn" data-a="view">View</div><div class="tbtn" data-a="inventory">Pack</div><div class="tbtn" data-a="journal">Journal</div><div class="tbtn" data-k="KeyK">Photo</div><div class="tbtn" data-a="pause">Menu</div></div>`;
     document.getElementById('ui').appendChild(root);
     this.root = root;
     const stick = root.querySelector('.stick'), knob = stick.querySelector('i');
@@ -23,6 +23,7 @@ export class TouchControls {
     look.addEventListener('pointermove', (e) => { if (e.pointerId !== lid) return; input.addLook((e.clientX - lx) * 1.6, (e.clientY - ly) * 1.6); lx = e.clientX; ly = e.clientY; });
     const lend = (e) => { if (e.pointerId === lid) lid = null; };
     look.addEventListener('pointerup', lend); look.addEventListener('pointercancel', lend);
+    root.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); ctx.events.emit('key', b.dataset.k); }));
     root.querySelectorAll('[data-a]').forEach((b) => {
       const a = b.dataset.a;
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); input.press(a); b.classList.add('held'); });

@@ -22,11 +22,39 @@ uniform float uNear; uniform float uFar; uniform float uTime;
 uniform float uUnder; uniform vec2 uSunScreen; uniform float uSunVis; uniform vec3 uUnderColor;
 uniform float uVignette; uniform float uGrain; uniform float uSat; uniform float uFlash; uniform float uFade;
 uniform float uCamDepth; uniform float uIndoor;
+uniform float uWetLens; uniform float uTunnel; uniform float uDof; uniform float uBloom; uniform vec2 uTexel; uniform float uCondense;
 varying vec2 vUv;
 float rnd(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
   float d = texture2D(tDepth, vUv).x;
-  vec3 col = texture2D(tColor, vUv).rgb;
+  vec2 uv = vUv;
+  // lens droplets after surfacing / in rain: hashed cells, each a small refracting bead
+  if (uWetLens > 0.01) {
+    vec2 cell = floor(vUv * vec2(18.0, 10.0)); vec2 f = fract(vUv * vec2(18.0, 10.0)) - 0.5;
+    float h = rnd(cell); vec2 c = (vec2(rnd(cell + 3.1), rnd(cell + 7.7)) - 0.5) * 0.6;
+    float r = 0.12 + 0.22 * h; float dd = length(f - c);
+    float drop = smoothstep(r, r * 0.6, dd) * step(1.0 - uWetLens, h);
+    uv += (f - c) * drop * 0.035;
+  }
+  vec3 col = texture2D(tColor, uv).rgb;
+  // soft bloom from bright sources (lanterns, the Beacon, the sun on water)
+  if (uBloom > 0.0) {
+    vec3 b = vec3(0.0);
+    for (int i = 0; i < 12; i++) {
+      float a = float(i) * 0.5236; vec2 o = vec2(cos(a), sin(a)) * uTexel * (6.0 + 10.0 * mod(float(i), 2.0));
+      vec3 s = texture2D(tColor, uv + o).rgb; b += max(s - 0.9, 0.0);
+    }
+    col += b * 0.06 * uBloom;
+  }
+  // photo-mode depth of field: blur by distance from the focus at screen centre
+  if (uDof > 0.5) {
+    float fz = -perspectiveDepthToViewZ(texture2D(tDepth, vec2(0.5)).x, uNear, uFar);
+    float vz = -perspectiveDepthToViewZ(d, uNear, uFar);
+    float coc = clamp(abs(vz - fz) / max(fz, 1.0), 0.0, 1.0);
+    vec3 acc = col; float wsum = 1.0;
+    for (int i = 0; i < 16; i++) { float a = float(i) * 2.399; float rr = sqrt(float(i) + 0.5) * 2.2 * coc; vec2 o = vec2(cos(a), sin(a)) * rr * uTexel * 2.0; acc += texture2D(tColor, uv + o).rgb; wsum += 1.0; }
+    col = acc / wsum;
+  }
   float viewZ = -perspectiveDepthToViewZ(d, uNear, uFar);
   if (uUnder > 0.5) {
     // light shafts: streaks radiating from the sun's position, scrolling noise
@@ -49,7 +77,8 @@ void main() {
   #include <colorspace_fragment>
   // vignette + grain after tonemapping
   vec2 q = vUv - 0.5;
-  gl_FragColor.rgb *= 1.0 - dot(q, q) * uVignette;
+  gl_FragColor.rgb *= 1.0 - dot(q, q) * (uVignette + uTunnel * 3.5);
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.75, 0.78, 0.8) * (0.4 + 0.6 * gl_FragColor.rgb), uCondense * smoothstep(0.15, 0.6, length(q)) * 0.6);
   gl_FragColor.rgb += (rnd(vUv * 1000.0 + fract(uTime)) - 0.5) * uGrain;
   gl_FragColor.rgb *= 1.0 - uFade;
   gl_FragDepth = d;
@@ -69,7 +98,7 @@ export class Pipeline {
       tColor: { value: null }, tDepth: { value: null }, uNear: { value: 0.1 }, uFar: { value: 2000 },
       uTime: { value: 0 }, uUnder: { value: 0 }, uSunScreen: { value: new THREE.Vector2(0.5, 1) }, uSunVis: { value: 0 },
       uUnderColor: { value: new THREE.Color(0.1, 0.3, 0.3) }, uVignette: { value: 0.9 }, uGrain: { value: 0.025 }, uSat: { value: 1 },
-      uFlash: { value: 0 }, uFade: { value: 0 }, uCamDepth: { value: 0 }, uIndoor: { value: 0 },
+      uFlash: { value: 0 }, uFade: { value: 0 }, uCamDepth: { value: 0 }, uIndoor: { value: 0 }, uWetLens: { value: 0 }, uTunnel: { value: 0 }, uDof: { value: 0 }, uBloom: { value: 1 }, uTexel: { value: new THREE.Vector2(1 / 1280, 1 / 720) }, uCondense: { value: 0 },
     };
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
       vertexShader: compositeVS, fragmentShader: compositeFS, uniforms: this.uniforms,
@@ -134,6 +163,7 @@ export class Pipeline {
         this.target.texture.generateMipmaps = false;
       } else this.target.setSize(this.size.x, this.size.y);
       this.uniforms.tColor.value = this.target.texture;
+      this.uniforms.uTexel.value.set(1 / this.size.x, 1 / this.size.y);
       this.uniforms.tDepth.value = this.target.depthTexture;
     } else if (this.target) { this.target.dispose(); this.target = null; }
     const rs = this.settings.q.reflections;

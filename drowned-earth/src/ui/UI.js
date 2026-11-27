@@ -1,4 +1,5 @@
 import { Settings } from '../core/Settings.js';
+import { HELP_HTML } from './Journal.js';
 
 // Minimal diegetic-leaning HUD + menus. Everything is DOM over the canvas.
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -20,6 +21,7 @@ export class UI {
     this.wristband = root.appendChild(el('div', 'wristband'));
     this.heatEl = root.appendChild(el('div', 'heatmark'));
     this.captionEl = root.appendChild(el('div', 'caption'));
+    this.hintEl = root.appendChild(el('div', 'hint'));
     ctx.events.on('standing', () => this.renderWristband());
     ctx.events.on('caption', (c) => this.caption(c));
     setTimeout(() => this.renderWristband(), 0);
@@ -37,6 +39,7 @@ export class UI {
     this.wristband.innerHTML = `<i style="background:${info.wristband}"></i><b>${info.short}${st.forged != null ? ' ?' : ''}</b>${tally}`;
     this.wristband.title = info.desc;
   }
+  hint(t) { this.hintEl.textContent = t; this.show(this.hintEl, 'hint', 7000); }
   caption(c) {
     if (!this.ctx.settings.captions) return;
     this.captionEl.textContent = c; this.show(this.captionEl, 'cap', 2200);
@@ -243,14 +246,31 @@ export class UI {
     this.ctx.paused = true;
     if (first) this.ctx.events.emit('journal:new', id);
   }
-  openJournal() {
+  openJournal(tab = 'mind') {
     const { story, data, state } = this.ctx;
-    const objs = story.objectives();
-    const cur = objs.filter((o) => !o.done).slice(0, 1).map((o) => `<div class="row"><div class="name"><i>${esc(o.text)}</i></div></div>`).join('') || '<div class="sub">Nothing pressing. The water is patient.</div>';
-    const done = objs.filter((o) => o.done).map((o) => `<div class="row"><div class="name" style="opacity:.5"><s>${esc(o.text)}</s></div></div>`).join('');
-    const logs = [...state.logs].map((id) => `<div class="row"><div class="name">${esc(data.logs.logs[id].title)}</div><button class="btn" data-log="${id}">Read</button></div>`).join('') || '<div class="sub">You have found nothing written down yet.</div>';
-    this.openPanel('journal', `<button class="btn close" data-close>Close</button><h2>Journal</h2><div class="sub">Day ${this.ctx.time.day}, ${this.ctx.time.clockString()} · ${this.ctx.weather.state}</div><h3>On your mind</h3>${cur}${done}<h3>Found writing &amp; recordings</h3>${logs}`, (p) => {
+    const tabs = { mind: 'On your mind', map: 'Chart', writing: 'Writing', photos: 'Photos', people: 'People', rumours: 'Rumours', help: 'Help' };
+    let body = '';
+    if (tab === 'mind') {
+      const objs = story.objectives();
+      const main = objs.filter((o) => !o.side), side = objs.filter((o) => o.side && !o.done);
+      const cur = main.filter((o) => !o.done).slice(0, 1).map((o) => `<div class="row"><div class="name hand">${esc(o.text)}</div></div>`).join('') || '<div class="sub">Nothing pressing. The water is patient.</div>';
+      const done = main.filter((o) => o.done).map((o) => `<div class="row"><div class="name hand" style="opacity:.5"><s>${esc(o.text)}</s></div></div>`).join('');
+      body = `<h3>Teo</h3>${cur}${done}${side.length ? '<h3>Threads</h3>' + side.map((o) => `<div class="row"><div class="name hand">${esc(o.text)}</div></div>`).join('') : ''}
+        <h3>Your notes</h3>${(state.notes || []).map((n) => `<div class="row"><div class="name hand">${esc(n.text)} <small>day ${n.day}</small></div></div>`).join('')}
+        <div class="tabs"><input data-note placeholder="Write a note in your own hand…" maxlength="120" style="flex:1;min-width:200px;font:15px Georgia;padding:6px;background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--line);pointer-events:auto"><button class="btn" data-addnote>Write</button></div>`;
+    } else if (tab === 'map') body = '<canvas class="chart" width="720" height="620"></canvas><div class="sub">Drawn as you go. Explore to fill it in.</div>';
+    else if (tab === 'writing') body = [...state.logs].map((id) => `<div class="row"><div class="name">${esc(data.logs.logs[id].title)}</div><button class="btn" data-log="${id}">Read</button></div>`).join('') || '<div class="sub">You have found nothing written down yet.</div>';
+    else if (tab === 'photos') { const ph = this.ctx.photo.list(); body = ph.length ? `<div class="photos">${ph.map((p) => `<figure><img src="${p.url}"><figcaption class="hand">Day ${p.day}, ${esc(p.time)} — ${esc(p.where)}</figcaption></figure>`).join('')}</div>` : '<div class="sub">No photographs yet. Press K (or the Photo button) to take one.</div>'; }
+    else if (tab === 'people') body = Object.entries(state.met || {}).map(([id, n]) => { const d = data.npcs.npcs.find((x) => x.id === id); return d ? `<div class="row"><div class="name hand">${esc(d.name)}<small>${esc(d.role)} · spoken to ${n}×${d.respect ? ' · treats you as an equal' : ''}</small></div></div>` : ''; }).join('') || '<div class="sub">You have kept to yourself.</div>';
+    else if (tab === 'rumours') body = (this.ctx.economy.rumours || []).map((r) => `<div class="row"><div class="name hand">${esc(r.text)}<small>day ${r.day}</small></div></div>`).join('') || '<div class="sub">No rumours yet. Ration boards and Raft Free Voice carry them.</div>';
+    else body = HELP_HTML;
+    this.openPanel('journal', `<button class="btn close" data-close>Close</button><h2>Journal</h2><div class="sub">${esc(this.ctx.life?.s?.name || 'Wren Calloway-Ashe')} · Day ${this.ctx.time.day}, ${this.ctx.time.clockString()} · ${this.ctx.weather.state}</div>
+      <div class="tabs">${Object.entries(tabs).map(([k, v]) => `<button class="btn ${k === tab ? 'on' : ''}" data-jt="${k}">${v}</button>`).join('')}</div>${body}`, (p) => {
+      p.querySelectorAll('[data-jt]').forEach((b) => b.addEventListener('click', () => this.openJournal(b.dataset.jt)));
       p.querySelectorAll('[data-log]').forEach((b) => b.addEventListener('click', () => story.openLog(b.dataset.log)));
+      const cv = p.querySelector('canvas.chart'); if (cv) this.ctx.journal.drawMap(cv, { cx: Math.max(-300, Math.min(400, this.ctx.player.position.x)), cz: Math.max(-300, Math.min(300, this.ctx.player.position.z)) });
+      p.querySelector('[data-addnote]')?.addEventListener('click', () => { const i = p.querySelector('[data-note]'); if (i.value.trim()) { state.notes.push({ text: i.value.trim(), day: this.ctx.time.day }); this.openJournal('mind'); } });
+      p.querySelector('[data-note]')?.addEventListener('keydown', (e) => e.stopPropagation());
     });
   }
   openPause() {
