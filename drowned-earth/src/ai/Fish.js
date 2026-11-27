@@ -93,7 +93,11 @@ export class Fish {
     // schools roam within ~25 m of the camera, below the surface, above the bottom
     for (const sc of this.schools) {
       const a = t * 0.07 + sc.seed;
-      const want = this._d.set(cam.x + Math.sin(a) * 18, -sc.depth - Math.sin(a * 0.7) * 1.2, cam.z + Math.cos(a * 1.3) * 18);
+      // underwater the schools gather around the diver (at their depth, a few metres off); from the surface they keep to the shallows
+      const under = atmosphere.underwater;
+      const R = under ? 7 + sc.seed % 5 : 18;
+      const wy = under ? Math.min(-0.8, cam.y + Math.sin(a * 0.9 + sc.seed) * 2.5) : -sc.depth - Math.sin(a * 0.7) * 1.2;
+      const want = this._d.set(cam.x + Math.sin(a) * R, wy, cam.z + Math.cos(a * 1.3) * R);
       const bed = worldMap?.seabedAt ? worldMap.seabedAt(want.x, want.z) : -20;
       want.y = Math.max(want.y, bed + 1.2);
       if (!this.placed || sc.c.distanceTo(cam) > 60) sc.c.copy(want);
