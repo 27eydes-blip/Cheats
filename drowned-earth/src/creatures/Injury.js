@@ -44,7 +44,7 @@ export class Injury {
     if (this.dead || this.ctx.settings.difficulty === 'calm') { this.hurtFlash = Math.max(this.hurtFlash, 0.4); return; }
     const harsh = this.ctx.settings.difficulty === 'harsh' ? 1.3 : 1;
     // wounds make everything worse
-    const k = harsh * (1 + this.bleeding * 0.3);
+    const k = harsh * (1 + this.bleeding * 0.3) * (this.guard ?? 1); // a raised guard takes half
     this.health -= amount * k;
     this.bleeding = Math.min(1, this.bleeding + (opts.bleed || 0));
     if (opts.breaks && !this.broken && Math.random() < opts.breaks) { this.broken = Math.random() < 0.6 ? 'leg' : 'arm'; this.splinted = false; this.ctx.ui.whisper(this.broken === 'leg' ? 'Something in your leg gives with a wet click. You can barely put weight on it.' : 'Your arm won\'t close properly. Every stroke is a knife.'); }

@@ -63,6 +63,7 @@ import { Creatures } from '../creatures/Creatures.js';
 import { Nightlife } from '../night/Nightlife.js';
 import { Club } from '../night/Club.js';
 import { Society } from '../people/Society.js';
+import { Arms } from '../weapons/Arms.js';
 import { ageGate } from '../ui/AgeGate.js';
 import { Fleet } from '../vehicles/Fleet.js';
 import { Ward } from '../crime/Ward.js';
@@ -204,9 +205,10 @@ export class Game {
     ctx.creatures = new Creatures(ctx);
     ctx.club = new Club(ctx);
     ctx.society = new Society(ctx);
+    ctx.arms = new Arms(ctx);
     ageGate(ctx.settings, ctx.params);
     ctx.ui.applyAccessibility();
-    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society];
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms];
     this.ambientSystems = [ctx.fx, ctx.birds, ctx.fish, ctx.highmark, ctx.abyss];
     this.wireEvents();
     this.newGame();
@@ -375,6 +377,8 @@ export class Game {
 
   update(dt) {
     const ctx = this.ctx;
+    // hit-stop: a few frames of near-freeze when a heavy blow lands
+    if (ctx.hitStop > 0) { ctx.hitStop -= dt; dt *= 0.08; }
     ctx.state.playTime += dt;
     this.minuteT = (this.minuteT || 0) + dt;
     if (this.minuteT > 5) { this.minuteT = 0; ctx.events.emit('tick:minute'); }

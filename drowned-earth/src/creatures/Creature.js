@@ -121,6 +121,7 @@ export class Creature {
     const night = ctx.time.out.night > 0.5;
     this.awake = sp.active === 'night' ? night || this.state === 'attack' : true;
     if (!this.awake) { this.setState('idle'); this.body.animate(this, dt); return; }
+    if (this.stunT > 0) { this.stunT -= dt; this.body.animate(this, dt); return; } // tangled in a net
     const why = this.perceive(dt);
     const { d, dHome, inTerritory } = this.perceived;
     const leashed = dHome > sp.territoryR + sp.leash;

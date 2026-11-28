@@ -113,6 +113,7 @@ export class Nightlife {
     if (!bar) return;
     const ui = this.ctx.ui;
     if (!this.isOpen(bar)) { ui.whisper(`${bar.name} is shut. Chairs up on the tables. Somebody's mopping in the dark.`); return; }
+    if (this.ctx.arms?.drawn) { ui.showNote(bar.name, `${bar.bartender.name} doesn't even look up. "Not with that out. Bouncer's got a hook and a long memory."`); return; }
     const s = this.bs(id);
     if (s.lastDay !== this.ctx.time.day) { s.visits++; s.lastDay = this.ctx.time.day; this.ctx.events.emit('night:visit', { bar: id, visits: s.visits }); }
     this.ctx.events.emit('talk', { npc: 'bt_' + bar.bartender.id });

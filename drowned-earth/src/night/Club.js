@@ -319,6 +319,7 @@ export class Club {
   exit() {
     const p = this.ctx.player;
     this.state.inside = false; this.state.admitted = false;
+    if (this.ctx.arms) this.ctx.arms.state.confiscated = false;
     p.mode = 'swim'; p.teleport(this.hatchPos.clone().add(_v.set(1.5, 0, 0)));
     this.ctx.events.emit('club:exit');
   }
@@ -334,7 +335,9 @@ export class Club {
         const said = opts[+b.dataset.o];
         if (said !== D.password) { ui.close(); ui.showNote(D.doorman, '"I don\'t believe we\'ve met." He doesn\'t move. He doesn\'t need to.'); return; }
         if (!this.ctx.story.flag('has_pin')) { ui.close(); ui.showNote(D.doorman, D.refuseNoPin); return; }
-        this.state.admitted = true; this.state.entered = true; ui.close(); ui.showNote(D.doorman, D.admit);
+        this.state.admitted = true; this.state.entered = true; ui.close();
+        const armed = this.ctx.arms?.state.owned.length; if (armed) { this.ctx.arms.holster(); this.ctx.arms.state.confiscated = true; }
+        ui.showNote(D.doorman, D.admit + (armed ? ' He holds out a velvet tray. "Your hardware, please. You\'ll have it back at the airlock."' : ''));
         this.ctx.events.emit('fame', { kind: 'ghost', text: 'Somebody new was seen wearing a brass fish. Nobody will say where.' });
       }));
     });

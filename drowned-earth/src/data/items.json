@@ -611,6 +611,78 @@
    "tags": [
     "key"
    ]
+  },
+  "spear_bolt": {
+   "name": "Speargun bolts",
+   "desc": "Ammunition.",
+   "value": 2,
+   "weight": 0.05,
+   "tags": [
+    "ammo"
+   ]
+  },
+  "flare_shell": {
+   "name": "Flare shells",
+   "desc": "Ammunition.",
+   "value": 3,
+   "weight": 0.05,
+   "tags": [
+    "ammo"
+   ]
+  },
+  "nails": {
+   "name": "Nails (strip of 12)",
+   "desc": "Ammunition.",
+   "value": 3,
+   "weight": 0.05,
+   "tags": [
+    "ammo"
+   ]
+  },
+  "bolt": {
+   "name": "Crossbow bolts",
+   "desc": "Ammunition.",
+   "value": 2,
+   "weight": 0.05,
+   "tags": [
+    "ammo"
+   ]
+  },
+  "stone": {
+   "name": "Sling stones",
+   "desc": "Ammunition.",
+   "value": 1,
+   "weight": 0.05,
+   "tags": [
+    "ammo"
+   ]
+  },
+  "shell": {
+   "name": "Shotgun shells",
+   "desc": "Ammunition.",
+   "value": 5,
+   "weight": 0.05,
+   "tags": [
+    "ammo"
+   ]
+  },
+  "round": {
+   "name": "Rifle rounds",
+   "desc": "Ammunition.",
+   "value": 8,
+   "weight": 0.05,
+   "tags": [
+    "ammo"
+   ]
+  },
+  "throw_net": {
+   "name": "Weighted net",
+   "desc": "Throw (G with it equipped). Tangles a creature or a person for a few seconds. Nobody dies of a net.",
+   "value": 4,
+   "weight": 0.8,
+   "tags": [
+    "gear"
+   ]
   }
  }
 }

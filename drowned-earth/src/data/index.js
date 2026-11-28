@@ -28,6 +28,7 @@ export function loadData() {
   club: get('club'),
   crews: get('crews'),
   people: get('people'),
+  weapons: get('weapons'),
   creatures: get('creatures') || { species: {}, placements: [], encounters: {} },
     life: loadLife(optional),
   };
