@@ -21,7 +21,7 @@ export class EmergencyExit {
     if (opt) { if (!this.padAt) this.padAt = now; } else this.padAt = 0;
     const held = Math.max(this.escAt ? now - this.escAt : 0, this.padAt ? now - this.padAt : 0);
     if (!held) { this.fired = false; this.hinted = false; return; }
-    if (this.ctx.mode !== 'play' || this.fired) return;
+    if (this.ctx.mode !== 'play' || this.ctx.scenarioActive || this.ctx.injury?.dead || this.fired) return;   // not in life-sim scenes or on the death card
     if (held > 350 && !this.hinted) { this.hinted = true; this.ctx.ui?.subtitle('Keep holding to get unstuck…', 1); }
     if (held >= HOLD_MS) { this.fired = true; this.rescue(); }
   }
@@ -39,7 +39,7 @@ export class EmergencyExit {
     // somewhere safe: a dock or raft edge near the boat, then further out, then the last ground you stood on
     if (b) b.park();
     let spot = b?.findLanding(6) || b?.findLanding(25);
-    if (!spot && p.lastSafe) spot = { pos: p.lastSafe.clone(), body: null };
+    if (!spot && p.lastSafeSet) spot = { pos: p.lastSafe.clone(), body: null };
     if (spot) {
       p.mode = 'foot'; p.teleport(spot.pos); p.velocity.set(0, 0, 0);
       if (spot.body) p.setGround?.(spot.body);

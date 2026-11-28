@@ -370,7 +370,7 @@ export class Game {
   }
   resetStory() {
     const ctx = this.ctx, st = ctx.state;
-    ctx.arms?.reset(); ctx.portageLife?.reset();
+    ctx.arms?.reset(); ctx.portageLife?.reset(); ctx.player.clearSafe();
     for (const k of Object.keys(st.flags)) delete st.flags[k];
     st.looted.clear(); st.logs.clear(); st.playTime = 0; st.glow = ctx.data.deep.glow.start; ctx.abyss.refreshGrowth();
     st.explored.clear(); st.route.length = 0; st.discovered.clear(); st.notes.length = 0; st.met = {}; st.hints = ctx.onboarding.done = {};
@@ -542,7 +542,7 @@ export class Game {
     if (playing && ctx.player.mode !== 'climb') ctx.interact.update(ctx.player.eye, ctx.player.forward, mode);
     else ctx.interact.focus = null;
     // E: the thing in front of you wins (a mooring, a dock); on a boat with nothing in focus, it gets you off
-    if (playing && ctx.input.pressed('use')) { if (ctx.interact.focus) ctx.interact.use(); else if (ctx.player.mode === 'boat') ctx.boat.leave(); }
+    if (playing && ctx.input.pressed('use')) { if (ctx.interact.focus) ctx.interact.use(); else if (ctx.player.mode === 'boat' && !ctx.ui.open) ctx.boat.leave(); }
     // warmth near raft fires
     const comm = ctx.state.community;
     if (comm) for (const r of comm.rafts.values()) if (r.fireLight && r.fireLight.getWorldPosition(this._fv || (this._fv = new THREE.Vector3())).distanceTo(ctx.player.position) < 3) ctx.survival.nearFire = true;

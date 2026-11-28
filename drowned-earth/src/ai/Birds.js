@@ -43,8 +43,8 @@ export class Birds {
   companionSetup() {
     const c = this.ctx;
     this.comp = { on: !!c.state.flags.gull_friend, away: false, pos: new THREE.Vector3(), mood: 1 };
-    c.interact.add({ id: 'gull:feed', kind: 'gull', mode: 'boat', radius: 6, requireLook: false,
-      pos: (v) => v.copy(c.boat.pos).setY(1.2),
+    c.interact.add({ id: 'gull:feed', kind: 'gull', mode: 'boat', radius: 6, requireLook: true,   // only when you look at it, so E still gets you off the boat
+      pos: (v) => v.set(c.boat.pos.x - Math.sin(c.boat.heading) * 2.4, 1.2, c.boat.pos.z - Math.cos(c.boat.heading) * 2.4),
       enabled: (cc) => !cc.state.flags.gull_friend && cc.time.out.night < 0.5 && (cc.inventory.has('canned_fish') || cc.inventory.has('kelp')) && cc.state.playTime > 120,
       prompt: 'A gull with a bent wing is watching you eat. Share some',
       onUse: (cc) => { cc.inventory.remove(cc.inventory.has('canned_fish') ? 'canned_fish' : 'kelp'); cc.state.flags.gull_friend = true; this.comp.on = true; cc.ui.whisper('The gull eats, then settles on your bow like it owns it. You decide to call it Captain.'); } });

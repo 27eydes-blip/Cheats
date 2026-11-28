@@ -40,6 +40,7 @@ export class Player {
     this.yaw -= dx * s;
     this.pitch = clamp(this.pitch - dy * s * (this.ctx.settings.invertY ? -1 : 1), -1.45, 1.45);
   }
+  clearSafe() { this.lastSafeSet = false; }
   teleport(p, yaw) { this.position.copy(p); this.velocity.set(0, 0, 0); if (yaw !== undefined) this.yaw = yaw; this.groundBody = null; this.ctx.landmarks?.update(p.x, p.z, true); }
 
   climb(from, to, step, down = false) {
@@ -51,8 +52,6 @@ export class Player {
   }
 
   update(dt) {
-    // remember the last solid ground you stood on (the emergency exit's fallback)
-    if (this.mode === 'foot' && this.grounded) { this.safeT = (this.safeT || 0) + dt; if (this.safeT > 1) { this.safeT = 0; (this.lastSafe ||= this.position.clone()).copy(this.position); } }
     const { input, waves, collision, survival } = this.ctx;
     if (this.mode !== 'locked') this.look(input.look.x, input.look.y);
     _f.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
@@ -89,7 +88,7 @@ export class Player {
         this.stepDist += hs * dt;
         this.bobPhase += hs * dt * 2.1;
         if (this.stepDist > (sprint ? 1.6 : 1.25)) { this.stepDist = 0; this.ctx.events.emit('footstep', { pos: this.position, surface: this.position.y < surface + 0.12 ? 'water' : this.groundTag, speed: hs }); }
-        if (this.position.y > surface + 0.2 && !this.groundBody) this.lastSafe.copy(this.position);
+        if (this.position.y > surface + 0.2 && !this.groundBody) { this.lastSafe.copy(this.position); this.lastSafeSet = true; }   // solid, static, dry ground
       }
       if (this.position.y < -200) this.teleport(this.lastSafe);
     } else if (this.mode === 'swim') this.updateSwim(dt, surface, slow);

@@ -46,9 +46,9 @@ export class PortageLife {
     ctx.interact.add({ id: 'secret:figure', kind: 'secret', mode: 'foot', radius: 2.4, pos: where('figure'), prompt: 'The hooded figure',
       enabled: () => !!this.raft('water') && this.figureHour() && !st.figure,
       onUse: () => {
-        st.figure = true; ctx.story.setFlag('secret_figure');
-        FIGURE_LINES.forEach((l, i) => setTimeout(() => ctx.ui.subtitle(`The hooded figure: ${l}`, 4, 'speech'), i * 4200));
-        setTimeout(() => { this.figure.visible = false; ctx.ui.whisper('When you look back, there is nobody on the raft. The water barrels are still rocking.'); }, FIGURE_LINES.length * 4200);
+        st.figure = true; ctx.story.setFlag('secret_figure'); this.leaving = true;   // stays visible until it has said its piece
+        this.timers = FIGURE_LINES.map((l, i) => setTimeout(() => ctx.ui.subtitle(`The hooded figure: ${l}`, 4, 'speech'), i * 4200));
+        this.timers.push(setTimeout(() => { this.leaving = false; ctx.ui.whisper('When you look back, there is nobody on the raft. The water barrels are still rocking.'); }, FIGURE_LINES.length * 4200));
         return true;
       } });
   }
@@ -68,7 +68,7 @@ export class PortageLife {
     const mk = this.raft('market');
     if (!mk) return;
     this.attach();
-    this.figure.visible = !this.st.figure && this.figureHour();
+    this.figure.visible = this.leaving || (!this.st.figure && this.figureHour());
     // market callouts while it's open and you're close
     const p = c.player.position, mp = mk.worldPoint(_m.set(0, mk.deck, 0), _m);
     const h = c.time.hour;
@@ -82,7 +82,7 @@ export class PortageLife {
       }
     }
   }
-  reset() { for (const k of Object.keys(this.st)) delete this.st[k]; this.raftRef = null; }
+  reset() { for (const k of Object.keys(this.st)) delete this.st[k]; this.raftRef = null; this.leaving = false; for (const t of this.timers || []) clearTimeout(t); this.timers = []; }
   toJSON() { return { ...this.st }; }
-  load(o) { if (o) Object.assign(this.st, o); this.raftRef = null; }
+  load(o) { this.reset(); if (o) Object.assign(this.st, o); }
 }

@@ -8,7 +8,7 @@ import { buildBoat } from '../vehicles/Hulls.js';
 // The player's small repair boat: buoyancy from 4 wave samples, outboard
 // thrust or paddling, keel drag, collisions with hull damage, fuel, storage,
 // wake ripples, lantern, and tie-up to moorings.
-const _lf = new THREE.Vector3(), _ld = new THREE.Vector3();
+const _lf = new THREE.Vector3(), _ld = new THREE.Vector3(), _lb = new THREE.Vector3(), _lt = new THREE.Vector3(), _lv = new THREE.Vector3(), _lres = {};
 const _s = [0, 0, 0];
 
 function hullGeometry() {
@@ -197,7 +197,7 @@ export class Boat {
   // at rest or slow: step onto the nearest dock / raft edge within 6 m, else into the water beside
   // the boat; moving fast: dive off the side with a small jump while the boat coasts on.
   static LEAVE_FAST = 5;    // m/s
-  canLeave() { return this.ctx.player.mode === 'boat' && !this.air; }
+  canLeave() { const c = this.ctx; return c.player.mode === 'boat' && !this.air && c.mode === 'play' && !c.ui.open && !c.paused && !c.injury?.dead && !c.creatures?.struggle && !c.scenarioActive; }
   leaveLabel() {
     const now = performance.now();
     if (!this._lbl || now - this._lblT > 300) { this._lblT = now; this._lbl = this.vel.length() > Boat.LEAVE_FAST ? 'Dive off the boat' : (this.findLanding(6) ? 'Leave boat' : 'Leave boat (into the water)'); }
@@ -207,12 +207,12 @@ export class Boat {
     if (!this.canLeave()) return null;
     const c = this.ctx, p = c.player, speed = this.vel.length();
     const fwd = new THREE.Vector3(-Math.sin(this.heading), 0, -Math.cos(this.heading)), side = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    this.throttle = 0; this.tied = null;
+    this.throttle = 0;   // a moored boat stays moored
     const surf = c.waves.height(this.pos.x, this.pos.z);
     let how;
     if (speed > Boat.LEAVE_FAST) {
       p.mode = 'swim';
-      p.teleport(this.pos.clone().addScaledVector(side, 1.8).setY(surf + 0.3));
+      p.teleport(this.clearSide(side, fwd, 1.8).setY(surf + 0.3));
       p.velocity.set(side.x * 2.5 + this.vel.x * 0.4, 2.2, side.z * 2.5 + this.vel.z * 0.4);
       c.ui.toast('You dive off the side.');
       how = 'dive';
@@ -225,7 +225,7 @@ export class Boat {
         p.yaw = Math.atan2(-(spot.pos.x - this.pos.x), -(spot.pos.z - this.pos.z));
         how = 'land';
       } else {
-        p.mode = 'swim'; p.teleport(this.pos.clone().addScaledVector(side, 1.6).setY(surf - 0.2)); p.velocity.set(0, 0, 0);
+        p.mode = 'swim'; p.teleport(this.clearSide(side, fwd, 1.6).setY(surf - 0.2)); p.velocity.set(0, 0, 0);
         how = 'water';
       }
     }
@@ -233,8 +233,22 @@ export class Boat {
     c.events.emit('boat:leave', how);
     return how;
   }
+  // a point beside the boat with open water: starboard, port, then astern (the boat itself if all are blocked)
+  clearSide(side, fwd, d) {
+    const col = this.ctx.collision, from = _lf.copy(this.pos).setY(this.ctx.waves.height(this.pos.x, this.pos.z) + 0.3);
+    for (const dir of [side, _ld.copy(side).negate(), _lb.copy(fwd).negate()]) if (col.raycast(from, dir, d + 0.6) >= d + 0.6) return this.pos.clone().addScaledVector(dir, d);
+    return this.pos.clone();
+  }
   // nearest walkable spot (static ground or a raft deck) within maxD of the hull, with no wall in between
   findLanding(maxD = 6) {
+    // cached: the same spot answers again until the boat has moved a metre
+    const key = maxD, ck = this._landCache;
+    if (ck && ck.key === key && ck.at.distanceToSquared(this.pos) < 1) return ck.res;
+    const res = this.findLandingNow(maxD);
+    this._landCache = { key, at: this.pos.clone(), res };
+    return res;
+  }
+  findLandingNow(maxD) {
     const c = this.ctx, col = c.collision, surf = c.waves.height(this.pos.x, this.pos.z);
     const from = _lf.copy(this.pos).setY(surf + 1.0);
     for (let r = 1.6; r <= maxD + 0.01; r += 0.8) {
@@ -244,9 +258,9 @@ export class Boat {
         if (col.raycast(from, dir, r) < r - 0.4) continue;                          // a wall in the way
         const g = col.groundAt(x, z, surf + 2.6);
         if (g > surf - 0.3 && g < surf + 2.5) return { pos: new THREE.Vector3(x, g + 0.02, z), body: null };
-        const test = new THREE.Vector3(x, surf + 0.6, z);
-        const res = col.resolveCylinder(test, 0.2, 0.2, new THREE.Vector3(0, -1, 0), 2.0, {});
-        if (res.groundBody && test.y > surf - 0.3 && test.y < surf + 2.5) return { pos: test, body: res.groundBody };
+        const test = _lt.set(x, surf + 0.6, z);
+        const res = col.resolveCylinder(test, 0.2, 0.2, _lv.set(0, -1, 0), 2.0, _lres);
+        if (res.groundBody && test.y > surf - 0.3 && test.y < surf + 2.5) return { pos: test.clone(), body: res.groundBody };
       }
     }
     return null;

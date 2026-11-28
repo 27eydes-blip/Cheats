@@ -161,7 +161,7 @@ export class Arms {
     if (!a) { ctx.ui.subtitle(`${npc.def.name}: Hey! HEY!`, 2.5, 'speech'); return; }
     a.hp = (a.hp ?? 100) - dmg;
     a.attitude -= 3; a.memory.push({ day: ctx.time.day, type: 'attacked by you' });
-    if (a.hp > 0 && Math.random() < stun) { a.memory.push({ day: ctx.time.day, type: 'subdued' }); npc.override = { from: 0, to: 24, do: 'sit' }; setTimeout(() => { npc.override = null; }, 45000); ctx.ui.subtitle(`${a.name} goes down hard and stays down, groaning.`, 3, 'speech'); ctx.events.emit('people:subdued', { who: a.id }); return; }
+    if (a.hp > 0 && Math.random() < stun) { a.memory.push({ day: ctx.time.day, type: 'subdued' }); npc.override = { from: 0, to: 24, do: 'pray' }; setTimeout(() => { npc.override = null; }, 45000); /* down on the deck, crouched — not standing */ ctx.ui.subtitle(`${a.name} goes down hard and stays down, groaning.`, 3, 'speech'); ctx.events.emit('people:subdued', { who: a.id }); return; }
     if (a.hp <= 0) {
       soc.death(a, { creature: 'you' }, 'you', 'raft');
       for (const k of Object.keys(ctx.crews?.state.standing || {})) ctx.crews.bump(k, -10);
