@@ -88,6 +88,37 @@ export function buildBoat(def) {
   const h = def.hull, C = def.colors;
   const group = new THREE.Group();
   const hullM = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.1 });
+  // a working hull, not a toy: patched panels, a grime band at the waterline, rust bleeding from the gunwale,
+  // paint worn through along the top edge (all in the shader, in the hull's own coordinates)
+  hullM.onBeforeCompile = (sh) => {
+    sh.uniforms.uSheer = { value: h.depth * 0.5 };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vHullP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvHullP = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vHullP; uniform float uSheer;
+float hh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hh(i), hh(i + vec2(1, 0)), f.x), mix(hh(i + vec2(0, 1)), hh(i + vec2(1, 1)), f.x), f.y); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+      {
+        vec3 P = vHullP;
+        float n = vn(P.zx * 3.0) * 0.6 + vn(P.zy * 9.0) * 0.4;
+        // patched panels: a few rectangles in a slightly different paint
+        vec2 cell = floor(vec2(P.z * 1.3, P.y * 2.6));
+        float patchP = step(0.78, hh(cell + floor(P.x * 2.0)));
+        diffuseColor.rgb *= mix(1.0, 0.8 + 0.35 * hh(cell * 1.7), patchP);
+        // grime and weed at and below the waterline
+        float wl = smoothstep(0.05, -0.12, P.y + (n - 0.5) * 0.08);
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.45, 0.5, 0.38) + vec3(0.02, 0.03, 0.015), wl * 0.85);
+        // rust bleeding down from the gunwale fixings
+        float stripe = step(0.72, hh(vec2(floor(P.z * 7.0), 3.0)));
+        float runD = smoothstep(uSheer + 0.05, uSheer - 0.45 - n * 0.25, P.y) * smoothstep(-0.05, 0.2, P.y);
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.15, 0.65, 0.42) + vec3(0.05, 0.015, 0.0), stripe * (1.0 - runD) * 0.0 + stripe * runD * 0.55 * smoothstep(0.3, 0.7, vn(vec2(P.z * 20.0, P.y * 2.0))));
+        // paint worn through along the top edge and in scuffs
+        float wear = smoothstep(0.55, 0.85, n) * smoothstep(uSheer - 0.25, uSheer + 0.05, P.y);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.32, 0.3, 0.27), wear * 0.6);
+        diffuseColor.rgb *= 0.9 + 0.2 * n;
+      }`);
+  };
+  hullM.customProgramCacheKey = () => 'de-hull';
   const hull = new THREE.Mesh(hullGeometry(h, C), hullM); hull.castShadow = true; hull.receiveShadow = true;
   const deckM = new THREE.MeshStandardMaterial({ color: new THREE.Color(...C.deck), roughness: 0.8 });
   const deck = new THREE.Mesh(deckGeometry(h), deckM); deck.receiveShadow = true;

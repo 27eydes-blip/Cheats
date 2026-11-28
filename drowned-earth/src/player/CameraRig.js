@@ -99,6 +99,17 @@ export class CameraRig {
       }
       this.smoothPos.copy(cam.position);
     }
+    // boats: the view widens a little with speed and gets a slight wave judder (off with reduce-motion)
+    if (!this.ctx.arms?.cur) {
+      const onBoat = player.mode === 'boat';
+      const want = onBoat ? 70 + Math.min(9, boat.speed * 0.55) * calm : 70;
+      if (Math.abs(cam.fov - want) > 0.02) { cam.fov += (want - cam.fov) * Math.min(1, dt * 2.5); cam.updateProjectionMatrix(); }
+      if (onBoat && calm > 0) {
+        const dp = Math.abs(boat.pitch - (this.lastBoatPitch ?? boat.pitch)) / Math.max(dt, 1e-3); this.lastBoatPitch = boat.pitch;
+        const j = Math.min(0.006, dp * 0.004 + boat.speed * 0.00025) * calm;
+        cam.position.y += Math.sin(this.t * 23.0) * j; cam.rotation.z += Math.sin(this.t * 17.0 + 1.3) * j * 0.6;
+      }
+    }
     cam.updateMatrixWorld();
   }
 }

@@ -229,6 +229,7 @@ export class Boat {
         how = 'water';
       }
     }
+    if (how !== 'land') c.events.emit('splash', { pos: p.position.clone(), big: how === 'dive' });   // you hit the water
     c.events.emit('boat:leave', how);
     return how;
   }
@@ -310,7 +311,9 @@ export class Boat {
       // quadratic drag tuned so full throttle settles at this hull's top speed
       const kq = Math.max(0.004, (maxThrust * leak - 0.25 * top) / (top * top));
       const foil = S.foil && Math.abs(vf) > S.foil ? 0.6 : 1;
-      const dragF = (0.25 + Math.abs(vf) * kq) * foil, dragS = 2.6;
+      // hard turns at speed let the stern slide out (lower side grip), so the boat drifts a little
+      const turnHard = Math.abs(this.rudder) > 0.7 && Math.abs(vf) > 6 ? 1 : 0;
+      const dragF = (0.25 + Math.abs(vf) * kq) * foil, dragS = 2.6 - turnHard * 1.5;
       this.vel.addScaledVector(fwdDir, -vf * dragF * dt).addScaledVector(side, -vs * dragS * dt);
       // drift with the wind a little
       const w = this.ctx.weather.windVec;
@@ -355,7 +358,9 @@ export class Boat {
       else this.heave = this.air.y;
     } else this.heave = damp(this.heave, ty + foilLift, 5, dt);
     this.pos.y = this.heave;
-    const tp = (this.air ? Math.max(-0.35, Math.min(0.35, this.air.vy * 0.04)) : Math.atan2(hb - hs, L * 2)) - this.throttle * 0.05 * (this.paddling ? 0 : 1) * (S.top > 12 ? 1.6 : 1);
+    // planing: the bow climbs onto its own wave as speed builds, then levels once the hull is up and planing
+    const hump = Math.max(0, Math.min(1, (this.speed - 2) / 3)) * (1 - Math.max(0, Math.min(1, (this.speed - 7) / 5)));
+    const tp = (this.air ? Math.max(-0.35, Math.min(0.35, this.air.vy * 0.04)) : Math.atan2(hb - hs, L * 2)) - this.throttle * 0.05 * (this.paddling ? 0 : 1) * (S.top > 12 ? 1.6 : 1) - hump * 0.06;
     const tr = Math.atan2(hp - hq, B * 2) + this.yawRate * 0.12;
     this.pitch = damp(this.pitch, tp, 4, dt);
     this.roll = damp(this.roll, tr, 4, dt);

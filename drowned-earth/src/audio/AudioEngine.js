@@ -81,6 +81,8 @@ export class AudioEngine {
     for (const f of [31, 31.7, 46.5]) { const o = ac.createOscillator(); o.frequency.value = f; o.connect(this.drone); o.start(); }
     // boat engine
     this.engine = this.synth.engine(); this.engine.out.connect(this.world);
+    // wake hiss: filtered noise that rises with boat speed
+    this.wakeHiss = mk('pink', 'bandpass', 1800, 0.6, 0, this.world);
     // radio static bed
     this.radioStatic = mk('white', 'bandpass', 2500, 0.5, 0, this.radioIn);
     this.timers = { foghorn: 25, moan: 60, gull: 4, drops: 0 };
@@ -189,7 +191,15 @@ export class AudioEngine {
     // engine
     const boat = g.boat, piloting = g.player.mode === 'boat';
     const rpm = piloting && !boat.paddling && !boat.engineOff ? 0.2 + Math.abs(boat.throttle) : 0;
-    this.engine.setRpm(rpm, boat.pos.distanceTo(cam.position));
+    // the engine strains under boost and when the throttle is on but the hull hasn't caught up yet
+    const strain = piloting && !boat.paddling && !boat.engineOff ? (boat.boosting ? 0.3 : 0) + Math.max(0, Math.abs(boat.throttle) - boat.speed / 12) * 0.25 : 0;
+    this.engine.setRpm(rpm + strain, boat.pos.distanceTo(cam.position));
+    // wake hiss rising with speed; water slapping the hull, faster in waves
+    set(this.wakeHiss.g.gain, piloting ? Math.min(0.22, boat.speed * 0.022) : 0, 0.4);
+    if (piloting) {
+      this.slapT = (this.slapT || 0) - dt * (0.6 + Math.abs(boat.pitch) * 8 + boat.speed * 0.08 + g.weather.cur.wind * 0.8);
+      if (this.slapT <= 0) { this.slapT = 0.7 + Math.random() * 1.1; this.synth.splash(this.panner(boat.pos.clone().add(_v.set((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 3)), 2, 1.5), 0.12 + Math.random() * 0.12); }
+    }
     if (piloting && (boat.paddling || boat.engineOff) && Math.abs(boat.throttle) > 0.2) { this.paddleT = (this.paddleT || 0) - dt; if (this.paddleT <= 0) { this.paddleT = 1.1; this.synth.splash(this.panner(boat.pos.clone(), 2, 1), 0.3); } }
     // the hull creaks harder the faster you push it
     if (piloting && boat.speed > 2.5) { this.hullT = (this.hullT || 0) - dt * boat.speed * 0.15; if (this.hullT <= 0) { this.hullT = 2 + Math.random() * 3; this.synth.ropeCreak(this.panner(boat.pos.clone(), 2, 1.5)); } }
