@@ -116,6 +116,7 @@ export class Arms {
     const test = (pos, obj, type) => { const d = _v.copy(pos).sub(eye); const L = d.length(); if (L > range) return; if (d.normalize().dot(fwd) < cosTol) return; if (ctx.collision.raycast(eye, d, L) < L - 0.6) return; out.push({ obj, type, d: L, pos: pos.clone() }); };
     for (const c of ctx.creatures?.list || []) if (c.active && (c.health > 0)) test(c.body?.focus ? c.body.focus().clone() : _w.copy(c.pos).setY(c.pos.y + 0.6), c, 'creature');
     for (const a of ctx.society?.actors || []) if (a.alive) test(_w.copy(a.pos).setY(a.pos.y + 1.2), a, 'actor');
+    for (const a of ctx.killers?.hittable() || []) test(_w.copy(a.pos).setY(a.pos.y + 1.2), a, 'actor');
     for (const com of Object.values(ctx.state.communities || {})) for (const n of com.npcs || []) if (n.root.visible) test(n.worldPos(new THREE.Vector3()).setY(n.worldPos(_w).y + 1.2), n, 'npc');
     return out.sort((a, b) => a.d - b.d);
   }

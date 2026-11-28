@@ -260,6 +260,9 @@ export class UI {
   openJournal(tab = 'mind') {
     const { story, data, state } = this.ctx;
     const tabs = { mind: 'On your mind', map: 'Chart', writing: 'Writing', photos: 'Photos', people: 'People', rumours: 'Rumours', bestiary: 'Bestiary', underworld: 'Underworld', help: 'Help' };
+    // the Investigation tab appears only once a case has opened (a clue found, or a lair stumbled into)
+    const cases = this.ctx.killers?.board?.() || [];
+    if (cases.length) { delete tabs.help; tabs.investigation = 'Investigation'; tabs.help = 'Help'; }
     let body = '';
     if (tab === 'mind') {
       const objs = story.objectives();
@@ -275,6 +278,17 @@ export class UI {
     else if (tab === 'photos') { const ph = this.ctx.photo.list(); body = ph.length ? `<div class="photos">${ph.map((p) => `<figure><img src="${p.url}"><figcaption class="hand">Day ${p.day}, ${esc(p.time)} — ${esc(p.where)}</figcaption></figure>`).join('')}</div>` : '<div class="sub">No photographs yet. Press K (or the Photo button) to take one.</div>'; }
     else if (tab === 'people') body = Object.entries(state.met || {}).map(([id, n]) => { const d = data.npcs.npcs.find((x) => x.id === id); return d ? `<div class="row"><div class="name hand">${esc(d.name)}<small>${esc(d.role)} · spoken to ${n}×${d.respect ? ' · treats you as an equal' : ''}</small></div></div>` : ''; }).join('') || '<div class="sub">You have kept to yourself.</div>';
     else if (tab === 'rumours') body = (this.ctx.economy.rumours || []).map((r) => `<div class="row"><div class="name hand">${esc(r.text)}<small>day ${r.day}</small></div></div>`).join('') || '<div class="sub">No rumours yet. Ration boards and Raft Free Voice carry them.</div>';
+    else if (tab === 'investigation') {
+      // a theory board: clue cards, who you think it is, and (if you saw him) who you tell. No map pin.
+      const met = Object.keys(state.met || {}).map((id) => data.npcs.npcs.find((x) => x.id === id)).filter(Boolean);
+      body = cases.map((c) => `<div class="board" data-case="${c.id}" style="margin:10px 0 18px;padding:10px;border:1px solid var(--line);background:rgba(60,40,20,.18)">
+        <h3 style="margin-top:0">${esc(c.case)}${c.solved ? ' — solved' : ''} <small style="opacity:.6">${c.clues.length} clue${c.clues.length === 1 ? '' : 's'}${c.clues.length < c.need ? `, not enough yet` : ''}</small></h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">${c.clues.map((k) => `<div class="hand" style="flex:1 1 210px;max-width:300px;padding:8px;background:#e9dfc6;color:#2a2219;transform:rotate(${((k.id.length * 37) % 7) - 3}deg);box-shadow:0 2px 6px rgba(0,0,0,.5);font-size:13px"><b>${esc(k.title)}</b><br>${esc(k.text)}<br><small>day ${k.day}</small></div>`).join('')}</div>
+        ${c.routine ? `<p class="hand" style="margin:10px 0 0">${esc(c.routine)}</p>` : ''}
+        ${c.solved ? '' : `<div class="tabs" style="margin-top:10px"><span class="hand">I think it's</span> <select data-sus style="pointer-events:auto;background:#1b1712;color:var(--ink);border:1px solid var(--line);font:14px Georgia"><option value="">— nobody yet —</option>${met.map((n) => `<option value="${n.id}" ${c.theory === n.id ? 'selected' : ''}>${esc(n.name)}</option>`).join('')}</select><button class="btn" data-pin>Pin it</button></div>`}
+        ${c.sawHim && !c.solved ? `<div class="tabs"><span class="hand">You saw him. Tell…</span><button class="btn" data-tell="ward" ${c.told.ward ? 'disabled' : ''}>the Tide Ward</button><button class="btn" data-tell="family" ${c.told.family ? 'disabled' : ''}>a victim's family</button><button class="btn" data-tell="friends" ${c.told.friends ? 'disabled' : ''}>his friends</button></div>` : ''}
+        <div class="result hand" style="margin-top:6px"></div></div>`).join('') || '<div class="sub">Nothing here yet.</div>';
+    }
     else if (tab === 'underworld') { setTimeout(() => this.ctx.crews?.openBoard(), 0); body = ''; }
     else if (tab === 'bestiary') {
       const sp = data.creatures?.species || {}, cr = this.ctx.creatures;
@@ -295,6 +309,11 @@ export class UI {
       const cv = p.querySelector('canvas.chart'); if (cv) this.ctx.journal.drawMap(cv, { cx: Math.max(-300, Math.min(400, this.ctx.player.position.x)), cz: Math.max(-300, Math.min(300, this.ctx.player.position.z)) });
       p.querySelector('[data-addnote]')?.addEventListener('click', () => { const i = p.querySelector('[data-note]'); if (i.value.trim()) { state.notes.push({ text: i.value.trim(), day: this.ctx.time.day }); this.openJournal('mind'); } });
       p.querySelector('[data-note]')?.addEventListener('keydown', (e) => e.stopPropagation());
+      p.querySelectorAll('.board').forEach((bd) => {
+        const id = bd.dataset.case, out = bd.querySelector('.result');
+        bd.querySelector('[data-pin]')?.addEventListener('click', () => { const v = bd.querySelector('[data-sus]').value; if (!v) return; const fits = this.ctx.killers.pin(id, v); out.textContent = fits ? 'The pieces fit. You are sure. Being sure is not proof.' : 'You pin the name up. Some of it fits. Some of it doesn\'t.'; });
+        bd.querySelectorAll('[data-tell]').forEach((b) => b.addEventListener('click', () => { out.textContent = this.ctx.killers.tell(id, b.dataset.tell); b.disabled = true; }));
+      });
     });
   }
   openPause() {

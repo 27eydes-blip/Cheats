@@ -433,6 +433,61 @@
    "want": "a clinic",
    "secret": "She was a nurse at St. Aldren.",
    "speech": "formal"
+  },
+  "garrick": {
+   "traits": {
+    "caution": 0.85,
+    "curiosity": 0.5,
+    "industry": 0.9,
+    "warmth": 0.6,
+    "greed": 0.2,
+    "courage": 0.8,
+    "talk": 0.35,
+    "superstition": 0.6,
+    "honesty": 0.3,
+    "temper": 0.25
+   },
+   "job": "repair",
+   "bunk": "rh_rig",
+   "friends": [
+    "bram",
+    "ada",
+    "osk"
+   ],
+   "rival": "kit",
+   "habit": "night fishing",
+   "fear": "being cut loose",
+   "want": "for Rusthold to stay tied together",
+   "secret": "He has a brother nobody at Rusthold has heard of.",
+   "speech": "blunt"
+  },
+  "quillon": {
+   "traits": {
+    "caution": 0.9,
+    "curiosity": 0.4,
+    "industry": 0.75,
+    "warmth": 0.7,
+    "greed": 0.15,
+    "courage": 0.7,
+    "talk": 0.5,
+    "superstition": 0.8,
+    "honesty": 0.35,
+    "temper": 0.2
+   },
+   "job": "repair",
+   "bunk": "chapel",
+   "friends": [
+    "keeper",
+    "maud",
+    "osk"
+   ],
+   "rival": "pell",
+   "partner": null,
+   "habit": "praying",
+   "fear": "a light going out with nobody there",
+   "want": "to be in time, once",
+   "secret": "He was a rescue diver in the first flood.",
+   "speech": "formal"
   }
  },
  "habits": {

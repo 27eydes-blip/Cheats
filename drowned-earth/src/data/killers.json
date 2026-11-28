@@ -1,0 +1,107 @@
+{
+ "_doc": "Two fictional serial killers hidden among the raft-folk. Each is an ordinary NPC by day (npcs.json + people.json under `npc` — nothing there marks him) and is run at night by src/killers/Killers.js on a slow tick. rules: global pacing and odds. killers.<id>: npc = daytime identity; reason = shown only in late clues and the lair; planning = how he chooses victims, hours, and places (spots: Portage raft edges or open-water lure points relative to Portage); lairs = main and moved positions (world x,z) with a safe entrance (unlocked by clues) and a second, stumbled-on entrance; clues = what the world leaves for the player, by kind (notice, item, witness, radio, creature, tide, routine, tell, lair); dialogue = his daytime lines, tells (only after a matching clue), and lines once he knows you know. Fictional characters only.",
+ "rules": {
+  "tickSeconds": 1,
+  "minDaysBetweenEvents": 4,
+  "extraGapDays": [0, 9],
+  "observeDaysNeeded": 3,
+  "witnessChance": 0.04,
+  "witnessRange": 45,
+  "cluesToUnlock": 5,
+  "lairStreamRadius": 140,
+  "eventHours": [22.5, 3.5],
+  "hunterHp": 320
+ },
+ "killers": {
+  "netmaker": {
+   "npc": "garrick",
+   "case": "The dock disappearances",
+   "signature": "a little charm of knotted net, tied seven times",
+   "reason": "His brother was tied to him on the evacuation line. When the Ward cut the line to save the barge, nobody went back. He believes no one should drift alone, so he keeps the ones who do — tied, safe, never let go of.",
+   "weakness": "He cannot leave a knot unfinished. Cut one of his charms and he comes back to re-tie it.",
+   "home": "rusthold_tender",
+   "planning": {
+    "prefers": ["alone", "night", "unliked"],
+    "spots": [
+     { "id": "dock_edge", "raft": "dock", "name": "the end of the main dock" },
+     { "id": "sleep_edge", "raft": "sleep2", "name": "the far side of the sleeping pontoon" },
+     { "id": "water_edge", "raft": "water", "name": "the water-barrel raft" },
+     { "id": "redlamp_edge", "raft": "redlamp", "name": "behind the red lamp" }
+    ],
+    "alibiPlace": "the Anchor, drinking slowly"
+   },
+   "lairs": {
+    "main": { "pos": [522, 612], "kind": "barge", "safe": "the deck hatch, wired shut — you know where he hides the pliers", "second": "a loose grate at the waterline" },
+    "moved": { "pos": [604, 486], "kind": "barge", "safe": "the deck hatch", "second": "a split seam in the hull, just above the water" }
+   },
+   "clues": [
+    { "id": "nm_notice", "kind": "notice", "title": "A missing notice", "text": "Pinned to the ration board: MISSING — {victim}. Last seen at {spot}. If you know anything, tell someone you trust. Underneath, in another hand: 'nobody trusts anybody'." },
+    { "id": "nm_charm", "kind": "item", "title": "A knotted net charm", "text": "Found where {victim} was last seen: a palm-sized charm of tarred net, knotted seven times, the same tight hitch over and over. Somebody's hands did this without thinking." },
+    { "id": "nm_witness", "kind": "witness", "who": "corr", "title": "Corr heard a winch", "text": "Corr, quietly: 'Three in the morning. A winch. Nobody winches at three. And then a splash, and then nothing, and I lay there and told myself it was a seal.'" },
+    { "id": "nm_radio", "kind": "radio", "title": "Free Voice: the cut nets", "text": "On Free Voice: 'Rusthold crews say their nets come up cut and re-knotted. Better knots than theirs. Nobody's admitting to it.'" },
+    { "id": "nm_creature", "kind": "creature", "title": "The empty water", "text": "Around the half-sunk barge off Rusthold the water is empty. No fish, no gull-rats on the rail. Things that eat dead things won't go near it." },
+    { "id": "nm_tide", "kind": "tide", "title": "Low water", "text": "At low water the old barge rides higher and something shows at its waterline on the far side — a grate, and fresh scrape marks where it's been moved." },
+    { "id": "nm_routine", "kind": "routine", "title": "A boat with no lamp", "text": "Past midnight, a small boat with no lamp slides out from under the Rusthold rig and goes toward Portage. Whoever rows it rows like they've done it a thousand times." },
+    { "id": "nm_tell", "kind": "tell", "title": "Rope-burned hands", "text": "Garrick's palms: rope-burned across both hands, fresh, the kind you get from a line running out fast under weight. He sees you look. He smiles and keeps mending." },
+    { "id": "nm_lair", "kind": "lair", "title": "His workshop", "text": "Nets hung like curtains. Rope cages. On a shelf: a shoe, a ration tag, a comb, a wristband — each tied with the same seven knots." }
+   ],
+   "dialogue": {
+    "day": ["Net's not going to mend itself. Neither are you, by the look of it.", "Rusthold's quiet. I like quiet.", "Tar and patience. That's the whole trade.", "You want a net? I'll make you a net. Good one. Won't let go of anything."],
+    "tell": ["He's tying a little knot charm while he talks, without looking. Seven turns. He sees you watching and puts it in his pocket.", "He smells of tar and, under it, something sweeter. Old water.", "There's a long scrape of rust on his forearm, the kind you'd get squeezing through a hull grate."],
+    "knows": ["You've been asking about the docks. Lot of people go missing on water. It's what water's for.", "Stay off the docks at night, friend. I'd hate to have to come looking for you.", "Funny. I keep seeing your lantern where it's got no reason to be."],
+    "befriend": ["Here — a good line, no charge. You look like you could use a friend at Rusthold.", "Come by any time. I'm always here. Always."]
+   },
+   "lairText": {
+    "enter": "Inside the hull it is close and wet and smells of tar. Nets hang from every beam like curtains, and they move, a little, though there is no wind.",
+    "empty": "The hooks are bare. Drag marks on the planks, still wet. A stove, still warm. He was here this morning, and he took everything that mattered.",
+    "proof": "Under the workbench, a tin box of tags and wristbands — one for each name on the missing notices, each tied seven times. This is proof. Somebody will have to listen now.",
+    "home": "Somewhere aft, behind the hanging nets, a man is humming. The humming stops."
+   }
+  },
+  "lamplighter": {
+   "npc": "quillon",
+   "case": "The lights on the water",
+   "signature": "a drowned lantern, glass blacked with soot",
+   "reason": "He was a rescue diver in the first flood. He followed every light he saw, and most of them were already gone when he got there. Now he keeps the lights himself, and the people who follow them, so that nobody he reaches is ever too late again. The wall has every name — the ones he couldn't save first, then the others.",
+   "weakness": "His helmet lamp. Douse your own light and his is the only one in the dark — and he can't stand a light going out without going to see.",
+   "home": "portage",
+   "planning": {
+    "prefers": ["alone", "night", "travelling"],
+    "spots": [
+     { "id": "lure_east", "lure": [70, -40], "name": "a rescue light east of Portage" },
+     { "id": "lure_north", "lure": [-60, 55], "name": "a rescue light toward the old towers" },
+     { "id": "lure_south", "lure": [40, 85], "name": "a light off the south channel" },
+     { "id": "lure_west", "lure": [-85, -30], "name": "a light past the breakwater" }
+    ],
+    "alibiPlace": "the chapel, trimming the vigil lamps"
+   },
+   "lairs": {
+    "main": { "pos": [392, 318], "kind": "tower", "safe": "a guide rope down to a broken window", "second": "a half-hidden shaft in the rubble" },
+    "moved": { "pos": [236, 352], "kind": "tower", "safe": "a guide rope down to a broken window", "second": "a gap where the floor gave way" }
+   },
+   "clues": [
+    { "id": "ll_notice", "kind": "notice", "title": "Another empty bunk", "text": "Chalked on the chapel post: {victim} — rowed out after a light on the water. Didn't come back. Under it, three other names, older chalk." },
+    { "id": "ll_lamp", "kind": "item", "title": "A drowned lantern", "text": "Bobbing where the rescue light was: a lantern, glass blacked with soot, wick trimmed with care. Someone looks after these." },
+    { "id": "ll_witness", "kind": "witness", "who": "pell", "title": "Pell saw a light with no boat", "text": "Pell, from the lookout: 'A light, low on the water, swinging like someone waving it. I put the glass on it. There was no boat under it. Just the light. And then it went down.'" },
+    { "id": "ll_radio", "kind": "radio", "title": "Night Songs: don't row to the lights", "text": "On Night Songs, between records: 'If you see a light on the water tonight, a little one, swinging — let it be. Let somebody else be the hero. That's all. Here's a slow one.'" },
+    { "id": "ll_creature", "kind": "creature", "title": "Crabs leaving the tower", "text": "The tide crabs are leaving the old tower east of Portage — a whole slow column of them, walking away along the seabed, as if something down there is wrong." },
+    { "id": "ll_tide", "kind": "tide", "title": "A chained lamp below a buoy", "text": "Under a dead buoy near the drowned tower, a lantern chained at diving depth. A marker. Someone dives here, often, and wants to find the way in the dark." },
+    { "id": "ll_routine", "kind": "routine", "title": "The vigil lamps go out", "text": "On the nights someone vanishes, the chapel's vigil lamps go out early. Quillon is meant to keep them lit until dawn. Nobody's ever asked where he goes." },
+    { "id": "ll_tell", "kind": "tell", "title": "Wet hair at dawn", "text": "Quillon at dawn: hair wet, a ring around his face like the seal of a helmet, smelling of lamp oil and deep water. 'Morning,' he says. 'Long night.'" },
+    { "id": "ll_lair", "kind": "lair", "title": "The wall of names", "text": "Hundreds of dead lanterns, rank on rank. And a wall, scratched floor to ceiling with names — the oldest from the first flood, the newest from Portage." }
+   ],
+   "dialogue": {
+    "day": ["Mind the lamp, it's hot. They're all hot until they aren't.", "Somebody has to keep the lights. Might as well be someone who likes the dark.", "Funerals are the busy nights. Every lantern on the water is mine.", "You row at night? Carry your own light. Never trust somebody else's."],
+    "tell": ["His fingers are black with soot to the second knuckle, and his nails are clean. He's careful.", "There's a red ring pressed around his face — from a seal, a mask, something tight — fading as you talk.", "He smells of lamp oil and, under it, the cold flat smell of very deep water."],
+    "knows": ["You've been diving near the old tower. It's not safe down there. Things fall.", "I saw your light on the water last night. You should be careful which lights you follow.", "People who look too hard at the dark, the dark looks back. It's a saying. Here, take a lamp."],
+    "befriend": ["Take this lamp. Good wick. Brighter than yours.", "If you ever need someone to come out after you, call. I always come."]
+   },
+   "lairText": {
+    "enter": "The flooded floor is black and still. Your light finds a lantern, then ten, then hundreds — row on row of dead lanterns, every one of them clean.",
+    "empty": "The shelves are half bare, lanterns gone, soot rings where they stood. The wall of names is still here. He couldn't carry that.",
+    "proof": "Behind the locked door: a diving helmet on a stand, its lamp still warm, and a ledger of names and dates in a careful hand — the last pages all from Portage. Proof.",
+    "home": "Somewhere above you in the dark, a lamp comes on. It is moving."
+   }
+  }
+ }
+}

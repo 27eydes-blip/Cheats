@@ -1187,6 +1187,151 @@
      "text": "Busy. Always busy. Ask me later."
     }
    ]
+  },
+  {
+   "id": "garrick",
+   "presents": "m",
+   "name": "Garrick Sole",
+   "raft": "rh_rig",
+   "role": "net-mender",
+   "coat": [
+    0.32,
+    0.3,
+    0.26
+   ],
+   "spawn": [
+    -3,
+    3
+   ],
+   "schedule": [
+    {
+     "from": 6,
+     "to": 12,
+     "do": "mend",
+     "pos": [
+      -3,
+      3
+     ]
+    },
+    {
+     "from": 12,
+     "to": 13,
+     "do": "sit",
+     "pos": [
+      4,
+      8
+     ]
+    },
+    {
+     "from": 13,
+     "to": 20,
+     "do": "mend",
+     "pos": [
+      -3,
+      3
+     ]
+    },
+    {
+     "from": 20,
+     "to": 23,
+     "do": "sit",
+     "pos": [
+      4,
+      8
+     ]
+    },
+    {
+     "from": 23,
+     "to": 6,
+     "do": "sleep",
+     "pos": [
+      1,
+      9
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Net's not going to mend itself. Neither are you, by the look of it."
+    },
+    {
+     "text": "Rusthold's quiet. I like quiet."
+    },
+    {
+     "text": "Tar and patience. That's the whole trade."
+    },
+    {
+     "text": "You want a net? I'll make you a net. Good one. Won't let go of anything."
+    }
+   ]
+  },
+  {
+   "id": "quillon",
+   "presents": "m",
+   "name": "Quillon Ferris",
+   "raft": "chapel",
+   "role": "lamp-trimmer",
+   "coat": [
+    0.22,
+    0.22,
+    0.26
+   ],
+   "spawn": [
+    -1.5,
+    -1
+   ],
+   "schedule": [
+    {
+     "from": 7,
+     "to": 12,
+     "do": "repair",
+     "pos": [
+      -1.5,
+      -1
+     ]
+    },
+    {
+     "from": 12,
+     "to": 17,
+     "do": "idle",
+     "pos": [
+      -1,
+      0.5
+     ]
+    },
+    {
+     "from": 17,
+     "to": 22,
+     "do": "lantern",
+     "pos": [
+      -1.5,
+      -1
+     ]
+    },
+    {
+     "from": 22,
+     "to": 7,
+     "do": "sleep",
+     "pos": [
+      -2,
+      4
+     ]
+    }
+   ],
+   "talk": [
+    {
+     "text": "Mind the lamp, it's hot. They're all hot until they aren't."
+    },
+    {
+     "text": "Somebody has to keep the lights. Might as well be someone who likes the dark."
+    },
+    {
+     "text": "Funerals are the busy nights. Every lantern on the water is mine."
+    },
+    {
+     "text": "You row at night? Carry your own light. Never trust somebody else's."
+    }
+   ]
   }
  ]
 }

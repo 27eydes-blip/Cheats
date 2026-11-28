@@ -45,7 +45,7 @@ export class Music {
     if (this.momentT <= 0) this.moment = null;
     const danger = a.danger || 0;
     const listener = a.listenerNear || 0;
-    const silent = listener > 0.5 || a.game.ctx.story.finale;
+    const silent = listener > 0.5 || a.game.ctx.story.finale || a.game.ctx.state.inLair;   // no music in the lairs
     const target = silent ? 0 : (this.moment ? 0.9 : this.level) * (a.game.ctx.settings.music ?? 1) * (1 - danger * 0.4);
     this.out.gain.setTargetAtTime(target * 0.35, t, silent ? 0.3 : 3);
     if (t < this.next - 0.1) return;

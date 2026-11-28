@@ -57,13 +57,15 @@ export class WorldMap {
     return y;
   }
   landmarkClaim(x, z, pad = 0) {
+    for (const l of this.extraClaims || []) if (Math.hypot(x - l.pos[0], z - l.pos[1]) < l.clear + pad) return l;
     for (const l of this.landmarks) {
       if (Math.hypot(x - l.pos[0], z - l.pos[1]) < l.clear + pad) return l;
     }
     return null;
   }
+  // extraClaims: quiet places kept clear of buildings that are not on any chart (the hunters' lairs)
   rectClaimed(x0, z0, x1, z1, pad = 0) {
-    for (const l of this.landmarks) {
+    for (const l of [...(this.extraClaims || []), ...this.landmarks]) {
       const cx = clamp(l.pos[0], x0, x1), cz = clamp(l.pos[1], z0, z1);
       if (Math.hypot(cx - l.pos[0], cz - l.pos[1]) < l.clear + pad) return l;
     }
