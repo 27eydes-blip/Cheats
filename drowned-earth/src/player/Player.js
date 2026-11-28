@@ -5,6 +5,8 @@ import { clamp, damp } from '../core/rng.js';
 // surface, free diving with buoyancy, ladder climbing, and seated in the boat.
 const UP = new THREE.Vector3(0, 1, 0);
 const _f = new THREE.Vector3(), _r = new THREE.Vector3(), _w = new THREE.Vector3();
+// scratch vectors for per-frame work (no garbage while swimming or riding a raft)
+const _ahead = new THREE.Vector3(), _test = new THREE.Vector3(), _down = new THREE.Vector3(0, -1, 0), _gl = new THREE.Vector3(), _climbRes = {};
 
 export class Player {
   constructor(ctx) {
@@ -123,7 +125,7 @@ export class Player {
     if (!this.groundBody) return;
     const o = this.groundBody.object;
     o.updateMatrixWorld();
-    const now = this.groundLocal.clone().applyMatrix4(o.matrixWorld);
+    const now = _gl.copy(this.groundLocal).applyMatrix4(o.matrixWorld);
     // follow the platform; keep player's own motion separate
     this.position.x = now.x; this.position.z = now.z;
     if (this.velocity.y <= 0) this.position.y = Math.max(this.position.y, now.y);
@@ -172,7 +174,7 @@ export class Player {
     this.swimStroke += Math.hypot(this.velocity.x, this.velocity.z) * dt;
     if (this.swimStroke > 1.4) { this.swimStroke = 0; this.ctx.events.emit('swimstroke', { pos: this.position, under }); if (!under) this.ctx.water.ripple(this.position.x, this.position.z, 0.6); }
     // climb out: if there is ground at roughly surface height in front
-    const ahead = this.position.clone().addScaledVector(_f, 0.6);
+    const ahead = _ahead.copy(this.position).addScaledVector(_f, 0.6);
     const g = collision.groundAt(ahead.x, ahead.z, surface + 1.3);
     if (!under && g > surface - 0.5 && g < surface + 1.3 && input.move.y > 0.3) {
       this.mode = 'foot';
@@ -182,9 +184,8 @@ export class Player {
     }
     // also climb onto rafts (dynamic bodies)
     if (!under && input.move.y > 0.3) {
-      const test = ahead.clone(); test.y = surface - 0.3;
-      const v0 = new THREE.Vector3(0, -1, 0);
-      const r = collision.resolveCylinder(test, 0.2, 0.2, v0, 2.0, {});
+      const test = _test.copy(ahead); test.y = surface - 0.3;
+      const r = collision.resolveCylinder(test, 0.2, 0.2, _down.set(0, -1, 0), 2.0, _climbRes);
       if (r.groundBody && test.y > surface - 0.2 && test.y < surface + 1.9) {
         this.mode = 'foot'; this.position.copy(test); this.velocity.set(0, 0, 0); this.setGround(r.groundBody);
         this.ctx.events.emit('climbout', {});

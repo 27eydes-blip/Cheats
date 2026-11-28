@@ -22,9 +22,24 @@ export class LandmarkManager {
       else if (isLoaded && d > unloadD) this.unload(def.id);
     }
     if (next) this.load(next, false);
+    // as you approach a loaded place, compile everything in it in the background (hidden people, LOD meshes,
+    // props switched off until night) so walking or sailing into it doesn't compile shaders mid-step
+    else if (!force) for (const rec of this.loaded.values()) {
+      if (rec.warmed || !rec.group || !rec.def.pos) continue;
+      if (Math.hypot(rec.def.pos[0] - px, rec.def.pos[1] - pz) > 380) continue;
+      rec.warmed = true; this.warm(rec.group);
+      break;   // one per frame
+    }
     for (const l of this.loaded.values()) for (const u of l.updaters || []) u(this._dt || 0);
   }
   tick(dt) { this._dt = dt; }
+  warm(group) {
+    const r = this.ctx.renderer; if (!r?.compileAsync) return;
+    const hidden = []; group.traverse((o) => { if (!o.visible && !o.isLight) { hidden.push(o); o.visible = true; } });
+    const prevT = r.getRenderTarget(), tgt = this.ctx.settings.q.postPipeline ? this.ctx.pipeline?.target : null;
+    try { if (tgt) r.setRenderTarget(tgt); r.compileAsync(this.ctx.scene, this.ctx.camera).catch(() => {}); } catch { /* compile on first draw */ }
+    finally { r.setRenderTarget(prevT); for (const o of hidden) o.visible = false; }
+  }
   load(def, sync = true) {
     const fn = this.builders.get(def.kind);
     if (!fn) return;

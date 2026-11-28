@@ -63,7 +63,8 @@ export class Settings {
     this.gpu = det.gpu;
     // every new player starts on the Light preset; a preset picked in Options (or set by safe mode) is remembered
     this.qualityChosen = !!stored.qualityChosen;
-    let q = params.get('quality') || (this.qualityChosen ? stored.quality : null) || 'low';
+    // first run: Standard on a dedicated GPU, Light otherwise (integrated, software, unknown); safe mode drops to Light
+    let q = params.get('quality') || (this.qualityChosen ? stored.quality : null) || (det.preset === 'high' ? 'medium' : det.preset);
     q = ALIAS[q] || q;
     this.auto = q === 'auto';
     this.autoCap = stored.autoCap ?? null; // set when auto quality had to step down on this machine

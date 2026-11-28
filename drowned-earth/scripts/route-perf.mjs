@@ -35,7 +35,8 @@ const r = await p.evaluate(async () => {
     if (!running) return;
     const ms = now - last; last = now;
     const pr = progs(); const shaders = pr - lastProgs; lastProgs = pr;
-    frames.push({ phase, ms, shaders, ev: evs.splice(0).join(' '), doing: c.player.mode + (c.player.mode === 'boat' ? ' ' + c.boat.vel.length().toFixed(1) + 'm/s' : '') });
+    const ri = c.renderer.info.render;
+    frames.push({ phase, ms, shaders, calls: ri.calls, tris: ri.triangles, ev: evs.splice(0).join(' '), doing: c.player.mode + (c.player.mode === 'boat' ? ' ' + c.boat.vel.length().toFixed(1) + 'm/s' : '') });
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -59,6 +60,9 @@ const r = await p.evaluate(async () => {
   if (c.player.mode === 'boat') { if (c.interact.focus) c.interact.use(); }
   if (c.player.mode !== 'foot') { c.player.mode = 'foot'; }
   phase = 'standing'; await wait(15);
+  // walking in Portage: on the market deck, moving and turning
+  { const po0 = c.state.communities?.portage, mk = po0?.rafts.get('market');
+    if (mk) { c.player.mode = 'foot'; c.player.teleport(mk.worldPoint(new V(0, mk.deck + 0.2, 0))); } }
   phase = 'walking'; c.input.touchMove.y = 1; const turn = setInterval(() => { c.player.yaw += 0.15; }, 500); await wait(15); clearInterval(turn); c.input.touchMove.y = 0;
   // boat across open water
   put(lc.pos[0] - 40, lc.pos[1] + 60, Math.PI); target = [lc.pos[0] - 40, lc.pos[1] + 400];
@@ -78,7 +82,8 @@ const r = await p.evaluate(async () => {
     if (!f.length) continue;
     const ms = f.map((x) => x.ms).sort((a, b) => b - a), k = Math.max(1, Math.floor(ms.length / 100));
     const avg = ms.reduce((a, b) => a + b, 0) / ms.length;
-    stats[ph] = { frames: f.length, avgFps: +(1000 / avg).toFixed(1), low1Fps: +(1000 / (ms.slice(0, k).reduce((a, b) => a + b, 0) / k)).toFixed(1), worstMs: Math.round(ms[0]), shaderCompiles: f.reduce((a, x) => a + x.shaders, 0) };
+    const avgOf = (k) => Math.round(f.reduce((a, x) => a + (x[k] || 0), 0) / f.length);
+    stats[ph] = { calls: avgOf('calls'), tris: avgOf('tris'), frames: f.length, avgFps: +(1000 / avg).toFixed(1), low1Fps: +(1000 / (ms.slice(0, k).reduce((a, b) => a + b, 0) / k)).toFixed(1), worstMs: Math.round(ms[0]), shaderCompiles: f.reduce((a, x) => a + x.shaders, 0) };
   }
   const worst = frames.filter((x) => x.phase !== 'warmup').sort((a, b) => b.ms - a.ms).slice(0, 10).map((x) => ({ phase: x.phase, ms: Math.round(x.ms), doing: x.doing, cause: x.shaders ? `${x.shaders} shader compile(s)` : x.ev || 'render/logic' }));
   return { quality: c.settings.quality, stats, worst };
