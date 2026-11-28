@@ -3,11 +3,12 @@
 const PRESETS = {
   low: {
     pixelRatio: 1, postPipeline: false, shadows: false, shadowMapSize: 0,
-    chunkNearRadius: 200, chunkFarRadius: 900, waterRings: 80, waterSegments: 96,
-    debrisDensity: 0.45, particleCount: 250, rainCount: 1500, envMapUpdates: false,
-    maxLights: 3, npcDetail: 0, birdCount: 10, renderScale: 1, reflections: 0,
-    label: 'Phone', targetFps: 30, minScale: 0.6, mipBias: 0, textureTier: '1k', anisotropy: 2,
-    ssao: false, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 2, propDensity: 0.5, characters: true,
+    // the Light preset draws far less: a shorter (fogged) view, sparser props and debris, capped particles
+    chunkNearRadius: 150, chunkFarRadius: 600, waterRings: 80, waterSegments: 96,
+    debrisDensity: 0.3, particleCount: 180, rainCount: 900, envMapUpdates: false,
+    maxLights: 3, npcDetail: 0, birdCount: 6, renderScale: 1, reflections: 0,
+    label: 'Light', targetFps: 30, minScale: 0.6, mipBias: 0, textureTier: '1k', anisotropy: 2,
+    ssao: false, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 2, propDensity: 0.35, characters: true,
   },
   medium: {
     pixelRatio: 1.5, postPipeline: true, shadows: true, shadowMapSize: 2048, shadowRange: 110,

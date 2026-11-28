@@ -49,6 +49,8 @@ export class Player {
   }
 
   update(dt) {
+    // remember the last solid ground you stood on (the emergency exit's fallback)
+    if (this.mode === 'foot' && this.grounded) { this.safeT = (this.safeT || 0) + dt; if (this.safeT > 1) { this.safeT = 0; (this.lastSafe ||= this.position.clone()).copy(this.position); } }
     const { input, waves, collision, survival } = this.ctx;
     if (this.mode !== 'locked') this.look(input.look.x, input.look.y);
     _f.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));

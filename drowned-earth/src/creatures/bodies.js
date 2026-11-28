@@ -30,7 +30,7 @@ function siltwolf(mgr, c) {
   const q = quality(mgr);
   const group = new THREE.Group();
   const pack = Array.from({ length: c.spec.count || 3 }, (_, i) => {
-    const m = quadruped(lib, { ...SILTWOLF, levels: q === 'low' ? 1 : 2, shells: q === 'high' ? 5 : q === 'medium' ? 2 : 0, scale: SILTWOLF.scale * (i === 0 ? 1.08 : 0.93 + i * 0.03) });
+    const m = quadruped(lib, { ...SILTWOLF, levels: q === 'low' ? 0 : 2, shells: q === 'high' ? 5 : q === 'medium' ? 2 : 0, scale: SILTWOLF.scale * (i === 0 ? 1.08 : 0.93 + i * 0.03) });
     group.add(m.root);
     m.anim.play('Idle', 0); m.anim.mixer.setTime(i * 1.3);
     return { ...m, off: new THREE.Vector3(Math.cos(i * 2.1) * 2.2, 0, Math.sin(i * 2.1) * 2.2), p: new THREE.Vector3(), h: 0, speed: 0 };
@@ -60,7 +60,7 @@ function siltwolf(mgr, c) {
   const bed = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshStandardMaterial({ color: 0x2a261e, roughness: 1, transparent: true, depthWrite: false, alphaMap: denStain() }));
   bed.rotation.x = -Math.PI / 2; bed.position.y = 0.008; den.add(bed);
   // a skull-like curl of spine: vertebrae from the spike profile
-  const pups = [0, 1].map((i) => { const m = quadruped(lib, { ...SILTWOLF, mutate: null, levels: 1, shells: 0, scale: SILTWOLF.scale * 0.42, eyeR: 0.05 }); m.root.position.set(i ? 0.5 : -0.3, 0, i ? -0.3 : 0.4); m.anim.play(i ? 'Idle' : 'Eating', 0); den.add(m.root); return m; });
+  const pups = [0, 1].map((i) => { const m = quadruped(lib, { ...SILTWOLF, mutate: null, levels: q === 'low' ? 0 : 1, shells: 0, scale: SILTWOLF.scale * 0.42, eyeR: 0.05 }); m.root.position.set(i ? 0.5 : -0.3, 0, i ? -0.3 : 0.4); m.anim.play(i ? 'Idle' : 'Eating', 0); den.add(m.root); return m; });
   group.add(den);
   return {
     group,
@@ -112,7 +112,7 @@ function siltwolf(mgr, c) {
 
 // ---------------------------------------------------------------- gullrats
 function gullrat(mgr, c) {
-  const base = BASIC.gullrat(mgr, c);
+  const base = BASIC.gullrat(mgr, c), q = quality(mgr);
   const lib = mgr.ctx.creatureModels;
   const n = c.spec.count || 16;
   const nRats = Math.min(9, Math.ceil(n * 0.6)), nGulls = Math.min(5, n - Math.ceil(n * 0.6));
@@ -120,7 +120,7 @@ function gullrat(mgr, c) {
   const members = [];
   for (let i = 0; i < nRats + nGulls; i++) {
     const gull = i >= nRats;
-    const m = gull ? gullModel(lib) : quadruped(lib, { ...GULLRAT, levels: 1, shells: 0, scale: GULLRAT.scale * (0.85 + Math.random() * 0.3), mutate: i % 3 === 0 ? GULLRAT.mutate : null });
+    const m = gull ? gullModel(lib) : quadruped(lib, { ...GULLRAT, levels: q === 'low' ? 0 : 1, shells: 0, scale: GULLRAT.scale * (0.85 + Math.random() * 0.3), mutate: i % 3 === 0 ? GULLRAT.mutate : null });
     if (!m) continue;
     group.add(m.root);
     m.anim.play('Idle', 0); m.anim.mixer.setTime(Math.random() * 3);

@@ -76,7 +76,13 @@ export class UI {
     const { interact, player, survival, boat, input } = this.ctx;
     const f = interact.focus;
     const p = f ? interact.promptFor(f) : '';
-    if (p && !this.open) {
+    // on a boat with nothing else to use, the prompt offers the way off
+    const leave = !p && player.mode === 'boat' && boat.canLeave?.() && !this.open ? boat.leaveLabel() : '';
+    if (leave) {
+      const pad = this.ctx.pad?.device === 'pad';
+      this.promptEl.innerHTML = pad ? `${this.ctx.pad.glyph('swap')}${esc(leave)}` : `<b>${input.usingTouch ? 'Use' : 'E'}</b>${esc(leave)}`;
+      this.promptEl.style.opacity = 1; this.dot.classList.remove('active');
+    } else if (p && !this.open) {
       const pad = this.ctx.pad?.device === 'pad';
       this.promptEl.innerHTML = pad ? `${this.ctx.pad.glyph('use')}${esc(p)}` : `<b>${input.usingTouch ? 'Use' : 'E'}</b>${esc(p)}`;
       this.promptEl.style.opacity = 1; this.dot.classList.add('active');
@@ -343,7 +349,7 @@ export class UI {
     const s = this.ctx.settings;
     const row = (label, key, opts) => `<h3>${label}</h3><div class="tabs">${opts.map(([v, n]) => `<button class="btn ${(key === 'quality' ? (s.auto ? 'auto' : s.quality) : String(s[key])) === String(v) ? 'on' : ''}" data-k="${key}" data-v="${v}">${n}</button>`).join('')}</div>`;
     const html = `<button class="btn close" data-close>Close</button><h2>Options</h2><div class="tabs"><button class="btn" data-padset>Controller settings &amp; button map</button></div>
-      ${row('Quality (reloads)', 'quality', [['auto', 'Auto'], ['low', 'Phone'], ['medium', 'Standard'], ['high', 'Ultra']])}
+      ${row('Quality (reloads)', 'quality', [['auto', 'Auto'], ['low', 'Light'], ['medium', 'Standard'], ['high', 'Ultra']])}
       ${row('Difficulty', 'difficulty', [['calm', 'Calm — no threats'], ['standard', 'Standard'], ['harsh', 'Harsh — scarce, permanent']])}
       ${row('Text size', 'textSize', [['1', 'Normal'], ['1.2', 'Large'], ['1.4', 'Larger']])}
       ${row('Sound captions', 'captions', [['true', 'On'], ['false', 'Off']])}

@@ -13,6 +13,7 @@ const STATE_COL = { idle: 0x50c878, alert: 0xf0d050, warning: 0xf08a30, attack: 
 
 export class Creatures {
   constructor(ctx) {
+    this.opaqueWater = !ctx.settings.q.postPipeline;
     this.ctx = ctx;
     this.data = ctx.data.creatures;
     this.senses = ctx.senses;
@@ -93,6 +94,9 @@ export class Creatures {
       if (near !== c.active) { c.active = near; c.body.group.visible = near; if (!near) { c.state = 'idle'; c.threat = 0; c.pos.copy(c.home); } }
       if (!near) continue;
       if (c.gone > 0) { c.gone -= dt; c.body.group.visible = false; continue; } else if (c.gone != null) { c.gone = null; c.health = c.spec.health ?? 60; c.body.group.visible = true; }
+      // Light preset: the water is opaque from above (no refraction pass), so submerged creatures can't be seen
+      // while you're above the surface: don't draw them (the needlefish school alone was ~90k triangles)
+      if (this.opaqueWater) { const v = ctx.atmosphere.underwater || c.pos.y > ctx.waves.height(c.pos.x, c.pos.z) - 1.5; if (c.body.group.visible !== v) c.body.group.visible = v; }
       if (c.place.roof && !this.resolveHome(c)) continue;
       if (c.place.community) this.resolveHome(c);
       this.applyTools(c, dt);

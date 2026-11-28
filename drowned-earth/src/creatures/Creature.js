@@ -160,6 +160,12 @@ export class Creature {
     }
     this.lastD = d; this.lastDH = dHome;
     this.body.move(this, dt);
+    // nothing clips into the boat: keep every creature outside the hull while you're aboard
+    const bt = this.ctx.boat;
+    if (bt && this.ctx.player.mode === 'boat' && Math.abs(this.pos.y - bt.pos.y) < 3) {
+      const dx = this.pos.x - bt.pos.x, dz = this.pos.z - bt.pos.z, d = Math.hypot(dx, dz), keep = 3.4;
+      if (d < keep) { const k = d > 0.01 ? keep / d : 1; this.pos.x = bt.pos.x + (d > 0.01 ? dx : 1) * k; this.pos.z = bt.pos.z + (d > 0.01 ? dz : 0) * k; }
+    }
     if (this.state === 'attack') this.body.attack?.(this, dt);
     this.body.animate(this, dt);
   }

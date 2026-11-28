@@ -208,6 +208,8 @@ export class Pad {
       // R1: tap next weapon, hold to holster
       if (b[B.next] && this.holdT[B.next] >= HOLD && !this.nextHeld) { this.nextHeld = true; if (A.state.drawn >= 0) { this.lastDrawn = A.state.drawn; A.holster(); } }
       if (up[B.next]) { if (!this.nextHeld) this.cycleWeapon(1); this.nextHeld = false; }
+      // Triangle on a boat: use the dock in front of you, or get off
+      if (c.player.mode === 'boat' && down[B.swap]) { if (c.interact.focus) c.interact.use(); else c.boat.leave(); this.swapHeld = true; }
       // Triangle: tap last weapon, hold to inspect
       if (b[B.swap] && this.holdT[B.swap] >= HOLD && !this.swapHeld) { this.swapHeld = true; A.inspect(); }
       if (up[B.swap]) { if (!this.swapHeld) this.swapWeapon(); this.swapHeld = false; }
@@ -495,7 +497,7 @@ export class Pad {
     if (c.game.frame % 10) return;
     const g = (a) => this.glyph(a), A = c.arms, w = A?.cur, P = c.player;
     let parts;
-    if (P.mode === 'boat') parts = [[g('sprint'), 'Boost'], [g('crouch'), c.boat.engineOff ? 'Start engine' : 'Cut engine'], [g('light'), 'Lantern'], [PAD_GLYPH[this.bind.quickPrev] + PAD_GLYPH[this.bind.quickNext], 'Radio'], [g('melee'), 'Camera']];
+    if (P.mode === 'boat') parts = [[g('sprint'), 'Boost'], [g('crouch'), c.boat.engineOff ? 'Start engine' : 'Cut engine'], [g('light'), 'Lantern'], [PAD_GLYPH[this.bind.quickPrev] + PAD_GLYPH[this.bind.quickNext], 'Radio'], [g('melee'), 'Camera'], [g('swap'), 'Leave boat']];
     else if (w && A.kind(w.id) === 'ranged') parts = [[g('attack'), A.jammed ? 'Clear jam' : 'Fire'], [g('aim'), 'Aim'], [g('use'), c.interact.focus ? 'Use' : 'Reload'], [g('swap'), 'Swap · hold Inspect'], [g('next'), 'Next'], [g('wheel'), 'Wheel']];
     else if (w) parts = [[g('attack'), 'Swing · hold Heavy'], [g('aim'), 'Block'], [g('melee'), 'Shove'], [g('swap'), 'Swap · hold Inspect'], [g('next'), 'Next'], [g('wheel'), 'Wheel']];
     else if (P.mode === 'swim') parts = [[g('jump'), 'Dive'], [g('crouch'), 'Surface'], [g('light'), 'Light'], [g('sprint'), 'Fast']];

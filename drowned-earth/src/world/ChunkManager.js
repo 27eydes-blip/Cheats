@@ -14,6 +14,7 @@ export class ChunkManager {
     this.generators = new Map();
     this.queue = [];
     this.budgetMs = 6;
+    this.perFrame = 1;
     this.center = { x: 1e9, z: 1e9 };
     this.stats = { loaded: 0, near: 0, builds: 0 };
   }
@@ -66,9 +67,11 @@ export class ChunkManager {
       this.queue.sort((a, b) => a.d - b.d);
     }
     const t0 = performance.now();
-    while (this.queue.length && (force || performance.now() - t0 < this.budgetMs)) {
+    // one chunk per frame, nearest first (a single build can take several ms on a laptop)
+    let built = 0;
+    while (this.queue.length && (force || (built < this.perFrame && performance.now() - t0 < this.budgetMs))) {
       const w = this.queue.shift();
-      this.build(w.cx, w.cz, w.lod);
+      this.build(w.cx, w.cz, w.lod); built++;
     }
     this.stats.loaded = this.chunks.size;
   }

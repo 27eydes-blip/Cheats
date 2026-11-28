@@ -123,9 +123,15 @@ export function buildBoat(def) {
     }
     if (p === 'inboard') parts.push(paint(at(rounded(h.beam * 0.5, 0.25, h.length * 0.18, 0.1), 0, sSt.sheer - 0.12, sSt.z + 0.2), C.stripe));
     if (p === 'canopy') {
-      for (const [x, z] of [[-0.75, -0.6], [0.75, -0.6], [-0.75, 0.5], [0.75, 0.5]]) parts.push(paint(at(new THREE.CylinderGeometry(0.025, 0.025, 1.9, 6), x, sMid.sheer + 0.85, z), [0.55, 0.55, 0.52]));
+      // the canopy is its own group so the first-person driving view can hide it (from the seat it's just
+      // four posts across the windscreen); weathered steel posts + a two-sided canvas tarp
+      const canopy = new THREE.Group(); canopy.name = 'canopy'; group.add(canopy);
+      const posts = [];
+      for (const [x, z] of [[-0.75, -0.6], [0.75, -0.6], [-0.75, 0.5], [0.75, 0.5]]) posts.push(at(new THREE.CylinderGeometry(0.03, 0.035, 1.9, 8), x, sMid.sheer + 0.85, z));
+      canopy.add(new THREE.Mesh(mergeGeometries(posts.map((g) => g.toNonIndexed())), new THREE.MeshStandardMaterial({ color: 0x3a3d3c, roughness: 0.6, metalness: 0.5 })));
       const tarp = new THREE.CylinderGeometry(1.2, 1.2, 1.4, 12, 1, true, -0.7, 1.4); tarp.rotateX(Math.PI / 2); tarp.rotateZ(Math.PI / 2);
-      parts.push(paint(at(tarp, 0, sMid.sheer + 0.65, -0.05), [0.55, 0.47, 0.32]));
+      // the tarp is seen from underneath when you sit in the boat: two-sided, or only its bare posts show
+      canopy.add(new THREE.Mesh(at(tarp, 0, sMid.sheer + 0.65, -0.05), new THREE.MeshStandardMaterial({ color: new THREE.Color(0.42, 0.36, 0.25), roughness: 0.92, side: THREE.DoubleSide })));
     }
     if (p === 'tires') for (let k = 0; k < 6; k++) { const s = section(h, 0.1 + k * 0.15); for (const sd of [-1, 1]) parts.push(paint(at(new THREE.TorusGeometry(0.28, 0.11, 6, 12), sd * (s.b + 0.08), s.sheer - 0.35, s.z, 0, Math.PI / 2), [0.07, 0.07, 0.07])); }
     if (p === 'stack') parts.push(paint(at(new THREE.CylinderGeometry(0.22, 0.26, 1.4, 10), 0, sMid.sheer + h.depth * 1.2 + 1.1, sMid.z + 0.8), [0.75, 0.55, 0.12]));

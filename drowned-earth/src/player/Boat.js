@@ -8,6 +8,7 @@ import { buildBoat } from '../vehicles/Hulls.js';
 // The player's small repair boat: buoyancy from 4 wave samples, outboard
 // thrust or paddling, keel drag, collisions with hull damage, fuel, storage,
 // wake ripples, lantern, and tie-up to moorings.
+const _lf = new THREE.Vector3(), _ld = new THREE.Vector3();
 const _s = [0, 0, 0];
 
 function hullGeometry() {
@@ -192,6 +193,66 @@ export class Boat {
     p.yaw = this.heading + Math.PI;
     this.ctx.events.emit('boat:leave');
   }
+  // ---- getting off anywhere (E / Triangle) -------------------------------------------------
+  // at rest or slow: step onto the nearest dock / raft edge within 6 m, else into the water beside
+  // the boat; moving fast: dive off the side with a small jump while the boat coasts on.
+  static LEAVE_FAST = 5;    // m/s
+  canLeave() { return this.ctx.player.mode === 'boat' && !this.air; }
+  leaveLabel() {
+    const now = performance.now();
+    if (!this._lbl || now - this._lblT > 300) { this._lblT = now; this._lbl = this.vel.length() > Boat.LEAVE_FAST ? 'Dive off the boat' : (this.findLanding(6) ? 'Leave boat' : 'Leave boat (into the water)'); }
+    return this._lbl;
+  }
+  leave() {
+    if (!this.canLeave()) return null;
+    const c = this.ctx, p = c.player, speed = this.vel.length();
+    const fwd = new THREE.Vector3(-Math.sin(this.heading), 0, -Math.cos(this.heading)), side = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    this.throttle = 0; this.tied = null;
+    const surf = c.waves.height(this.pos.x, this.pos.z);
+    let how;
+    if (speed > Boat.LEAVE_FAST) {
+      p.mode = 'swim';
+      p.teleport(this.pos.clone().addScaledVector(side, 1.8).setY(surf + 0.3));
+      p.velocity.set(side.x * 2.5 + this.vel.x * 0.4, 2.2, side.z * 2.5 + this.vel.z * 0.4);
+      c.ui.toast('You dive off the side.');
+      how = 'dive';
+    } else {
+      const spot = this.findLanding(6);
+      this.vel.multiplyScalar(0.2);
+      if (spot) {
+        p.mode = 'foot'; p.teleport(spot.pos); p.velocity.set(0, 0, 0);
+        if (spot.body) p.setGround?.(spot.body);
+        p.yaw = Math.atan2(-(spot.pos.x - this.pos.x), -(spot.pos.z - this.pos.z));
+        how = 'land';
+      } else {
+        p.mode = 'swim'; p.teleport(this.pos.clone().addScaledVector(side, 1.6).setY(surf - 0.2)); p.velocity.set(0, 0, 0);
+        how = 'water';
+      }
+    }
+    c.events.emit('boat:leave', how);
+    return how;
+  }
+  // nearest walkable spot (static ground or a raft deck) within maxD of the hull, with no wall in between
+  findLanding(maxD = 6) {
+    const c = this.ctx, col = c.collision, surf = c.waves.height(this.pos.x, this.pos.z);
+    const from = _lf.copy(this.pos).setY(surf + 1.0);
+    for (let r = 1.6; r <= maxD + 0.01; r += 0.8) {
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2, x = this.pos.x + Math.cos(a) * r, z = this.pos.z + Math.sin(a) * r;
+        const dir = _ld.set(Math.cos(a), 0, Math.sin(a));
+        if (col.raycast(from, dir, r) < r - 0.4) continue;                          // a wall in the way
+        const g = col.groundAt(x, z, surf + 2.6);
+        if (g > surf - 0.3 && g < surf + 2.5) return { pos: new THREE.Vector3(x, g + 0.02, z), body: null };
+        const test = new THREE.Vector3(x, surf + 0.6, z);
+        const res = col.resolveCylinder(test, 0.2, 0.2, new THREE.Vector3(0, -1, 0), 2.0, {});
+        if (res.groundBody && test.y > surf - 0.3 && test.y < surf + 2.5) return { pos: test, body: res.groundBody };
+      }
+    }
+    return null;
+  }
+  // stop dead where it is (the emergency exit parks it)
+  park() { this.throttle = 0; this.vel.set(0, 0, 0); this.yawRate = 0; this.boosting = false; }
+
   tieUp(m) {
     this.tied = m;
     this.vel.set(0, 0, 0);
@@ -212,6 +273,8 @@ export class Boat {
   update(dt) {
     const { input, waves, collision, player } = this.ctx;
     const driving = player.mode === 'boat';
+    // hide the canopy from the driver's seat (first person); it's still there from outside
+    const can = this.body?.getObjectByName('canopy'); if (can) can.visible = !(driving && !this.ctx.rig?.thirdPerson);
     if (driving) {
       const fwd = input.move.y, turn = -input.move.x;
       if (Math.abs(fwd) > 0.05 && this.tied) { this.tied = null; this.ctx.events.emit('boat:untie'); }

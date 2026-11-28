@@ -47,7 +47,8 @@ export class LightPool {
     this.refreshT -= dt;
     if (this.refreshT <= 0) { this.refreshT = 1; this.refresh(); }
     const cam = this.ctx.camera.position;
-    const cands = [];
+    const cands = this._cands || (this._cands = []), pool = this._recs || (this._recs = []);
+    cands.length = 0; let ri = 0;
     for (const o of this.list) {
       if (o.intensity <= 0.001 || !o.parent || !LightPool.shown(o)) continue;
       o.getWorldPosition(_p);
@@ -55,7 +56,9 @@ export class LightPool {
       const reach = (o.distance || 30) + 25;
       if (d > reach + 60) continue;
       // nearer and brighter lights win; a light whose range doesn't reach us ranks lower
-      cands.push({ o, x: _p.x, y: _p.y, z: _p.z, s: d / Math.pow(o.intensity + 0.2, 0.35) + (d > reach ? 100 : 0) });
+      const rec = pool[ri] || (pool[ri] = {}); ri++;
+      rec.o = o; rec.x = _p.x; rec.y = _p.y; rec.z = _p.z; rec.s = d / Math.pow(o.intensity + 0.2, 0.35) + (d > reach ? 100 : 0);
+      cands.push(rec);
     }
     cands.sort((a, b) => a.s - b.s);
     for (let i = 0; i < this.pool.length; i++) {

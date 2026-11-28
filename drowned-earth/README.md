@@ -131,6 +131,11 @@ Scavenged, repaired, hand-modified (`src/data/weapons.json`, `src/weapons/`). Ke
 ### Play online
 Live build: **https://drowned-earth.27eydes.workers.dev** (Cloudflare Worker serving the build from an R2 bucket). Redeploy with `npm run build && NODE_USE_ENV_PROXY=1 CLOUDFLARE_API_TOKEN=… node scripts/deploy-worker.cjs dist <account-id> drowned-earth` (the token needs Workers Scripts and R2 edit).
 
+### Getting off the boat, getting unstuck, performance tools
+- **Leave the boat:** `E` (keyboard) or `Triangle` (controller). If a dock or mooring is in front of you, that comes first ("Tie up and climb off"). Otherwise: slow → you step onto the nearest dock or raft edge within 6 m, or into the water beside the boat; fast → you dive off the side. The centre prompt shows "E / Triangle: Leave boat" whenever it's possible; on a controller the bottom-right list shows it too.
+- **Emergency exit:** hold `Esc` or `Options` for 1 second — you're put on the nearest dock/raft edge or the last ground you stood on, the boat is parked, and menus and stuck input are cleared.
+- **F3** frame-rate overlay · **F4** download a frame log (JSON) to send with a bug report.
+
 ### Controller (PS5 DualSense on PC)
 Plug in or pair a DualSense (any standard-mapping pad works) and press a button: a toast confirms it and the prompts switch to controller icons. Touching the keyboard, mouse or screen switches back. Unplugging it pauses the game. Pause → **Controller** (or Options → Controller settings) has deadzone, response curve, separate horizontal/vertical look sensitivity, invert Y, aim assist (Off / Light / Standard: slows the camera near a target and nudges gently, never aims for you), vibration, the DualSense extras toggle and the button map (saved in settings and in the save file).
 
@@ -141,7 +146,7 @@ Plug in or pair a DualSense (any standard-mapping pad works) and press a button:
 | Cross | jump · swim down | — | confirm |
 | Circle | crouch · swim up | cut / start engine | back |
 | Square | interact · reload (gun out, nothing to use) | interact | — |
-| Triangle | last weapon · **hold**: inspect & mods | — | — |
+| Triangle | last weapon · **hold**: inspect & mods | **leave boat** (or use the dock in front) | — |
 | L1 | flashlight | lantern / spotlight | previous tab |
 | R1 | next weapon · **hold**: holster | — | next tab |
 | L2 | aim · block | — | — |

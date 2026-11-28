@@ -57,6 +57,7 @@ import { Life } from '../life/Life.js';
 import { LifeUI } from '../life/LifeUI.js';
 import { Pad } from '../input/Pad.js';
 import { LightPool } from '../render/LightPool.js';
+import { EmergencyExit } from '../input/Emergency.js';
 import { MenuBackdrop } from '../ui/MenuBackdrop.js';
 import { PerfOverlay } from '../ui/PerfOverlay.js';
 import { Scenarios } from '../life/Scenarios.js';
@@ -119,8 +120,8 @@ export class Game {
     ctx.input = new Input(renderer.domElement, ctx.events);
     this.frame = 0; this.running = true; this.fps = 60; this.fpsAcc = 0; this.fpsN = 0;
     this.clock = new THREE.Clock();
-    window.__game = this; window.__THREE = THREE;
-    this.perf = new PerfOverlay();
+    window.__THREE = THREE;   // window.__game is published once there's something to drive (menu up, or world loaded)
+    this.perf = new PerfOverlay(ctx);
     addEventListener('resize', () => this.onResize());
     this.onTitleChoice = (choice) => this.chooseFromMenu(choice);
     // a quality step-down in play saves and reloads straight back into the game
@@ -128,6 +129,7 @@ export class Game {
     renderer.setAnimationLoop(() => this.loop());
     if (auto || ['skipintro', 'life', 'viewer'].some((k) => ctx.params.has(k))) {
       await this.loadWorld();
+      window.__game = this;
       if (auto) this.chooseFromMenu('continue');
       return;
     }
@@ -145,6 +147,9 @@ export class Game {
     const ctx = this.ctx, renderer = ctx.renderer;
     this.loadingWorld = true;
     ctx.pipeline = new Pipeline(renderer, ctx.settings);
+    // the fog is fully opaque just inside the streaming radius: don't draw anything past it (the sky and far
+    // skyline live in the separate far scene). Raft cities 600–900 m away were costing ~300k triangles in fog.
+    ctx.camera.far = ctx.settings.q.chunkFarRadius + 30; ctx.camera.updateProjectionMatrix();
     const loading = showLoading(document.getElementById('ui'));
     ctx.assets = new AssetLibrary(renderer, ctx.settings);
     if (!ctx.params.has('noassets')) await ctx.assets.load((p, what) => loading.set(p, what));
@@ -268,6 +273,9 @@ export class Game {
     // warm every material up front, hidden creatures and props included, for the target frames actually render into
     try {
       const hidden = []; ctx.scene.traverse((o) => { if (!o.visible && !o.isLight && o !== ctx.scene) { hidden.push(o); o.visible = true; } });
+      // upload every texture now too, so none uploads mid-play the first time something comes into view
+      const seen = new Set();
+      ctx.scene.traverse((o) => { for (const m of [].concat(o.material || [])) for (const k in m) { const t = m[k]; if (t && t.isTexture && !seen.has(t)) { seen.add(t); try { renderer.initTexture(t); } catch { /* not uploadable yet */ } } } });
       const prevT = renderer.getRenderTarget(), tgt = ctx.settings.q.postPipeline ? ctx.pipeline?.target : null;
       let p;
       try { if (tgt) renderer.setRenderTarget(tgt); p = renderer.compileAsync(ctx.scene, ctx.camera); } finally { renderer.setRenderTarget(prevT); for (const o of hidden) o.visible = false; }
@@ -279,6 +287,8 @@ export class Game {
     addEventListener('pointerdown', unlock, { once: true });
     addEventListener('keydown', unlock, { once: true });
     if (navigator.userActivation?.hasBeenActive) unlock();   // the menu click already counts as a gesture
+    this.perf.watch(ctx.events);
+    ctx.emergency = new EmergencyExit(ctx);   // hold Esc / Options for 1 s: get unstuck
     this.worldLoaded = true; this.loadingWorld = false;
     this.onResize();
     loading.done();
@@ -470,15 +480,18 @@ export class Game {
     if (this.fixedDt || ctx.params.get('dynres') === '0') return;
     const ms = dt * 1000;
     this.frameEma = this.frameEma == null ? ms : this.frameEma * 0.95 + ms * 0.05;
+    // dynamic resolution first: over 20 ms per frame for a second → lower the resolution a step (never below 60%)
+    const p = ctx.pipeline, MIN = 0.6;
+    this.overT = ms > 20 ? (this.overT || 0) + dt : 0;
+    this.underT = ms < 14 ? (this.underT || 0) + dt : 0;
+    if (this.frame > 60 && this.overT >= 1 && p.scale > MIN + 0.001) { p.setScale(Math.max(MIN, p.scale - 0.1)); this.overT = 0; }
+    else if (this.underT >= 3 && p.scale < 1) { p.setScale(Math.min(1, p.scale + 0.05)); this.underT = 0; }
     this.govT = (this.govT || 0) + dt;
     if (this.govT < 1.5 || this.frame < 120) return;
     this.govT = 0;
-    const target = 1000 / (q.targetFps || 60);
-    const p = ctx.pipeline;
-    if (this.frameEma > target * 1.18 && p.scale > (q.minScale || 0.6)) p.setScale(Math.max(q.minScale || 0.6, p.scale - 0.1));
     // safe mode: still under 25 fps at the lowest resolution for ~5 s → drop a preset, save, and come straight back
     const s = ctx.settings;
-    if (s.quality !== 'low' && ctx.mode === 'play' && p.scale <= (q.minScale || 0.6) + 0.01 && this.frameEma > 1000 / 25) {
+    if (s.quality !== 'low' && ctx.mode === 'play' && p.scale <= MIN + 0.01 && this.frameEma > 1000 / 25) {
       this.slowT = (this.slowT || 0) + 1.5;
       if (this.slowT >= 4.5) {
         const to = s.quality === 'high' ? 'medium' : 'low';
@@ -488,7 +501,6 @@ export class Game {
         setTimeout(() => location.reload(), 1200); this.slowT = -999;
       }
     } else if (this.slowT > 0) this.slowT = 0;
-    else if (this.frameEma < target * 0.78 && p.scale < 1) p.setScale(Math.min(1, p.scale + 0.05));
   }
 
   update(dt) {
@@ -527,7 +539,8 @@ export class Game {
     const mode = ctx.player.mode === 'boat' ? 'boat' : 'foot';
     if (playing && ctx.player.mode !== 'climb') ctx.interact.update(ctx.player.eye, ctx.player.forward, mode);
     else ctx.interact.focus = null;
-    if (playing && ctx.input.pressed('use')) ctx.interact.use();
+    // E: the thing in front of you wins (a mooring, a dock); on a boat with nothing in focus, it gets you off
+    if (playing && ctx.input.pressed('use')) { if (ctx.interact.focus) ctx.interact.use(); else if (ctx.player.mode === 'boat') ctx.boat.leave(); }
     // warmth near raft fires
     const comm = ctx.state.community;
     if (comm) for (const r of comm.rafts.values()) if (r.fireLight && r.fireLight.getWorldPosition(this._fv || (this._fv = new THREE.Vector3())).distanceTo(ctx.player.position) < 3) ctx.survival.nearFire = true;
