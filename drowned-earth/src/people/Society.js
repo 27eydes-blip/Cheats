@@ -395,9 +395,10 @@ class Actor {
       case 'freeze': speed = 0; this.noise = 0.02; if (this.t % 6 > 4 && cr.state !== 'attack') this.react = 'back away'; break;
       case 'back away': target = this.pos.clone().addScaledVector(away, 5); speed *= 0.55; this.noise = 0.05; break;
       case 'panic': target = this.pos.clone().addScaledVector(away, 8); speed *= 2.2; this.noise = 0.7; break;
-      case 'fight': speed = 0; this.noise = 0.5; if (cr.state === 'attack' && cr.pos.distanceTo(this.pos) < 2.5 && (this.swingT = (this.swingT || 0) - dt) <= 0) { this.swingT = 1.2; cr.takeDamage(8); if (cr.health < cr.spec.health * 0.5 && cr.state === 'attack') { cr.setState('return', `driven off by ${this.name}`); this.react = 'back away'; this.bark('That\'s right! Go on!'); } } break;
+      case 'fight': speed = 0; this.noise = 0.5; if (cr.pos.distanceTo(this.pos) > 4 && this.reactT > 6) { this.react = 'back away'; this.reactT = 0; this.bark('Yeah. That\'s what I thought.'); } if (cr.state === 'attack' && cr.pos.distanceTo(this.pos) < 2.5 && (this.swingT = (this.swingT || 0) - dt) <= 0) { this.swingT = 1.2; cr.takeDamage(8); if (cr.health < cr.spec.health * 0.5 && cr.state === 'attack') { cr.setState('return', `driven off by ${this.name}`); this.react = 'back away'; this.bark('That\'s right! Go on!'); } } break;
       case 'stumble': target = this.pos.clone().add(new THREE.Vector3(Math.sin(this.t * 1.3) * 3, 0, Math.cos(this.t) * 3)).add(target.clone().sub(this.pos).setLength(1)); speed *= 0.5; break;
-      case 'down': speed = 0; this.noise = 0.3; this.downT += dt; if (this.downT > 12 && Math.random() < dt * 0.15) { this.rescuedBy = 'a friend'; this.downed = false; this.safe = true; this.finish('injured'); } break;
+      case 'down': speed = 0; this.noise = 0.3; this.downT += dt;
+        if (this.sc.medium === 'water') this.pos.y = Math.min(cr.home.y + 5.6, this.pos.y + dt * 0.7); // a limp body floats up out of the threads if (this.downT > 12 && Math.random() < dt * 0.15) { this.rescuedBy = 'a friend'; this.downed = false; this.safe = true; this.finish('injured'); } break;
       default: break;
     }
     if (speed > 0) {

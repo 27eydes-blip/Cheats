@@ -149,6 +149,7 @@ export class Creature {
         if (leashed || (!inTerritory && d > sp.warnR * 2.5 && this.stateT > 2)) this.setState('return', 'out of territory');
         else if (this.litRepel > 0.7 && this.spec.senses.light < -0.6) this.setState('return', 'driven off by light');
         else if (this.health <= 0) this.setState('return', 'driven off');
+        else if (this.stateT > 12 && d > sp.warnR) this.setState('return', 'out of reach');
         else if (this.kind === 'listener' && this.mgr.senses.noise < 0.06 && this.mgr.senses.burst < 0.05 && this.stateT > 4) this.setState('return', 'lost the sound');
         break;
       case 'return':
