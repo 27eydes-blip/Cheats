@@ -58,7 +58,7 @@ export class HumanKit {
   // ---------------------------------------------------------------- textures
   texture(rel, srgb = true) {
     if (!rel) return null;
-    const tier = this.assets.settings.q.textureTier === '2k' && /skin_/.test(rel) ? 2048 : /skin_/.test(rel) ? 1024 : (/cloth|hair/.test(rel) ? 1024 : 512);
+    const tier = this.assets.settings.q.textureTier === '2k' && /skin_/.test(rel) ? 2048 : /skin_/.test(rel) ? 1024 : (/cloth|hair/.test(rel) && !/\.(normal|ao)$/.test(rel) ? 1024 : 512);
     const sizes = /skin_/.test(rel) ? [tier, 1024] : [tier];
     const key = rel + '|' + tier;
     if (this.tex.has(key)) return this.tex.get(key);
