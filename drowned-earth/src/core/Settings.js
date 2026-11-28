@@ -44,8 +44,11 @@ export function detectPreset(isMobile) {
   const g = gpu.toLowerCase();
   if (!g || g === 'none') return { preset: 'low', gpu };
   if (/swiftshader|llvmpipe|software|basic render/.test(g)) return { preset: 'low', gpu };
-  if (/nvidia|geforce|rtx|quadro|radeon rx|radeon pro|apple m[1-9]|apple gpu|arc\(/.test(g) && !/mx\d{3}/.test(g)) return { preset: 'high', gpu };
-  return { preset: 'medium', gpu };
+  // integrated / low-power GPUs: the light preset (laptops with Intel or APU graphics, MX parts)
+  if (/intel|uhd|iris|hd graphics|mali|adreno|powervr|radeon\(tm\) graphics|radeon graphics|vega \d|\bmx\s?\d{3}|gt \d{3}\b/.test(g)) return { preset: 'low', gpu };
+  // discrete GPUs start on Standard; Ultra is opt-in from Options
+  if (/nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|apple m[1-9]|apple gpu|arc\(/.test(g)) return { preset: 'medium', gpu };
+  return { preset: 'low', gpu };
 }
 
 export class Settings {
@@ -60,7 +63,10 @@ export class Settings {
     let q = params.get('quality') || stored.quality || 'auto';
     q = ALIAS[q] || q;
     this.auto = q === 'auto';
-    this.quality = this.auto ? det.preset : q;
+    this.autoCap = stored.autoCap ?? null; // set when auto quality had to step down on this machine
+    const order = ['low', 'medium', 'high'];
+    const autoPick = this.autoCap && order.indexOf(this.autoCap) < order.indexOf(det.preset) ? this.autoCap : det.preset;
+    this.quality = this.auto ? autoPick : q;
     if (!PRESETS[this.quality]) this.quality = 'medium';
     this.volume = stored.volume ?? 0.8;
     this.invertY = stored.invertY ?? false;
@@ -95,7 +101,7 @@ export class Settings {
         quality: this.auto ? 'auto' : this.quality, volume: this.volume, invertY: this.invertY,
         lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
         reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur, ageConfirmed: this.ageConfirmed, mature: this.mature, npcSim: this.npcSim,
-      pad: this.pad,
+      pad: this.pad, autoCap: this.autoCap,
       }));
     } catch { /* storage may be unavailable */ }
   }

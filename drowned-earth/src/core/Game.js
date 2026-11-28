@@ -203,10 +203,18 @@ export class Game {
     ctx.scenarios = new Scenarios(ctx);
     ctx.injury = new Injury(ctx);
     ctx.senses = new Senses(ctx);
-    if (ctx.params.get('creatures') !== 'basic' && ctx.params.get('creatures') !== 'off') { loading.set?.(0.97, 'creatures'); ctx.creatureModels = await loadCreatureModels(ctx); const fg = ambientFishGeometry(ctx.creatureModels); if (fg) ctx.fish.useGeometry?.(fg); }
+    // late boot stages: show what's happening and yield so the label actually repaints
+    const bootT = (window.__bootTimes = []); let stT = performance.now(), stName = 'start';
+    const stage = async (p, label) => { const now = performance.now(); bootT.push([stName, Math.round(now - stT)]); stT = now; stName = label; loading.set?.(p, label); await new Promise((r) => setTimeout(r, 0)); };
+    await stage(0.97, 'Waking the creatures');
+    if (ctx.params.get('creatures') !== 'basic' && ctx.params.get('creatures') !== 'off') { ctx.creatureModels = await loadCreatureModels(ctx); const fg = ambientFishGeometry(ctx.creatureModels); if (fg) ctx.fish.useGeometry?.(fg); }
+    await stage(0.975, 'Teaching the creatures their territory');
     ctx.creatures = new Creatures(ctx);
+    await stage(0.98, 'Opening the Club');
     ctx.club = new Club(ctx);
+    await stage(0.985, 'Giving the raft-folk their lives');
     ctx.society = new Society(ctx);
+    await stage(0.99, 'Sharpening scrap');
     ctx.arms = new Arms(ctx);
     ctx.pad = new Pad(ctx);
     ageGate(ctx.settings, ctx.params);
@@ -214,11 +222,18 @@ export class Game {
     this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms];
     this.ambientSystems = [ctx.fx, ctx.birds, ctx.fish, ctx.highmark, ctx.abyss];
     this.wireEvents();
+    await stage(0.993, 'Setting the tide');
     this.newGame();
     applyDebugParams(ctx);
     ctx.story.checkObjectives();
     ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z);
+    await stage(0.996, 'Raising the district');
     ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
+    // compile shaders without blocking the page (uses parallel compile where the driver allows);
+    // a weak GPU otherwise freezes the tab on the first frames and the browser calls it unresponsive
+    await stage(0.998, 'Preparing shaders');
+    try { await Promise.race([renderer.compileAsync(ctx.scene, ctx.camera), new Promise((r) => setTimeout(r, 45000))]); } catch { /* compile on first use instead */ }
+    await stage(1, 'Almost there');
     ctx.paused = ctx.params.has('pause');
     this.onTitleChoice = (choice) => {
       if (choice === 'continue') { if (ctx.save.load()) this.enterStory(true); else this.enterStory(false); }
@@ -375,6 +390,16 @@ export class Game {
     const target = 1000 / (q.targetFps || 60);
     const p = ctx.pipeline;
     if (this.frameEma > target * 1.18 && p.scale > (q.minScale || 0.6)) p.setScale(Math.max(q.minScale || 0.6, p.scale - 0.1));
+    // still too slow at the lowest resolution: on Auto, step the preset down (remembered for next time)
+    const s = ctx.settings;
+    if (s.auto && s.quality !== 'low' && p.scale <= (q.minScale || 0.6) + 0.01 && this.frameEma > 1000 / 24) {
+      this.slowT = (this.slowT || 0) + 1.5;
+      if (this.slowT >= 6) {
+        s.autoCap = s.quality === 'high' ? 'medium' : 'low'; s.save();
+        ctx.ui.toast(`Lowering quality to ${Settings.label(s.autoCap)} for this computer…`);
+        setTimeout(() => location.reload(), 1200); this.slowT = -999;
+      }
+    } else if (this.slowT > 0) this.slowT = 0;
     else if (this.frameEma < target * 0.78 && p.scale < 1) p.setScale(Math.min(1, p.scale + 0.05));
   }
 
