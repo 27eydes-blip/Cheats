@@ -6,7 +6,7 @@ L=$1; O=$2; mkdir -p "$O"
 ok=1
 npx vite build --outDir "$O/build" > "$O/$L-build.log" 2>&1 && echo "build PASS" || { echo "build FAIL"; ok=0; }
 node scripts/validate-data.mjs > "$O/$L-validate.log" 2>&1 && echo "validate PASS" || { echo "validate FAIL"; ok=0; }
-for t in boat-test weapons-test controller-test portage-test raft-collision-test npc-traits-test npc-life-test killers-test freeze-test; do
+for t in boat-test weapons-test controller-test portage-test raft-collision-test npc-traits-test npc-life-test killers-test freeze-test interaction-test; do
   timeout 1500 node scripts/$t.mjs > "$O/$L-$t.log" 2>&1 && echo "$t PASS ($(grep -c '^PASS' "$O/$L-$t.log") checks)" || { echo "$t FAIL: $(grep -E '^FAIL|ERRORS' "$O/$L-$t.log" | head -3 | tr '\n' ' ')"; ok=0; }
 done
 timeout 1500 node scripts/route-perf.mjs > "$O/$L-route.json" 2>&1 && echo "route-perf ran" || { echo "route-perf FAIL"; ok=0; }

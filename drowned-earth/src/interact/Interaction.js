@@ -445,6 +445,17 @@ export class Interaction {
       if (c.input.pressed?.('crouch')) this.drag = null;
       else if (c.input.pressed?.('use')) { if (this.overWater()) this.dump(n); else this.hide(n); }
     }
+    // revenge: a brave friend of someone you were seen killing may come for you when you're close (once a day)
+    this.revT = (this.revT || 0) - dt;
+    if (this.revT <= 0) {
+      this.revT = 3;
+      const killed = Object.values(this.state.bodies).filter((b) => b.seen).map((b) => b.id);
+      if (killed.length) for (const n of this.crime.allNPCs()) {
+        if (n.dead || n.down || n.worldPos(_v).distanceTo(p) > 6) continue;
+        const a = c.society?.agents.get(n.def.id); if (!a || a.revengeDay === c.time.day || (a.traits?.courage ?? 0) < 0.6) continue;
+        if (a.memory.some((m) => m.type === 'lost' && killed.includes(m.about))) { a.revengeDay = c.time.day; c.ui.subtitle(`${n.def.name}: You. I know what you did.`, 3, 'speech'); this.npcAttacks(n, 1); break; }
+      }
+    }
     // somebody finds a body nobody was meant to find
     this.findT = (this.findT || 0) - dt; if (this.findT > 0) return; this.findT = 1;
     for (const [id, b] of Object.entries(this.state.bodies)) {

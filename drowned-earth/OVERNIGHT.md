@@ -553,3 +553,96 @@ top and a button. I couldn't see either in my bar screenshots, so these are the 
 - **New:** a moon glint and murky-green shallows.
 - **Already present:** three normal layers, Fresnel, rain rings, wake ripples, foam and the never-white cap.
 - **Laptop water tint** darkened after the first shot showed pale water.
+
+---
+
+# Interaction layer: pick up, carry, steal, fight, loot (speed mode)
+
+Tags: `interact-start`, `ix-phase-1-start`.
+
+## Decisions (made unattended)
+
+- **One layer, not five commits.** The five phases depend on each other: theft needs items, robbery needs the
+  fight code, every test needs all of it. So I built it as one layer in three modules (`src/interact/Items.js`,
+  `Crime.js`, `Interaction.js`), committed as unwired groundwork first and wired in second. Each phase still has
+  its tests in `scripts/interaction-test.mjs`.
+- **"The Hollows" don't exist in this game.** The law is the Tide Ward (Heat, patrols, boarding crews), so
+  everything the brief gave to the Hollows goes to the Tide Ward.
+- **Items:**
+  - Every item gets a category, weight, value, stackable and legal status at load. Data can override; new items
+    carry them explicitly.
+  - New items: lockpick (contraband), raft key, silver ring, pocket watch, coin purse, fuel can, swollen book,
+    raft rum, fish cake, oilskin coat, wool cap, repair kit.
+  - New recipes: hand-loaded rounds, repair kit, lockpicks.
+- **Pool and cap:** at most 40 loose items awake within 30 m (the rest sleep as data). They are drawn as 11
+  instanced shapes (one draw call each), plus one Points object for the glints. 300 items around you cost about
+  2 extra draw calls and 0.09 ms a frame.
+- **Owners:**
+  - Raft crates, lockers and cupboards belong to that raft's resident, or to the shop if it has one.
+  - Market display goods belong to Vance's Exchange.
+  - The start tower and drifting salvage belong to nobody.
+- **Locks:**
+  - Lockers need a pick (difficulty 0.45).
+  - Every third crate needs the raft key.
+  - A failed pick snaps 45 % of the time and makes a little noise.
+- **Witnesses:**
+  - Range 16 m, halved at night without a light, ×0.6 crouched, ×0.8 indoors.
+  - The NPC must face you, unless you're within 3 m, and have a clear ray to you.
+  - Anyone whose attitude to you is 3 or more looks away.
+- **Reactions:** chosen by traits and role, as in the brief.
+  - **The owner:** confronts you, or attacks if brave and hot-tempered.
+  - **The brave and angry:** attack.
+  - **The timid:** run.
+  - **The warm:** shout for the Ward.
+- **Consequences of a seen theft:**
+  - Heat: 6 + value / 3.
+  - Standing (raft-folk) down.
+  - The thief mark goes up. At 3: shop prices +20 %, haggling harder, and a news line.
+  - Memory and rumours.
+- **Unseen thefts:** the owner notices about 0.6 in-game hours later. Talk spreads. A shop rings its bell, which
+  costs Heat if you're still near.
+- **The fence:** Sal on the Portage dock (the existing "fixer").
+  - Pays 35–55 % of value, rising with trust.
+  - There is a small chance the Ward is watching him early on.
+- **Getting caught:** pay the fine (scrap), do the time (12 hours), or fight. Paying or doing time confiscates
+  stolen goods and lockpicks.
+- **Fighting people:**
+  - **Hit zones** come from where the aim ray passes the body: head ×2.2, torso ×1, arm ×0.6, leg ×0.7.
+  - **Bleeding:** above 14 damage, a 50 % chance.
+  - **Knockdown:** above 35 damage, or on a stun roll.
+  - **Knock-out:** a heavy blow from behind on someone who hasn't noticed you.
+  - **Death:** goes through the Living-NPC death (grief, funerals, a replacement later).
+  - **Witnesses** scream, run, hide, call the Ward, fight, or protect a friend.
+  - **A seen killing:** Heat +45, a bounty of 60 (120 for a shopkeeper), and the bounty keeps Heat warm until
+    paid.
+  - **A dead shopkeeper's shop** closes for 5 days, with a lootable till.
+- **Bodies:**
+  - They stay where they fell, lying down.
+  - Search, drag, hide, or dump in the water.
+  - A passer-by within 9 m finds an undumped body: a rumour ("the Ward is investigating"), and Heat if you're
+    near. The killers' counter-intelligence reacts to that wording and lies low.
+- **Weapon-point:** keep a drawn weapon on someone (within 7 m) for 1.2 s and they put their hands up, unless
+  they're very brave and hot-tempered. Then:
+  - "Take their valuables"
+  - for shopkeepers and bartenders, "Empty the till": comply, an alarm bell, or a flare pistol from under the
+    counter
+- **Gore:** stains on hits and deaths only with Mature Content on. With it off, a short black cut-away and no
+  wounds.
+- **Bars:** a weapon drawn within 9 m of a bar gets the bouncer's line at once; after 4 s it's put away for you
+  (+3 Heat).
+- **Hotbar:** keys 5–9 (1–4 stay the weapon slots). The controller's existing quick-item D-pad and G now list
+  the hotbar items first.
+- **Safehouse:** a bunk and chest on the Portage sleeping pontoon. Resting heals, passes 6 hours and saves (not
+  at 2+ stars). The boat's cargo hold already existed; the pack now moves goods in and out of it, stolen flags
+  kept.
+
+## Not done (honest)
+
+- **No real physics or body ragdolls.** Thrown and dropped items fall, bounce and float with simple ballistics.
+  A body is the NPC model laid flat, not a ragdoll.
+- **No bounty-hunter NPCs.** The bounty works through the Ward's Heat response.
+- **Revenge is simple.** A brave friend (courage ≥ 0.6) of someone you were seen killing, within 6 m, comes at you once a day. Nobody hunts you across the map.
+  the existing attack path.
+- **No new touch buttons.** Hold-E-for-all works on touch through the existing use button. The pickpocket
+  crouch works through the existing crouch button.
+- **NPC limbs don't react to hits.** Hit zones change damage only.
