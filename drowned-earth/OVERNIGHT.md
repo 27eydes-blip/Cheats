@@ -443,3 +443,113 @@ Route perf, before (NPC pass, n5) → after (k1):
   costs 0.03 ms once a second.
 - **Not measured:** the lairs' own cost when you're inside them (one lamp each, instanced bars and lanterns,
   about 30–60 meshes).
+
+---
+
+# Stability first, then real sky and water (speed mode)
+
+Tags: `stab-start`, then `laptop-start`, then `look-start`.
+
+## Decisions (made unattended)
+
+### Freezes
+
+- **The likely cause of the grey 3D view with the HUD still up:** a lost WebGL context. That is the normal
+  failure on integrated GPUs short of memory or hitting a driver timeout. It is now handled:
+  - pause and autosave
+  - on restore, resume
+  - if the context doesn't come back within 4 s, or is lost twice in 2 minutes, reload one preset lower with
+    a message
+- **Boat jammed against a raft with the hull draining:** this was real. Jammed with the throttle open,
+  `unstick()` ran a 256-probe search every frame, and the hull took damage every frame. Now:
+  - the search runs at most twice a second, over 96 probes nearest-first
+  - damage lands at most every 0.4 s
+  - sub-steps are capped at 8
+- **A real freeze-by-exception, found by the new test:**
+  - A NaN in the boat velocity reached the camera, and AudioEngine threw on `setTargetAtTime` every frame.
+  - Fixes:
+    - NaN/Infinity guards on the boat (back to the last good position, or open water) and on the camera.
+    - The audio listener skips non-finite values.
+    - Every system update is wrapped: one that throws is logged to the watchdog (once a second) instead of
+      killing the frame.
+- **Hull at 0:** the boat swamps (engine drowned, sitting 0.3 m lower) with a message. You can still paddle to
+  a dock. No freeze.
+- **Watchdog:** main-thread blocks over 2 s (a 250 ms interval that notices gaps) and frames over 500 ms are
+  logged with:
+  - a stack (taken at detection time, so it shows where the game was when it noticed, not inside the block)
+  - the last 40 game actions
+  - the 5 slowest systems that frame
+  They appear in the F4 log, and as a line in F3.
+- **Memory estimate in F3:** textures (from image sizes, compressed mip data included), geometry buffers and
+  render targets.
+
+### Graphics memory
+
+- World textures were already 1k on all presets except Ultra.
+- **Laptop** caps every compressed texture at 512 by dropping its top mip level at load: a quarter of the
+  memory, no re-encode. No separate 512 files exist on disk.
+- **Light** caps at 1k.
+- **Ultra** keeps 2k skins.
+- **Far NPC bodies** (more than 170 m away) are freed and rebuilt within 75 m.
+- **Not done:** freeing hidden creature groups. They are small next to the textures, and creatures are already
+  hidden and inactive when far.
+
+### Laptop preset (below Light)
+
+**Who gets it:** integrated GPUs (Intel, AMD APU graphics, MX parts) and software rendering by default, plus
+any automatic preset averaging under 22 fps in its first 10 s of play.
+
+**Rendering:**
+- render scale 60 % (minimum 50 %) with the sharpen pass: the post pipeline is on, but bloom, AO, SSR,
+  volumetrics, TAA and shadows are off
+- 30 fps cap with even frame pacing
+- view 360 m with thicker fog (about 90 % at 340 m); landmarks load at 42 % of their usual distance
+- props at 15 %
+- at most 12 people and 6 creatures drawn
+
+**Simple sky and water:**
+- sky: 3-octave clouds, no cirrus or self-shadow
+- water: one normal layer, sky tint, no refraction
+
+**Software rendering:** the message "Turn on hardware acceleration in Chrome settings" shows on the title
+screen (see the UI change).
+
+**Cheaper for every preset:**
+- the 98 floating bottles were drawn map-wide (about 99k triangles); now only those within 160 m
+- bar interiors are hidden beyond 45 m
+
+**Cheaper on Light and Laptop only:**
+- the deep growth isn't drawn from above the surface (about 100k triangles)
+- far landmark vines are hidden past 220 m
+
+**Laptop only:** a 30 % needlefish school, and ambient fish only underwater.
+
+**Not done:**
+- merging static geometry or building impostors for buildings
+- texture atlases
+
+**Bars:** the plain arm-wrestling block (the "orange box" under the forge's orange light) is now a cask table
+with staves, hoops, a top and grip pegs. The flat red floor cushions (the "red slab") now have a base, a soft
+top and a button. I couldn't see either in my bar screenshots, so these are the best match from the code.
+
+### Sky
+
+- **Physical sky:** the standard Preetham daylight model (formulas from the three.js Sky example), blended at
+  40 % over the existing scripted palette, which still carries weather, storms and the art direction.
+  - turbidity follows haze and cloud
+  - the halo and a limb-darkened sun get softer and wider in haze
+  - a faint galaxy band at night
+- **No horizon seam:** the horizon fades into the actual fog colour.
+- **Unchanged:** ACES filmic tone mapping (already in use), and the environment map rendered rarely from the
+  sky (already in place; Laptop and Light don't update it).
+- **Review round:** the first version washed the midday sky out to milky white. I reduced turbidity and
+  brightness and re-shot. Then I lowered the blend from 50 % to 40 % without another render (speed mode allows
+  one review round).
+
+### Water
+
+- **Tiers:** compile-time `WATER_TIER`. Laptop 0, Light 1, Standard 2, Ultra 3 (Ultra adds SSR through the
+  pipeline).
+- **New:** a moon glint and murky-green shallows.
+- **Already present:** three normal layers, Fresnel, rain rings, wake ripples, foam and the never-white cap.
+- **Laptop water tint** darkened after the first shot showed pale water.
