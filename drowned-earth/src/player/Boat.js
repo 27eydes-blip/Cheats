@@ -8,7 +8,7 @@ import { buildBoat } from '../vehicles/Hulls.js';
 // The player's small repair boat: buoyancy from 4 wave samples, outboard
 // thrust or paddling, keel drag, collisions with hull damage, fuel, storage,
 // wake ripples, lantern, and tie-up to moorings.
-const _lf = new THREE.Vector3(), _ld = new THREE.Vector3(), _lb = new THREE.Vector3(), _lt = new THREE.Vector3(), _lv = new THREE.Vector3(), _lres = {};
+const _hc = new THREE.Vector3(), _lf = new THREE.Vector3(), _ld = new THREE.Vector3(), _lb = new THREE.Vector3(), _lt = new THREE.Vector3(), _lv = new THREE.Vector3(), _lres = {};
 const _s = [0, 0, 0];
 
 function hullGeometry() {
@@ -265,6 +265,15 @@ export class Boat {
     }
     return null;
   }
+  // pushed out of a raft or wall: the nearest point of open water, searching outward
+  unstick() {
+    const col = this.ctx.collision, r = (this.type?.hull?.beam ?? 1.9) * 0.55;
+    for (let d = 1; d <= 16; d += 1) for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2, x = this.pos.x + Math.cos(a) * d, z = this.pos.z + Math.sin(a) * d;
+      if (!col.hullBlocked(x, z, r)) { this.pos.x = x; this.pos.z = z; this.vel.multiplyScalar(0.2); return true; }
+    }
+    return false;
+  }
   // stop dead where it is (the emergency exit parks it)
   park() { this.throttle = 0; this.vel.set(0, 0, 0); this.yawRate = 0; this.boosting = false; }
 
@@ -337,10 +346,26 @@ export class Boat {
       const steer = this.rudder * (0.25 + Math.min(Math.abs(vf), 5) * 0.28) * Math.sign(vf || 1) * (S.turn / 1.1) * (this.air ? 0.2 : 1);
       this.yawRate = damp(this.yawRate, steer + (this.paddling ? this.rudder * 0.25 : 0), 3, dt);
       this.heading += this.yawRate * dt;
-      this.pos.addScaledVector(this.vel, dt);
-      const impact = collision.resolveHull(this.pos, 1.3, this.vel);
+      // swept hull: sub-steps of at most 0.25 m, and three circles along the keel (bow, middle, stern), so
+      // neither speed nor a low frame rate can carry the boat through a thin raft
+      const step = this.vel.length() * dt, nSub = Math.min(12, Math.max(1, Math.ceil(step / 0.25)));
+      const half = (this.type?.hull?.length ?? 5.6) * 0.32, r = (this.type?.hull?.beam ?? 1.9) * 0.55;
+      let impact = 0;
+      for (let k = 0; k < nSub; k++) {
+        this.pos.addScaledVector(this.vel, dt / nSub);
+        for (const off of [half, 0, -half]) {
+          _hc.set(this.pos.x + fwdDir.x * off, 0, this.pos.z + fwdDir.z * off);
+          const px = _hc.x, pz = _hc.z;
+          impact = Math.max(impact, collision.resolveHull(_hc, off === 0 ? r : r * 0.8, this.vel));
+          this.pos.x += _hc.x - px; this.pos.z += _hc.z - pz;
+        }
+      }
+      this._lastImpact = impact;
+      // never left inside a raft or wall: slide out to the nearest open water
+      if (impact > 0 && collision.hullBlocked(this.pos.x, this.pos.z, r * 0.7)) this.unstick();
+      if (impact > 0.25 && impact <= 1.2) { this.scrapeT = (this.scrapeT || 0) - dt; if (this.scrapeT <= 0) { this.scrapeT = 0.5; this.ctx.events.emit('boat:impact', { speed: impact * 0.5, pos: this.pos.clone(), scrape: true }); } }
       if (impact > 1.2) {
-        const dmg = (impact - 1.2) * 4 * this.mods.damage * 100 / (S.hull || 100);
+        const dmg = (impact - 1.2) * 2 * this.mods.damage * 100 / (S.hull || 100);   // a bump costs a little hull (~12% for a 7 m/s ram)
         this.hull = Math.max(0, this.hull - dmg);
         this.ctx.events.emit('boat:impact', { speed: impact, pos: this.pos.clone() });
         this.ctx.events.emit('shake', Math.min(1, impact / 8));

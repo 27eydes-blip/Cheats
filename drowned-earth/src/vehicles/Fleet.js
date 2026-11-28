@@ -26,6 +26,9 @@ export class Fleet {
     mesh.position.set(x, 0, z); mesh.rotation.y = heading;
     this.group.add(mesh);
     const p = { ...info, type, mesh, pos: new THREE.Vector3(x, 0, z), heading };
+    // a parked boat is solid: your boat bumps off it instead of sailing through (the box rides with the mesh)
+    const H = def.hull || { length: 5.6, beam: 1.9 };
+    p.body = this.ctx.collision.addBody(mesh, [{ minX: -H.beam * 0.45, maxX: H.beam * 0.45, minY: -0.6, maxY: 1.2, minZ: -H.length * 0.45, maxZ: H.length * 0.45, tag: 'boat' }], 'boat');
     p.iid = this.ctx.interact.add({
       kind: 'boat', mode: 'boat', radius: 7, requireLook: false,
       pos: (v) => v.copy(p.pos).setY(0.8),
@@ -49,6 +52,7 @@ export class Fleet {
     boat.setType(p.type);
     boat.pos.set(p.pos.x, boat.pos.y, p.pos.z); boat.heading = p.heading; boat.vel.set(0, 0, 0);
     this.group.remove(p.mesh);
+    if (p.body) this.ctx.collision.removeBody(p.body);
     const left = this.park(oldType, oldPos.x, oldPos.z, oldHeading, { owner: 'you', mine: true });
     this.parked[this.parked.indexOf(p)] = left;
     this.ctx.interact.remove?.(p.iid);

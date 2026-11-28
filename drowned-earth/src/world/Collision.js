@@ -4,6 +4,7 @@ import * as THREE from 'three';
 // bodies (rafts, ships) whose boxes live in a parent's local space. Simple,
 // predictable, cheap on phones, and enough for walking, stairs and boats.
 const CELL = 16;
+const _n = new THREE.Vector3();
 const _inv = new THREE.Matrix4();
 const _v = new THREE.Vector3();
 
@@ -132,8 +133,8 @@ export class Collision {
   resolveHull(pos, radius, vel) {
     const boxes = this.query(pos.x - radius - 1, pos.z - radius - 1, pos.x + radius + 1, pos.z + radius + 1, this._tmp2 || (this._tmp2 = []));
     let impact = 0;
-    const hit = (b, p) => {
-      if (b.tag === 'trigger' || b.maxY < -0.7 || b.minY > 0.6) return null;
+    const hit = (b, p, floating = false) => {
+      if (b.tag === 'trigger' || b.maxY < -0.7 || b.minY > (floating ? 2.5 : 0.6)) return null;   // a raft's deck slab can sit well above the water
       const cx = Math.max(b.minX, Math.min(p.x, b.maxX)), cz = Math.max(b.minZ, Math.min(p.z, b.maxZ));
       let dx = p.x - cx, dz = p.z - cz; const d2 = dx * dx + dz * dz;
       if (d2 >= radius * radius) return null;
@@ -159,10 +160,10 @@ export class Collision {
       _inv.copy(o.matrixWorld).invert();
       _v.set(pos.x, 0, pos.z).applyMatrix4(_inv);
       for (const b of body.boxes) {
-        const h = hit(b, _v);
+        const h = hit(b, _v, true);
         if (!h) continue;
         _v.x += h.nx * h.push; _v.z += h.nz * h.push;
-        const n = new THREE.Vector3(h.nx, 0, h.nz).transformDirection(o.matrixWorld);
+        const n = _n.set(h.nx, 0, h.nz).transformDirection(o.matrixWorld);
         const vn = vel.x * n.x + vel.z * n.z;
         if (vn < 0) { vel.x -= vn * n.x * 1.3; vel.z -= vn * n.z * 1.3; impact = Math.max(impact, -vn); }
       }
@@ -170,6 +171,19 @@ export class Collision {
       pos.x = w.x; pos.z = w.z;
     }
     return impact;
+  }
+
+  // is a hull circle at (x, z) overlapping anything solid? (static walls or a floating raft)
+  hullBlocked(x, z, radius) {
+    const boxes = this.query(x - radius - 1, z - radius - 1, x + radius + 1, z + radius + 1, this._tmp3 || (this._tmp3 = []));
+    const over = (b, px, pz, floating) => !(b.tag === 'trigger' || b.maxY < -0.7 || b.minY > (floating ? 2.5 : 0.6)) && (Math.max(b.minX, Math.min(px, b.maxX)) - px) ** 2 + (Math.max(b.minZ, Math.min(pz, b.maxZ)) - pz) ** 2 < radius * radius;
+    for (const b of boxes) if (over(b, x, z, false)) return true;
+    for (const body of this.bodies) {
+      if (body.disabled) continue;
+      _inv.copy(body.object.matrixWorld).invert(); _v.set(x, 0, z).applyMatrix4(_inv);
+      for (const b of body.boxes) if (over(b, _v.x, _v.z, true)) return true;
+    }
+    return false;
   }
 
   // Ray (for camera collision / line of sight). Slab test over hashed cells along the segment.
