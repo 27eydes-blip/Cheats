@@ -81,6 +81,7 @@ export class Settings {
     this.ageConfirmed = stored.ageConfirmed ?? null;
     this.mature = stored.mature ?? false;
     // living-NPC simulation: full (visible incidents, conversations) or light (abstract incidents) — Phone defaults to light
+    this.pad = stored.pad ?? null; // controller: deadzone, curve, sensitivity, aim assist, extras, button map
     this.npcSim = stored.npcSim ?? (this.quality === 'low' ? 'light' : 'full');
   }
   get q() { return PRESETS[this.quality]; }
@@ -94,6 +95,7 @@ export class Settings {
         quality: this.auto ? 'auto' : this.quality, volume: this.volume, invertY: this.invertY,
         lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
         reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur, ageConfirmed: this.ageConfirmed, mature: this.mature, npcSim: this.npcSim,
+      pad: this.pad,
       }));
     } catch { /* storage may be unavailable */ }
   }

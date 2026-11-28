@@ -1,0 +1,50 @@
+[
+ {
+  "name": "c1-controller-settings",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "18.6",
+   "agegate": "off"
+  },
+  "frames": 25,
+  "wait": 800,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const M={id:'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',connected:true,buttons:Array.from({length:18},()=>({pressed:false,value:0})),axes:[0,0,0,0]};navigator.getGamepads=()=>[M];window.__M=M;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));c.player.mode='foot';c.player.teleport(P);c.player.yaw=-2.2;c.player.pitch=0.02;for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}c.pad.setDevice('pad');c.pad.openSettings();for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}const t=document.querySelector('[data-remap=\"attack\"]');c.pad.setFocus(t);t.scrollIntoView({block:'center'});for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}})()"
+ },
+ {
+  "name": "c2-inventory-focus",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "18.6",
+   "agegate": "off"
+  },
+  "frames": 25,
+  "wait": 800,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const M={id:'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',connected:true,buttons:Array.from({length:18},()=>({pressed:false,value:0})),axes:[0,0,0,0]};navigator.getGamepads=()=>[M];window.__M=M;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));c.player.mode='foot';c.player.teleport(P);c.player.yaw=-2.2;c.player.pitch=0.02;for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}['flare','bandage','salt','bait'].forEach(k=>c.inventory.add(k,2,true));c.inventory.add('scrap',14,true);c.pad.setDevice('pad');c.ui.openInventory();for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}const L=c.pad.focusables(c.ui.panel);c.pad.setFocus(L[Math.min(3,L.length-1)]);for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}})()"
+ },
+ {
+  "name": "c3-hud-prompts",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "18.6",
+   "agegate": "off"
+  },
+  "frames": 25,
+  "wait": 800,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const M={id:'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',connected:true,buttons:Array.from({length:18},()=>({pressed:false,value:0})),axes:[0,0,0,0]};navigator.getGamepads=()=>[M];window.__M=M;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));c.player.mode='foot';c.player.teleport(P);c.player.yaw=-2.2;c.player.pitch=0.02;for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}A.give('speargun');c.inventory.add('spear_bolt',6,true);c.inventory.add('flare',2,true);A.state.drawn=-1;A.draw(0);c.pad.setDevice('pad');for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}})()"
+ },
+ {
+  "name": "c4-weapon-wheel",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "18.6",
+   "agegate": "off"
+  },
+  "frames": 25,
+  "wait": 800,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const M={id:'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',connected:true,buttons:Array.from({length:18},()=>({pressed:false,value:0})),axes:[0,0,0,0]};navigator.getGamepads=()=>[M];window.__M=M;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));c.player.mode='foot';c.player.teleport(P);c.player.yaw=-2.2;c.player.pitch=0.02;for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}['pipe_wrench','speargun','flare_pistol','crossbow','pipe_shotgun'].forEach(id=>A.give(id));A.state.drawn=-1;A.draw(1);c.pad.setDevice('pad');window.__M.buttons[12].pressed=true;window.__M.buttons[12].value=1;for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}const n=c.pad.wheel.items.length,a=(4/n)*Math.PI*2;window.__M.axes[2]=Math.sin(a);window.__M.axes[3]=-Math.cos(a);for(let i=0;i<30;i++){await new Promise(q=>requestAnimationFrame(q));}})()"
+ }
+]

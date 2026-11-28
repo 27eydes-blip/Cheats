@@ -128,6 +128,32 @@ Far from you, incidents resolve abstractly from the same traits. Options → *NP
 
 Scavenged, repaired, hand-modified (`src/data/weapons.json`, `src/weapons/`). Keys: 1–4 draw, 0 holster, LMB attack/fire (hold for a heavy swing), RMB block / aim down sights, T reload or clear a jam, Y shove, U throw a net, O inspect & mods. Every weapon has a noise radius (creatures hear it; the Ward cares), wears and fouls with salt water, takes three mods that change stats and look, and belongs to a crew style. Bars won't serve you armed; the Gentleman's Club checks weapons at the door. Vendors: Hook & Barb and Sal's back room (Portage), the Anvil (Rusthold). Test: `node scripts/weapons-test.mjs`.
 
+### Controller (PS5 DualSense on PC)
+Plug in or pair a DualSense (any standard-mapping pad works) and press a button: a toast confirms it and the prompts switch to controller icons. Touching the keyboard, mouse or screen switches back. Unplugging it pauses the game. Pause → **Controller** (or Options → Controller settings) has deadzone, response curve, separate horizontal/vertical look sensitivity, invert Y, aim assist (Off / Light / Standard: slows the camera near a target and nudges gently, never aims for you), vibration, the DualSense extras toggle and the button map (saved in settings and in the save file).
+
+| Button | On foot / swimming | Boat | Menus |
+|---|---|---|---|
+| Left stick | move | steer + throttle | move focus |
+| Right stick | look | look | scroll |
+| Cross | jump · swim down | — | confirm |
+| Circle | crouch · swim up | cut / start engine | back |
+| Square | interact · reload (gun out, nothing to use) | interact | — |
+| Triangle | last weapon · **hold**: inspect & mods | — | — |
+| L1 | flashlight | lantern / spotlight | previous tab |
+| R1 | next weapon · **hold**: holster | — | next tab |
+| L2 | aim · block | — | — |
+| R2 | attack · fire (hold for a heavy swing) | — | — |
+| L3 | sprint (click to toggle) | boost | — |
+| R3 | shove | outside camera | — |
+| D-pad up | **hold**: weapon wheel (pick with right stick) | — | move focus |
+| D-pad left/right | choose quick item | radio station | move focus / adjust sliders |
+| D-pad down | use quick item (flare, bait, salt, bandage, net…) | — | move focus |
+| Options | pause menu (Pack, Journal, Craft, Options, Controller) | | close |
+| Touchpad | journal chart | | |
+| Create | photo to the journal | | |
+
+**DualSense extras** (off by default; Chrome/Edge on desktop): *Link DualSense* uses WebHID for adaptive triggers (per-weapon feel in `weapons.json` → `triggers`: stiff crossbow, clean flare-pistol click, a jammed gun locks the trigger), motors (footsteps by surface, boat engine hum, a heartbeat when a creature is warning or attacking, impacts, rain) and a light bar that follows your Heat (blue → red, flashing at five stars, dimmed in the deep lairs). Without WebHID the haptics fall back to standard vibration and Options says so. The controller speaker is never used. Phones keep their touch controls; a Bluetooth pad also works where the browser supports it.
+
 ### Mature content (18+, opt-in)
 
 The first launch asks whether you are 18 or older. Mature content (alcohol, gambling, violence, brief non-explicit artistic nudity) is opt-in and can be switched in Options; declining swaps every flagged item for its clean version (data entries marked `"mature": true` carry a `"clean"` alternative). There are no sexual acts, nothing explicit, nothing interactive or rewarded, and the only artistic nudity is classical art in one deeply hidden late-game place.

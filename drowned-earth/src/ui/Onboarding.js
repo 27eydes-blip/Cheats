@@ -7,7 +7,10 @@ export class Onboarding {
     this.cool = 0;
   }
   begin() { this.cool = 3; }
-  k(desk, touch) { return this.ctx.input.usingTouch ? touch : desk; }
+  k(desk, touch) {
+    if (this.ctx.pad?.device === 'pad') return padText(desk);
+    return this.ctx.input.usingTouch ? touch : desk;
+  }
   hint(id, text) {
     if (this.done[id] || this.cool > 0) return false;
     this.done[id] = true; this.cool = 9;
@@ -31,3 +34,8 @@ export class Onboarding {
     else if (c.time.out.night > 0.7) this.hint('photo', this.k('K for photo mode, J for your journal and hand-drawn chart.', 'Pack → Journal holds your chart, photos and notes.'));
   }
 }
+
+// keyboard wording → controller wording (button names, not icons: hints are plain text)
+const PADWORDS = [[/Move the mouse to look around\. Click the window first if it doesn't respond\./, 'Right stick to look around.'], [/W\/S throttle, A\/D steer/, 'Left stick to steer and throttle'], [/\bWASD\b/, 'Left stick'],
+  [/\bhold Space\b/, 'hold Cross'], [/\bSpace\b/, 'Cross'], [/\bE\b/, 'Square'], [/\bF\b/, 'L1'], [/\bTab\b/, 'Options → Pack'], [/\bV\b/, 'R3'], [/\bR\b/, 'D-pad left/right'], [/\bC\b/, 'Circle'], [/\bK\b/, 'Create'], [/\bJ\b/, 'the touchpad']];
+function padText(t) { for (const [a, b] of PADWORDS) t = t.replace(a, b); return t; }

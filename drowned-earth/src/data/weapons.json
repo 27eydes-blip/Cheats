@@ -1,69 +1,1094 @@
 {
-  "_doc": "Weapons. Original designs, no real brands. melee: dmg (light), heavy (multiplier), speed (swings/s), stamina (per swing), reach (m), weight (kg; slows swings, raises sway), stun (non-lethal knock-down chance vs people), material (hit sound: steel | wood | glass | iron). ranged: dmg, ammo (id), mag, reload (s), rate (s between shots), spread (deg), range (m), adsZoom, projectile (bolt | flare | pellets | bullet | nail | stone). Both: noise (metres heard by creatures/NPCs/Ward), wear (condition lost per use), jam (base jam/foul chance, grows with salt and wear), licensed (tolerated by the Tide Ward in Highmark waters), style (crew look: rusthold | lowlight | vigil | ward | drift), parts (look recipe for weapons/WeaponKit.js), slots (mods allowed per slot), sold (vendor ids), price.",
-  "melee": {
-    "rebar_spear": { "name": "Rebar spear", "dmg": 22, "heavy": 1.7, "speed": 1.1, "stamina": 9, "reach": 2.6, "weight": 2.4, "stun": 0.05, "material": "steel", "noise": 6, "wear": 0.006, "jam": 0, "licensed": false, "style": "drift", "price": 12,
-      "parts": { "shaft": "rebar", "head": "spear_point", "grip": "tape", "extras": ["wire_lashing", "tally"] }, "slots": { "grip": ["tape", "rope", "cork"], "head": ["spear_point", "barbed", "glass_tip"], "wrap": ["none", "wire", "cloth"] }, "sold": ["hook_barb"] },
-    "boat_hook": { "name": "Boat hook", "dmg": 16, "heavy": 1.6, "speed": 1.2, "stamina": 8, "reach": 2.8, "weight": 2.0, "stun": 0.2, "material": "wood", "noise": 5, "wear": 0.005, "jam": 0, "licensed": true, "style": "drift", "price": 8,
-      "parts": { "shaft": "wood_pole", "head": "hook", "grip": "rope", "extras": ["brass_ferrule", "crew_tag"] }, "slots": { "grip": ["rope", "tape", "leather"], "head": ["hook", "double_hook"], "wrap": ["none", "cloth", "wire"] }, "sold": ["hook_barb"] },
-    "fire_axe": { "name": "Fire axe", "dmg": 34, "heavy": 1.9, "speed": 0.75, "stamina": 16, "reach": 1.5, "weight": 3.4, "stun": 0.1, "material": "steel", "noise": 9, "wear": 0.009, "jam": 0, "licensed": false, "style": "rusthold", "price": 26,
-      "parts": { "shaft": "wood_haft", "head": "axe", "grip": "leather", "extras": ["weld_beads", "chipped_paint", "tally"] }, "slots": { "grip": ["leather", "tape", "rubber"], "head": ["axe", "axe_spike"], "wrap": ["none", "chain", "wire"] }, "sold": ["anvil"] },
-    "cleaver": { "name": "Galley cleaver", "dmg": 20, "heavy": 1.5, "speed": 1.6, "stamina": 6, "reach": 1.0, "weight": 1.2, "stun": 0.0, "material": "steel", "noise": 4, "wear": 0.007, "jam": 0, "licensed": true, "style": "drift", "price": 9,
-      "parts": { "shaft": "short_handle", "head": "cleaver", "grip": "tape", "extras": ["rivets"] }, "slots": { "grip": ["tape", "cork", "leather"], "head": ["cleaver", "serrated"], "wrap": ["none", "cloth"] }, "sold": ["hook_barb", "back_room"] },
-    "harpoon": { "name": "Hand harpoon", "dmg": 30, "heavy": 1.4, "speed": 0.9, "stamina": 11, "reach": 2.4, "weight": 2.8, "stun": 0.0, "material": "iron", "noise": 5, "wear": 0.006, "jam": 0, "licensed": false, "style": "vigil", "price": 18,
-      "parts": { "shaft": "wood_pole", "head": "harpoon", "grip": "rope", "extras": ["scripture", "brass_ferrule"] }, "slots": { "grip": ["rope", "leather"], "head": ["harpoon", "barbed"], "wrap": ["none", "cloth", "wire"] }, "sold": ["hook_barb"] },
-    "pipe_wrench": { "name": "Chain-wrapped pipe wrench", "dmg": 28, "heavy": 2.0, "speed": 0.8, "stamina": 14, "reach": 1.2, "weight": 3.1, "stun": 0.45, "material": "iron", "noise": 8, "wear": 0.004, "jam": 0, "licensed": false, "style": "rusthold", "price": 22,
-      "parts": { "shaft": "wrench", "head": "wrench_jaw", "grip": "tape", "extras": ["chain_wrap", "weld_beads", "crew_tag"] }, "slots": { "grip": ["tape", "rubber", "leather"], "head": ["wrench_jaw", "spiked_jaw"], "wrap": ["chain", "wire", "none"] }, "sold": ["anvil"] },
-    "oar_club": { "name": "Oar club", "dmg": 18, "heavy": 1.8, "speed": 0.95, "stamina": 12, "reach": 1.6, "weight": 2.2, "stun": 0.55, "material": "wood", "noise": 6, "wear": 0.008, "jam": 0, "licensed": true, "style": "drift", "price": 6,
-      "parts": { "shaft": "oar", "head": "oar_blade", "grip": "rope", "extras": ["nails", "tally", "chipped_paint"] }, "slots": { "grip": ["rope", "tape"], "head": ["oar_blade", "nailed_blade"], "wrap": ["none", "wire"] }, "sold": ["hook_barb"] },
-    "glass_knife": { "name": "Sea-glass knife", "dmg": 15, "heavy": 1.4, "speed": 2.0, "stamina": 4, "reach": 0.8, "weight": 0.4, "stun": 0.0, "material": "glass", "noise": 2, "wear": 0.012, "jam": 0, "licensed": true, "style": "lowlight", "price": 11,
-      "parts": { "shaft": "bone_handle", "head": "glass_blade", "grip": "cord", "extras": ["sea_glass_inlay", "brass_pommel"] }, "slots": { "grip": ["cord", "leather"], "head": ["glass_blade", "steel_blade"], "wrap": ["none", "cloth"] }, "sold": ["back_room"] }
+ "_doc": "Weapons. Original designs, no real brands. melee: dmg (light), heavy (multiplier), speed (swings/s), stamina (per swing), reach (m), weight (kg; slows swings, raises sway), stun (non-lethal knock-down chance vs people), material (hit sound: steel | wood | glass | iron). ranged: dmg, ammo (id), mag, reload (s), rate (s between shots), spread (deg), range (m), adsZoom, projectile (bolt | flare | pellets | bullet | nail | stone). Both: noise (metres heard by creatures/NPCs/Ward), wear (condition lost per use), jam (base jam/foul chance, grows with salt and wear), licensed (tolerated by the Tide Ward in Highmark waters), style (crew look: rusthold | lowlight | vigil | ward | drift), parts (look recipe for weapons/WeaponKit.js), slots (mods allowed per slot), sold (vendor ids), price.",
+ "melee": {
+  "rebar_spear": {
+   "name": "Rebar spear",
+   "dmg": 22,
+   "heavy": 1.7,
+   "speed": 1.1,
+   "stamina": 9,
+   "reach": 2.6,
+   "weight": 2.4,
+   "stun": 0.05,
+   "material": "steel",
+   "noise": 6,
+   "wear": 0.006,
+   "jam": 0,
+   "licensed": false,
+   "style": "drift",
+   "price": 12,
+   "parts": {
+    "shaft": "rebar",
+    "head": "spear_point",
+    "grip": "tape",
+    "extras": [
+     "wire_lashing",
+     "tally"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "tape",
+     "rope",
+     "cork"
+    ],
+    "head": [
+     "spear_point",
+     "barbed",
+     "glass_tip"
+    ],
+    "wrap": [
+     "none",
+     "wire",
+     "cloth"
+    ]
+   },
+   "sold": [
+    "hook_barb"
+   ]
   },
-  "ranged": {
-    "speargun": { "name": "Speargun", "dmg": 40, "ammo": "spear_bolt", "mag": 1, "reload": 2.2, "rate": 0.5, "spread": 0.6, "range": 25, "adsZoom": 1.6, "projectile": "bolt", "weight": 2.6, "noise": 4, "wear": 0.01, "jam": 0.02, "licensed": true, "style": "drift", "price": 30, "underwater": true,
-      "parts": { "body": "speargun", "grip": "pistol_grip", "extras": ["rubber_bands", "brass_fittings", "tally"] }, "slots": { "grip": ["pistol_grip", "cork"], "barrel": ["short", "long"], "wrap": ["tape", "none"] }, "sold": ["hook_barb"] },
-    "flare_pistol": { "name": "Flare pistol", "dmg": 8, "ammo": "flare_shell", "mag": 1, "reload": 1.6, "rate": 0.6, "spread": 1.5, "range": 40, "adsZoom": 1.2, "projectile": "flare", "weight": 1.0, "noise": 12, "wear": 0.006, "jam": 0.03, "licensed": true, "style": "ward", "price": 20,
-      "parts": { "body": "flare_pistol", "grip": "bakelite", "extras": ["stencil", "lanyard"] }, "slots": { "grip": ["bakelite", "tape"], "barrel": ["stock", "long"], "wrap": ["none", "lanyard"] }, "sold": ["hook_barb", "anvil"] },
-    "nail_rifle": { "name": "Nail-gun rifle", "dmg": 14, "ammo": "nails", "mag": 12, "reload": 2.4, "rate": 0.18, "spread": 2.5, "range": 30, "adsZoom": 1.5, "projectile": "nail", "weight": 3.6, "noise": 16, "wear": 0.004, "jam": 0.06, "licensed": false, "style": "rusthold", "price": 44,
-      "parts": { "body": "nail_rifle", "grip": "rubber", "extras": ["air_tank", "weld_beads", "chipped_paint", "crew_tag"] }, "slots": { "grip": ["rubber", "tape"], "barrel": ["short", "long", "baffle"], "wrap": ["none", "wire"] }, "sold": ["anvil"] },
-    "spring_crossbow": { "name": "Truck-spring crossbow", "dmg": 36, "ammo": "bolt", "mag": 1, "reload": 2.8, "rate": 0.5, "spread": 0.5, "range": 45, "adsZoom": 2.0, "projectile": "bolt", "weight": 3.2, "noise": 3, "wear": 0.008, "jam": 0.02, "licensed": false, "style": "lowlight", "price": 38,
-      "parts": { "body": "crossbow", "grip": "wood_stock", "extras": ["leaf_spring", "cable", "sea_glass_inlay"] }, "slots": { "grip": ["wood_stock", "cork"], "barrel": ["stock", "scope"], "wrap": ["cloth", "none"] }, "sold": ["back_room"] },
-    "sling": { "name": "Sling", "dmg": 9, "ammo": "stone", "mag": 1, "reload": 0.8, "rate": 0.4, "spread": 3, "range": 25, "adsZoom": 1.1, "projectile": "stone", "weight": 0.2, "noise": 2, "wear": 0.01, "jam": 0, "licensed": true, "style": "drift", "price": 2,
-      "parts": { "body": "sling", "extras": ["braid"] }, "slots": { "grip": ["cord"], "barrel": ["pouch"], "wrap": ["none"] }, "sold": ["hook_barb"] },
-    "pipe_shotgun": { "name": "Pipe shotgun", "dmg": 11, "pellets": 7, "ammo": "shell", "mag": 2, "reload": 3.4, "rate": 0.35, "spread": 6, "range": 18, "adsZoom": 1.2, "projectile": "pellets", "weight": 3.0, "noise": 60, "wear": 0.012, "jam": 0.05, "licensed": false, "style": "rusthold", "price": 40,
-      "parts": { "body": "double_pipe", "grip": "wood_stock", "extras": ["hose_clamps", "tape", "weld_beads", "tally"] }, "slots": { "grip": ["wood_stock", "tape"], "barrel": ["short", "long"], "wrap": ["tape", "wire", "none"] }, "sold": ["anvil"] },
-    "bolt_rifle": { "name": "Bolt-action scrap rifle", "dmg": 55, "ammo": "round", "mag": 4, "reload": 3.0, "rate": 1.1, "spread": 0.3, "range": 120, "adsZoom": 3.0, "projectile": "bullet", "weight": 3.8, "noise": 90, "wear": 0.01, "jam": 0.04, "licensed": false, "style": "ward", "price": 70,
-      "parts": { "body": "bolt_rifle", "grip": "wood_stock", "extras": ["scope", "brass_fittings", "stencil", "crew_tag"] }, "slots": { "grip": ["wood_stock", "cork"], "barrel": ["stock", "scope", "baffle"], "wrap": ["none", "cloth"] }, "sold": ["back_room"] }
+  "boat_hook": {
+   "name": "Boat hook",
+   "dmg": 16,
+   "heavy": 1.6,
+   "speed": 1.2,
+   "stamina": 8,
+   "reach": 2.8,
+   "weight": 2.0,
+   "stun": 0.2,
+   "material": "wood",
+   "noise": 5,
+   "wear": 0.005,
+   "jam": 0,
+   "licensed": true,
+   "style": "drift",
+   "price": 8,
+   "parts": {
+    "shaft": "wood_pole",
+    "head": "hook",
+    "grip": "rope",
+    "extras": [
+     "brass_ferrule",
+     "crew_tag"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "rope",
+     "tape",
+     "leather"
+    ],
+    "head": [
+     "hook",
+     "double_hook"
+    ],
+    "wrap": [
+     "none",
+     "cloth",
+     "wire"
+    ]
+   },
+   "sold": [
+    "hook_barb"
+   ]
   },
-  "throwables": {
-    "throw_net": { "name": "Weighted net", "stun": 4.5, "range": 9, "noise": 2, "desc": "Throw (G with it equipped). Tangles a creature or a person for a few seconds. Nobody dies of a net.", "price": 6, "sold": ["hook_barb"] }
+  "fire_axe": {
+   "name": "Fire axe",
+   "dmg": 34,
+   "heavy": 1.9,
+   "speed": 0.75,
+   "stamina": 16,
+   "reach": 1.5,
+   "weight": 3.4,
+   "stun": 0.1,
+   "material": "steel",
+   "noise": 9,
+   "wear": 0.009,
+   "jam": 0,
+   "licensed": false,
+   "style": "rusthold",
+   "price": 26,
+   "parts": {
+    "shaft": "wood_haft",
+    "head": "axe",
+    "grip": "leather",
+    "extras": [
+     "weld_beads",
+     "chipped_paint",
+     "tally"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "leather",
+     "tape",
+     "rubber"
+    ],
+    "head": [
+     "axe",
+     "axe_spike"
+    ],
+    "wrap": [
+     "none",
+     "chain",
+     "wire"
+    ]
+   },
+   "sold": [
+    "anvil"
+   ]
   },
-  "ammo": {
-    "spear_bolt": { "name": "Speargun bolts", "price": 2, "craft": { "scrap": 1 } },
-    "flare_shell": { "name": "Flare shells", "price": 3, "craft": { "scrap": 1, "charcoal": 1 } },
-    "nails": { "name": "Nails (strip of 12)", "price": 3, "craft": { "scrap": 2 } },
-    "bolt": { "name": "Crossbow bolts", "price": 2, "craft": { "scrap": 1, "fibre": 1 } },
-    "stone": { "name": "Sling stones", "price": 0, "craft": {} },
-    "shell": { "name": "Shotgun shells", "price": 5, "craft": { "scrap": 2, "charcoal": 1 } },
-    "round": { "name": "Rifle rounds", "price": 8, "craft": null }
+  "cleaver": {
+   "name": "Galley cleaver",
+   "dmg": 20,
+   "heavy": 1.5,
+   "speed": 1.6,
+   "stamina": 6,
+   "reach": 1.0,
+   "weight": 1.2,
+   "stun": 0.0,
+   "material": "steel",
+   "noise": 4,
+   "wear": 0.007,
+   "jam": 0,
+   "licensed": true,
+   "style": "drift",
+   "price": 9,
+   "parts": {
+    "shaft": "short_handle",
+    "head": "cleaver",
+    "grip": "tape",
+    "extras": [
+     "rivets"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "tape",
+     "cork",
+     "leather"
+    ],
+    "head": [
+     "cleaver",
+     "serrated"
+    ],
+    "wrap": [
+     "none",
+     "cloth"
+    ]
+   },
+   "sold": [
+    "hook_barb",
+    "back_room"
+   ]
   },
-  "mods": {
-    "tape": { "stamina": 0, "grip": 0.0 }, "rope": { "grip": 0.05 }, "cork": { "grip": 0.1, "sway": -0.15 }, "leather": { "grip": 0.08, "speed": 0.05 }, "rubber": { "grip": 0.12, "sway": -0.1 }, "cord": { "speed": 0.05 },
-    "spear_point": {}, "barbed": { "dmg": 0.15, "wear": 0.3 }, "glass_tip": { "dmg": 0.25, "wear": 1.0 }, "double_hook": { "stun": 0.1 }, "axe_spike": { "dmg": 0.1, "weight": 0.3 }, "serrated": { "dmg": 0.12, "bleed": 0.2 },
-    "spiked_jaw": { "dmg": 0.15, "stun": -0.15 }, "nailed_blade": { "dmg": 0.2, "stun": -0.2 }, "steel_blade": { "dmg": 0.1, "wear": -0.5 }, "harpoon": {}, "hook": {}, "axe": {}, "cleaver": {}, "wrench_jaw": {}, "oar_blade": {}, "glass_blade": {},
-    "none": {}, "wire": { "wear": -0.2, "weight": 0.1 }, "cloth": { "noise": -0.15 }, "chain": { "dmg": 0.12, "weight": 0.5, "noise": 0.2 }, "lanyard": {},
-    "pistol_grip": {}, "bakelite": {}, "wood_stock": { "sway": -0.1 }, "short": { "spread": 0.3, "weight": -0.2 }, "long": { "spread": -0.3, "range": 0.3, "weight": 0.3 }, "baffle": { "noise": -0.5, "range": -0.15 }, "scope": { "adsZoom": 1.0, "weight": 0.2 }, "stock": {}, "pouch": {}
+  "harpoon": {
+   "name": "Hand harpoon",
+   "dmg": 30,
+   "heavy": 1.4,
+   "speed": 0.9,
+   "stamina": 11,
+   "reach": 2.4,
+   "weight": 2.8,
+   "stun": 0.0,
+   "material": "iron",
+   "noise": 5,
+   "wear": 0.006,
+   "jam": 0,
+   "licensed": false,
+   "style": "vigil",
+   "price": 18,
+   "parts": {
+    "shaft": "wood_pole",
+    "head": "harpoon",
+    "grip": "rope",
+    "extras": [
+     "scripture",
+     "brass_ferrule"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "rope",
+     "leather"
+    ],
+    "head": [
+     "harpoon",
+     "barbed"
+    ],
+    "wrap": [
+     "none",
+     "cloth",
+     "wire"
+    ]
+   },
+   "sold": [
+    "hook_barb"
+   ]
   },
-  "styles": {
-    "rusthold": { "metal": [0.32, 0.27, 0.24], "accent": [0.85, 0.55, 0.15], "rust": 0.7, "paint": [0.75, 0.45, 0.1], "desc": "Welded, heavy, over-built. Orange Syndicate paint, weld beads like scar tissue." },
-    "lowlight": { "metal": [0.12, 0.13, 0.14], "accent": [0.2, 0.55, 0.5], "rust": 0.2, "paint": [0.08, 0.09, 0.1], "desc": "Sleek and dark. Blackened steel, sea-glass, nothing that catches the light." },
-    "vigil": { "metal": [0.45, 0.42, 0.38], "accent": [0.9, 0.82, 0.55], "rust": 0.4, "paint": [0.85, 0.8, 0.65], "desc": "Old iron with scripture painted along it in a careful white hand." },
-    "ward": { "metal": [0.2, 0.22, 0.26], "accent": [0.8, 0.8, 0.76], "rust": 0.05, "paint": [0.18, 0.2, 0.26], "desc": "Clean, official, stencilled. Somebody signs for these." },
-    "drift": { "metal": [0.35, 0.33, 0.3], "accent": [0.7, 0.55, 0.3], "rust": 0.5, "paint": [0.3, 0.42, 0.42], "desc": "Whatever was to hand. Tape, rope, brass from a dead ship." }
+  "pipe_wrench": {
+   "name": "Chain-wrapped pipe wrench",
+   "dmg": 28,
+   "heavy": 2.0,
+   "speed": 0.8,
+   "stamina": 14,
+   "reach": 1.2,
+   "weight": 3.1,
+   "stun": 0.45,
+   "material": "iron",
+   "noise": 8,
+   "wear": 0.004,
+   "jam": 0,
+   "licensed": false,
+   "style": "rusthold",
+   "price": 22,
+   "parts": {
+    "shaft": "wrench",
+    "head": "wrench_jaw",
+    "grip": "tape",
+    "extras": [
+     "chain_wrap",
+     "weld_beads",
+     "crew_tag"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "tape",
+     "rubber",
+     "leather"
+    ],
+    "head": [
+     "wrench_jaw",
+     "spiked_jaw"
+    ],
+    "wrap": [
+     "chain",
+     "wire",
+     "none"
+    ]
+   },
+   "sold": [
+    "anvil"
+   ]
   },
-  "vendors": {
-    "hook_barb": { "name": "Hook & Barb", "keeper": "Odile's cousin Ferro", "community": "portage", "platform": "dock", "at": [3, 1.5], "crew": "brokers", "sells": "drift and Ward-licensed gear, nets, flares, bolts", "line": "Licensed or not, it's all sharp. Ward only cares about the paperwork." },
-    "anvil": { "name": "The Anvil", "keeper": "Jax Fontaine's sister Petra", "community": "rusthold_tender", "platform": "rh_rig", "at": [-3, 3], "crew": "syndicate", "sells": "heavy Rusthold steel, shotguns, nail rifles", "line": "Everything here was a boat once. Treat it like one: it'll float you or it'll sink you." },
-    "back_room": { "name": "Sal's back room", "keeper": "Sal", "community": "portage", "platform": "redlamp", "at": [2, 0], "crew": "lowlight", "sells": "Lowlight blades, crossbows, the rifle nobody asked about", "line": "You didn't buy this here. You found it. In a canal. Lucky you." }
+  "oar_club": {
+   "name": "Oar club",
+   "dmg": 18,
+   "heavy": 1.8,
+   "speed": 0.95,
+   "stamina": 12,
+   "reach": 1.6,
+   "weight": 2.2,
+   "stun": 0.55,
+   "material": "wood",
+   "noise": 6,
+   "wear": 0.008,
+   "jam": 0,
+   "licensed": true,
+   "style": "drift",
+   "price": 6,
+   "parts": {
+    "shaft": "oar",
+    "head": "oar_blade",
+    "grip": "rope",
+    "extras": [
+     "nails",
+     "tally",
+     "chipped_paint"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "rope",
+     "tape"
+    ],
+    "head": [
+     "oar_blade",
+     "nailed_blade"
+    ],
+    "wrap": [
+     "none",
+     "wire"
+    ]
+   },
+   "sold": [
+    "hook_barb"
+   ]
   },
-  "law": { "highmarkRadius": 260, "highmark": [0, -520], "wardRadius": 90, "armedHeat": 14, "shotHeat": 6, "barRule": "No blades, no barrels, no exceptions. Bouncer's got a hook and a long memory." }
+  "glass_knife": {
+   "name": "Sea-glass knife",
+   "dmg": 15,
+   "heavy": 1.4,
+   "speed": 2.0,
+   "stamina": 4,
+   "reach": 0.8,
+   "weight": 0.4,
+   "stun": 0.0,
+   "material": "glass",
+   "noise": 2,
+   "wear": 0.012,
+   "jam": 0,
+   "licensed": true,
+   "style": "lowlight",
+   "price": 11,
+   "parts": {
+    "shaft": "bone_handle",
+    "head": "glass_blade",
+    "grip": "cord",
+    "extras": [
+     "sea_glass_inlay",
+     "brass_pommel"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "cord",
+     "leather"
+    ],
+    "head": [
+     "glass_blade",
+     "steel_blade"
+    ],
+    "wrap": [
+     "none",
+     "cloth"
+    ]
+   },
+   "sold": [
+    "back_room"
+   ]
+  }
+ },
+ "ranged": {
+  "speargun": {
+   "name": "Speargun",
+   "dmg": 40,
+   "ammo": "spear_bolt",
+   "mag": 1,
+   "reload": 2.2,
+   "rate": 0.5,
+   "spread": 0.6,
+   "range": 25,
+   "adsZoom": 1.6,
+   "projectile": "bolt",
+   "weight": 2.6,
+   "noise": 4,
+   "wear": 0.01,
+   "jam": 0.02,
+   "licensed": true,
+   "style": "drift",
+   "price": 30,
+   "underwater": true,
+   "parts": {
+    "body": "speargun",
+    "grip": "pistol_grip",
+    "extras": [
+     "rubber_bands",
+     "brass_fittings",
+     "tally"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "pistol_grip",
+     "cork"
+    ],
+    "barrel": [
+     "short",
+     "long"
+    ],
+    "wrap": [
+     "tape",
+     "none"
+    ]
+   },
+   "sold": [
+    "hook_barb"
+   ]
+  },
+  "flare_pistol": {
+   "name": "Flare pistol",
+   "dmg": 8,
+   "ammo": "flare_shell",
+   "mag": 1,
+   "reload": 1.6,
+   "rate": 0.6,
+   "spread": 1.5,
+   "range": 40,
+   "adsZoom": 1.2,
+   "projectile": "flare",
+   "weight": 1.0,
+   "noise": 12,
+   "wear": 0.006,
+   "jam": 0.03,
+   "licensed": true,
+   "style": "ward",
+   "price": 20,
+   "parts": {
+    "body": "flare_pistol",
+    "grip": "bakelite",
+    "extras": [
+     "stencil",
+     "lanyard"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "bakelite",
+     "tape"
+    ],
+    "barrel": [
+     "stock",
+     "long"
+    ],
+    "wrap": [
+     "none",
+     "lanyard"
+    ]
+   },
+   "sold": [
+    "hook_barb",
+    "anvil"
+   ]
+  },
+  "nail_rifle": {
+   "name": "Nail-gun rifle",
+   "dmg": 14,
+   "ammo": "nails",
+   "mag": 12,
+   "reload": 2.4,
+   "rate": 0.18,
+   "spread": 2.5,
+   "range": 30,
+   "adsZoom": 1.5,
+   "projectile": "nail",
+   "weight": 3.6,
+   "noise": 16,
+   "wear": 0.004,
+   "jam": 0.06,
+   "licensed": false,
+   "style": "rusthold",
+   "price": 44,
+   "parts": {
+    "body": "nail_rifle",
+    "grip": "rubber",
+    "extras": [
+     "air_tank",
+     "weld_beads",
+     "chipped_paint",
+     "crew_tag"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "rubber",
+     "tape"
+    ],
+    "barrel": [
+     "short",
+     "long",
+     "baffle"
+    ],
+    "wrap": [
+     "none",
+     "wire"
+    ]
+   },
+   "sold": [
+    "anvil"
+   ]
+  },
+  "spring_crossbow": {
+   "name": "Truck-spring crossbow",
+   "dmg": 36,
+   "ammo": "bolt",
+   "mag": 1,
+   "reload": 2.8,
+   "rate": 0.5,
+   "spread": 0.5,
+   "range": 45,
+   "adsZoom": 2.0,
+   "projectile": "bolt",
+   "weight": 3.2,
+   "noise": 3,
+   "wear": 0.008,
+   "jam": 0.02,
+   "licensed": false,
+   "style": "lowlight",
+   "price": 38,
+   "parts": {
+    "body": "crossbow",
+    "grip": "wood_stock",
+    "extras": [
+     "leaf_spring",
+     "cable",
+     "sea_glass_inlay"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "wood_stock",
+     "cork"
+    ],
+    "barrel": [
+     "stock",
+     "scope"
+    ],
+    "wrap": [
+     "cloth",
+     "none"
+    ]
+   },
+   "sold": [
+    "back_room"
+   ]
+  },
+  "sling": {
+   "name": "Sling",
+   "dmg": 9,
+   "ammo": "stone",
+   "mag": 1,
+   "reload": 0.8,
+   "rate": 0.4,
+   "spread": 3,
+   "range": 25,
+   "adsZoom": 1.1,
+   "projectile": "stone",
+   "weight": 0.2,
+   "noise": 2,
+   "wear": 0.01,
+   "jam": 0,
+   "licensed": true,
+   "style": "drift",
+   "price": 2,
+   "parts": {
+    "body": "sling",
+    "extras": [
+     "braid"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "cord"
+    ],
+    "barrel": [
+     "pouch"
+    ],
+    "wrap": [
+     "none"
+    ]
+   },
+   "sold": [
+    "hook_barb"
+   ]
+  },
+  "pipe_shotgun": {
+   "name": "Pipe shotgun",
+   "dmg": 11,
+   "pellets": 7,
+   "ammo": "shell",
+   "mag": 2,
+   "reload": 3.4,
+   "rate": 0.35,
+   "spread": 6,
+   "range": 18,
+   "adsZoom": 1.2,
+   "projectile": "pellets",
+   "weight": 3.0,
+   "noise": 60,
+   "wear": 0.012,
+   "jam": 0.05,
+   "licensed": false,
+   "style": "rusthold",
+   "price": 40,
+   "parts": {
+    "body": "double_pipe",
+    "grip": "wood_stock",
+    "extras": [
+     "hose_clamps",
+     "tape",
+     "weld_beads",
+     "tally"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "wood_stock",
+     "tape"
+    ],
+    "barrel": [
+     "short",
+     "long"
+    ],
+    "wrap": [
+     "tape",
+     "wire",
+     "none"
+    ]
+   },
+   "sold": [
+    "anvil"
+   ]
+  },
+  "bolt_rifle": {
+   "name": "Bolt-action scrap rifle",
+   "dmg": 55,
+   "ammo": "round",
+   "mag": 4,
+   "reload": 3.0,
+   "rate": 1.1,
+   "spread": 0.3,
+   "range": 120,
+   "adsZoom": 3.0,
+   "projectile": "bullet",
+   "weight": 3.8,
+   "noise": 90,
+   "wear": 0.01,
+   "jam": 0.04,
+   "licensed": false,
+   "style": "ward",
+   "price": 70,
+   "parts": {
+    "body": "bolt_rifle",
+    "grip": "wood_stock",
+    "extras": [
+     "scope",
+     "brass_fittings",
+     "stencil",
+     "crew_tag"
+    ]
+   },
+   "slots": {
+    "grip": [
+     "wood_stock",
+     "cork"
+    ],
+    "barrel": [
+     "stock",
+     "scope",
+     "baffle"
+    ],
+    "wrap": [
+     "none",
+     "cloth"
+    ]
+   },
+   "sold": [
+    "back_room"
+   ]
+  }
+ },
+ "throwables": {
+  "throw_net": {
+   "name": "Weighted net",
+   "stun": 4.5,
+   "range": 9,
+   "noise": 2,
+   "desc": "Throw (G with it equipped). Tangles a creature or a person for a few seconds. Nobody dies of a net.",
+   "price": 6,
+   "sold": [
+    "hook_barb"
+   ]
+  }
+ },
+ "ammo": {
+  "spear_bolt": {
+   "name": "Speargun bolts",
+   "price": 2,
+   "craft": {
+    "scrap": 1
+   }
+  },
+  "flare_shell": {
+   "name": "Flare shells",
+   "price": 3,
+   "craft": {
+    "scrap": 1,
+    "charcoal": 1
+   }
+  },
+  "nails": {
+   "name": "Nails (strip of 12)",
+   "price": 3,
+   "craft": {
+    "scrap": 2
+   }
+  },
+  "bolt": {
+   "name": "Crossbow bolts",
+   "price": 2,
+   "craft": {
+    "scrap": 1,
+    "fibre": 1
+   }
+  },
+  "stone": {
+   "name": "Sling stones",
+   "price": 0,
+   "craft": {}
+  },
+  "shell": {
+   "name": "Shotgun shells",
+   "price": 5,
+   "craft": {
+    "scrap": 2,
+    "charcoal": 1
+   }
+  },
+  "round": {
+   "name": "Rifle rounds",
+   "price": 8,
+   "craft": null
+  }
+ },
+ "mods": {
+  "tape": {
+   "stamina": 0,
+   "grip": 0.0
+  },
+  "rope": {
+   "grip": 0.05
+  },
+  "cork": {
+   "grip": 0.1,
+   "sway": -0.15
+  },
+  "leather": {
+   "grip": 0.08,
+   "speed": 0.05
+  },
+  "rubber": {
+   "grip": 0.12,
+   "sway": -0.1
+  },
+  "cord": {
+   "speed": 0.05
+  },
+  "spear_point": {},
+  "barbed": {
+   "dmg": 0.15,
+   "wear": 0.3
+  },
+  "glass_tip": {
+   "dmg": 0.25,
+   "wear": 1.0
+  },
+  "double_hook": {
+   "stun": 0.1
+  },
+  "axe_spike": {
+   "dmg": 0.1,
+   "weight": 0.3
+  },
+  "serrated": {
+   "dmg": 0.12,
+   "bleed": 0.2
+  },
+  "spiked_jaw": {
+   "dmg": 0.15,
+   "stun": -0.15
+  },
+  "nailed_blade": {
+   "dmg": 0.2,
+   "stun": -0.2
+  },
+  "steel_blade": {
+   "dmg": 0.1,
+   "wear": -0.5
+  },
+  "harpoon": {},
+  "hook": {},
+  "axe": {},
+  "cleaver": {},
+  "wrench_jaw": {},
+  "oar_blade": {},
+  "glass_blade": {},
+  "none": {},
+  "wire": {
+   "wear": -0.2,
+   "weight": 0.1
+  },
+  "cloth": {
+   "noise": -0.15
+  },
+  "chain": {
+   "dmg": 0.12,
+   "weight": 0.5,
+   "noise": 0.2
+  },
+  "lanyard": {},
+  "pistol_grip": {},
+  "bakelite": {},
+  "wood_stock": {
+   "sway": -0.1
+  },
+  "short": {
+   "spread": 0.3,
+   "weight": -0.2
+  },
+  "long": {
+   "spread": -0.3,
+   "range": 0.3,
+   "weight": 0.3
+  },
+  "baffle": {
+   "noise": -0.5,
+   "range": -0.15
+  },
+  "scope": {
+   "adsZoom": 1.0,
+   "weight": 0.2
+  },
+  "stock": {},
+  "pouch": {}
+ },
+ "styles": {
+  "rusthold": {
+   "metal": [
+    0.32,
+    0.27,
+    0.24
+   ],
+   "accent": [
+    0.85,
+    0.55,
+    0.15
+   ],
+   "rust": 0.7,
+   "paint": [
+    0.75,
+    0.45,
+    0.1
+   ],
+   "desc": "Welded, heavy, over-built. Orange Syndicate paint, weld beads like scar tissue."
+  },
+  "lowlight": {
+   "metal": [
+    0.12,
+    0.13,
+    0.14
+   ],
+   "accent": [
+    0.2,
+    0.55,
+    0.5
+   ],
+   "rust": 0.2,
+   "paint": [
+    0.08,
+    0.09,
+    0.1
+   ],
+   "desc": "Sleek and dark. Blackened steel, sea-glass, nothing that catches the light."
+  },
+  "vigil": {
+   "metal": [
+    0.45,
+    0.42,
+    0.38
+   ],
+   "accent": [
+    0.9,
+    0.82,
+    0.55
+   ],
+   "rust": 0.4,
+   "paint": [
+    0.85,
+    0.8,
+    0.65
+   ],
+   "desc": "Old iron with scripture painted along it in a careful white hand."
+  },
+  "ward": {
+   "metal": [
+    0.2,
+    0.22,
+    0.26
+   ],
+   "accent": [
+    0.8,
+    0.8,
+    0.76
+   ],
+   "rust": 0.05,
+   "paint": [
+    0.18,
+    0.2,
+    0.26
+   ],
+   "desc": "Clean, official, stencilled. Somebody signs for these."
+  },
+  "drift": {
+   "metal": [
+    0.35,
+    0.33,
+    0.3
+   ],
+   "accent": [
+    0.7,
+    0.55,
+    0.3
+   ],
+   "rust": 0.5,
+   "paint": [
+    0.3,
+    0.42,
+    0.42
+   ],
+   "desc": "Whatever was to hand. Tape, rope, brass from a dead ship."
+  }
+ },
+ "vendors": {
+  "hook_barb": {
+   "name": "Hook & Barb",
+   "keeper": "Odile's cousin Ferro",
+   "community": "portage",
+   "platform": "dock",
+   "at": [
+    3,
+    1.5
+   ],
+   "crew": "brokers",
+   "sells": "drift and Ward-licensed gear, nets, flares, bolts",
+   "line": "Licensed or not, it's all sharp. Ward only cares about the paperwork."
+  },
+  "anvil": {
+   "name": "The Anvil",
+   "keeper": "Jax Fontaine's sister Petra",
+   "community": "rusthold_tender",
+   "platform": "rh_rig",
+   "at": [
+    -3,
+    3
+   ],
+   "crew": "syndicate",
+   "sells": "heavy Rusthold steel, shotguns, nail rifles",
+   "line": "Everything here was a boat once. Treat it like one: it'll float you or it'll sink you."
+  },
+  "back_room": {
+   "name": "Sal's back room",
+   "keeper": "Sal",
+   "community": "portage",
+   "platform": "redlamp",
+   "at": [
+    2,
+    0
+   ],
+   "crew": "lowlight",
+   "sells": "Lowlight blades, crossbows, the rifle nobody asked about",
+   "line": "You didn't buy this here. You found it. In a canal. Lucky you."
+  }
+ },
+ "law": {
+  "highmarkRadius": 260,
+  "highmark": [
+   0,
+   -520
+  ],
+  "wardRadius": 90,
+  "armedHeat": 14,
+  "shotHeat": 6,
+  "barRule": "No blades, no barrels, no exceptions. Bouncer's got a hook and a long memory."
+ },
+ "triggers": {
+  "_doc": "DualSense adaptive-trigger feel per weapon (WebHID only). mode: off | resist (from start, force) | section (start..end, force) | click (a short hard wall). Positions and force are 0..1.",
+  "speargun": {
+   "R2": {
+    "mode": "section",
+    "start": 0.25,
+    "end": 0.6,
+    "force": 0.6
+   },
+   "L2": {
+    "mode": "resist",
+    "start": 0.1,
+    "force": 0.15
+   }
+  },
+  "flare_pistol": {
+   "R2": {
+    "mode": "click",
+    "start": 0.45,
+    "end": 0.52,
+    "force": 0.9
+   }
+  },
+  "nail_rifle": {
+   "R2": {
+    "mode": "resist",
+    "start": 0.2,
+    "force": 0.25
+   }
+  },
+  "crossbow": {
+   "R2": {
+    "mode": "section",
+    "start": 0.15,
+    "end": 0.85,
+    "force": 1.0
+   },
+   "L2": {
+    "mode": "resist",
+    "start": 0.05,
+    "force": 0.35
+   }
+  },
+  "sling": {
+   "R2": {
+    "mode": "resist",
+    "start": 0.0,
+    "force": 0.12
+   }
+  },
+  "pipe_shotgun": {
+   "R2": {
+    "mode": "section",
+    "start": 0.4,
+    "end": 0.7,
+    "force": 0.8
+   }
+  },
+  "bolt_rifle": {
+   "R2": {
+    "mode": "section",
+    "start": 0.5,
+    "end": 0.65,
+    "force": 0.7
+   },
+   "L2": {
+    "mode": "resist",
+    "start": 0.1,
+    "force": 0.15
+   }
+  },
+  "_melee": {
+   "R2": {
+    "mode": "resist",
+    "start": 0.3,
+    "force": 0.2
+   },
+   "L2": {
+    "mode": "resist",
+    "start": 0.0,
+    "force": 0.3
+   }
+  },
+  "_jammed": {
+   "R2": {
+    "mode": "resist",
+    "start": 0.0,
+    "force": 1.0
+   }
+  },
+  "_none": {
+   "R2": {
+    "mode": "off"
+   },
+   "L2": {
+    "mode": "off"
+   }
+  }
+ }
 }

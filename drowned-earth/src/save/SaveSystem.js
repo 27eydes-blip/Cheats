@@ -24,7 +24,7 @@ export class SaveSystem {
       survival: c.survival.toJSON(), inventory: c.inventory.toJSON(),
       flags: c.state.flags, looted: [...c.state.looted], logs: [...c.state.logs], playTime: c.state.playTime, seen: c.state.seenLines,
       story: c.story.toJSON(), trade: c.trade.stock, radio: { index: c.radio.index },
-      standing: c.standing.toJSON(), economy: c.economy.toJSON(), heat: c.heat.toJSON(), deep: c.abyss.toJSON(), journal: c.journal.toJSON(), hints: c.state.hints, life: c.life?.toJSON?.() || null, injury: c.injury?.toJSON(), creatures: c.creatures?.toJSON(), nightlife: c.nightlife?.toJSON(), fleet: c.fleet?.toJSON(), club: c.club?.toJSON?.(), crews: c.crews?.toJSON(), society: c.society?.toJSON?.(), arms: c.arms?.toJSON?.(), checkpoint: c.state.checkpoint || null,
+      standing: c.standing.toJSON(), economy: c.economy.toJSON(), heat: c.heat.toJSON(), deep: c.abyss.toJSON(), journal: c.journal.toJSON(), hints: c.state.hints, life: c.life?.toJSON?.() || null, injury: c.injury?.toJSON(), creatures: c.creatures?.toJSON(), nightlife: c.nightlife?.toJSON(), fleet: c.fleet?.toJSON(), club: c.club?.toJSON?.(), crews: c.crews?.toJSON(), society: c.society?.toJSON?.(), arms: c.arms?.toJSON?.(), pad: c.pad?.toJSON?.(), checkpoint: c.state.checkpoint || null,
     };
   }
   save(reason = 'auto') {
@@ -58,7 +58,7 @@ export class SaveSystem {
     c.standing.load(s.standing); c.economy.load(s.economy); c.heat.load(s.heat); c.abyss.load(s.deep); c.journal.load(s.journal); c.state.hints = c.onboarding.done = s.hints || {};
     for (const u of Object.keys(s.boat.upgrades || {})) c.boat.applyUpgrade(u);
     if (s.life && c.life) c.life.load(s.life);
-    c.injury?.load(s.injury); c.creatures?.load(s.creatures); c.nightlife?.load(s.nightlife); c.fleet?.load(s.fleet); c.club?.load?.(s.club); c.crews?.load(s.crews); c.society?.load?.(s.society); c.arms?.load?.(s.arms); c.state.checkpoint = s.checkpoint || null;
+    c.injury?.load(s.injury); c.creatures?.load(s.creatures); c.nightlife?.load(s.nightlife); c.fleet?.load(s.fleet); c.club?.load?.(s.club); c.crews?.load(s.crews); c.society?.load?.(s.society); c.arms?.load?.(s.arms); c.pad?.load?.(s.pad); c.state.checkpoint = s.checkpoint || null;
     c.events.emit('standing', c.standing.shown);
     c.story.load(s.story); c.trade.stock = s.trade || {}; c.radio.index = s.radio?.index ?? -1;
     c.chunks.update(c.player.position.x, c.player.position.z, true);

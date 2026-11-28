@@ -55,6 +55,7 @@ import { Patrol } from '../ai/Patrol.js';
 import { DeepShapes } from '../ai/DeepShapes.js';
 import { Life } from '../life/Life.js';
 import { LifeUI } from '../life/LifeUI.js';
+import { Pad } from '../input/Pad.js';
 import { Scenarios } from '../life/Scenarios.js';
 import { Deep } from '../deep/Deep.js';
 import { Senses } from '../creatures/Senses.js';
@@ -207,6 +208,7 @@ export class Game {
     ctx.club = new Club(ctx);
     ctx.society = new Society(ctx);
     ctx.arms = new Arms(ctx);
+    ctx.pad = new Pad(ctx);
     ageGate(ctx.settings, ctx.params);
     ctx.ui.applyAccessibility();
     this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms];

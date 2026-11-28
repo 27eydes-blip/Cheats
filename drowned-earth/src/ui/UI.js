@@ -77,8 +77,8 @@ export class UI {
     const f = interact.focus;
     const p = f ? interact.promptFor(f) : '';
     if (p && !this.open) {
-      const key = input.usingTouch ? 'Use' : 'E';
-      this.promptEl.innerHTML = `<b>${key}</b>${esc(p)}`;
+      const pad = this.ctx.pad?.device === 'pad';
+      this.promptEl.innerHTML = pad ? `${this.ctx.pad.glyph('use')}${esc(p)}` : `<b>${input.usingTouch ? 'Use' : 'E'}</b>${esc(p)}`;
       this.promptEl.style.opacity = 1; this.dot.classList.add('active');
     } else { this.promptEl.style.opacity = 0; this.dot.classList.remove('active'); }
     this.dot.style.opacity = player.mode === 'boat' && this.ctx.rig.thirdPerson ? 0 : 1;
@@ -294,16 +294,18 @@ export class UI {
   openPause() {
     const s = this.ctx.settings;
     const html = `<h2>Paused</h2><div class="sub">Drowned Earth — Stage 1: The First Drowned District</div>
-      <div class="tabs"><button class="btn" data-close>Resume</button><button class="btn" data-act="inv">Pack</button><button class="btn" data-act="journal">Journal</button><button class="btn" data-act="save">Save</button><button class="btn" data-act="load">Load last save</button><button class="btn" data-act="opts">Options</button><button class="btn" data-act="export">Export save</button><button class="btn" data-act="import">Import save</button><button class="btn" data-act="life">A Life on the Water</button><button class="btn" data-act="title">Title screen</button></div>
+      <div class="tabs"><button class="btn" data-close>Resume</button><button class="btn" data-act="inv">Pack</button><button class="btn" data-act="journal">Journal</button><button class="btn" data-act="save">Save</button><button class="btn" data-act="load">Load last save</button><button class="btn" data-act="opts">Options</button><button class="btn" data-act="pad">Controller</button><button class="btn" data-act="craft">Craft</button><button class="btn" data-act="export">Export save</button><button class="btn" data-act="import">Import save</button><button class="btn" data-act="life">A Life on the Water</button><button class="btn" data-act="title">Title screen</button></div>
       <h3>Quality</h3><div class="tabs"><button class="btn ${s.auto ? 'on' : ''}" data-q="auto">Auto</button>${Settings.presets().map((q) => `<button class="btn ${q === s.quality && !s.auto ? 'on' : ''}" data-q="${q}">${Settings.label(q)}</button>`).join('')}</div>
       <h3>Sound</h3><div class="tabs"><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-vol style="width:220px;pointer-events:auto"></div>
       <h3>Options</h3><div class="tabs"><button class="btn ${s.subtitles ? 'on' : ''}" data-opt="subtitles">Subtitles</button><button class="btn ${s.invertY ? 'on' : ''}" data-opt="invertY">Invert look</button></div>
-      <h3>Controls</h3><div class="sub" style="font-style:normal;line-height:1.7">WASD move · mouse look · Shift sprint · C crouch / swim up · Space jump / dive · E use · F flashlight (lantern on the boat) · V boat camera · R radio · Tab pack · Q craft · J journal · Esc pause.<br>Touch: left stick, drag right side to look, buttons for the rest.</div>`;
+      <h3>Controls</h3>${this.ctx.pad?.device === 'pad' ? this.ctx.pad.layoutHTML() : ''}<div class="sub" style="font-style:normal;line-height:1.7">WASD move · mouse look · Shift sprint · C crouch / swim up · Space jump / dive · E use · F flashlight (lantern on the boat) · V boat camera · R radio · Tab pack · Q craft · J journal · Esc pause.<br>Touch: left stick, drag right side to look, buttons for the rest.</div>`;
     this.openPanel('pause', html, (p) => {
       p.querySelector('[data-act="inv"]').addEventListener('click', () => this.openInventory());
       p.querySelector('[data-act="journal"]').addEventListener('click', () => this.openJournal());
       p.querySelector('[data-act="save"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.toast('Saved.'); });
       p.querySelector('[data-act="opts"]').addEventListener('click', () => this.openOptions());
+      p.querySelector('[data-act="pad"]').addEventListener('click', () => this.ctx.pad?.openSettings());
+      p.querySelector('[data-act="craft"]').addEventListener('click', () => this.openCraft(null));
       p.querySelector('[data-act="export"]').addEventListener('click', () => { this.ctx.save.save('manual'); const blob = new Blob([localStorage.getItem('drowned-earth.save') || '{}'], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `drowned-earth-day${this.ctx.time.day}.json`; a.click(); });
       p.querySelector('[data-act="import"]').addEventListener('click', () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json'; i.onchange = async () => { const t = await i.files[0].text(); try { JSON.parse(t); localStorage.setItem('drowned-earth.save', t); if (this.ctx.save.load()) { this.close(); this.toast('Save imported.'); } } catch { this.toast('That file is not a Drowned Earth save.'); } }; i.click(); });
       p.querySelector('[data-act="life"]').addEventListener('click', () => { this.ctx.save.save('manual'); this.close(); this.ctx.game.enterLife(); });
@@ -340,7 +342,7 @@ export class UI {
   openOptions(fromTitle) {
     const s = this.ctx.settings;
     const row = (label, key, opts) => `<h3>${label}</h3><div class="tabs">${opts.map(([v, n]) => `<button class="btn ${(key === 'quality' ? (s.auto ? 'auto' : s.quality) : String(s[key])) === String(v) ? 'on' : ''}" data-k="${key}" data-v="${v}">${n}</button>`).join('')}</div>`;
-    const html = `<button class="btn close" data-close>Close</button><h2>Options</h2>
+    const html = `<button class="btn close" data-close>Close</button><h2>Options</h2><div class="tabs"><button class="btn" data-padset>Controller settings &amp; button map</button></div>
       ${row('Quality (reloads)', 'quality', [['auto', 'Auto'], ['low', 'Phone'], ['medium', 'Standard'], ['high', 'Ultra']])}
       ${row('Difficulty', 'difficulty', [['calm', 'Calm — no threats'], ['standard', 'Standard'], ['harsh', 'Harsh — scarce, permanent']])}
       ${row('Text size', 'textSize', [['1', 'Normal'], ['1.2', 'Large'], ['1.4', 'Larger']])}
@@ -358,8 +360,9 @@ export class UI {
       ${row('Music', 'music', [['1', 'On'], ['0.5', 'Quiet'], ['0', 'Off']])}
       ${row('Invert look', 'invertY', [['true', 'On'], ['false', 'Off']])}
       <h3>Volume</h3><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-vol style="width:240px;pointer-events:auto">
-      <h3>Controls</h3><div class="sub" style="font-style:normal;line-height:1.7">WASD move · mouse look · Shift sprint · C crouch / swim up / cut the boat engine · Space jump / dive · E use · F flashlight (lantern or spotlight on the boat) · V boat camera · R radio · Tab pack · Q craft · J journal & map · K photo mode · \` debug · Esc pause.<br>Touch: left stick, drag right to look, buttons for the rest.</div>`;
+      <h3>Controls</h3>${this.ctx.pad?.device === 'pad' ? this.ctx.pad.layoutHTML() : ''}<div class="sub" style="font-style:normal;line-height:1.7">WASD move · mouse look · Shift sprint · C crouch / swim up / cut the boat engine · Space jump / dive · E use · F flashlight (lantern or spotlight on the boat) · V boat camera · R radio · Tab pack · Q craft · J journal & map · K photo mode · \` debug · Esc pause.<br>Touch: left stick, drag right to look, buttons for the rest.</div>`;
     const p = this.openPanel('options', html, (p) => {
+      p.querySelector('[data-padset]')?.addEventListener('click', () => this.ctx.pad?.openSettings(fromTitle));
       p.querySelector('[data-sharp]')?.addEventListener('input', (e) => { s.set('sharpness', parseFloat(e.target.value)); p.querySelector('[data-sharpv]').textContent = Math.round(s.sharpness * 100) + '%'; });
       p.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
         const k = b.dataset.k; let v = b.dataset.v;
