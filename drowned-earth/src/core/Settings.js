@@ -80,6 +80,8 @@ export class Settings {
     // mature content: decided at the first-launch age gate; null = not asked yet
     this.ageConfirmed = stored.ageConfirmed ?? null;
     this.mature = stored.mature ?? false;
+    // living-NPC simulation: full (visible incidents, conversations) or light (abstract incidents) — Phone defaults to light
+    this.npcSim = stored.npcSim ?? (this.quality === 'low' ? 'light' : 'full');
   }
   get q() { return PRESETS[this.quality]; }
   get label() { return PRESETS[this.quality].label + (this.auto ? ' (auto)' : ''); }
@@ -91,7 +93,7 @@ export class Settings {
       localStorage.setItem(KEY, JSON.stringify({
         quality: this.auto ? 'auto' : this.quality, volume: this.volume, invertY: this.invertY,
         lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
-        reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur, ageConfirmed: this.ageConfirmed, mature: this.mature,
+        reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur, ageConfirmed: this.ageConfirmed, mature: this.mature, npcSim: this.npcSim,
       }));
     } catch { /* storage may be unavailable */ }
   }

@@ -133,7 +133,7 @@ export class Society {
     if (sid === 'drunk_dive') a.drunk = Math.max(a.drunk, 0.8);
     const npc = this.npcOf(a.id); if (npc) { npc.override = { from: 0, to: 24, do: 'away' }; npc.root.visible = false; }
     const route = sc.route.map(([x, y, z]) => new THREE.Vector3(cr.home.x + x, cr.home.y + y, cr.home.z + z));
-    const near = nearPlayer || ctx.player.position.distanceTo(cr.home) < 160;
+    const near = nearPlayer || (ctx.player.position.distanceTo(cr.home) < 160 && ctx.settings.npcSim !== 'light' && this.actors.length < 2);
     this.log(`${a.name} heads out (${sid}). ${near ? 'Player nearby: simulated.' : 'Far: resolved abstractly.'}`);
     if (near) { const actor = new Actor(this, a, sc, route, cr); this.actors.push(actor); if (ctx.player.position.distanceTo(cr.home) < 90) ctx.ui.subtitle(sc.go.replace('{name}', a.name), 5, 'speech'); return actor; }
     // abstract: personality decides the odds
@@ -240,7 +240,7 @@ export class Society {
   chatter(dt) {
     this.chatT = (this.chatT ?? 8) - dt;
     if (this.chatT > 0 || this.ctx.ui.panel) return;
-    this.chatT = 9 + Math.random() * 10;
+    this.chatT = (9 + Math.random() * 10) * (this.ctx.settings.npcSim === 'light' ? 2.5 : 1);
     const com = this.community; if (!com) return;
     const pp = this.ctx.player.position;
     const near = com.npcs.filter((n) => n.root.visible && this.agents.get(n.def.id) && !this.agents.get(n.def.id).dead && n.worldPos(_v).distanceTo(pp) < 14);

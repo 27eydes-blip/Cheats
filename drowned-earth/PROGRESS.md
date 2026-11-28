@@ -97,6 +97,14 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 - Age gate + Mature toggle. "Gilded Gill" appears nowhere in the codebase; the Club's nickname is "the Gill".
 - Honest limits: the Club's sea view is a painted window shader; raid guests are counted through the tunnel rather than individually animated; heists are stage-based objectives, not scripted cinematics; boat chases use the existing physics plus ramps and boost.
 
+## L. Living NPCs
+- Personality model (10 trait sliders, seeded where not authored), jobs, bunks, friends/rivals/partners/family, habits, fears, wants, secrets, speech styles for 20 Portage residents (9 new). Needs and moods drive the routine through NPC overrides; storms, hunger, injury and grief bend it.
+- Risk decisions with an incident budget; NPCs are prey for creatures (Creature perceives actors with the same senses as the player); 3 system-driven scenarios (Siltwolf roof, Net-Weaver dive, Tide Crab nest — the Tide Crab is now a real creature). Player interventions: warn, distract (existing tools), rescue.
+- Outcomes, memory, learning (caution up, or down if proud), injuries with recovery, death → grief, funeral, replacement, rumours, reputation; dialogue lines from memory in each speech style; NPC-to-NPC chatter.
+- LOD: visible actors only near the player and capped at 2; abstract resolution elsewhere; NPC sim quality toggle (Light on Phone).
+- Headless test (`scripts/people-test.mjs`): wolf → killed (grief for friends), Net-Weaver → killed, crab → escaped with a scare. After that run, territorial creatures were changed to usually break off once the intruder is down.
+- Stubbed in data: Greentide and Rusthold residents' personalities; NPC excursions between rafts (bar visits) are not walked, only scheduled.
+
 ## Verification (final run)
 - `npm run test:shots` — 12 scripted views (title dawn, dawn, midday, dusk festival, fog patrol, Dark Shelf dive, Portage from the Crow, Ward 9 basement, Beacon at night, midnight storm, phone 390×780 on low quality, third-person dusk): **0 console errors**. Images in `screenshots/`.
 - `npm run test:smoke` — drives the story loop end to end (tie-up, loot, craft, logs, swim/dive, radio, docking at the red lamp, dialogue, trade, workbench, patrol inspection, Standing step, Listener hunt, journal + photo, life-sim ageing, sleep, save/load, the Keeper's decoding, storm, finale): **passes, 0 errors**.

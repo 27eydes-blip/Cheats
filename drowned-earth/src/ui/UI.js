@@ -352,6 +352,7 @@ export class UI {
       ${row('One-handed touch layout', 'oneHand', [['true', 'On'], ['false', 'Off']])}
       ${row('Film grain & lens effects', 'lensFx', [['true', 'On'], ['false', 'Off']])}
       ${row('Motion blur', 'motionBlur', [['false', 'Off'], ['true', 'On']])}
+      ${row('NPC life simulation', 'npcSim', [['full', 'Full — incidents play out near you'], ['light', 'Light — resolved off-screen (Phone)']])}
       ${s.ageConfirmed ? row('Mature content (18+: alcohol, gambling, violence, brief artistic nudity)', 'mature', [['false', 'Off — clean versions'], ['true', 'On']]) : '<h3>Mature content</h3><div class="sub">Off. Only available after confirming you are 18 or older at the first-launch gate.</div>'}
       <h3>Sharpness <span class="dim" data-sharpv>${Math.round(s.sharpness * 100)}%</span></h3><input type="range" min="0" max="1" step="0.05" value="${s.sharpness}" data-sharp style="width:240px;pointer-events:auto">${s.q.postPipeline ? '' : '<div class="sub">Sharpen and motion blur need Standard or Ultra quality.</div>'}
       ${row('Music', 'music', [['1', 'On'], ['0.5', 'Quiet'], ['0', 'Off']])}
