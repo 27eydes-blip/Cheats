@@ -43,6 +43,7 @@ uniform vec3 uScatter; uniform vec3 uDeep; uniform float uWind; uniform vec2 uWi
 uniform vec4 uRip[${MAX_RIPPLES}]; uniform float uRipStr[${MAX_RIPPLES}];
 uniform float uUnder; uniform vec3 uUnderColor; uniform float uGlow; uniform vec3 uGlowPos;
 uniform vec3 uLightPos[4]; uniform vec3 uLightCol[4];
+uniform vec4 uHullA; uniform vec4 uHullB; // boat cutout: (x, z, fwd.x, fwd.z), (half length, half beam, gunwale y, on)
 varying vec3 vW; varying vec3 vN; varying float vCrest; varying float vDist;
 #include <fog_pars_fragment>
 
@@ -89,6 +90,13 @@ float rainRings(vec2 p) {
 }
 
 void main() {
+  // no water inside the boat's hull (its floor sits below the waterline, like a real skiff)
+  if (uHullB.w > 0.5 && uUnder < 0.5) {
+    vec2 d = vW.xz - uHullA.xy;
+    float a = dot(d, uHullA.zw) / uHullB.x, b = dot(d, vec2(-uHullA.w, uHullA.z)) / uHullB.y;
+    float taper = a > 0.0 ? 1.0 - a * a * 0.85 : 1.0;   // the bow narrows
+    if (abs(a) < 1.0 && abs(b) < taper && vW.y < uHullB.z) discard;
+  }
   vec3 V = normalize(cameraPosition - vW);
   float detailFade = 1.0 - smoothstep(30.0, 400.0, vDist);
   vec2 wind = uWindDir * uTime * (0.25 + uWind * 0.6);
@@ -224,6 +232,7 @@ export class Water {
       uUnder: { value: 0 }, uUnderColor: { value: new THREE.Color(0.04, 0.16, 0.16) },
       uGlowPos: { value: new THREE.Vector3() },
       uFadeNear: { value: 250 }, uFadeFar: { value: 900 },
+      uHullA: { value: new THREE.Vector4() }, uHullB: { value: new THREE.Vector4() },
       uLightPos: { value: Array.from({ length: 4 }, () => new THREE.Vector3(0, -1000, 0)) },
       uLightCol: { value: Array.from({ length: 4 }, () => new THREE.Color(0, 0, 0)) },
     });
@@ -267,6 +276,13 @@ export class Water {
     }
   }
   update(dt, camera, pipeline) {
+    // cut the water out of the boat's hull while it's afloat near the camera
+    const bt = this.ctx.boat, hb = this.uniforms.uHullB.value;
+    if (bt?.pos && bt.group?.visible !== false && camera.position.distanceTo(bt.pos) < 60) {
+      const H = bt.type?.hull || { length: 5.6, beam: 1.9, depth: 0.75 };
+      this.uniforms.uHullA.value.set(bt.pos.x, bt.pos.z, -Math.sin(bt.heading), -Math.cos(bt.heading));
+      hb.set(H.length * 0.46, H.beam * 0.44, bt.pos.y + H.depth, 1);
+    } else hb.w = 0;
     const u = this.uniforms;
     const step = 2;
     this.mesh.position.set(Math.round(camera.position.x / step) * step, 0, Math.round(camera.position.z / step) * step);
