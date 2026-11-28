@@ -22,7 +22,7 @@ export class Club {
   constructor(ctx) {
     this.ctx = ctx;
     this.d = ctx.data.club;
-    if (!this.d || ctx.params.get('club') === 'off') return;
+    if (!this.d || ctx.params.get('club') === 'off') { this.d = null; return; }
     this.state = { inside: false, entered: false, favors: {}, raidDone: false, vaultOpen: false, heard: {} };
     this.t = 0;
     const L = this.d.lighthouse, F = this.d.ferry;
@@ -42,7 +42,7 @@ export class Club {
   installDryZone() {
     const w = this.ctx.waves, orig = w.height.bind(w), z = this.dry;
     w.height = (x, zz, t) => {
-      if (x > z.min.x && x < z.max.x && zz > z.min.z && zz < z.max.z && this.camOrPlayerInside()) return z.water;
+      if (x > z.min.x && x < z.max.x && zz > z.min.z && zz < z.max.z && this.state.inside && this.camOrPlayerInside()) return z.water;
       return orig(x, zz, t);
     };
   }
@@ -347,8 +347,8 @@ export class Club {
     const nl = this.ctx.nightlife;
     const bar = { id: 'club', name: 'The long bar', drinks: ['gold_seal', 'drowned_rat', 'rum_ration', 'tea_bitter'], games: this.d.games, rowdy: 0, community: 'club', bartender: { name: 'the bartender', tree: { start: { text: 'Good evening.', options: [{ text: 'A drink.', do: 'order' }, { text: 'Is there a game tonight?', do: 'game:tide_cards' }, { text: 'Bones?', do: 'game:bones' }, { text: 'Any work for me here?', do: 'clubjob' }, { text: 'Nothing, thanks.', do: 'leave' }] } }, greets: ['Good evening.'], greetsTab: ['Good evening.'], greetsRegular: ['Good evening, again.'], intro: 'Good evening.' }, blurb: 'Brass and amber and the sea against the glass.', open: [0, 24] };
     nl.bars.club = bar;
-    const act = nl.act.bind(nl);
-    nl.act = (b, what) => { if (b.id === 'club' && what === 'clubjob') return this.clubJobs(); return act(b, what); };
+    if (!nl._clubWrapped) { nl._clubWrapped = true; const act = nl.act.bind(nl);
+    nl.act = (b, what) => { if (b.id === 'club' && what === 'clubjob') return this.clubJobs(); return act(b, what); }; }
     nl.node(bar, 'start');
   }
   clubJobs() {
@@ -356,7 +356,7 @@ export class Club {
     ui.openPanel('club', `<button class="btn close" data-close>Back</button><h2>Work at the Club</h2>${this.d.jobs.map((j, i) => `<div class="row"><div class="name">${esc(j.name)}<small>${esc(j.desc)}</small></div><button class="btn" data-j="${i}">${j.pay} scrap</button></div>`).join('')}`, (el) => {
       el.querySelectorAll('[data-j]').forEach((b) => b.addEventListener('click', () => {
         const j = this.d.jobs[+b.dataset.j]; ui.close();
-        ui.fade(1.2, () => { this.ctx.time.hour = (this.ctx.time.hour + 3) % 24; this.ctx.inventory.add('scrap', j.pay); this.ctx.events.emit('club:job', j.id); if (j.id === 'informant') this.ctx.story.setFlag('club_informant'); ui.whisper(j.id === 'bartend' ? 'Three hours in a white jacket. You learn that a Concord accountant tips in confessions.' : j.id === 'musician' ? 'You hum with the band until your chest aches. The singer squeezes your hand after the last number.' : 'A page of what you heard, folded twice, into Ondine\'s glove. She doesn\'t read it in front of you.'); });
+        ui.fade(1.2, () => { this.ctx.time.hour += 3; this.ctx.inventory.add('scrap', j.pay); this.ctx.events.emit('club:job', j.id); if (j.id === 'informant') this.ctx.story.setFlag('club_informant'); ui.whisper(j.id === 'bartend' ? 'Three hours in a white jacket. You learn that a Concord accountant tips in confessions.' : j.id === 'musician' ? 'You hum with the band until your chest aches. The singer squeezes your hand after the last number.' : 'A page of what you heard, folded twice, into Ondine\'s glove. She doesn\'t read it in front of you.'); });
       }));
     });
   }
@@ -401,16 +401,18 @@ export class Club {
     this.ctx.paused = true;
     const zone = p.querySelector('.zone'), mk = p.querySelector('.mk'), sl = p.querySelector('.sl'), frag = p.querySelector('.frag');
     const keys = (e) => { if (e.code === 'ArrowLeft') attn = Math.max(0, attn - 0.04); if (e.code === 'ArrowRight') attn = Math.min(1, attn + 0.04); sl.value = attn * 1000; };
-    addEventListener('keydown', keys);
+    addEventListener('keydown', keys); this._listenKeys = keys;
     sl.addEventListener('input', () => (attn = sl.value / 1000));
+    let last = performance.now();
     const loop = () => {
       if (!document.body.contains(mk)) { removeEventListener('keydown', keys); return; }
-      const t = (performance.now() - t0) / 1000;
+      const now = performance.now(), fdt = Math.min(0.1, (now - last) / 1000); last = now;
+      const t = (now - t0) / 1000;
       const zc = 0.5 + Math.sin(t * 0.7) * 0.3 + Math.sin(t * 1.9) * 0.08;
       zone.style.left = ((zc - 0.09) * 100) + '%'; mk.style.left = (attn * 100) + '%';
       const inZone = Math.abs(attn - zc) < 0.09;
-      hold = inZone ? hold + 1 / 60 : Math.max(0, hold - 1 / 30);
-      if (!inZone) lost += 1 / 60;
+      hold = inZone ? hold + fdt : Math.max(0, hold - fdt * 2);
+      if (!inZone) lost += fdt;
       if (hold > 2.2) { hold = 0; frag.innerHTML += `<p>“${esc(Ls.fragments[got])}”</p>`; got++; if (got >= Ls.fragments.length) return this.heard(pd, true); }
       if (lost > 14) return this.heard(pd, false);
       raf = requestAnimationFrame(loop);
@@ -420,6 +422,7 @@ export class Club {
   }
   heard(pd, ok) {
     const ui = this.ctx.ui;
+    if (this._listenKeys) { removeEventListener('keydown', this._listenKeys); this._listenKeys = null; }
     this.state.heard[pd.id] = ok;
     if (!ok) { ui.close(); ui.whisper('The band swells, a glass breaks, somebody laughs too loud. When the room settles, the booth has gone quiet and someone is looking at you.'); this.ctx.events.emit('club:noticed'); return; }
     this.ctx.story.setFlag(pd.listen.reveals);
@@ -466,7 +469,7 @@ export class Club {
     r.on = false; this.state.raidDone = true; this.dry.water = -999;
     for (const l of this.lights) l.color?.setHex(0xffa860);
     const msg = (r.saved >= r.total * 0.5 ? R.saved : R.lost).replace('{n}', r.saved).replace('{total}', r.total);
-    this.ctx.ui.fade(1.5, () => { this.exit(); this.ctx.ui.whisper(msg); });
+    this.ctx.ui.fade(1.5, () => { if (this.state.inside) this.exit(); this.ctx.ui.whisper(msg); });
     if (r.saved >= r.total * 0.5) { this.ctx.story.setFlag('ondine_owes'); this.ctx.story.setFlag('vault_code'); this.ctx.events.emit('fame', { kind: 'legend', text: 'Somebody pulled a dozen masked strangers out of a flooding hull. Nobody will say who, or where.' }); }
     this.raid = null;
   }
@@ -494,6 +497,7 @@ export class Club {
     // the curtain: dancers as silhouettes, moving slowly, elegant and clothed
     if (this.saloon.visible) this.drawCurtain();
     for (const p of this.people) p.update(dt, this.state.inside ? this.ctx.player.eye : null);
+    if (this.raid?.on && !this.state.inside) this.endRaid();   // you left by the airlock: it plays out without you
     if (this.raid?.on) {
       this.raid.t -= dt;
       this.dry.water = Math.min(this.origin.y + 3.2, this.origin.y - 1 + (1 - this.raid.t / this.d.raid.seconds) * 4.2);
@@ -518,6 +522,12 @@ export class Club {
     this.curtainTex.needsUpdate = true;
   }
   toJSON() { return this.state; }
-  load(o) { if (o) this.state = { ...this.state, ...o, inside: false, admitted: false }; }
+  load(o) {
+    if (!o) return;
+    const wasInside = o.inside;
+    this.state = { ...this.state, ...o, inside: false, admitted: false };
+    // saved inside the saloon: wake up outside the airlock with your weapons back
+    if (wasInside && this.hatchPos) setTimeout(() => { if (this.ctx.arms) this.ctx.arms.state.confiscated = false; const p = this.ctx.player; p.mode = 'swim'; p.teleport(this.hatchPos.clone().add(_v.set(1.5, 0, 0))); }, 0);
+  }
 }
 void Band; void runGame;

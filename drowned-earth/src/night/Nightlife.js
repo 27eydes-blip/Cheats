@@ -66,7 +66,12 @@ export class Nightlife {
   }
 
   // ---------------------------------------------------------------- the room
-  dress(raft, anchors) { if (!this.enabled) return; const d = dressBar(this.ctx, raft, anchors, this.bars); this.dressed.set(raft.id, d); }
+  dress(raft, anchors) {
+    if (!this.enabled) return;
+    // a rebuilt raft re-dresses its bars: drop the old band/crowd sound first, or it doubles up each visit
+    const old = this.dressed.get(raft.id); if (old) for (const id of old.emitters || []) if (id) this.ctx.audio?.removeEmitter(id);
+    const d = dressBar(this.ctx, raft, anchors, this.bars); this.dressed.set(raft.id, d);
+  }
   prompt(id) {
     const bar = this.bars[id]; if (!bar) return 'The bar';
     if (!this.isOpen(bar)) return `${bar.name} — closed (opens ${bar.open[0]}:00)`;
@@ -267,7 +272,7 @@ export class Nightlife {
     if (J.hours) { // a shift: time passes, you earn, you overhear things
       const pay = J.pay[0] + Math.floor(Math.random() * (J.pay[1] - J.pay[0] + 1));
       this.ctx.ui.close();
-      this.ctx.ui.fade(1.2, () => { this.ctx.time.hour = (this.ctx.time.hour + J.hours) % 24; this.ctx.inventory.add('scrap', pay); this.bs(bar.id).favour += 2; this.rumour(bar); this.ctx.ui.whisper(`Four hours of pouring. ${pay} scrap, sore feet, and you heard something.`); });
+      this.ctx.ui.fade(1.2, () => { this.ctx.time.hour += J.hours; this.ctx.inventory.add('scrap', pay); this.bs(bar.id).favour += 2; this.rumour(bar); this.ctx.ui.whisper(`Four hours of pouring. ${pay} scrap, sore feet, and you heard something.`); });
       return;
     }
     if (this.state.job) return this.say(bar, 'Finish what you\'re carrying first. Nobody trusts a courier with two masters.');
@@ -292,7 +297,7 @@ export class Nightlife {
   cityName(id) { return { portage: 'Portage', greentide_barge: 'Greentide', rusthold_tender: 'Rusthold', vigil: 'the Vigil', lowlight: 'Lowlight' }[id] || id; }
 
   toJSON() { return this.state; }
-  load(o) { if (o) this.state = { ...this.state, ...o }; }
+  load(o) { if (o) this.state = { ...this.state, ...o, hangover: false }; }
 }
 export { generatePerson };
 void THREE;

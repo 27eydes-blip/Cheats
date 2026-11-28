@@ -67,7 +67,7 @@ function menuTexture(bar, drinks) {
 
 export function dressBar(ctx, raft, anchors, bars) {
   geos();
-  const out = { anchors, signs: [], bulbs: [], hazes: [], lights: [], world: (a) => _v.set(a.x, a.y + 1.5, a.z).applyMatrix4(raft.root.matrixWorld).clone() };
+  const out = { anchors, emitters: [], signs: [], bulbs: [], hazes: [], lights: [], world: (a) => _v.set(a.x, a.y + 1.5, a.z).applyMatrix4(raft.root.matrixWorld).clone() };
   const glassM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.06, metalness: 0, transparent: true, opacity: 0.82, depthWrite: false });
   const mugM = new THREE.MeshStandardMaterial({ color: 0x8a7a66, roughness: 0.5, metalness: 0.3 });
   for (const a of anchors) {
@@ -143,9 +143,9 @@ export function dressBar(ctx, raft, anchors, bars) {
     // ---- the band and the crowd, as positional sound
     const posFn = (v) => v.set(a.stage.x, a.y + 1.2, a.stage.z).applyMatrix4(raft.root.matrixWorld);
     const nl = ctx.nightlife;
-    if (!bar.dry) ctx.audio?.addEmitter({ type: 'band', style: bar.band, seed: a.id.length * 7, pos: posFn, gainFn: () => (nl.isOpen(bar) ? 0.35 + nl.crowd(bar) * 0.65 : 0) });
-    else ctx.audio?.addEmitter({ type: 'band', style: 'hymn', seed: 3, pos: posFn, gainFn: () => (nl.isOpen(bar) ? 0.4 : 0) });
-    ctx.audio?.addEmitter({ type: 'barCrowd', pos: (v) => v.set(a.x, a.y + 1.4, a.z + 1).applyMatrix4(raft.root.matrixWorld), gainFn: () => nl.crowd(bar) * (bar.dry ? 0.25 : 1) });
+    if (!bar.dry) out.emitters.push(ctx.audio?.addEmitter({ type: 'band', style: bar.band, seed: a.id.length * 7, pos: posFn, gainFn: () => (nl.isOpen(bar) ? 0.35 + nl.crowd(bar) * 0.65 : 0) }));
+    else out.emitters.push(ctx.audio?.addEmitter({ type: 'band', style: 'hymn', seed: 3, pos: posFn, gainFn: () => (nl.isOpen(bar) ? 0.4 : 0) }));
+    out.emitters.push(ctx.audio?.addEmitter({ type: 'barCrowd', pos: (v) => v.set(a.x, a.y + 1.4, a.z + 1).applyMatrix4(raft.root.matrixWorld), gainFn: () => nl.crowd(bar) * (bar.dry ? 0.25 : 1) }));
   }
   return out;
 }

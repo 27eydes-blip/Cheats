@@ -65,7 +65,7 @@ export class Society {
     const ctx = this.ctx, h = ctx.time.hour, day = ctx.time.day;
     const storm = ctx.weather.cur.wind > 0.7 || ctx.weather.cur.rain > 0.6;
     for (const a of this.agents.values()) {
-      if (a.dead) continue;
+      if (a.dead) { const dn = this.npcOf(a.id); if (dn && dn.override?.do !== 'away') { dn.override = { from: 0, to: 24, do: 'away' }; dn.root.visible = false; } continue; }
       const n = a.needs;
       n.hunger = Math.min(1, n.hunger + 0.012); n.fatigue = Math.min(1, n.fatigue + (h > 21 || h < 5 ? 0.02 : 0.008)); n.social = Math.min(1, n.social + 0.01 * (0.5 + a.traits.talk));
       n.safety = Math.max(0, n.safety - 0.01) + (storm ? 0.02 : 0);
@@ -100,6 +100,7 @@ export class Society {
     }
     a.goal = goal;
     if (npc) {
+      if (!npc._societyBound) { npc._societyBound = true; a._task = undefined; }
       const want = task ? `${task.do}:${task.pos || ''}` : '';
       if (want !== a._task) { a._task = want; npc.override = task ? { from: 0, to: 24, do: task.do, pos: task.pos || null } : null; }
       npc.speedK = a.injury ? 0.5 : a.drunk > 0.5 ? 0.7 : 1;
@@ -315,7 +316,7 @@ export class Society {
   load(o) {
     if (!o) return;
     this.state = { ...this.state, ...o.state };
-    for (const s of o.agents || []) { const a = this.agents.get(s.id); if (a) Object.assign(a, s, { excursion: null }); }
+    for (const s of o.agents || []) { const a = this.agents.get(s.id); if (a) Object.assign(a, s, { excursion: null, _task: undefined }); }
   }
 }
 
@@ -398,7 +399,8 @@ class Actor {
       case 'fight': speed = 0; this.noise = 0.5; if (cr.pos.distanceTo(this.pos) > 4 && this.reactT > 6) { this.react = 'back away'; this.reactT = 0; this.bark('Yeah. That\'s what I thought.'); } if (cr.state === 'attack' && cr.pos.distanceTo(this.pos) < 2.5 && (this.swingT = (this.swingT || 0) - dt) <= 0) { this.swingT = 1.2; cr.takeDamage(8); if (cr.health < cr.spec.health * 0.5 && cr.state === 'attack') { cr.setState('return', `driven off by ${this.name}`); this.react = 'back away'; this.bark('That\'s right! Go on!'); } } break;
       case 'stumble': target = this.pos.clone().add(new THREE.Vector3(Math.sin(this.t * 1.3) * 3, 0, Math.cos(this.t) * 3)).add(target.clone().sub(this.pos).setLength(1)); speed *= 0.5; break;
       case 'down': speed = 0; this.noise = 0.3; this.downT += dt;
-        if (this.sc.medium === 'water') this.pos.y = Math.min(cr.home.y + 5.6, this.pos.y + dt * 0.7); // a limp body floats up out of the threads if (this.downT > 12 && Math.random() < dt * 0.15) { this.rescuedBy = 'a friend'; this.downed = false; this.safe = true; this.finish('injured'); } break;
+        if (this.sc.medium === 'water') this.pos.y = Math.min(cr.home.y + 5.6, this.pos.y + dt * 0.7); // a limp body floats up out of the threads
+        if (this.downT > 12 && Math.random() < dt * 0.15) { this.rescuedBy = 'a friend'; this.downed = false; this.safe = true; this.finish('injured'); } break;
       default: break;
     }
     if (speed > 0) {
