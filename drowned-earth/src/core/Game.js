@@ -57,6 +57,8 @@ import { Life } from '../life/Life.js';
 import { LifeUI } from '../life/LifeUI.js';
 import { Pad } from '../input/Pad.js';
 import { LightPool } from '../render/LightPool.js';
+import { MenuBackdrop } from '../ui/MenuBackdrop.js';
+import { PerfOverlay } from '../ui/PerfOverlay.js';
 import { Scenarios } from '../life/Scenarios.js';
 import { Deep } from '../deep/Deep.js';
 import { Senses } from '../creatures/Senses.js';
@@ -114,9 +116,35 @@ export class Game {
     ctx.farScene = new THREE.Scene();
     ctx.camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.12, 2600);
     ctx.farCamera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 20, 60000);
-    ctx.pipeline = new Pipeline(renderer, ctx.settings);
     ctx.input = new Input(renderer.domElement, ctx.events);
+    this.frame = 0; this.running = true; this.fps = 60; this.fpsAcc = 0; this.fpsN = 0;
+    this.clock = new THREE.Clock();
+    window.__game = this; window.__THREE = THREE;
+    this.perf = new PerfOverlay();
+    addEventListener('resize', () => this.onResize());
+    this.onTitleChoice = (choice) => this.chooseFromMenu(choice);
+    // a quality step-down in play saves and reloads straight back into the game
+    let auto = null; try { auto = sessionStorage.getItem('de.autocontinue'); sessionStorage.removeItem('de.autocontinue'); } catch { /* no storage */ }
+    renderer.setAnimationLoop(() => this.loop());
+    if (auto || ['skipintro', 'life', 'viewer'].some((k) => ctx.params.has(k))) {
+      await this.loadWorld();
+      if (auto) this.chooseFromMenu('continue');
+      return;
+    }
+    // the menu: no world yet. Just the UI, the save check, controller navigation and a cheap backdrop.
+    ctx.ui = new UI(ctx); ctx.save = new SaveSystem(ctx); ctx.pad = new Pad(ctx);
+    ageGate(ctx.settings, ctx.params); this.gated = true;
+    ctx.ui.applyAccessibility();
+    ctx.ui.titleScreen(ctx.save.has(), this.onTitleChoice);
+    window.__game = this;
+    ctx.events.emit('menu');
+  }
 
+  // build the whole world (assets, district, people, creatures, shaders) behind the loading bar
+  async loadWorld() {
+    const ctx = this.ctx, renderer = ctx.renderer;
+    this.loadingWorld = true;
+    ctx.pipeline = new Pipeline(renderer, ctx.settings);
     const loading = showLoading(document.getElementById('ui'));
     ctx.assets = new AssetLibrary(renderer, ctx.settings);
     if (!ctx.params.has('noassets')) await ctx.assets.load((p, what) => loading.set(p, what));
@@ -130,7 +158,7 @@ export class Game {
       const v = new Viewer(ctx);
       loading.done();
       const clock = new THREE.Clock();
-      window.__viewer = v; window.__game = this; this.frame = 0; this.running = true; this.fps = 60;
+      window.__viewer = v; window.__game = this; this.frame = 0; this.running = true; this.fps = 60; this.loadingWorld = false;
       renderer.setAnimationLoop(() => { v.update(Math.min(0.05, clock.getDelta())); this.frame++; });
       addEventListener('resize', () => ctx.pipeline.resize());
       return;
@@ -158,7 +186,7 @@ export class Game {
     ctx.chunks.registerGenerator('sunken_ruins', ruinsChunk);
     ctx.chunks.registerGenerator('open_ocean', oceanChunk);
     ctx.audio = new AudioEngine(this);
-    ctx.ui = new UI(ctx);
+    ctx.ui = ctx.ui || new UI(ctx);
     ctx.fx = new Effects(ctx);
     ctx.inventory = new Inventory(ctx);
     ctx.boatStorage = new Inventory(ctx, 80);
@@ -192,7 +220,7 @@ export class Game {
     ctx.crews = new Crews(ctx);
     ctx.deep = new DeepShapes(ctx);
     ctx.abyss = new Deep(ctx);
-    ctx.save = new SaveSystem(ctx);
+    ctx.save = ctx.save || new SaveSystem(ctx);
     ctx.touch = new TouchControls(ctx);
     ctx.journal = new Journal(ctx);
     ctx.photo = new Photo(ctx);
@@ -217,8 +245,8 @@ export class Game {
     ctx.society = new Society(ctx);
     await stage(0.99, 'Sharpening scrap');
     ctx.arms = new Arms(ctx);
-    ctx.pad = new Pad(ctx);
-    ageGate(ctx.settings, ctx.params);
+    ctx.pad = ctx.pad || new Pad(ctx); ctx.pad.attachArms();
+    if (!this.gated) ageGate(ctx.settings, ctx.params);
     ctx.ui.applyAccessibility();
     this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms];
     this.ambientSystems = [ctx.fx, ctx.birds, ctx.fish, ctx.highmark, ctx.abyss];
@@ -247,39 +275,71 @@ export class Game {
     } catch { /* compile on first use instead */ }
     await stage(1, 'Almost there');
     ctx.paused = ctx.params.has('pause');
-    this.onTitleChoice = (choice) => {
-      if (choice === 'continue') { if (ctx.save.load()) this.enterStory(true); else this.enterStory(false); }
-      else if (choice === 'story') this.enterStory(false);
-      else if (choice === 'life') this.enterLife();
-    };
-    if (ctx.params.has('skipintro')) { this.setMode('play'); ctx.story.checkObjectives(); }
-    else if (ctx.params.has('life')) this.enterLife();
-    else ctx.ui.titleScreen(ctx.save.has(), this.onTitleChoice);
     const unlock = () => ctx.audio.start();
     addEventListener('pointerdown', unlock, { once: true });
     addEventListener('keydown', unlock, { once: true });
-    addEventListener('resize', () => this.onResize());
+    if (navigator.userActivation?.hasBeenActive) unlock();   // the menu click already counts as a gesture
+    this.worldLoaded = true; this.loadingWorld = false;
     this.onResize();
-    this.clock = new THREE.Clock();
-    this.frame = 0;
-    this.running = true;
-    this.fps = 60; this.fpsAcc = 0; this.fpsN = 0;
-    renderer.setAnimationLoop(() => this.loop());
     loading.done();
-    window.__game = this;
-    window.__THREE = THREE;
+    if (ctx.params.has('skipintro')) { this.setMode('play'); ctx.story.checkObjectives(); }
+    else if (ctx.params.has('life')) this.enterLife();
     ctx.events.emit('booted');
+  }
+
+  // a menu choice: build the world first (once), then go
+  async chooseFromMenu(choice) {
+    const ctx = this.ctx;
+    if (!this.worldLoaded) { if (this.loadingWorld) return; await this.loadWorld(); }
+    if (choice === 'continue') { if (ctx.save.load()) this.enterStory(true); else this.enterStory(false); }
+    else if (choice === 'story') this.enterStory(false);
+    else if (choice === 'life') this.enterLife();
+  }
+
+  // ---------------------------------------------------------------- the menu
+  basePixelRatio() { return Math.min(devicePixelRatio || 1, this.ctx.settings.q.pixelRatio || 1); }
+  menuFrame() {
+    const ctx = this.ctx, now = performance.now();
+    const dt = Math.min(0.25, (now - (this.menuLast || now)) / 1000); this.menuLast = now;
+    this.menuAcc = (this.menuAcc || 0) + dt;
+    if (this.menuAcc < 1 / 30 - 0.003) return;            // capped at 30 fps
+    const fdt = this.menuAcc; this.menuAcc = 0;
+    if (!this.backdrop) { this.backdrop = new MenuBackdrop(ctx.renderer); this.backdrop.enter(this.basePixelRatio()); }
+    if (!this.inMenu) { this.inMenu = true; this.backdrop.enter(this.basePixelRatio()); this.menuSlowT = 0; }
+    ctx.input.poll();
+    const t = performance.now();
+    this.backdrop.render(fdt);
+    ctx.input.endFrame();
+    this.frame++;
+    this.perf.sample(fdt, performance.now() - t, 'menu');
+    // safe mode on the menu: if even this can't hold 25 fps for 5 s, lower the game's preset and the backdrop
+    this.menuFps = this.menuFps == null ? 1 / fdt : this.menuFps * 0.9 + (1 / fdt) * 0.1;
+    if (this.menuFps < 25) this.menuSlowT += fdt; else this.menuSlowT = 0;
+    if (this.menuSlowT > 5) {
+      this.menuSlowT = 0;
+      const s = ctx.settings, B = this.backdrop;
+      if (s.quality !== 'low') { const to = s.quality === 'high' ? 'medium' : 'low'; s.quality = to; s.auto = false; s.qualityChosen = true; s.save(); ctx.ui?.toast(`Safe mode: quality set to ${Settings.label(to)} for this computer.`); }
+      else if (B.scale > 0.35) { B.setScale(0.35); }
+      else if (!B.static) { B.static = true; }
+    }
+  }
+  leaveMenu() {
+    if (!this.inMenu) return;
+    this.inMenu = false;
+    const pl = this.ctx.pipeline;
+    if (this.worldLoaded && pl) { this.ctx.renderer.setPixelRatio(pl.basePixelRatio * pl.scale); this.onResize(); }
   }
 
   // test helper: advance the simulation n fixed steps
   step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { this.ctx.input.poll(); this.update(dt); this.ctx.input.endFrame(); } }
 
-  setMode(m) { this.ctx.mode = m; document.body.classList.toggle('mode-play', m === 'play'); }
+  setMode(m) { this.ctx.mode = m; document.body.classList.toggle('mode-play', m === 'play'); if (m !== 'title') this.leaveMenu(); }
   toTitle() {
     const ctx = this.ctx;
     this.setMode('title');
     ctx.input.enabled = false;
     ctx.paused = false;
+    if (!this.worldLoaded) return;
     ctx.time.hour = 6.05; ctx.time.frozen = true; ctx.time.update(0);
     ctx.weather.set('mist', true);
   }
@@ -366,6 +426,7 @@ export class Game {
   }
 
   onResize() {
+    if (this.inMenu || !this.worldLoaded) { this.backdrop?.resize(); if (!this.worldLoaded) return; }
     const { camera, farCamera, pipeline } = this.ctx;
     camera.aspect = farCamera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix(); farCamera.updateProjectionMatrix();
@@ -374,6 +435,9 @@ export class Game {
 
   loop() {
     const ctx = this.ctx;
+    if (this.loadingWorld) return;                                     // the loading bar is up; leave the CPU to the build
+    if (!this.worldLoaded || ctx.mode === 'title') { this.menuFrame(); return; }   // the menu never simulates the world
+    const frameStart = performance.now();
     let dt = Math.min(this.clock.getDelta(), 0.1);
     if (this.fixedDt) dt = this.fixedDt;
     this.fpsAcc += dt; this.fpsN++;
@@ -388,8 +452,6 @@ export class Game {
       return;
     }
     this.lifeDrawn = false;
-    // the title fly-over is scenery: on the light preset, 20 fps is plenty
-    if (ctx.mode === 'title' && ctx.settings.quality === 'low') { this.titleAcc = (this.titleAcc || 0) + dt; if (this.titleAcc < 0.05) { this.frame++; return; } dt = Math.min(0.1, this.titleAcc); this.titleAcc = 0; }
     ctx.input.poll();
     if (!paused || ctx.mode !== 'play') this.update(dt);
     else if (ctx.photoMode) { ctx.input.poll(); ctx.player.look(ctx.input.look.x, ctx.input.look.y); ctx.rig.update(0); }
@@ -398,6 +460,7 @@ export class Game {
     this.render(dt);
     ctx.input.endFrame();
     this.frame++;
+    this.perf.sample(dt, performance.now() - frameStart, ctx.mode);
   }
 
   // Dynamic resolution: hold the preset's frame-rate target by scaling the
@@ -413,13 +476,15 @@ export class Game {
     const target = 1000 / (q.targetFps || 60);
     const p = ctx.pipeline;
     if (this.frameEma > target * 1.18 && p.scale > (q.minScale || 0.6)) p.setScale(Math.max(q.minScale || 0.6, p.scale - 0.1));
-    // still too slow at the lowest resolution: on Auto, step the preset down (remembered for next time)
+    // safe mode: still under 25 fps at the lowest resolution for ~5 s → drop a preset, save, and come straight back
     const s = ctx.settings;
-    if (s.auto && s.quality !== 'low' && p.scale <= (q.minScale || 0.6) + 0.01 && this.frameEma > 1000 / 24) {
+    if (s.quality !== 'low' && ctx.mode === 'play' && p.scale <= (q.minScale || 0.6) + 0.01 && this.frameEma > 1000 / 25) {
       this.slowT = (this.slowT || 0) + 1.5;
-      if (this.slowT >= 6) {
-        s.autoCap = s.quality === 'high' ? 'medium' : 'low'; s.save();
-        ctx.ui.toast(`Lowering quality to ${Settings.label(s.autoCap)} for this computer…`);
+      if (this.slowT >= 4.5) {
+        const to = s.quality === 'high' ? 'medium' : 'low';
+        s.quality = to; s.auto = false; s.qualityChosen = true; s.save();
+        ctx.ui.toast(`Safe mode: lowering quality to ${Settings.label(to)}…`);
+        try { ctx.save.save('auto'); sessionStorage.setItem('de.autocontinue', '1'); } catch { /* reload to the menu instead */ }
         setTimeout(() => location.reload(), 1200); this.slowT = -999;
       }
     } else if (this.slowT > 0) this.slowT = 0;

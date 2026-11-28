@@ -60,7 +60,9 @@ export class Settings {
     const params = new URLSearchParams(location.search);
     const det = detectPreset(isMobile);
     this.gpu = det.gpu;
-    let q = params.get('quality') || stored.quality || 'auto';
+    // every new player starts on the Light preset; a preset picked in Options (or set by safe mode) is remembered
+    this.qualityChosen = !!stored.qualityChosen;
+    let q = params.get('quality') || (this.qualityChosen ? stored.quality : null) || 'low';
     q = ALIAS[q] || q;
     this.auto = q === 'auto';
     this.autoCap = stored.autoCap ?? null; // set when auto quality had to step down on this machine
@@ -93,7 +95,7 @@ export class Settings {
   get q() { return PRESETS[this.quality]; }
   get label() { return PRESETS[this.quality].label + (this.auto ? ' (auto)' : ''); }
   static presets() { return Object.keys(PRESETS); }
-  set(key, value) { if (key === 'quality') this.auto = value === 'auto'; this[key] = value; this.save(); }
+  set(key, value) { if (key === 'quality') { this.auto = value === 'auto'; this.qualityChosen = true; } this[key] = value; this.save(); }
   static label(q) { return PRESETS[q]?.label || q; }
   save() {
     try {
@@ -101,7 +103,7 @@ export class Settings {
         quality: this.auto ? 'auto' : this.quality, volume: this.volume, invertY: this.invertY,
         lookSensitivity: this.lookSensitivity, subtitles: this.subtitles, difficulty: this.difficulty, captions: this.captions, textSize: this.textSize,
         reduceMotion: this.reduceMotion, colorSafe: this.colorSafe, highContrast: this.highContrast, oneHand: this.oneHand, lensFx: this.lensFx, music: this.music, sharpness: this.sharpness, motionBlur: this.motionBlur, ageConfirmed: this.ageConfirmed, mature: this.mature, npcSim: this.npcSim,
-      pad: this.pad, autoCap: this.autoCap,
+      pad: this.pad, autoCap: this.autoCap, qualityChosen: this.qualityChosen,
       }));
     } catch { /* storage may be unavailable */ }
   }

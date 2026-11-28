@@ -61,7 +61,7 @@ export class Pad {
     addEventListener('touchstart', () => this.setDevice('touch'), { capture: true, passive: true });
     addEventListener('gamepadconnected', () => { this.prev = []; });
     // keep the weapon system's hook pointing here
-    if (ctx.arms) ctx.arms.pad = { setTrigger: () => {}, rumble: (ms) => this.rumble(ms > 50 ? 0.7 : 0.4, 0.5, ms) };
+    this.attachArms();
     // haptic events (only with extras on)
     const ev = ctx.events;
     ev.on('footstep', (e) => { if (this.fxOn() && ctx.player.mode !== 'boat') this.pulse(0, { metal: 0.35, wood: 0.22, water: 0.12, concrete: 0.28 }[e?.surface] ?? 0.18, 45); });
@@ -71,6 +71,9 @@ export class Pad {
     ev.on('weapon:jam', () => this.rumble(0, 0.5, 60));
     if (this.opt.extras) setTimeout(() => this.ds.restore(), 0);
   }
+
+  // the weapon system exists only once the world has loaded
+  attachArms() { const ctx = this.ctx; if (ctx.arms) ctx.arms.pad = { setTrigger: () => {}, rumble: (ms) => this.rumble(ms > 50 ? 0.7 : 0.4, 0.5, ms) }; }
 
   // ------------------------------------------------------------ settings
   save() {
