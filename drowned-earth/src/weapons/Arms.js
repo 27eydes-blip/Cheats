@@ -395,7 +395,7 @@ export class Arms {
 
   // ---------------------------------------------------------------- HUD
   buildHud() {
-    const el = document.createElement('div');
+    const el = document.createElement('div'); el.className = 'weapon-hud';
     el.style.cssText = 'position:fixed;right:18px;bottom:64px;z-index:20;pointer-events:none;font:13px ui-monospace,monospace;color:#efe6d4;text-shadow:0 1px 3px #000;text-align:right';
     document.body.appendChild(el); this.hudEl = el;
   }

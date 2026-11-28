@@ -43,6 +43,7 @@ body.pad-mode .padbar.on{opacity:.92}
 .padbar span{white-space:nowrap}
 .wwheel{position:fixed;left:50%;top:50%;width:360px;height:360px;margin:-180px 0 0 -180px;z-index:8;pointer-events:none;display:none}
 .wwheel.on{display:block}
+body.wheel-open .padbar,body.wheel-open .weapon-hud{opacity:0!important}
 .wwheel .seg{position:absolute;left:50%;top:50%;width:118px;margin-left:-59px;padding:8px 6px;text-align:center;font:13px/1.25 Georgia,serif;color:#e8e2d4;background:rgba(10,14,16,.78);border:1px solid rgba(232,226,212,.25);border-radius:6px;transition:transform .12s,background .12s}
 .wwheel .seg small{display:block;opacity:.65;font:11px sans-serif;margin-top:2px}
 .wwheel .seg.sel{background:rgba(240,199,90,.9);color:#111;transform:scale(1.08)}

@@ -294,6 +294,7 @@ export class Pad {
       return `<div class="seg" data-k="${k}" style="--t:translate(${Math.sin(a) * R}px,${-Math.cos(a) * R - 18}px)">${it.name}<small>${it.sub}</small></div>`;
     }).join('');
     this.wheelEl.classList.add('on');
+    document.body.classList.add('wheel-open');
     this.paintWheel();
   }
   wheelSelect(rx, ry, lx, ly) {
@@ -309,6 +310,7 @@ export class Pad {
   closeWheel(apply) {
     if (!this.wheel.open) return;
     this.wheel.open = false; this.wheelEl.classList.remove('on');
+    document.body.classList.remove('wheel-open');
     const A = this.ctx.arms, it = this.wheel.items[this.wheel.sel];
     if (!apply || !A || !it) return;
     if (it.i < 0) { if (A.state.drawn >= 0) { this.lastDrawn = A.state.drawn; A.holster(); } }
