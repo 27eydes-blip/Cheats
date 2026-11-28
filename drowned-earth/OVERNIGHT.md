@@ -272,3 +272,30 @@ Route perf, unchanged within noise (the NPC work adds no draw calls away from pe
 | cask | 573 | 709k |
 
 Shader compiles: 0/5/0/0/0.
+
+## Phase 5: final check
+
+**Full gate (n5): all pass.**
+- build, validate
+- boat 7, weapons 8, controller 7, portage 5, raft-collision 7
+- npc-traits 9, npc-life 9
+- people-test, life-smoke, smoke
+- gesture-shots 17
+
+The creature test's `raid` scenario still fails exactly as it did before this pass (a known gap, recorded
+last night).
+
+Route perf:
+
+| Stop | Draw calls | Triangles |
+|---|---|---|
+| standing | 581 | 625k |
+| walking | 380 | 552k |
+| boat | 662 | 696k |
+| raft city | 585 | 558k |
+| cask | 566 | 708k |
+
+All within 2 % of the start of the pass.
+
+**Deploy.** The final build is deployed (3 changed files) and boot-checked headless on the live site: new
+bundle, game running, no console errors, no failed requests. See NPC_MORNING_REPORT.md.
