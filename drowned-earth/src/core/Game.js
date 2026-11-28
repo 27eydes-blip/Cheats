@@ -56,6 +56,7 @@ import { DeepShapes } from '../ai/DeepShapes.js';
 import { Life } from '../life/Life.js';
 import { LifeUI } from '../life/LifeUI.js';
 import { Pad } from '../input/Pad.js';
+import { LightPool } from '../render/LightPool.js';
 import { Scenarios } from '../life/Scenarios.js';
 import { Deep } from '../deep/Deep.js';
 import { Senses } from '../creatures/Senses.js';
@@ -231,8 +232,19 @@ export class Game {
     ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
     // compile shaders without blocking the page (uses parallel compile where the driver allows);
     // a weak GPU otherwise freezes the tab on the first frames and the browser calls it unresponsive
+    // a fixed number of real point lights for the whole game, so shaders never rebuild when lights come and go
+    ctx.lightPool = new LightPool(ctx, Math.max(4, ctx.settings.q.pointLights || 4));
+    ctx.lightPool.refresh(); ctx.lightPool.update(0);
+    this.systems.push(ctx.lightPool); this.ambientSystems.push(ctx.lightPool);
     await stage(0.998, 'Preparing shaders');
-    try { await Promise.race([renderer.compileAsync(ctx.scene, ctx.camera), new Promise((r) => setTimeout(r, 45000))]); } catch { /* compile on first use instead */ }
+    // warm every material up front, hidden creatures and props included, for the target frames actually render into
+    try {
+      const hidden = []; ctx.scene.traverse((o) => { if (!o.visible && !o.isLight && o !== ctx.scene) { hidden.push(o); o.visible = true; } });
+      const prevT = renderer.getRenderTarget(), tgt = ctx.settings.q.postPipeline ? ctx.pipeline?.target : null;
+      let p;
+      try { if (tgt) renderer.setRenderTarget(tgt); p = renderer.compileAsync(ctx.scene, ctx.camera); } finally { renderer.setRenderTarget(prevT); for (const o of hidden) o.visible = false; }
+      await Promise.race([p, new Promise((r) => setTimeout(r, 45000))]);
+    } catch { /* compile on first use instead */ }
     await stage(1, 'Almost there');
     ctx.paused = ctx.params.has('pause');
     this.onTitleChoice = (choice) => {

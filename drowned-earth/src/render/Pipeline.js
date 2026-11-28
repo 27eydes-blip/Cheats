@@ -575,7 +575,7 @@ export class Pipeline {
       this.pass(this.composeMat, this.targetB);
       camera.layers.disableAll(); camera.layers.enable(LAYER_WATER); camera.layers.enable(LAYER_FX);
       r.render(scene, camera);
-      camera.layers.enableAll();
+      camera.layers.enableAll(); camera.layers.disable(31); // 31 = virtual lights (see LightPool)
       // --- volumetric sunlight through the shadow map (half res)
       const sun = world.atmosphere?.sun;
       const u = this.uniforms;
@@ -633,7 +633,7 @@ export class Pipeline {
       r.clear(true, true, true);
       if (under) r.setClearColor(0x000000, 1); else r.render(farScene, farCamera);
       r.clearDepth();
-      camera.layers.enableAll();
+      camera.layers.enableAll(); camera.layers.disable(31); // 31 = virtual lights (see LightPool)
       r.render(scene, camera);
     }
   }
