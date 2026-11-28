@@ -51,7 +51,7 @@ await step('back to Portage', (ctx) => { ctx.boat.pos.set(300, 0, 300); ctx.play
 await step('patrol chase + inspection', (ctx) => { ctx.time.hour = 22.5; const p = ctx.patrol; p.forceActive = true; p.pos.set(ctx.boat.pos.x + 10, 0, ctx.boat.pos.z); ctx.boat.vel.set(0,0,0); p.startStop(); const r = p.inspect(); ctx.ui.close(); p.endStop('clean'); return r.lines.length; }, 10);
 await step('standing step', (ctx) => { ctx.inventory.add('scrap', 10); return ctx.standing.step('drifter_tag') && ctx.standing.shown; });
 await step('deep zone + listener', (ctx) => { ctx.player.mode = 'swim'; ctx.player.teleport(new ctx.player.position.constructor(100, -30, -140)); ctx.input.held.sprint = true; return 0; }, 40);
-await step('deep state', (ctx) => { ctx.input.held.sprint = false; return ctx.abyss.zone.id + ' ' + ctx.abyss.listeners[0].state; });
+await step('deep state', (ctx) => { ctx.input.held.sprint = false; const L = ctx.creatures?.byKind('listener')[0] || ctx.abyss.listeners[0]; return ctx.abyss.zone.id + ' ' + (L ? L.state : 'no listener'); });
 await step('journal + photo', (ctx) => { ctx.ui.openJournal('map'); ctx.ui.close(); ctx.photo.enter(); ctx.photo.shoot(); ctx.photo.exit(); return ctx.photo.list().length; });
 await step('life sim scene', async (ctx) => { ctx.life.create({ seed: 'smoke' }); for (let i = 0; i < 20; i++) ctx.life.ageUp(); return ctx.life.s.age; });
 await step('sleep', (ctx) => { ctx.survival.sleep(); return ctx.time.hour.toFixed(1); }, 30);
