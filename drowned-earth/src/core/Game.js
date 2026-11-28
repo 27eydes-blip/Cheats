@@ -302,12 +302,23 @@ export class Game {
   // a menu choice: build the world first (once), then go
   async chooseFromMenu(choice) {
     const ctx = this.ctx;
-    if (!this.worldLoaded) { if (this.loadingWorld) return; await this.loadWorld(); }
+    if (!this.worldLoaded) {
+      if (this.loadingWorld) return;
+      try { await this.loadWorld(); } catch (e) {
+        console.error(e); this.loadingWorld = false;
+        document.getElementById('ui').innerHTML = `<div class="fatal">Drowned Earth could not load the world.<br><small>${String(e?.message || e)}</small></div>`;
+        return;
+      }
+    }
     if (choice === 'continue') { if (ctx.save.load()) this.enterStory(true); else this.enterStory(false); }
     else if (choice === 'story') this.enterStory(false);
     else if (choice === 'life') this.enterLife();
   }
 
+  // a ?quality= in the address would put the old preset straight back after a safe-mode reload
+  reloadWithoutQualityParam() {
+    setTimeout(() => { try { const u = new URL(location.href); u.searchParams.delete('quality'); history.replaceState(null, '', u); } catch { /* keep the url */ } location.reload(); }, 1200);
+  }
   // ---------------------------------------------------------------- the menu
   basePixelRatio() { return Math.min(devicePixelRatio || 1, this.ctx.settings.q.pixelRatio || 1); }
   menuFrame() {
@@ -330,7 +341,12 @@ export class Game {
     if (this.menuSlowT > 5) {
       this.menuSlowT = 0;
       const s = ctx.settings, B = this.backdrop;
-      if (s.quality !== 'low') { const to = s.quality === 'high' ? 'medium' : 'low'; s.quality = to; s.auto = false; s.qualityChosen = true; s.save(); ctx.ui?.toast(`Safe mode: quality set to ${Settings.label(to)} for this computer.`); }
+      if (s.quality !== 'low') {
+        const to = s.quality === 'high' ? 'medium' : 'low'; s.quality = to; s.auto = false; s.autoCap = to; s.qualityChosen = true; s.save();
+        ctx.ui?.toast(`Safe mode: quality set to ${Settings.label(to)} for this computer.`);
+        if (this.worldLoaded) { try { if (ctx.save.save('auto')) sessionStorage.setItem('de.autocontinue', '1'); } catch { /* menu */ } }
+        this.reloadWithoutQualityParam(); this.menuSlowT = -999;
+      }
       else if (B.scale > 0.35) { B.setScale(0.35); }
       else if (!B.static) { B.static = true; }
     }
@@ -338,6 +354,7 @@ export class Game {
   leaveMenu() {
     if (!this.inMenu) return;
     this.inMenu = false;
+    this.playFrames = 0; this.frameEma = null; this.overT = this.underT = this.slowT = 0;   // judge play on play frames only
     const pl = this.ctx.pipeline;
     if (this.worldLoaded && pl) { this.ctx.renderer.setPixelRatio(pl.basePixelRatio * pl.scale); this.onResize(); }
   }
@@ -484,23 +501,29 @@ export class Game {
     this.frameEma = this.frameEma == null ? ms : this.frameEma * 0.95 + ms * 0.05;
     // dynamic resolution first: over 20 ms per frame for a second → lower the resolution a step (never below 60%)
     const p = ctx.pipeline, MIN = ctx.settings.quality === 'low' ? 0.8 : 0.6;   // Light never drops below 80% (it has no sharpen pass to hide it)
-    this.overT = ms > 20 ? (this.overT || 0) + dt : 0;
-    this.underT = ms < 14 ? (this.underT || 0) + dt : 0;
-    if (this.frame > 60 && this.overT >= 1 && p.scale > MIN + 0.001) { p.setScale(Math.max(MIN, p.scale - 0.1)); this.overT = 0; }
+    // over budget for a second → a resolution step down; the budget is 20 ms or the preset's own target (Light aims at 30 fps)
+    const budget = Math.max(20, 1000 / (q.targetFps || 60) * 1.2);
+    this.playFrames = (this.playFrames || 0) + 1;
+    this.overT = ms > budget ? (this.overT || 0) + dt : 0;
+    this.underT = ms < budget * 0.7 ? (this.underT || 0) + dt : 0;
+    if (this.playFrames > 90 && this.overT >= 1 && p.scale > MIN + 0.001) { p.setScale(Math.max(MIN, p.scale - 0.1)); this.overT = 0; }
     else if (this.underT >= 3 && p.scale < 1) { p.setScale(Math.min(1, p.scale + 0.05)); this.underT = 0; }
     this.govT = (this.govT || 0) + dt;
-    if (this.govT < 1.5 || this.frame < 120) return;
+    if (this.govT < 1.5 || this.playFrames < 150) return;
     this.govT = 0;
     // safe mode: still under 25 fps at the lowest resolution for ~5 s → drop a preset, save, and come straight back
     const s = ctx.settings;
     if (s.quality !== 'low' && ctx.mode === 'play' && p.scale <= MIN + 0.01 && this.frameEma > 1000 / 25) {
       this.slowT = (this.slowT || 0) + 1.5;
       if (this.slowT >= 4.5) {
+        // only when the game can save right now (not mid-climb, in a scene or a blackout): otherwise try again later
+        let saved = false; try { saved = !!ctx.save.save('auto'); } catch { saved = false; }
+        if (!saved) { this.slowT = 3; return; }
         const to = s.quality === 'high' ? 'medium' : 'low';
-        s.quality = to; s.auto = false; s.qualityChosen = true; s.save();
+        s.quality = to; s.auto = false; s.autoCap = to; s.qualityChosen = true; s.save();
         ctx.ui.toast(`Safe mode: lowering quality to ${Settings.label(to)}…`);
-        try { ctx.save.save('auto'); sessionStorage.setItem('de.autocontinue', '1'); } catch { /* reload to the menu instead */ }
-        setTimeout(() => location.reload(), 1200); this.slowT = -999;
+        try { sessionStorage.setItem('de.autocontinue', '1'); } catch { /* reload to the menu instead */ }
+        this.reloadWithoutQualityParam(); this.slowT = -999;
       }
     } else if (this.slowT > 0) this.slowT = 0;
   }

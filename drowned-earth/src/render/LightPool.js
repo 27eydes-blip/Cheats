@@ -26,7 +26,7 @@ export class LightPool {
     }
     this.list = [];
     this.refreshT = 0;
-    const dirty = () => { this.refreshT = 0; };
+    const dirty = () => { this.refreshT = Math.min(this.refreshT, 0.25); };   // at most ~4 scans a second while streaming
     ctx.events.on('chunk:built', dirty);
     ctx.events.on('landmark:loaded', dirty);
   }

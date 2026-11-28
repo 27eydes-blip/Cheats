@@ -37,7 +37,7 @@ export class LandmarkManager {
     const r = this.ctx.renderer; if (!r?.compileAsync) return;
     const hidden = []; group.traverse((o) => { if (!o.visible && !o.isLight) { hidden.push(o); o.visible = true; } });
     const prevT = r.getRenderTarget(), tgt = this.ctx.settings.q.postPipeline ? this.ctx.pipeline?.target : null;
-    try { if (tgt) r.setRenderTarget(tgt); r.compileAsync(this.ctx.scene, this.ctx.camera).catch(() => {}); } catch { /* compile on first draw */ }
+    try { if (tgt) r.setRenderTarget(tgt); this.ctx.lightPool?.refresh(); r.compileAsync(group, this.ctx.camera, this.ctx.scene).catch(() => {}); } catch { /* compile on first draw */ }
     finally { r.setRenderTarget(prevT); for (const o of hidden) o.visible = false; }
   }
   load(def, sync = true) {
@@ -54,7 +54,7 @@ export class LandmarkManager {
         // compile for the target the frame actually renders into (the HDR pipeline when it's on), with the group's own lights counted
         const prevT = r.getRenderTarget(), tgt = this.ctx.settings.q.postPipeline ? this.ctx.pipeline?.target : null;
         let p = null;
-        try { if (tgt) r.setRenderTarget(tgt); g.visible = true; p = r.compileAsync(this.ctx.scene, this.ctx.camera); } catch { /* fall back to compile on first draw */ }
+        try { if (tgt) r.setRenderTarget(tgt); g.visible = true; this.ctx.lightPool?.refresh(); p = r.compileAsync(g, this.ctx.camera, this.ctx.scene); } catch { /* fall back to compile on first draw */ }
         finally { r.setRenderTarget(prevT); }
         g.visible = false;
         const show = () => { if (this.loaded.get(def.id) === rec) g.visible = was; };

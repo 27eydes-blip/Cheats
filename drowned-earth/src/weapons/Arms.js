@@ -24,7 +24,7 @@ export class Arms {
     if (!this.d) return;
     if (!ctx.camera.parent) ctx.scene.add(ctx.camera);
     this.vm = new THREE.Group(); this.vm.name = 'viewmodel'; ctx.camera.add(this.vm);
-    this.vmLight = new THREE.PointLight(0xffe0c0, 0.25, 1.6); this.vmLight.position.set(0.3, 0.2, 0.2); ctx.camera.add(this.vmLight);
+    this.vmLight = new THREE.PointLight(0xffe0c0, 0.25, 1.6); this.vmLight.position.set(0.3, 0.2, 0.2); this.vmLight.userData.pooled = true; ctx.camera.add(this.vmLight);
     this.def = (id) => this.d.melee[id] || this.d.ranged[id];
     this.kind = (id) => (this.d.melee[id] ? 'melee' : 'ranged');
     this.bindInput();
@@ -230,7 +230,7 @@ export class Arms {
     const eye = this.ctx.camera.getWorldPosition(new THREE.Vector3()), fwd = this.ctx.camera.getWorldDirection(new THREE.Vector3());
     const pos = t ? t.pos.clone() : eye.addScaledVector(fwd, 30);
     if (!t) pos.y = Math.max(pos.y, this.ctx.waves.height(pos.x, pos.z));
-    const light = new THREE.PointLight(0xff3a1a, 8, 28, 2); light.position.copy(pos); this.ctx.scene.add(light);
+    const light = new THREE.PointLight(0xff3a1a, 8, 28, 2); light.position.copy(pos); light.layers.set(31); this.ctx.scene.add(light); if (this.ctx.lightPool) this.ctx.lightPool.refreshT = 0;   // pooled, never a new light count
     const f = { kind: 'flare', pos, t: 30, light }; c.flares.push(f);
     const tick = setInterval(() => { light.intensity = f.t > 0 ? 6 + Math.random() * 3 : 0; if (f.t <= 0) { clearInterval(tick); this.ctx.scene.remove(light); } }, 60);
     if (t?.type === 'creature' && (t.obj.spec.senses.light || 0) < 0) t.obj.setState('return', 'flare in the face');

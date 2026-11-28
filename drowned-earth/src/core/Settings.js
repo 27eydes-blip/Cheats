@@ -62,7 +62,7 @@ export class Settings {
     const det = detectPreset(isMobile);
     this.gpu = det.gpu;
     // every new player starts on the Light preset; a preset picked in Options (or set by safe mode) is remembered
-    this.qualityChosen = !!stored.qualityChosen;
+    this.qualityChosen = stored.qualityChosen ?? (stored.quality != null && stored.quality !== 'auto');
     // first run: Standard on a dedicated GPU, Light otherwise (integrated, software, unknown); safe mode drops to Light
     let q = params.get('quality') || (this.qualityChosen ? stored.quality : null) || (det.preset === 'high' ? 'medium' : det.preset);
     q = ALIAS[q] || q;

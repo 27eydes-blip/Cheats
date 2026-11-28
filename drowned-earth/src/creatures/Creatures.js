@@ -138,7 +138,7 @@ export class Creatures {
       const pos = this.throwPoint(6);
       const light = new THREE.PointLight(0xff4a2a, 6, 22, 2); light.position.copy(pos).add(_a.set(0, 0.3, 0));
       const core = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffb0a0 })); core.position.copy(pos);
-      this.ctx.scene.add(light, core);
+      light.layers.set(31); this.ctx.scene.add(light, core); if (this.ctx.lightPool) this.ctx.lightPool.refreshT = 0;   // pooled
       const f = { kind: 'flare', pos, t: 45, light, core };
       this.flares.push(f);
       const tick = setInterval(() => { light.intensity = (f.t > 0 ? 5 + Math.random() * 2 : 0) * Math.min(1, f.t / 5); if (f.t <= 0) { clearInterval(tick); this.ctx.scene.remove(light, core); } }, 60);

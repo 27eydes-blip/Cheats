@@ -262,7 +262,7 @@ export class Water {
       fog: true,
     });
     Object.assign(m.uniforms, skyUniforms);
-    const g = new THREE.RingGeometry(1500, 40000, 64, 1);
+    const g = new THREE.RingGeometry(Math.min(1500, this.ctx.settings.q.chunkFarRadius), 40000, 64, 1);   // starts where the near camera stops drawing
     g.rotateX(-Math.PI / 2);
     const mesh = new THREE.Mesh(g, m);
     mesh.frustumCulled = false;
