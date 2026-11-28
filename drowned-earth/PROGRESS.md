@@ -105,6 +105,22 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 - Headless test (`scripts/people-test.mjs`): wolf → killed (grief for friends), Net-Weaver → killed, crab → escaped with a scare. After that run, territorial creatures were changed to usually break off once the intruder is down.
 - Stubbed in data: Greentide and Rusthold residents' personalities; NPC excursions between rafts (bar visits) are not walked, only scheduled.
 
+## M. Weapons
+- `src/data/weapons.json`: 8 melee (rebar spear, boat hook, fire axe, galley cleaver, hand harpoon, chain-wrapped pipe wrench, oar club, sea-glass knife), 7 ranged (speargun, flare pistol, nail-gun rifle, truck-spring crossbow, sling, pipe shotgun, bolt-action scrap rifle), a thrown net, 7 ammo types, mods, five crew styles, three vendors (Hook & Barb and Sal's back room at Portage, the Anvil at Rusthold), the law.
+- Look (`weapons/WeaponKit.js`): built from parts per weapon + its three mods (grip, head/barrel, wrap): ribbed rebar, lathe ferrules, extruded blades and jaws, tape bands, rope/wire helices, chain links, weld beads, sea-glass beads, rivets, crew tags, painted tally/scripture/stencil decals. Shared PBR materials per role and style with a wear layer (rust, salt crust, chipped paint, oil sheen) driven by condition and salt.
+- Systems (`weapons/Arms.js`): viewmodel; light/heavy (hold) swings with weight-based speed and stamina, block (RMB), shove (Y), net (U); ranged fire with ammo counts, reload/clear jams (T), ADS zoom with sway from fatigue and injury; hit-stop, camera nudge, material sounds; noise radius → creature senses and Heat near the Ward / in Highmark waters; flare pistol feeds the creature light/flare system; wounded-creature reactions by species; jams and fouling from salt and wear; maintenance at vendors/benches; NPC reactions to drawn weapons (anger, fear, run, call for help); bar no-weapons rule with bouncer ejection; the Club confiscates at the door; unlicensed weapons draw Heat when the Ward sees them in Highmark waters; vendors reluctant with a villain reputation and refusing at 2+ stars; subduing vs killing named NPCs (grief, rumours, funeral, crews remember). Gamepad hook: `arms.pad.setTrigger/rumble` (DualSense adaptive triggers not implemented).
+- `scripts/weapons-test.mjs`: 8/8 pass (damage, wounded reaction, noise waking a creature vs a quiet weapon, jams, wear, NPC reaction, bar rule + ejection, Club confiscation).
+
+## Known gaps
+- NPCs don't walk between rafts (bar visits are schedule-only; bar crowds are separate NPCs).
+- Greentide and Rusthold residents have no personalities yet (data stubs).
+- Phone frame rate not measured on a device or the Phone preset since the creature, nightlife and NPC passes; triangle counts in shots reach 2–3.5 M on Ultra.
+- Weapons, untested in play: feel of melee timing and hit-stop, ADS sway values, the inspect turntable on real GPUs, ranged hit detection at range (uses a cone test, no ballistic projectiles except visual tracers), net throws, mods' look on every combination, vendor UI flows, saving/loading owned weapons, block reducing creature damage, unlicensed-weapon Heat, killing a named NPC end to end. DualSense adaptive triggers are only a hook.
+- Weapon wear shares materials per crew style, so two weapons of the same style show the same wear.
+- No glTF export of weapons: they are built procedurally at runtime from cached part geometries (cheap, but not glTF assets).
+- Jellyfish bell still shows a small gap at the top.
+- Creature behaviour tests (`creature-test.mjs`) not rerun since the NPC-prey and creature changes.
+
 ## Verification (final run)
 - `npm run test:shots` — 12 scripted views (title dawn, dawn, midday, dusk festival, fog patrol, Dark Shelf dive, Portage from the Crow, Ward 9 basement, Beacon at night, midnight storm, phone 390×780 on low quality, third-person dusk): **0 console errors**. Images in `screenshots/`.
 - `npm run test:smoke` — drives the story loop end to end (tie-up, loot, craft, logs, swim/dive, radio, docking at the red lamp, dialogue, trade, workbench, patrol inspection, Standing step, Listener hunt, journal + photo, life-sim ageing, sleep, save/load, the Keeper's decoding, storm, finale): **passes, 0 errors**.

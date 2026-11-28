@@ -42,8 +42,8 @@ export function wearMaterial(role, style, S) {
           chip = smoothstep(0.7 - uWear * 0.45, 0.78, fb + fine * 0.2);
           diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.3, 0.29, 0.28) * (0.8 + fine * 0.4), chip);
         } else if (uKind > 2.5) {                  // wood: grain, grime where hands go
-          float grain = sin(vWP.z * 220.0 + w_n(vWP * vec3(60.0, 60.0, 4.0)) * 6.0) * 0.5 + 0.5;
-          diffuseColor.rgb *= 0.75 + grain * 0.35;
+          float grain = sin(dot(vWP, vec3(9.0, 23.0, 7.0)) + w_n(vWP * 18.0) * 3.0) * 0.5 + 0.5;  // soft, low-contrast figure, not stripes
+          diffuseColor.rgb *= 0.88 + grain * 0.12 + (fine - 0.5) * 0.08;
           diffuseColor.rgb *= 1.0 - uWear * 0.3 * smoothstep(0.4, 0.8, fb);
         } else diffuseColor.rgb *= 0.85 + fine * 0.3;
         salt = smoothstep(0.66 - uSalt * 0.45, 0.8, w_f(q * 0.7 + 3.0)) * uSalt;  // white salt crust in the crevices
@@ -132,7 +132,7 @@ export function buildWeapon(id, def, mods, styles, kind) {
         case 'nail_rifle': { const rcv = new THREE.BoxGeometry(0.05, 0.08, 0.36, 2, 2, 6); rcv.translate(0, 0.05, -0.12); const br = along(L([[0.012, 0], [0.012, 0.4], [0.016, 0.42], [0.001, 0.42]], 10)); br.translate(0, 0.06, -0.3); return mergeGeometries([rcv.toNonIndexed(), br.toNonIndexed()]); }
         case 'crossbow': { const st = new THREE.BoxGeometry(0.035, 0.04, 0.7); st.translate(0, 0.035, -0.25); return st; }
         case 'sling': { const t = new THREE.TorusGeometry(0.05, 0.006, 6, 20); return t; }
-        case 'double_pipe': { const a = along(L([[0.022, 0], [0.022, 0.62], [0.025, 0.63], [0.019, 0.63]], 14)); const b = a.clone(); a.translate(-0.022, 0.055, -0.1); b.translate(0.022, 0.055, -0.1); return mergeGeometries([a.toNonIndexed(), b.toNonIndexed()]); }
+        case 'double_pipe': { const a = along(L([[0.022, 0], [0.022, 0.62], [0.025, 0.63], [0.019, 0.63]], 14)); const b = a.clone(); a.translate(-0.022, 0.055, -0.1); b.translate(0.022, 0.055, -0.1); const br = new THREE.BoxGeometry(0.1, 0.07, 0.2, 2, 2, 3); br.translate(0, 0.05, -0.02); return mergeGeometries([a.toNonIndexed(), b.toNonIndexed(), br.toNonIndexed()]); }
         case 'bolt_rifle': { const rcv = along(L([[0.018, 0], [0.018, 0.22], [0.012, 0.24], [0.011, 0.9], [0.014, 0.92], [0.001, 0.92]], 12)); rcv.translate(0, 0.06, 0.05); return rcv; }
         default: return new THREE.BoxGeometry(0.04, 0.05, 0.4);
       }

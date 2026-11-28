@@ -287,11 +287,13 @@ export class Arms {
     const t = performance.now() / 1000, sw = (0.004 + tired * 0.01 + hurt * 0.012) * (1 + heavyW * 0.1);
     this.swing = Math.max(0, this.swing - dt * 3.2); this.recoil = Math.max(0, this.recoil - dt * 6);
     this.drawT = Math.max(0, (this.drawT || 0) - dt);
-    const restX = ranged ? 0.16 : 0.24, restY = ranged ? -0.16 : -0.22, restZ = ranged ? -0.32 : -0.36;
-    const x = restX * (1 - this.ads) + Math.sin(t * 1.3) * sw, y = (restY + 0.1 * this.ads * (ranged ? 0.55 : 0)) * (1 - this.ads * 0.1) + Math.sin(t * 2.1) * sw * 0.7 - this.drawT * 0.6;
-    this.mesh.position.set(x, y + (ranged ? -0.06 * this.ads : 0), restZ + this.recoil * 0.06);
+    // ranged guns carry a stock behind the grip, so they rest further out; ADS lines the sight up under the eye
+    const restX = ranged ? 0.17 : 0.24, restY = ranged ? -0.17 : -0.22, restZ = ranged ? -0.46 : -0.36;
+    const adsY = -0.088, adsZ = -0.5, a = ranged ? this.ads : 0;
+    const x = restX * (1 - a) + Math.sin(t * 1.3) * sw, y = restY + (adsY - restY) * a + Math.sin(t * 2.1) * sw * 0.7 - this.drawT * 0.6;
+    this.mesh.position.set(x, y, restZ + (adsZ - restZ) * a + this.recoil * 0.06);
     const sweep = Math.sin(this.swing * Math.PI) * (this.swingHeavy ? 1.3 : 0.9);
-    this.mesh.rotation.set(ranged ? this.recoil * 0.15 : -0.3 + sweep * 1.2, ranged ? 0.02 : -0.2 - sweep * 0.9, ranged ? 0 : 0.35 - sweep * 0.6);
+    this.mesh.rotation.set(ranged ? this.recoil * 0.15 + 0.03 * (1 - a) : -0.3 + sweep * 1.2, ranged ? 0.05 * (1 - a) : -0.2 - sweep * 0.9, ranged ? 0 : 0.35 - sweep * 0.6);
     if (!ranged) this.mesh.rotation.x += 1.2; // melee held angled up and forward
     if (this.held.rmb && !ranged) this.mesh.rotation.z = 1.2; // a guard across the body
   }
