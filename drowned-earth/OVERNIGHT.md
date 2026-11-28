@@ -37,3 +37,11 @@ Unattended run. Rules: no new features; tag before each phase; revert a phase th
 - **Not done:** skin/eye/hair/clothing shading changes. A software-rendered face close-up wasn't good enough to judge subtle shading, and blind changes to faces risk making them worse — left for a session with a GPU and real screenshots.
 - Gate: all pass + people-test (3 scenarios, no errors; outcomes escaped/killed/escaped as before).
 - Budget call: raft-city draw calls 550 → 609 (+10.7%) while the other route phases fell 10–25% in the same run (Cask Street 456 → 340); route total 2546 → 2396 (−6%). Nothing in this phase adds geometry (it hides sleepers and swaps poses), so this is the route's real-time variance (phases are timed, the boat ends in different spots). Kept; flagged here.
+
+## Phase 5 — boats ✅ kept
+- Handling (most already existed: wave pitch/roll, bow-up under throttle, lean in turns, airtime off ramps): added a planing hump (bow climbs at 2–5 m/s, levels once planing past ~7 m/s) and a drift on hard turns above 6 m/s (side grip drops so the stern slides).
+- Camera: FOV widens up to +9° with speed and a slight wave judder scaled by how hard the hull pitches; both off with Reduce motion, and FOV is left alone while a weapon is drawn (ADS owns it).
+- Look: a weathering shader on every hull (patched panels, grime/weed band at the waterline, rust bleeding from the gunwale, paint worn through on the top edge). The canopy was already hidden in first person. **Not done:** a new detailed boat model (rope coils, lantern rework, deck detail) — that's modelling work beyond "improve what exists"; wake/bow spray stay as the existing water ripples + wake foam.
+- Sound (engine with RPM, paddling, hull creak, foghorn already existed): added a wake hiss that rises with speed, water slapping the hull (faster in waves/wind), engine strain under boost and when the throttle outruns the hull, and a splash when you dive or drop off the boat. **Not heard** — no audio output here; only checked that it runs without errors.
+- Bug caught by the screenshot run and fixed before the gate: the new wake hiss used the wrong node field and threw every frame.
+- Gate: all pass, boat-test 7/7 (E/Triangle still leaves the boat). Route: standing 571/622k · walk 390/596k · boat 386/581k · raft city 455/541k · Cask 442/599k (all at or below phase 4).
