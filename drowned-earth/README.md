@@ -128,6 +128,9 @@ Far from you, incidents resolve abstractly from the same traits. Options → *NP
 
 Scavenged, repaired, hand-modified (`src/data/weapons.json`, `src/weapons/`). Keys: 1–4 draw, 0 holster, LMB attack/fire (hold for a heavy swing), RMB block / aim down sights, T reload or clear a jam, Y shove, U throw a net, O inspect & mods. Every weapon has a noise radius (creatures hear it; the Ward cares), wears and fouls with salt water, takes three mods that change stats and look, and belongs to a crew style. Bars won't serve you armed; the Gentleman's Club checks weapons at the door. Vendors: Hook & Barb and Sal's back room (Portage), the Anvil (Rusthold). Test: `node scripts/weapons-test.mjs`.
 
+### Play online
+Live build: **https://drowned-earth.27eydes.workers.dev** (Cloudflare Worker serving the build from an R2 bucket). Redeploy with `npm run build && NODE_USE_ENV_PROXY=1 CLOUDFLARE_API_TOKEN=… node scripts/deploy-worker.cjs dist <account-id> drowned-earth` (the token needs Workers Scripts and R2 edit).
+
 ### Controller (PS5 DualSense on PC)
 Plug in or pair a DualSense (any standard-mapping pad works) and press a button: a toast confirms it and the prompts switch to controller icons. Touching the keyboard, mouse or screen switches back. Unplugging it pauses the game. Pause → **Controller** (or Options → Controller settings) has deadzone, response curve, separate horizontal/vertical look sensitivity, invert Y, aim assist (Off / Light / Standard: slows the camera near a target and nudges gently, never aims for you), vibration, the DualSense extras toggle and the button map (saved in settings and in the save file).
 
