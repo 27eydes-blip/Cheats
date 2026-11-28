@@ -368,6 +368,16 @@ export class Game {
     this.governResolution(dt);
     if (this.fpsAcc > 1) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
     const paused = ctx.paused;
+    // the life sim is a menu: draw the world once as a still backdrop, then stop simulating and rendering it
+    if (ctx.lifeActive && !ctx.scenarioActive) {
+      ctx.input.poll(); ctx.ui.update(dt);
+      if (!this.lifeDrawn) { this.lifeDrawn = true; this.render(dt); }
+      ctx.input.endFrame(); this.frame++;
+      return;
+    }
+    this.lifeDrawn = false;
+    // the title fly-over is scenery: on the light preset, 20 fps is plenty
+    if (ctx.mode === 'title' && ctx.settings.quality === 'low') { this.titleAcc = (this.titleAcc || 0) + dt; if (this.titleAcc < 0.05) { this.frame++; return; } dt = Math.min(0.1, this.titleAcc); this.titleAcc = 0; }
     ctx.input.poll();
     if (!paused || ctx.mode !== 'play') this.update(dt);
     else if (ctx.photoMode) { ctx.input.poll(); ctx.player.look(ctx.input.look.x, ctx.input.look.y); ctx.rig.update(0); }
