@@ -33,7 +33,7 @@ const results = await page.evaluate(async () => {
   const stand = async (n, d = 3.2) => { const p = n.worldPos(new V()); c.player.teleport(new V(p.x + Math.sin(n.heading) * d, p.y + 0.2, p.z + Math.cos(n.heading) * d)); };
   // greeting on approach (warm the person up so the coin flip can't miss)
   c.state.greets = {}; c.society.chatT = 1e9; for (const n of built) if (n.manners) n.manners.chat = null;   // no random chats during this part
-  const M = who.manners; M.tr.warmth = 0.9; M.tr.talk = 0.9; M.B.lastGreet = -99; M.wasFar = true;
+  const M = who.manners; M.tr.warmth = 1; M.tr.talk = 1;   /* chance 1.0: the roll can't miss */ M.B.lastGreet = -99; M.wasFar = true;
   subs.length = 0; await stand(who); for (let i = 0; i < 12 && !subs.some((s) => s.startsWith(who.def.name + ':')); i++) { await stand(who); await tick(20); }
   const g1 = subs.find((s) => s.startsWith(who.def.name + ':'));
   // eye contact, then a glance away within a few seconds

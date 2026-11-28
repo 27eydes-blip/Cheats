@@ -253,3 +253,22 @@ drunk ones slouch.
 `scripts/npc-life-test.mjs` loads real humans in Portage and checks: built, gaze/glance-away, greeting plus
 second-visit memory, pair chat facing plus nodding, thunder, ears, curiosity, rain, and poses/seats.
 Result: 9/9 pass.
+
+**Gate (n34):**
+- Passed: build, validate, boat 7, weapons 8, controller 7, portage 5, raft-collision 7, npc-traits 9,
+  people-test.
+- npc-life-test failed once, on the first greeting only. The test person's warmth/talk of 0.9 gives a 93.5 %
+  greeting chance, so the roll sometimes misses. That flake is in the test, not the game. Fix: the test pins
+  both traits to 1. It then passed 9/9 twice in a row.
+
+Route perf, unchanged within noise (the NPC work adds no draw calls away from people):
+
+| Stop | Draw calls | Triangles |
+|---|---|---|
+| standing | 581 | 625k |
+| walking | 369 | 545k |
+| boat | 661 | 696k |
+| raft city | 593 | 559k |
+| cask | 573 | 709k |
+
+Shader compiles: 0/5/0/0/0.
