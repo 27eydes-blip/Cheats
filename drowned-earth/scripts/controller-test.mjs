@@ -176,10 +176,11 @@ const results = await page.evaluate(async () => {
     c.save.save('manual');
     const inSave = JSON.parse(localStorage.getItem('drowned-earth.save')).pad?.bind?.jump === 3;
     P.resetBinds(); const reset = P.bind.jump === 0;
-    c.save.load(); const loaded = P.bind.jump === 3 && P.bind.swap === 0;
+    c.save.load(); const kept = P.bind.jump === 0;   // a layout already set here is not overwritten by the save
+    c.settings.pad = null; c.save.load(); const loaded = P.bind.jump === 3 && P.bind.swap === 0;   // fresh browser: the save brings it
     btn(3, true); c.ui.close(); await tick(1); const live = c.input.held.dive; btn(3, false); await tick(1);
     P.resetBinds();
-    out.remap = { pass: opened && swapped && stored && inSave && reset && loaded && live, detail: `capture ${opened}; jump→Triangle, swap→Cross ${swapped}; settings ${stored}; save file ${inSave}; reset ${reset}; loaded back ${loaded}; Triangle now jumps ${live}` };
+    out.remap = { pass: opened && swapped && stored && inSave && reset && kept && loaded && live, detail: `capture ${opened}; jump→Triangle, swap→Cross ${swapped}; settings ${stored}; save file ${inSave}; reset ${reset}; save doesn't override local ${kept}; loaded on a fresh browser ${loaded}; Triangle now jumps ${live}` };
   }
   // 7. extras never throw without hardware
   {

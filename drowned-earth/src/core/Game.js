@@ -286,6 +286,7 @@ export class Game {
   }
   resetStory() {
     const ctx = this.ctx, st = ctx.state;
+    ctx.arms?.reset();
     for (const k of Object.keys(st.flags)) delete st.flags[k];
     st.looted.clear(); st.logs.clear(); st.playTime = 0; st.glow = ctx.data.deep.glow.start; ctx.abyss.refreshGrowth();
     st.explored.clear(); st.route.length = 0; st.discovered.clear(); st.notes.length = 0; st.met = {}; st.hints = ctx.onboarding.done = {};

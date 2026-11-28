@@ -51,11 +51,18 @@ export class Arms {
   draw(i) {
     if (this.state.confiscated) { this.ctx.ui.toast('Your weapons are in the Club\'s cloakroom.'); return; }
     if (i === this.state.drawn || i < 0 || i >= this.state.owned.length) { this.holster(); return; }
-    this.state.drawn = i; this.rebuildVM(); this.drawT = 0.35;
+    this.state.drawn = i; this.jammed = false; this.reloadT = 0; this.rebuildVM(); this.drawT = 0.35;
     this.ctx.events.emit('weapon:draw', this.cur.id);
     this.ctx.ui.toast(`${this.def(this.cur.id).name}${this.kind(this.cur.id) === 'ranged' ? ` · ${this.cur.loaded}/${this.def(this.cur.id).mag} · ${this.ammoCount(this.cur)} spare` : ''}`);
   }
-  holster() { this.state.drawn = -1; this.vm.clear(); this.ctx.events.emit('weapon:holster'); }
+  holster() {
+    this.state.drawn = -1; this.vm.clear(); this.mesh = null;
+    this.ads = 0; this.held.lmb = this.held.rmb = false; this.barT = 0;
+    const cam = this.ctx.camera; if (cam && cam.fov !== 70) { cam.fov = 70; cam.updateProjectionMatrix(); }
+    this.ctx.events.emit('weapon:holster');
+  }
+  // fresh state for a new story
+  reset() { this.holster(); this.state = { owned: [], drawn: -1, confiscated: false, licence: false }; this.jammed = false; this.reloadT = 0; this.stamina = 100; this.cool = 0; }
   rebuildVM() {
     this.vm.clear();
     const w = this.cur; if (!w) return;
@@ -71,10 +78,11 @@ export class Arms {
   bindInput() {
     const c = this.ctx.renderer?.domElement || document.querySelector('canvas');
     addEventListener('mousedown', (e) => { if (!this.ctx.input.pointerLocked || this.ctx.ui.panel) return; if (e.button === 0) { this.held.lmb = true; this.lmbT = 0; } if (e.button === 2) this.held.rmb = true; });
-    addEventListener('mouseup', (e) => { if (e.button === 0 && this.held.lmb) { this.held.lmb = false; this.release(); } if (e.button === 2) this.held.rmb = false; });
+    addEventListener('mouseup', (e) => { if (e.button === 0 && this.held.lmb) { this.held.lmb = false; if (this.ctx.input.pointerLocked && !this.ctx.ui.panel) this.release(); } if (e.button === 2) this.held.rmb = false; });
+    addEventListener('blur', () => { this.held.lmb = this.held.rmb = false; });
     c?.addEventListener('contextmenu', (e) => e.preventDefault());
     addEventListener('keydown', (e) => {
-      if (this.ctx.mode !== 'play' || this.ctx.ui.panel || e.repeat) return;
+      if (this.ctx.mode !== 'play' || this.ctx.ui.panel || e.repeat || this.ctx.injury?.dead) return;
       if (/^Digit[1-4]$/.test(e.code)) this.draw(+e.code.slice(5) - 1);
       if (e.code === 'Digit0') this.holster();
       if (e.code === 'KeyT') this.reload();
@@ -301,7 +309,8 @@ export class Arms {
   lawCheck(dt) {
     const ctx = this.ctx, w = this.cur;
     this.lawT = (this.lawT || 0) - dt;
-    if (!w || this.lawT > 0) return;
+    if (!w) { this.barT = 0; return; }
+    if (this.lawT > 0) return;
     this.lawT = 1;
     const p = ctx.player.position;
     // bars: the bouncer has a hook and a long memory
@@ -373,7 +382,7 @@ export class Arms {
   nearBench() { const p = this.ctx.player.position; for (const com of Object.values(this.ctx.state.communities || {})) for (const r of com.rafts?.values?.() || []) if (r.info?.workbench && r.worldPoint(_v.copy(r.info.workbench)).distanceTo(p) < 4) return true; return false; }
   // a little turntable with its own renderer, lit like a workbench lamp
   viewer(canvas, w) {
-    if (this.vr) { this.vr.dispose(); this.vr = null; }
+    if (this.vr) { this.vr.forceContextLoss(); this.vr.dispose(); this.vr = null; }
     const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); r.setPixelRatio(Math.min(2, devicePixelRatio)); r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
     this.vr = r;
     const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, canvas.width / canvas.height, 0.01, 20);
@@ -389,7 +398,7 @@ export class Arms {
     canvas.addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
     canvas.addEventListener('pointermove', (e) => { if (!drag) return; rotY += (e.clientX - drag[0]) * 0.01; rotX += (e.clientY - drag[1]) * 0.01; drag = [e.clientX, e.clientY]; });
     canvas.addEventListener('pointerup', () => (drag = null));
-    const loop = () => { if (!document.body.contains(canvas)) { r.dispose(); if (this.vr === r) this.vr = null; return; } if (!drag) rotY += 0.004; pivot.rotation.set(rotX, rotY, 0); r.render(sc, cam); requestAnimationFrame(loop); };
+    const loop = () => { if (!document.body.contains(canvas)) { if (this.vr === r) { r.forceContextLoss(); r.dispose(); this.vr = null; } return; } if (!drag) rotY += 0.004; pivot.rotation.set(rotX, rotY, 0); r.render(sc, cam); requestAnimationFrame(loop); };
     loop();
   }
 
@@ -407,5 +416,5 @@ export class Arms {
     if (s !== this._hud) { this._hud = s; this.hudEl.textContent = s; }
   }
   toJSON() { return this.state; }
-  load(o) { if (o) { this.state = { ...this.state, ...o, drawn: -1 }; } }
+  load(o) { this.holster(); this.jammed = false; this.reloadT = 0; this.cool = 0; if (o) { this.state = { ...this.state, ...o, drawn: -1 }; } }
 }

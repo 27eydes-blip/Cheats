@@ -79,7 +79,8 @@ export class Pad {
     s.save();
   }
   toJSON() { return { ...this.opt, bind: { ...this.bind } }; }
-  load(o) { if (!o) return; const { bind, ...rest } = o; Object.assign(this.opt, rest); if (bind) this.bind = { ...DEFAULT_BIND, ...bind }; this.save(); }
+  // the save carries your layout to a new browser, but never overrides a layout already set in this one
+  load(o) { if (!o || this.ctx.settings.pad) return; const { bind, ...rest } = o; Object.assign(this.opt, rest); if (bind) this.bind = { ...DEFAULT_BIND, ...bind }; this.save(); }
   setDevice(d) {
     if (this.device === d) return;
     this.device = d;
@@ -124,6 +125,7 @@ export class Pad {
     const S = { b, v, down, up, ax, dt };
     this.S = S;
     let move = null;
+    if (this.capture && this.ctx.ui.panelKind !== 'controller') this.capture = null;
     if (this.capture) this.doCapture(S);
     else {
       // Options and the touchpad work everywhere
@@ -132,7 +134,7 @@ export class Pad {
       if (down[this.bind.map] && this.ctx.mode === 'play' && !this.ctx.lifeActive) { if (this.ctx.ui.panelKind === 'journal') this.ctx.ui.close(); else this.ctx.ui.openJournal('map'); }
       const root = this.activeRoot();
       if (root) { this.releaseGameplay(); this.menu(root, S); }
-      else { this.clearFocus(); if (this.ctx.mode === 'play' && !this.ctx.paused) move = this.gameplay(S); else this.releaseGameplay(); }
+      else { this.clearFocus(); if (this.ctx.mode === 'play' && !this.ctx.paused && !this.ctx.injury?.dead) move = this.gameplay(S); else this.releaseGameplay(); }
     }
     for (let i = 0; i < b.length; i++) { this.prev[i] = b[i]; if (up[i]) this.holdT[i] = 0; }
     this.updateFx(dt, p);
@@ -167,6 +169,7 @@ export class Pad {
     const A = this.ctx.arms;
     if (A && (this.armLmb || this.armRmb)) { A.held.lmb = false; A.held.rmb = false; }
     this.armLmb = this.armRmb = false; this.sprintLatch = false;
+    this.swapHeld = this.nextHeld = false; this.closeWheel(false);
   }
   gameplay(S) {
     const c = this.ctx, B = this.bind, A = c.arms, { b, v, down, up, ax, dt } = S;
@@ -260,7 +263,7 @@ export class Pad {
     const cone = (this.opt.assist === 'standard' ? 8 : 5) * Math.PI / 180;
     const cam = c.camera; let best = null, bestA = cone;
     const cands = [];
-    for (const cr of c.creatures?.list || []) if (cr.active && cr.health > 0) cands.push(cr.body?.focus ? cr.body.focus() : cr.pos);
+    for (const cr of c.creatures?.list || []) if (cr.active && cr.health > 0) cands.push(cr.body?.focus ? cr.body.focus().clone() : cr.pos);
     for (const a of c.society?.actors || []) if (a.alive) cands.push(_v.copy(a.pos).setY(a.pos.y + 1.2).clone());
     cam.updateMatrixWorld();
     for (const pos of cands) {
@@ -503,10 +506,10 @@ export class Pad {
 
   // ------------------------------------------------------------ haptics, triggers, light bar
   fxOn() { return this.opt.extras && this.opt.vibration && this.connected && this.device === 'pad'; }
-  pulse(strong, weak, ms) { if (!this.fxOn()) return; this.fx.pulses.push({ s: strong, w: weak, t: ms / 1000 }); }
+  pulse(strong, weak, ms) { if (!this.fxOn() || this.fx.pulses.length > 40) return; this.fx.pulses.push({ s: strong, w: weak, t: ms / 1000 }); }
   rumble(strong, weak, ms) {
     if (!this.opt.vibration || !this.connected || this.device !== 'pad') return;
-    if (this.ds.connected) { this.fx.pulses.push({ s: strong, w: weak, t: ms / 1000 }); return; }
+    if (this.ds.connected && this.opt.extras) { this.fx.pulses.push({ s: strong, w: weak, t: ms / 1000 }); return; }
     try { this.readPad()?.vibrationActuator?.playEffect?.('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch?.(() => {}); } catch { /* not supported */ }
   }
   updateFx(dt, p) {
