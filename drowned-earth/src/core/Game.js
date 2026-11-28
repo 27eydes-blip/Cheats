@@ -92,6 +92,7 @@ export class Game {
     ctx.events = new EventBus();
     ctx.settings = new Settings();
     ctx.params = new URLSearchParams(location.search);
+    if (import.meta.env?.VITE_LITE) for (const k of ['noassets', 'nohumans']) ctx.params.set(k, ''); // lite build: procedural only, no binary assets
     ctx.data = loadData();
     ctx.state = { flags: {}, looted: new Set(), logs: new Set(), playTime: 0 };
 
