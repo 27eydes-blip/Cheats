@@ -137,9 +137,11 @@ void main() {
     refr = mix(uScatter, uDeep, 0.4 + 0.6 * (1.0 - NdV));
   }
   if (!below) {
-    float F = 0.02 + 0.98 * pow(1.0 - NdV, 5.0);
+    // Fresnel, capped: a rough sea never mirrors the hazy sky completely, so distant water keeps its own colour
+    float F = (0.02 + 0.98 * pow(1.0 - NdV, 5.0)) * 0.74;
     vec3 R = reflect(-V, N); R.y = abs(R.y);
-    vec3 refl = skyClouds(R, skyBase(R), true) * (1.0 - uCloud * 0.2);
+    // the reflected sky is a little darker and greener than the sky itself (absorption + polarisation)
+    vec3 refl = skyClouds(R, skyBase(R), true) * (1.0 - uCloud * 0.2) * vec3(0.8, 0.86, 0.86);
     if (uHasRefl > 0.5) {
       vec4 rc = uReflMatrix * vec4(vW.x, 0.0, vW.z, 1.0);
       vec2 ruv = rc.xy / rc.w + N.xz * 0.06 * clamp(1.0 - vDist / 400.0, 0.2, 1.0);
@@ -148,7 +150,7 @@ void main() {
     }
     // sun glitter / moon path
     float spec = pow(max(dot(R, uSunDir), 0.0), mix(700.0, 180.0, clamp(pix * 8.0, 0.0, 1.0))) * mix(30.0, 8.0, clamp(pix * 8.0, 0.0, 1.0)) + pow(max(dot(R, uSunDir), 0.0), 60.0) * 0.6;
-    refl += uSunColor * spec * (1.0 - uCloud * 0.85);
+    refl += uSunColor * min(spec, 8.0) * (1.0 - uCloud * 0.85);   // a bright glint, never a white-out
     // point lights (lanterns, searchlights) streak on the water
     for (int i = 0; i < 4; i++) {
       vec3 L = uLightPos[i] - vW; float ld = length(L); L /= ld;
@@ -183,9 +185,13 @@ void main() {
   }
   // deep structure glow from far below (finale)
   col += vec3(0.1, 0.9, 0.75) * uGlow * 0.35 * exp(-length(vW.xz - uGlowPos.xz) * 0.02);
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(min(col, vec3(2.2)), 1.0);
   #define FOG_NO_STREAM_FADE
   #include <fog_fragment>
+  #ifdef USE_FOG
+  // distant water sits a touch darker than the haze, so the horizon line reads instead of melting into the sky
+  if (uUnder < 0.5) gl_FragColor.rgb *= 1.0 - fogFactor * 0.16;
+  #endif
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;

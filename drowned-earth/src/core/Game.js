@@ -481,7 +481,7 @@ export class Game {
     const ms = dt * 1000;
     this.frameEma = this.frameEma == null ? ms : this.frameEma * 0.95 + ms * 0.05;
     // dynamic resolution first: over 20 ms per frame for a second → lower the resolution a step (never below 60%)
-    const p = ctx.pipeline, MIN = 0.6;
+    const p = ctx.pipeline, MIN = ctx.settings.quality === 'low' ? 0.8 : 0.6;   // Light never drops below 80% (it has no sharpen pass to hide it)
     this.overT = ms > 20 ? (this.overT || 0) + dt : 0;
     this.underT = ms < 14 ? (this.underT || 0) + dt : 0;
     if (this.frame > 60 && this.overT >= 1 && p.scale > MIN + 0.001) { p.setScale(Math.max(MIN, p.scale - 0.1)); this.overT = 0; }
