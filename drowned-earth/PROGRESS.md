@@ -125,7 +125,12 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 - Leave the boat anywhere: E / Triangle (dock in focus wins); slow → nearest dock/raft edge within 6 m else into the water; fast → dive off. Emergency exit: hold Esc / Options 1 s. Canopy hidden in first person; creatures kept out of the hull.
 - Tests: `scripts/boat-test.mjs` 7/7, `scripts/route-perf.mjs --limit=MS` (scripted route), `scripts/stall-probe.mjs` (first 5 minutes), `controller-test` 7/7, `weapons-test` 8/8.
 
+## P. Overnight pass (smoother, more real, livelier) — see OVERNIGHT.md and MORNING_REPORT.md
+- Smoothness: per-place background shader warm-up, Standard by default on dedicated GPUs, fewer per-frame allocations, light-pool and safe-mode fixes. Water no longer blows out to white. Facades: boarded windows, rust, cracks, moss; wood decks: joints, patches, stains. NPCs: calm step-aside, run only from real threats, no hovering sitters. Boats: planing, drift, FOV push, weathered hull, wake hiss / hull slap / strain / splash. Portage: vendor callouts and three hidden things. Bug sweep: 20 fixes. Tests: portage-test added; all pass except a pre-existing creature-test raid failure.
+
 ## Known gaps
+- creature-test `raid` fails (pre-existing, also at the start of the overnight pass): the flashlight never counts as "in the beam" for the gull-rat swarm, so they aren't driven off by light. Needs a look at Senses.lightOn vs the pack position.
+- People still lack animations for leaning, laughing, sweeping, carrying, standing fishing and sitting on an edge (only 15 clips exist); there are no seats on the rafts. Faces, hair and clothing shading untouched (not judgeable without a GPU).
 - **Boats (next boats pass):** the skiff is a flat green hull with little surface detail (no planking, wear or fittings); the canopy is hidden from the driver's seat rather than modelled for first person.
 - **Performance, GPU-only:** every frame-rate figure in this repo comes from headless Chromium rendering on the CPU (SwiftShader), roughly 0.5–1 fps for the game. Draw calls, triangles, shader compiles and CPU-side logic times are real; frame rates on an actual GPU were never measured here. Use F3/F4 on a real PC to get them.
 - Performance: the Light preset still draws ~590 draw calls / ~560k triangles at the start (large landmark meshes and nearby raft cities, single-mesh hospital and Sounding). Merging and LOD for landmarks and raft cities is the next lever.
