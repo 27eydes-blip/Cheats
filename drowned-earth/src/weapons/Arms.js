@@ -178,7 +178,7 @@ export class Arms {
     const line = { anger: 'Put it down or I\'ll put you down.', run: 'No— no, please—', help: 'Help! Somebody! They\'ve got a weapon!', fear: 'Easy. Easy. I don\'t want trouble.' }[r];
     ctx.ui.subtitle(`${a.name}: ${line}`, 3, 'speech');
     a.memory.push({ day: ctx.time.day, type: struck ? 'hit' : 'threatened' }); a.attitude -= struck ? 0 : 1;
-    if (r === 'run') { npc.override = { from: 0, to: 24, do: 'walk', pos: [npc.local.x + 6 * Math.sign(npc.local.x || 1), npc.local.z] }; setTimeout(() => (npc.override = null), 20000); }
+    if (r === 'run') { npc.override = { from: 0, to: 24, do: 'walk', pos: [npc.local.x + 6 * Math.sign(npc.local.x || 1), npc.local.z] }; npc.fleeing = true; setTimeout(() => { npc.override = null; npc.fleeing = false; }, 20000); }   // a real threat: they run
     if (r === 'help') ctx.heat?.add(4, 'Someone called for help');
     ctx.events.emit('people:weapon', { who: a.id, reaction: r });
     return r;

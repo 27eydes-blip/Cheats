@@ -112,7 +112,7 @@ export class NPC {
       this.activity = task.do;
       this.face = task.face ?? spot?.face ?? null;
       // off-shift people go home (out of sight) and come back on schedule
-      this.root.visible = task.do !== 'away';
+      this.root.visible = task.do !== 'away' && task.do !== 'sleep';   // sleepers are in their shelters, not hovering on deck
       if (task.do === 'away') { this.local.copy(this.target); }
     }
     // keep a polite distance
@@ -128,7 +128,7 @@ export class NPC {
     const dist = Math.hypot(dx, dz);
     let moving = false;
     if (dist > 0.15) {
-      const sp = (this.backoff > 0 ? 1.4 : 1.0) * (this.speedK ?? 1);
+      const sp = (this.backoff > 0 ? 0.8 : 1.0) * (this.speedK ?? 1);   // a calm step aside, not a sprint
       const step = Math.min(dist, sp * dt);
       this.local.x += (dx / dist) * step; this.local.z += (dz / dist) * step;
       // stay on deck
@@ -162,7 +162,9 @@ export class NPC {
       const near = this.worldPos(_w).distanceToSquared(p) < 36;
       this.talkT = Math.max(0, (this.talkT || 0) - dt);
       const sitting = ['sit', 'fish', 'sleep'].includes(this.activity);
-      this.rig.play(moving ? (this.backoff > 0 ? 'run' : 'walk') : this.talkT > 0 ? (sitting ? 'sitTalk' : 'talk') : this.activity);
+      // there are no seats on the rafts: people who'd sit stand instead (sleepers are indoors, see below)
+      const pose = sitting ? (this.activity === 'fish' ? 'watch' : 'idle') : this.activity;
+      this.rig.play(moving ? (this.fleeing ? 'run' : 'walk') : this.talkT > 0 ? 'talk' : pose);
       // distant people animate at a lower rate (cheap crowd)
       const d2 = this.worldPos(_w).distanceToSquared(p);
       const far = d2 > 900;
@@ -177,7 +179,7 @@ export class NPC {
         const phone = this.ctx.settings.q.npcDetail === 0;
         this.rig.human.setLod(d2 > (phone ? 64 : 400) ? 1 : 0);
         this.rig.human.setWet(Math.min(1, this.ctx.weather.cur.rain * 1.3), this.ctx.time.out.sunI > 2 && /hammer|repair|haul/.test(this.activity) ? 0.5 : 0);
-        this.rig.setSpeed(moving ? (this.backoff > 0 ? 1.4 : 1.0) : 0);
+        this.rig.setSpeed(moving ? (this.fleeing ? 1.4 : this.backoff > 0 ? 0.8 : 1.0) : 0);
         // they read your wristband: how far apart you stand in the Order shows on their face
         if (near && !this.faceSet) {
           const gap = (this.rig.p.tier ?? 6) - (this.ctx.standing?.shown ?? 7);
@@ -207,7 +209,7 @@ export class NPC {
     else if (a === 'watch') { this.head.rotation.y = Math.sin(t * 0.3) * 0.8; this.armR.rotation.x = -2.2; }
     else if (a === 'sell') { this.armR.rotation.x = -0.4 + Math.sin(t * 0.8) * 0.2; this.head.rotation.y = Math.sin(t * 0.5) * 0.4; }
     else if (a === 'laundry') { this.armL.rotation.x = -2.4 + Math.sin(t * 2) * 0.2; this.armR.rotation.x = -2.4 - Math.sin(t * 2) * 0.2; }
-    else if (a === 'sit') { this.hips.position.y = 0.45; this.legL.rotation.x = -1.4; this.legR.rotation.x = -1.4; }
+    else if (a === 'sit') { /* no seats on the rafts: stand */ }
     else if (a === 'sleep') { this.hips.position.y = 0.2; this.torso.rotation.x = -1.45; this.legL.rotation.x = -1.5; this.legR.rotation.x = -1.5; }
     else if (a === 'pray') { this.torso.rotation.x = 0.15; this.head.rotation.x = 0.4; this.armL.rotation.x = -0.8; this.armR.rotation.x = -0.8; }
     else if (a === 'festival') { this.head.rotation.x = -0.15; this.armR.rotation.x = -0.5 + Math.sin(t * 0.6) * 0.1; }
