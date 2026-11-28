@@ -42,7 +42,7 @@ const TESTS = {
     const c = S.c('gr_portage'); await S.homed(c);
     S.time(23.5); S.ctx.inventory.add('canned_fish', 3);
     S.place(c, 3, 'foot');
-    await S.idle(1.5);   // light them up while they're still warning (they attack after their 2.5 s warning time)
+    await S.idle(4);
     S.ctx.player.flashlight = true; S.aim(c);
     await S.idle(4);
     return S.result(c, { mustSee: ['warning', 'return'] });`,
