@@ -29,3 +29,11 @@ Unattended run. Rules: no new features; tag before each phase; revert a phase th
 - Not done (would add geometry or new props): balconies, rooftop tanks/antennas/laundry, collapsed corners, extra dock props (rope, crates, nets, lamps) beyond what the raft kit already places.
 - Judged: the plank deck in a software-rendered close-up (reads as boards; worn spots slightly busy). **Not judged:** the facade additions up close — the test shots only caught towers at a distance.
 - Gate: all pass. Route draw calls/triangles unchanged (shader-only).
+
+## Phase 4 — people ✅ kept (with one budget judgment call)
+- Panic removed: the "keep a polite distance" step-aside used the jog animation at 1.4 m/s, which read as fleeing. Now a calm walk at 0.8 m/s. NPCs only run when they have a real reason (`npc.fleeing`, set when a drawn weapon scares them). Head/eye tracking toward the player within ~6 m already existed and is unchanged.
+- Hovering sitters fixed: the raft kit has **no seat geometry at all**, so every sit/fish pose floated. Sitters now stand (idle), fishers stand watching the water, sleepers are inside their shelters (hidden) instead of lying on air.
+- Animations that exist (15 clips): Crouch_Idle, Driving, Fixing_Kneeling, Idle, Idle_Talking (talks with hands), Idle_Torch, Interact, Jog, PickUp_Table, Push, Sitting_Idle, Sitting_Talking, Swim_Fwd, Swim_Idle, Walk. **Missing** (would need new animation assets, which tonight excludes): leaning, laughing, sweeping, carrying crates, a standing fishing pose, a proper sit-on-edge pose.
+- **Not done:** skin/eye/hair/clothing shading changes. A software-rendered face close-up wasn't good enough to judge subtle shading, and blind changes to faces risk making them worse — left for a session with a GPU and real screenshots.
+- Gate: all pass + people-test (3 scenarios, no errors; outcomes escaped/killed/escaped as before).
+- Budget call: raft-city draw calls 550 → 609 (+10.7%) while the other route phases fell 10–25% in the same run (Cask Street 456 → 340); route total 2546 → 2396 (−6%). Nothing in this phase adds geometry (it hides sleepers and swaps poses), so this is the route's real-time variance (phases are timed, the boat ends in different spots). Kept; flagged here.
