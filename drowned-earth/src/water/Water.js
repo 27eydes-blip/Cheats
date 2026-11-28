@@ -100,17 +100,35 @@ void main() {
   vec3 V = normalize(cameraPosition - vW);
   float detailFade = 1.0 - smoothstep(30.0, 400.0, vDist);
   vec2 wind = uWindDir * uTime * (0.25 + uWind * 0.6);
+  // quality tiers (compile-time): 0 Laptop — one normal layer, sky tint, no refraction / ripples / streaks;
+  // 1 Light — two layers + Fresnel + cheap clouds; 2 Standard — everything; 3 Ultra — + SSR (in the pipeline)
   vec3 n1 = texture2D(tNormal, vW.xz * 0.11 + wind * 0.05).xyz * 2.0 - 1.0;
+  #if WATER_TIER >= 2
   vec3 n2 = texture2D(tNormal, vW.xz * 0.31 - wind.yx * 0.09 + 0.3).xyz * 2.0 - 1.0;
+  #else
+  vec3 n2 = vec3(0.0);
+  #endif
+  #if WATER_TIER >= 1
   vec3 n3 = texture2D(tNormal, vW.xz * 0.023 + wind * 0.01).xyz * 2.0 - 1.0;
+  #else
+  vec3 n3 = vec3(0.0);
+  #endif
   float chop = (0.25 + uWind * 0.75);
   vec3 detail = vec3(n1.x + n2.x * 0.6, 0.0, n1.y + n2.y * 0.6) * chop * detailFade + vec3(n3.x, 0.0, n3.y) * 0.25;
-  float ripFoam;
+  float ripFoam = 0.0;
+  float pix = length(fwidth(vW.xz));
+  #if WATER_TIER >= 1
   vec3 rip = ripples(vW.xz, ripFoam);
   float rr = rainRings(vW.xz);
+  #else
+  vec3 rip = vec3(0.0); float rr = 0.0;
+  #endif
   // fade the fine octaves out where they'd be smaller than a pixel (blocky glints otherwise)
-  float pix = length(fwidth(vW.xz));
+  #if WATER_TIER >= 2
   vec2 fw = fineWaves(vW.xz, uTime, 0.35 + uWind) * detailFade * clamp(1.0 - (pix - 0.02) * 12.0, 0.0, 1.0);
+  #else
+  vec2 fw = vec2(0.0);
+  #endif
   vec3 N = normalize(vN + detail * 0.22 + rip + vec3(rr * 0.3, 0.0, rr * 0.3) - vec3(fw.x, 0.0, fw.y));
   bool below = uUnder > 0.5;
   if (below) N = -N;
@@ -121,7 +139,7 @@ void main() {
   float waterZ = -perspectiveDepthToViewZ(gl_FragCoord.z, uNear, uFar);
   float thick = 30.0;
   vec3 refr = uDeep;
-  if (uHasScene > 0.5) {
+  if (uHasScene > 0.5 && WATER_TIER >= 1) {
     vec2 off = N.xz * 0.045 * clamp(1.0 - vDist / 300.0, 0.15, 1.0);
     vec2 ruv = clamp(suv + off, 0.001, 0.999);
     float sz = -perspectiveDepthToViewZ(texture2D(tDepth, ruv).x, uNear, uFar);
@@ -133,6 +151,8 @@ void main() {
     vec3 trans = exp(-vec3(0.55, 0.3, 0.36) * thick * pathK);
     float scatterAmt = 1.0 - exp(-thick * 0.35 * pathK);
     refr = sceneCol * trans + uScatter * scatterAmt;
+    // shallow water near walls and shores reads murky green, not open-sea teal
+    refr = mix(refr, refr * vec3(0.8, 1.05, 0.75) + vec3(0.006, 0.012, 0.004), smoothstep(5.0, 0.6, thick) * 0.6);
   } else {
     refr = mix(uScatter, uDeep, 0.4 + 0.6 * (1.0 - NdV));
   }
@@ -141,7 +161,11 @@ void main() {
     float F = (0.02 + 0.98 * pow(1.0 - NdV, 5.0)) * 0.74;
     vec3 R = reflect(-V, N); R.y = abs(R.y);
     // the reflected sky is a little darker and greener than the sky itself (absorption + polarisation)
+    #if WATER_TIER >= 1
     vec3 refl = skyClouds(R, skyBase(R), true) * (1.0 - uCloud * 0.2) * vec3(0.8, 0.86, 0.86);
+    #else
+    vec3 refl = skyBase(R) * (1.0 - uCloud * 0.25) * vec3(0.66, 0.74, 0.76);   // Laptop: sky tint only, kept dark enough that wide water never goes white
+    #endif
     if (uHasRefl > 0.5) {
       vec4 rc = uReflMatrix * vec4(vW.x, 0.0, vW.z, 1.0);
       vec2 ruv = rc.xy / rc.w + N.xz * 0.06 * clamp(1.0 - vDist / 400.0, 0.2, 1.0);
@@ -151,12 +175,16 @@ void main() {
     // sun glitter / moon path
     float spec = pow(max(dot(R, uSunDir), 0.0), mix(700.0, 180.0, clamp(pix * 8.0, 0.0, 1.0))) * mix(30.0, 8.0, clamp(pix * 8.0, 0.0, 1.0)) + pow(max(dot(R, uSunDir), 0.0), 60.0) * 0.6;
     refl += uSunColor * min(spec, 8.0) * (1.0 - uCloud * 0.85);   // a bright glint, never a white-out
+    // the moon's path on the water at night
+    refl += vec3(0.55, 0.62, 0.75) * min(pow(max(dot(R, uMoon), 0.0), 220.0) * 6.0 + pow(max(dot(R, uMoon), 0.0), 25.0) * 0.12, 3.0) * uNightK * (1.0 - uCloud * 0.8);
     // point lights (lanterns, searchlights) streak on the water
+    #if WATER_TIER >= 1
     for (int i = 0; i < 4; i++) {
       vec3 L = uLightPos[i] - vW; float ld = length(L); L /= ld;
       float s = pow(max(dot(R, L), 0.0), 900.0) * 5.0 / (1.0 + ld * 0.08);
       refl += uLightCol[i] * s;
     }
+    #endif
     col = mix(refr, refl, F);
     // subsurface scattering: sunlight through the thin water of wave crests
     float sssView = pow(max(dot(V, -normalize(uSunDir + N * 0.35)), 0.0), 4.0);
@@ -169,7 +197,11 @@ void main() {
     float wake = smoothstep(0.1, 0.8, ripFoam * fn * 1.6);
     // wind streaks: long foam lines lying along the wind in a blow
     vec2 wp2 = vec2(dot(vW.xz, uWindDir), dot(vW.xz, vec2(-uWindDir.y, uWindDir.x)));
+    #if WATER_TIER >= 1
     float streak = texture2D(tNoise, vec2(wp2.x * 0.012 - uTime * 0.01, wp2.y * 0.22)).r;
+    #else
+    float streak = 0.0;
+    #endif
     crest += smoothstep(0.62, 0.8, streak) * smoothstep(0.55, 1.0, uWind) * 0.35 * detailFade;
     float foam = clamp(contact + crest + wake, 0.0, 1.0);
     vec3 foamCol = (skyBase(vec3(0.0, 1.0, 0.0)) * 0.6 + uSunColor * max(uSunDir.y, 0.0) * 0.5) * 0.9 + 0.04;
@@ -244,6 +276,7 @@ export class Water {
     });
     this.material = new THREE.ShaderMaterial({
       vertexShader: vs, fragmentShader: fs, uniforms: this.uniforms, fog: true, side: THREE.DoubleSide,
+      defines: { WATER_TIER: q.waterTier ?? 2 },
     });
     this.mesh = new THREE.Mesh(radialGrid(q.waterRings, q.waterSegments, 0.6, 2200), this.material);
     this.mesh.frustumCulled = false;

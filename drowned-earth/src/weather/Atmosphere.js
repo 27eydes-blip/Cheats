@@ -93,6 +93,8 @@ export class Atmosphere {
     skyUniforms.uSkyTime.value += dt;
     skyUniforms.uHaze.value = Math.min(1, w.fog * 60);
     skyUniforms.uFlashSky.value = weather.flash * 0.5;
+    skyUniforms.uSkyTier.value = this.ctx.settings.q.skyTier ?? 2;
+    skyUniforms.uFogCol.value.copy(this.fog.color); skyUniforms.uFogK.value = this.underwater ? 0 : 0.6;
     // lights
     const ld = time.lightDir;
     const isMoon = time.sunDir.y <= -0.02;

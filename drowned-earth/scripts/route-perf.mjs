@@ -27,6 +27,7 @@ await p.evaluate(() => setTimeout(() => document.querySelector('[data-c="story"]
 await p.waitForFunction(() => window.__game?.ctx?.mode === 'play' && window.__game.ctx.player, null, { timeout: 400000 });
 const r = await p.evaluate(async () => {
   const g = window.__game, c = g.ctx, V = c.player.position.constructor;
+  const snap = {};
   const frames = []; let phase = 'warmup', last = performance.now(), running = true;
   const evs = []; c.events.on('chunk:built', () => evs.push('chunk')); c.events.on('landmark:loaded', (x) => evs.push('landmark ' + (x?.def?.id || '')));
   const progs = () => c.renderer.info.programs?.length || 0;
@@ -59,22 +60,22 @@ const r = await p.evaluate(async () => {
   const lc = c.worldMap.landmarks.find((l) => l.id === 'linden_court');
   if (c.player.mode === 'boat') { if (c.interact.focus) c.interact.use(); }
   if (c.player.mode !== 'foot') { c.player.mode = 'foot'; }
-  phase = 'standing'; await wait(15);
+  phase = 'standing'; await wait(15); snap['standing'] = { memMB: c.perf?.memory ? +c.perf.memory().toFixed(0) : null, textures: c.renderer.info.memory.textures, geometries: c.renderer.info.memory.geometries };
   // walking in Portage: on the market deck, moving and turning
   { const po0 = c.state.communities?.portage, mk = po0?.rafts.get('market');
     if (mk) { c.player.mode = 'foot'; c.player.teleport(mk.worldPoint(new V(0, mk.deck + 0.2, 0))); } }
   phase = 'walking'; c.input.touchMove.y = 1; const turn = setInterval(() => { c.player.yaw += 0.15; }, 500); await wait(15); clearInterval(turn); c.input.touchMove.y = 0;
   // boat across open water
   put(lc.pos[0] - 40, lc.pos[1] + 60, Math.PI); target = [lc.pos[0] - 40, lc.pos[1] + 400];
-  phase = 'boat'; await wait(20);
+  phase = 'boat'; await wait(20); snap['boat'] = { memMB: c.perf?.memory ? +c.perf.memory().toFixed(0) : null, textures: c.renderer.info.memory.textures, geometries: c.renderer.info.memory.geometries };
   // sail into the raft city
   const po = c.worldMap.landmarks.find((l) => l.id === 'portage');
   put(po.pos[0] - 220, po.pos[1], -Math.PI / 2); target = [po.pos[0], po.pos[1]];
-  phase = 'raft city'; await wait(25);
+  phase = 'raft city'; await wait(25); snap['raft city'] = { memMB: c.perf?.memory ? +c.perf.memory().toFixed(0) : null, textures: c.renderer.info.memory.textures, geometries: c.renderer.info.memory.geometries };
   // on to Cask Street
   const ck = c.worldMap.landmarks.find((l) => l.id === 'cask_street');
   put(ck.pos[0] - 200, ck.pos[1] + 120, 0); target = [ck.pos[0], ck.pos[1]];
-  phase = 'cask street'; await wait(25);
+  phase = 'cask street'; await wait(25); snap['cask street'] = { memMB: c.perf?.memory ? +c.perf.memory().toFixed(0) : null, textures: c.renderer.info.memory.textures, geometries: c.renderer.info.memory.geometries };
   running = false; target = null;
   const stats = {};
   for (const ph of ['standing', 'walking', 'boat', 'raft city', 'cask street']) {
@@ -83,7 +84,7 @@ const r = await p.evaluate(async () => {
     const ms = f.map((x) => x.ms).sort((a, b) => b - a), k = Math.max(1, Math.floor(ms.length / 100));
     const avg = ms.reduce((a, b) => a + b, 0) / ms.length;
     const avgOf = (k) => Math.round(f.reduce((a, x) => a + (x[k] || 0), 0) / f.length);
-    stats[ph] = { calls: avgOf('calls'), tris: avgOf('tris'), frames: f.length, avgFps: +(1000 / avg).toFixed(1), low1Fps: +(1000 / (ms.slice(0, k).reduce((a, b) => a + b, 0) / k)).toFixed(1), worstMs: Math.round(ms[0]), shaderCompiles: f.reduce((a, x) => a + x.shaders, 0) };
+    stats[ph] = { calls: avgOf('calls'), tris: avgOf('tris'), frames: f.length, avgFps: +(1000 / avg).toFixed(1), low1Fps: +(1000 / (ms.slice(0, k).reduce((a, b) => a + b, 0) / k)).toFixed(1), worstMs: Math.round(ms[0]), shaderCompiles: f.reduce((a, x) => a + x.shaders, 0), ...(snap[ph] || {}) };
   }
   const worst = frames.filter((x) => x.phase !== 'warmup').sort((a, b) => b.ms - a.ms).slice(0, 10).map((x) => ({ phase: x.phase, ms: Math.round(x.ms), doing: x.doing, cause: x.shaders ? `${x.shaders} shader compile(s)` : x.ev || 'render/logic' }));
   return { quality: c.settings.quality, stats, worst };
