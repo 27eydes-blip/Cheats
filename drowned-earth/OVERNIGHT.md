@@ -106,3 +106,50 @@ Route perf (SwiftShader, CPU; ±20 % run-to-run noise):
 
 Shader compiles: 0/5/0/0/0. Worst frames 1.9–2.7 s, which is CPU rendering, not meaningful as fps. These
 numbers are in line with the end-of-overnight runs. Collision adds no draw calls.
+
+## Phase 2: how NPCs look (tag `npc-phase-2-start`, kept)
+
+**Face/body consistency.**
+- Every named NPC in `npcs.json` now records `presents` (f/m), decided from names and pronouns in the data.
+- `generatePerson` honours it, so skin texture, body, facial hair and clothing cut all follow one value.
+- Facial hair:
+  - Beards were already male-only, and only on people over 18.
+  - Stubble only on males over 16.
+  - Bald heads always show scalp stubble.
+  - Age lines only on people over 50.
+- New `voicePitch(p)`: female voices are above 1.08, male below 1.0, lowered a little with age, plus a per-person offset. Dialogue and the dockmaster's refusal line now use it.
+- `scripts/npc-traits-test.mjs` checks 500 random people plus all 23 named NPCs against 9 rules. It passes 523/523, and it is now part of the phase gate.
+
+**Look changes.** All are shader-only: no new meshes, textures or draw calls.
+- **Skin:** every person (not only the weathered) gets low-frequency warm/cool/yellow colour variation, a cool cast where skin is thin, and uneven roughness, so highlights break up instead of reading as wax.
+- **Eyes:** a tight corneal catch-light from the sky above the viewer, plus a faint wet sheen at grazing angles. Blinks (single, double, half), saccades, gaze and pupil response to light already existed.
+- **Hair:** the scalp under the hair cards is lightly tinted with the hair colour, so skin doesn't show through between cards.
+- **Clothes by job** (`role` passes through to the generator):
+  - Mechanics, scavengers and fixers get oil/tar wipe marks, darker and a little shinier.
+  - Dock, water and fishing hands get more salt.
+  - Elders, leaders and traders are cleaner.
+  - Labourers get an extra patch.
+  - Crew colours were already chosen from the community palette.
+
+**Cost.** A few extra noise lookups per skin, eye and cloth pixel; full-detail people within 20 m only use the SSS path. Route numbers are unchanged:
+
+| Stop | Draw calls | Triangles |
+|---|---|---|
+| standing | 581 | 625k |
+| walking | 373 | 551k |
+| boat | 662 | 696k |
+| raft city | 584 | 557k |
+| cask | 565 | 706k |
+
+**Not done (honest):**
+- The hard hairline on long styles (e.g. Ondine) comes from the hair-card mesh edge itself. Fixing it needs new hair assets.
+- Hair styles are limited to the 9 meshes that exist.
+- I compared CPU-rendered close-ups before and after: the skin difference is subtle, and the catch-light is not visible at that resolution. Whether this reads as "less waxy" needs a look on a real GPU.
+
+**Gate (n2):** all pass, including npc-traits 9/9.
+
+**Checkpoint deploy:**
+- Done, after making `deploy-worker.cjs` upload only changed files.
+  - It keeps a hash manifest in the bucket, uploads `index.html` last, and backs off on Cloudflare's 429 throttling.
+  - The first attempt was throttled partway through. The page kept the old `index.html` until the retry finished.
+- A headless boot of the live site shows no console errors and no failed requests.
