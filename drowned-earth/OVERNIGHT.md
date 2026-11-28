@@ -153,3 +153,103 @@ numbers are in line with the end-of-overnight runs. Collision adds no draw calls
   - It keeps a hash manifest in the bucket, uploads `index.html` last, and backs off on Cloudflare's 429 throttling.
   - The first attempt was throttled partway through. The page kept the old `index.html` until the retry finished.
 - A headless boot of the live site shows no console errors and no failed requests.
+
+## Phases 3 + 4: how NPCs move and act (tag `npc-phase-3-start`)
+
+I built these together because the behaviour layer (Manners) drives the motion layer (Gestures). They were gated
+together as `n34` (results below).
+
+### Animations: what exists vs what's procedural vs what's missing
+
+**Mocap clips that exist (15):** Idle, Walk, Jog, Idle_Talking (talking with the hands), Fixing_Kneeling,
+Interact, PickUp_Table, Sitting_Idle, Sitting_Talking, Idle_Torch, Push, Swim_Idle, Swim_Fwd, Crouch_Idle,
+Driving.
+
+**Procedural layers** (`src/humans/Gestures.js`) aim the upper arm and forearm at body-frame directions over a
+base clip, blend in and out over about 0.35 s, and use shared props:
+
+| Wanted | Done as |
+|---|---|
+| talking gestures | Idle_Talking clip (mocap) |
+| listening / nodding | `nod` layer on Idle |
+| laughing | `laugh` layer (shoulders and chest shake, head back) |
+| arms crossed | `crossed` layer |
+| leaning | `lean` layer (hip shift, spine tilt, one arm across); used for lookouts' `watch` |
+| sweeping | `sweep` layer plus broom prop |
+| carrying crates | `carry` layer plus crate prop; works over Walk (dock hands, runners, scavengers between tasks) |
+| mending nets | Sitting clip, `mend` layer and net prop, on a seat |
+| fishing | Sitting clip, `fish` layer and rod prop, on a seat |
+| sitting on crates/benches | Sitting clips plus a seat crate fitted under the hips each frame (0.47 m for the test person) |
+| hauling rope | `haul` layer (hand over hand, leaning back) plus rope prop |
+| hammering | Fixing_Kneeling clip plus a striking rhythm on the right arm |
+| cooking | PickUp_Table clip plus a `stir` layer |
+| handing items over | Interact clip plus a `give` layer |
+| covering ears | `ears` layer |
+| subtle life | breathing, weight drift and personal head tilt (existing) plus fidgets every 7–21 s |
+
+**Missing (honest):**
+- No real mocap for any of the procedural actions. They are posed arms over idle or sitting bodies, so legs
+  and hips don't take part (no step into a sweep stroke, no squat to lift a crate).
+- No hammer or ladle prop.
+- No fingers closing around props: the hands are open.
+- Transitions are cross-fades plus layer blends. I found no T-poses. Foot sliding is held down by the existing
+  speed-matched walk.
+
+**Bug found and fixed:** bones the clips don't animate (e.g. spine02) kept each frame's procedural rotation, so
+poses compounded within seconds; the contact sheet showed people folding over. The layer now snapshots the
+pose right after the mixer runs and restores it before the next update. This also fixes slow drift in the old
+breathing/sway code on unanimated bones.
+
+`scripts/gesture-shots.mjs` poses one person through 17 activities in the character viewer. It saves a
+screenshot of each and fails on NaN bones, hands below the feet, hands more than 1.2 m from the body, or a
+seated person without a seat. Result: 17/17 pass, and I looked at the contact sheet.
+
+### Behaviour (`src/people/Manners.js`, one per raft NPC)
+
+**Eyes:**
+- Eye contact within 6 m.
+- A polite glance away after 1.4–4.4 s, longer for warm people. Shy people look down, others look to the side.
+- They look at whoever they're talking with.
+- Everyone glances up for a moment at lightning.
+
+**Mood in the body** (from the living-NPC moods): wary, stressed or grieving people fold their arms; tired or
+drunk ones slouch.
+
+**Greetings:**
+- By hour: morning, day, evening and night lines.
+- Spoken through the person's speech style (blunt, rambling, nervous…).
+- Remembered per day in the save: "Back again?" on a second visit, "There's our regular" after six.
+- Cold people just grunt.
+- One greeting at a time across the town (6 s spacing).
+- A greeting that comes due mid-conversation waits until it can be said.
+
+**Pair and group talk:** the existing overheard chatter now has bodies.
+- The two turn to face each other.
+- The listener nods, and laughs at a joke.
+- Anyone within 3.5 m turns to listen.
+
+**World reactions:**
+- A gunshot or loud noise within 22 m: hands over the ears, looking toward it.
+- A hard boat crash or an incident within 24 m: curious people walk over to about 2.5 m from it and look,
+  then go back.
+- Hard rain: idlers hunch and walk to the nearest doorway or bed spot if their raft has one.
+- Step aside was already in place.
+
+**Routines and personality:**
+- Schedules by job now use the new actions:
+  - Osk mends nets.
+  - Brin hauls rope, then mends.
+  - Juno sweeps in the mornings.
+  - Fishers sit on a seat with a rod.
+- Hard workers sweep instead of standing idle.
+- Calm by default: running still only happens when fleeing a real threat.
+
+**Budget:**
+- All of this is arithmetic on NPCs that are already built and drawn.
+- Props and seats exist only on full-detail people (within 20 m, 8 m on phones).
+- A prop is one draw call each, from shared geometry and materials.
+- The test saw 2–3 full-detail people near the player at the market.
+
+`scripts/npc-life-test.mjs` loads real humans in Portage and checks: built, gaze/glance-away, greeting plus
+second-visit memory, pair chat facing plus nodding, thunder, ears, curiosity, rain, and poses/seats.
+Result: 9/9 pass.
