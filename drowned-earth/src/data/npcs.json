@@ -2,7 +2,8 @@
  "_doc": "NPCs. raft = platform id (rafts.json). schedule: from/to hours (wrap past midnight when to < from), do = activity, at = spot kind or pos = [x,z]. talk lines: if = story flag required, set = flag raised, minTier/maxTier = player Standing range (7 = Deep-Born, lower = higher standing), once = only ever said once. shop = trade.json id. step = a Standing step this NPC can grant (standing.json). role 'respect' marks people who treat every tier the same.",
  "npcs": [
   {
-   "id": "oru", "presents": "f",
+   "id": "oru",
+   "presents": "f",
    "name": "Madam Oru Vance",
    "raft": "market",
    "role": "leader",
@@ -75,7 +76,8 @@
    ]
   },
   {
-   "id": "ruel", "presents": "m",
+   "id": "ruel",
+   "presents": "m",
    "name": "Dockmaster Ruel",
    "raft": "market",
    "role": "dockmaster",
@@ -117,7 +119,8 @@
    ]
   },
   {
-   "id": "odile", "presents": "f",
+   "id": "odile",
+   "presents": "f",
    "name": "Odile",
    "raft": "market",
    "role": "trader",
@@ -184,7 +187,8 @@
    ]
   },
   {
-   "id": "dela", "presents": "f",
+   "id": "dela",
+   "presents": "f",
    "name": "Dela",
    "raft": "market",
    "role": "resident",
@@ -257,7 +261,8 @@
    ]
   },
   {
-   "id": "keeper", "presents": "f",
+   "id": "keeper",
+   "presents": "f",
    "name": "The Keeper",
    "raft": "chapel",
    "role": "elder",
@@ -318,7 +323,8 @@
    ]
   },
   {
-   "id": "pell", "presents": "m",
+   "id": "pell",
+   "presents": "m",
    "name": "Pell",
    "raft": "lookout",
    "role": "lookout",
@@ -361,7 +367,8 @@
    ]
   },
   {
-   "id": "ivo", "presents": "m",
+   "id": "ivo",
+   "presents": "m",
    "name": "Ivo",
    "raft": "water",
    "role": "water",
@@ -411,7 +418,8 @@
    ]
   },
   {
-   "id": "moss", "presents": "m",
+   "id": "moss",
+   "presents": "m",
    "name": "Moss",
    "raft": "garden",
    "role": "resident",
@@ -484,7 +492,8 @@
    ]
   },
   {
-   "id": "maud", "presents": "f",
+   "id": "maud",
+   "presents": "f",
    "name": "Maud",
    "raft": "sleep1",
    "role": "resident",
@@ -552,7 +561,8 @@
    ]
   },
   {
-   "id": "corr", "presents": "m",
+   "id": "corr",
+   "presents": "m",
    "name": "Corr",
    "raft": "sleep2",
    "role": "resident",
@@ -610,7 +620,8 @@
    ]
   },
   {
-   "id": "sal", "presents": "m",
+   "id": "sal",
+   "presents": "m",
    "name": "Sal",
    "raft": "dock",
    "role": "fixer",
@@ -652,7 +663,8 @@
    ]
   },
   {
-   "id": "koa", "presents": "f",
+   "id": "koa",
+   "presents": "f",
    "name": "Elder Tamsin Koa",
    "raft": "gt_plots",
    "role": "leader",
@@ -709,7 +721,8 @@
    ]
   },
   {
-   "id": "bram", "presents": "m",
+   "id": "bram",
+   "presents": "m",
    "name": "Bram Hollis",
    "raft": "rh_rig",
    "role": "mechanic",
@@ -776,7 +789,8 @@
    ]
   },
   {
-   "id": "ada", "presents": "f",
+   "id": "ada",
+   "presents": "f",
    "name": "Ada",
    "raft": "rh_rig",
    "role": "resident",
@@ -824,7 +838,8 @@
    ]
   },
   {
-   "id": "kit", "presents": "f",
+   "id": "kit",
+   "presents": "f",
    "name": "Kit Marrow",
    "raft": "repair",
    "role": "scavenger",
@@ -859,7 +874,8 @@
    ]
   },
   {
-   "id": "hollis", "presents": "m",
+   "id": "hollis",
+   "presents": "m",
    "name": "Hollis Pike",
    "raft": "dock",
    "role": "fisher",
@@ -894,7 +910,8 @@
    ]
   },
   {
-   "id": "nell", "presents": "f",
+   "id": "nell",
+   "presents": "f",
    "name": "Nell Asante",
    "raft": "garden",
    "role": "cook",
@@ -929,7 +946,8 @@
    ]
   },
   {
-   "id": "brin", "presents": "m",
+   "id": "brin",
+   "presents": "m",
    "name": "Brin Okoye",
    "raft": "sleep1",
    "role": "rope-maker",
@@ -940,8 +958,26 @@
    "schedule": [
     {
      "from": 6,
+     "to": 13,
+     "do": "haul",
+     "pos": [
+      1,
+      -1
+     ]
+    },
+    {
+     "from": 13,
+     "to": 14,
+     "do": "sit",
+     "pos": [
+      1,
+      -1
+     ]
+    },
+    {
+     "from": 14,
      "to": 21,
-     "do": "repair",
+     "do": "mend",
      "pos": [
       1,
       -1
@@ -964,7 +1000,8 @@
    ]
   },
   {
-   "id": "tamsin", "presents": "f",
+   "id": "tamsin",
+   "presents": "f",
    "name": "Tamsin Reyes",
    "raft": "market",
    "role": "glass trader",
@@ -999,7 +1036,8 @@
    ]
   },
   {
-   "id": "osk", "presents": "f",
+   "id": "osk",
+   "presents": "f",
    "name": "Old Osk",
    "raft": "chapel",
    "role": "net-mender",
@@ -1011,7 +1049,7 @@
     {
      "from": 6,
      "to": 21,
-     "do": "sit",
+     "do": "mend",
      "pos": [
       1,
       1
@@ -1034,7 +1072,8 @@
    ]
   },
   {
-   "id": "juno", "presents": "f",
+   "id": "juno",
+   "presents": "f",
    "name": "Juno Vale",
    "raft": "sleep2",
    "role": "runner",
@@ -1045,6 +1084,15 @@
    "schedule": [
     {
      "from": 6,
+     "to": 12,
+     "do": "sweep",
+     "pos": [
+      2,
+      1
+     ]
+    },
+    {
+     "from": 12,
      "to": 21,
      "do": "idle",
      "pos": [
@@ -1069,7 +1117,8 @@
    ]
   },
   {
-   "id": "perrin", "presents": "m",
+   "id": "perrin",
+   "presents": "m",
    "name": "Perrin Lusk",
    "raft": "lookout",
    "role": "signaller",
@@ -1104,7 +1153,8 @@
    ]
   },
   {
-   "id": "ama", "presents": "f",
+   "id": "ama",
+   "presents": "f",
    "name": "Ama Boateng",
    "raft": "water",
    "role": "water-boiler",

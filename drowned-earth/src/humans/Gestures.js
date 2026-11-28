@@ -9,6 +9,8 @@ import * as THREE from 'three';
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _rq = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _iq = new THREE.Quaternion(), _q0 = new THREE.Quaternion();
 
+const TOUCHED = ['root', 'spine02', 'spine03', 'neck01', 'head', 'clavicle.L', 'clavicle.R', 'upperarm01.L', 'upperarm01.R', 'lowerarm01.L', 'lowerarm01.R'];
+
 // which layer an activity wants, and whether it sits
 export const LAYER_FOR = {
   sweep: 'sweep', carry: 'carry', mend: 'mend', fish: 'fish', haul: 'haul', hammer: 'hammer', repair: 'hammer',
@@ -27,9 +29,8 @@ function props() {
   const bristle = new THREE.BoxGeometry(0.32, 0.05, 0.1);
   const rod = new THREE.CylinderGeometry(0.006, 0.014, 2.4, 5); rod.translate(0, 1.2, 0); rod.rotateX(Math.PI / 2);
   const net = new THREE.PlaneGeometry(0.7, 0.5, 4, 3); net.rotateX(-Math.PI / 2);
-  const mallet = new THREE.Group();
   const netMat = new THREE.MeshStandardMaterial({ color: 0x75705a, roughness: 1, wireframe: true });
-  P = { wood, dark, rope, crate, stick, bristle, rod, net, netMat, mallet };
+  P = { wood, dark, rope, crate, stick, bristle, rod, net, netMat };
   return P;
 }
 
@@ -57,6 +58,16 @@ export class Gestures {
     this.fidgetT = 6 + person.rnd() * 12; this.fidget = 0;
   }
   set(layer) { this.want = layer; }
+  // Bones the clips don't animate keep whatever we did to them last frame, so every procedural offset
+  // (ours and the breathing/sway in Person) would pile up frame after frame. Snapshot the pose right after
+  // the mixer runs, put it back before the next mixer update.
+  snapshot() {
+    const b = this.p.human.bone, s = this.saved || (this.saved = []);
+    if (!s.length) for (const n of TOUCHED) if (b[n]) s.push([b[n], b[n].quaternion.clone(), b[n].position.clone()]);
+    else for (const r of s) { r[1].copy(r[0].quaternion); r[2].copy(r[0].position); }
+    this.snapped = true;
+  }
+  restore() { if (!this.snapped) return; for (const [bone, q, p] of this.saved) { bone.quaternion.copy(q); bone.position.copy(p); } this.snapped = false; }
   // body-frame direction helper
   static v(x, y, z) { return new THREE.Vector3(x, y, z); }
   update(dt, detail) {
@@ -144,6 +155,8 @@ export class Gestures {
     }
     this.updateProps(detail);
   }
+  // world-space props live in whatever scene the person is in (the game's, or the character viewer's)
+  top() { let o = this.p.root; while (o.parent) o = o.parent; return o; }
   // props: only for full-detail people; a missing prop is never worse than a floating one
   prop(name, make) { return this.props[name] || (this.props[name] = make()); }
   updateProps(detail) {
@@ -163,7 +176,7 @@ export class Gestures {
     } else show('seat', false);
     // broom from the hands to the deck ahead
     if (on('sweep')) {
-      const br = this.prop('broom', () => { const g = new THREE.Group(); const h = new THREE.Mesh(props().stick, props().wood); const bb = new THREE.Mesh(props().bristle, props().dark); g.add(h, bb); g.userData = { h, bb }; this.p.ctx.scene.add(g); return g; });
+      const br = this.prop('broom', () => { const g = new THREE.Group(); const h = new THREE.Mesh(props().stick, props().wood); const bb = new THREE.Mesh(props().bristle, props().dark); g.add(h, bb); g.userData = { h, bb }; this.top().add(g); return g; });
       const top = b['wrist.R'].getWorldPosition(_a), foot = p.root.localToWorld(_b.set(Math.sin(this.t * 2.6) * 0.25, 0.03, 0.75));
       const len = top.distanceTo(foot);
       br.position.copy(top); br.lookAt(foot);
@@ -172,16 +185,16 @@ export class Gestures {
     } else show('broom', false);
     // crate between the hands
     if (on('carry')) {
-      const cr = this.prop('crate', () => { const m = new THREE.Mesh(props().crate, props().wood); m.scale.set(0.42, 0.3, 0.32); m.castShadow = true; this.p.ctx.scene.add(m); return m; });
+      const cr = this.prop('crate', () => { const m = new THREE.Mesh(props().crate, props().wood); m.scale.set(0.42, 0.3, 0.32); m.castShadow = true; this.top().add(m); return m; });
       b['wrist.L'].getWorldPosition(_a); b['wrist.R'].getWorldPosition(_b);
       cr.position.addVectors(_a, _b).multiplyScalar(0.5); cr.position.y -= 0.12;
       cr.quaternion.copy(p.root.getWorldQuaternion(_rq)); cr.visible = true;
     } else show('crate', false);
     // fishing rod in the right hand, out over the water
     if (on('fish')) {
-      const rd = this.prop('rod', () => { const m = new THREE.Mesh(props().rod, props().dark); this.p.ctx.scene.add(m); return m; });
+      const rd = this.prop('rod', () => { const m = new THREE.Mesh(props().rod, props().dark); this.top().add(m); return m; });
       b['wrist.R'].getWorldPosition(_a); rd.position.copy(_a);
-      rd.lookAt(p.root.localToWorld(_b.set(0, 0.9, 2.6))); rd.visible = true;
+      rd.lookAt(p.root.localToWorld(_b.set(0.2, 2.0, 2.4))); rd.visible = true;
     } else show('rod', false);
     // net over the lap
     if (on('mend') && p.sitting) {
@@ -191,7 +204,7 @@ export class Gestures {
     } else show('net', false);
     // rope from the hands, running forward and down to a cleat
     if (on('haul')) {
-      const rp = this.prop('rope', () => { const m = new THREE.Mesh(props().stick, props().rope); this.p.ctx.scene.add(m); return m; });
+      const rp = this.prop('rope', () => { const m = new THREE.Mesh(props().stick, props().rope); this.top().add(m); return m; });
       b['wrist.L'].getWorldPosition(_a); const end = p.root.localToWorld(_b.set(0, 0.2, 3.2));
       rp.position.copy(_a); rp.lookAt(end); rp.scale.set(1.2, 1.2, _a.distanceTo(end) + 0.6); rp.visible = true;
     } else show('rope', false);

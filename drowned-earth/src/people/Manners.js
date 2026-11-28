@@ -53,7 +53,10 @@ export class Manners {
   update(dt) {
     const n = this.npc, c = n.ctx, B = this.B;
     // one shared clock, advanced once per frame however many NPCs update; old events are dropped
-    if (B.frame !== c.game?.frame) { B.frame = c.game?.frame; B.now += dt; if (B.bangs.length > 8 || B.odd.length > 8) { B.bangs = B.bangs.filter((b) => B.now - b.t < 3); B.odd = B.odd.filter((o) => B.now - o.t < 20); } }
+    // (a new round starts when someone updates a second time — no reliance on the render loop's frame count)
+    if (!B.ticked) B.ticked = new Set();
+    if (B.ticked.has(this) || !B.ticked.size) { B.ticked.clear(); B.now += dt; if (B.bangs.length > 8 || B.odd.length > 8) { B.bangs = B.bangs.filter((b) => B.now - b.t < 3); B.odd = B.odd.filter((o) => B.now - o.t < 20); } }
+    B.ticked.add(this);
     const me = n.worldPos(_v), pp = c.player.position, dP = me.distanceTo(pp);
     this.layer = null; this.lookOn = false;
     const t = performance.now() / 1000;
@@ -63,7 +66,8 @@ export class Manners {
       this.look.copy(o).setY(o.y + 1.55); this.lookOn = true;
       const speaking = t >= this.chat.speakFrom && t < this.chat.speakTo;
       if (!speaking) this.layer = this.chat.laughAt && t > this.chat.laughAt && t < this.chat.laughAt + 1.6 ? 'laugh' : 'nod';
-      n.chatFace = Math.atan2(o.x - me.x, o.z - me.z);
+      const ol = this.chat.with.raft === n.raft ? this.chat.with.local : n.raft.root.worldToLocal(_w.copy(o));
+      n.chatFace = Math.atan2(ol.x - n.local.x, ol.z - n.local.z);   // in the raft's own frame, like heading
     } else { this.chat = null; n.chatFace = null; }
     // --- thunder: everyone glances up for a moment
     if (B.now - B.flash < 1.8 && B.now - B.flash > 0.5) { this.look.copy(me).add(_w.set(Math.sin(n.heading) * 4, 9, Math.cos(n.heading) * 4)); this.lookOn = true; }
@@ -104,7 +108,9 @@ export class Manners {
       this.greet(dP);
     } else { this.eyeT = 0; this.away = 0; }
     // --- you've been away a while: a greeting is due next time you come close
-    if (dP > 9) { this.farT += dt; if (this.farT > 45) this.wasFar = true; } else this.farT = 0;
+    // (wall-clock, because nobody updates people on a raft you've left behind)
+    // the flag waits until they actually get to say it (they might be mid-conversation when you arrive)
+    if (dP <= 9) { if (t - (this.nearAt ?? -1e9) > 45) this.wasFar = true; this.nearAt = t; }
     // --- mood shows in the body when nothing else is going on
     if (!this.layer && !this.chat && /idle|watch|sell|trade|festival/.test(n.activity || '') && !this.goal) {
       const m = this.mood();
@@ -115,9 +121,9 @@ export class Manners {
   // a greeting that fits the person and the hour; remembered per day
   greet(dP) {
     const n = this.npc, c = n.ctx, B = this.B;
-    if (!this.wasFar || dP > 4 || c.ui.panel || n.talkT > 0) return;
+    if (!this.wasFar || dP > 5 || c.ui.panel || n.talkT > 0) return;
+    if (B.now - B.lastGreet < 6) return;   // someone else just spoke up: wait your turn
     this.wasFar = false;
-    if (B.now - B.lastGreet < 6) return;
     const chance = 0.35 + this.tr.warmth * 0.4 + this.tr.talk * 0.25;
     if (Math.random() > chance) return;
     const day = Math.floor((c.time.day ?? 0));

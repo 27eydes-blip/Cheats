@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Person } from '../humans/Person.js';
 import { personFor } from '../humans/Roster.js';
+import { startChat } from './Manners.js';
 
 // Living NPCs: personalities, needs, moods, routines that bend, decisions
 // weighed against risk, and incidents that happen on their own when a
@@ -259,6 +260,9 @@ export class Society {
     const inc = this.state.incidents[this.state.incidents.length - 1];
     const fill = (s) => s.replaceAll('{who}', topic === 'gossip' && inc ? this.agents.get(inc.who)?.name : B.name).replaceAll('{dead}', (A.grief || B.grief)?.who || '').replace('{creature}', inc ? this.ctx.creatures?.byId(inc.scenario)?.spec.name.toLowerCase() : 'thing').replace('{place}', 'old roofs');
     const l1 = this.voice(A, fill(pick(T[topic]))), l2 = this.voice(B, fill(pick(topic === 'argue' ? T.argue : topic === 'flirt' ? ['Get away with you.', 'Only if you carry the lantern.'] : topic === 'grief' ? T.grief : ['Mm.', 'Hah. True.', 'Don\'t start.', 'You heard that from Odile, didn\'t you.'])));
+    startChat(x, y, topic);   // they face each other, the listener nods (and laughs at a joke)
+    // anyone else standing close turns to listen
+    for (const z of near) if (z !== x && z !== y && z.manners && !z.manners.chat && z.worldPos(_v).distanceTo(x.worldPos(new THREE.Vector3())) < 3.5) z.manners.chat = { with: x, until: performance.now() / 1000 + 7, speakFrom: 1e12, speakTo: 0, laughAt: null };
     this.ctx.ui.subtitle(`${A.name}: ${l1}`, 3.5, 'speech');
     setTimeout(() => this.ctx.ui.subtitle(`${B.name}: ${l2}`, 3.5, 'speech'), 3600);
     // conversations share knowledge (and sometimes make it worse)

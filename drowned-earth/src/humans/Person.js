@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Human } from './Human.js';
 import { retargetClips } from './Retarget.js';
 import { CLIP_FOR } from '../ai/Characters.js';
+import { Gestures, LAYER_FOR, SITS } from './Gestures.js';
 
 // A Human that moves: retargeted clips, cross-fades, speed-matched walking,
 // and procedural layers on top so nobody moves like a robot — breathing that
@@ -31,6 +32,7 @@ export class Person {
     this.breathRate = 0.22 + this.rnd() * 0.08;
     this.phase = this.rnd() * 10;
     this.look = new THREE.Vector2();
+    this.gest = new Gestures(this); this.sitting = false; this.detail = true;
     this.play('idle', 0);
     this.mixer.setTime(this.rnd() * 4);
     this.addWristband(params.tier ?? 7);
@@ -66,12 +68,26 @@ export class Person {
     if (this.current && fade > 0) this.current.crossFadeTo(next, fade, false); else if (this.current) this.current.stop();
     this.current = next; this.currentName = name;
   }
+  // what the person is doing → a base clip plus a procedural layer (and a seat if they sit).
+  // Work the clip library doesn't have (sweeping, carrying, nets, rods, rope, crossed arms…) stands on the
+  // idle or sitting clip with its arms posed by the layer; `layer` overrides the activity's own layer.
+  doing(act, moving = false, layer) {
+    const sits = !moving && SITS.has(act);
+    const clip = moving ? (act === 'run' ? 'run' : 'walk') : sits ? (act === 'sitTalk' ? 'sitTalk' : 'sit')
+      : act === 'give' ? 'Interact' : /^(sweep|carry|haul|crossed|lean|listen|laugh|ears|nod)$/.test(act) ? 'idle' : act;
+    this.sitting = sits;
+    this.play(clip);
+    const own = moving ? (act === 'carry' ? 'carry' : null) : LAYER_FOR[act] ?? null;
+    this.gest.set(layer !== undefined && layer !== null ? layer : own);
+  }
   // walking clips are matched to ground speed so feet don't slide
   setSpeed(mps) { if (this.current && /Walk|Jog/.test(this.currentName)) this.current.timeScale = mps / (/Jog/.test(this.currentName) ? 3.0 : 1.25); else if (this.current) this.current.timeScale = 1; }
   say(text, duration) { this.human.face.say(text, duration); this.play('talk'); }
   update(dt, lookAt = null) {
     this.phase += dt;
+    this.gest.restore();
     this.mixer.update(dt);
+    this.gest.snapshot();
     const b = this.human.bone;
     // breathing: chest and shoulders rise, a slower deeper breath now and then
     const br = Math.sin(this.phase * Math.PI * 2 * this.breathRate) * (1 + 0.5 * Math.max(0, Math.sin(this.phase * 0.13)));
@@ -80,6 +96,8 @@ export class Person {
     if (b['clavicle.R']) b['clavicle.R'].rotateZ(-br * 0.01);
     // idle sway: weight drifts from foot to foot
     if (b.root && /Idle|Talking|Torch/.test(this.currentName || '')) b.root.position.x += Math.sin(this.phase * 0.31) * 0.012;
+    // work and body-language layers (arms posed over the clip), seats and props
+    this.gest.update(dt, this.detail);
     // aim the face: rotate (in world space) from where the animation points the
     // head to where the target is; neck takes 40 %, head 60 %, capped at ~65°.
     // Without a target the head is lifted slightly (the clips look a bit down).
@@ -109,7 +127,7 @@ export class Person {
     this.human.face.look(lookAt);
     this.human.update(dt, { lightLevel: this.ctx.lightLevel ?? 0.6 });
   }
-  dispose() { this.mixer.stopAllAction(); this.human.dispose(); }
+  dispose() { this.mixer.stopAllAction(); this.gest.dispose(); this.human.dispose(); }
 }
 const _v = new THREE.Vector3(), _f = new THREE.Vector3(), _w = new THREE.Vector3(), _r = new THREE.Vector3();
 const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _q4 = new THREE.Quaternion(), _q5 = new THREE.Quaternion(), _qi = new THREE.Quaternion(), _pq = new THREE.Quaternion();

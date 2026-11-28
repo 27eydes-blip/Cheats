@@ -5,7 +5,8 @@ import { mat } from '../world/Materials.js';
 import { damp } from '../core/rng.js';
 import { Character, charactersAvailable } from './Characters.js';
 import { Person } from '../humans/Person.js';
-import { personFor } from '../humans/Roster.js';
+import { personFor, voicePitch } from '../humans/Roster.js';
+import { Manners } from '../people/Manners.js';
 
 // Raft-folk. Low-poly figures with procedural animation, living on a raft
 // (they are children of the raft so they ride its motion). Each follows a
@@ -55,6 +56,7 @@ export class NPC {
     this.rig = new Person(ctx, ctx.humans, personFor(def.id, { palette: community, tier, labour: /mechanic|dock|water/.test(def.role) ? 1 : 0, name: def.name, presents: def.presents, role: def.role }));
     this.root.add(this.rig.root);
     this.root.scale.setScalar(1);
+    this.manners = new Manners(this); this.voicePitch = voicePitch;
   }
   buildRigged(ctx, def) {
     let seed = 0;
@@ -115,8 +117,12 @@ export class NPC {
       this.root.visible = task.do !== 'away' && task.do !== 'sleep';   // sleepers are in their shelters, not hovering on deck
       if (task.do === 'away') { this.local.copy(this.target); }
     }
+    // manners: gaze, greetings, mood, chats and reactions (only for built, drawn people)
+    const mind = this.manners && this.rig?.root.visible ? this.manners : null;
+    if (mind) mind.update(dt);
     // keep a polite distance
     let tx = this.target.x, tz = this.target.z;
+    if (mind?.goal) { tx = mind.goal.x; tz = mind.goal.z; }
     if (playerNear && playerLocal) {
       const dx = this.local.x - playerLocal.x, dz = this.local.z - playerLocal.z;
       const d = Math.hypot(dx, dz);
@@ -138,6 +144,8 @@ export class NPC {
       this.local.y = this.raft.deckAt(this.local.x, this.local.z);
       this.heading = damp(this.heading, Math.atan2(dx, dz), 8, dt);
       moving = true;
+    } else if (this.chatFace != null) {
+      this.heading = damp(this.heading, this.chatFace, 4, dt);   // face whoever they're talking with
     } else if (this.face != null && !(playerNear && playerLocal && this.talkT > 0)) {
       this.heading = damp(this.heading, this.face, 4, dt);
     } else if (playerNear && playerLocal && this.activity !== 'sleep') {
@@ -161,10 +169,15 @@ export class NPC {
       const p = this.ctx.player.position;
       const near = this.worldPos(_w).distanceToSquared(p) < 36;
       this.talkT = Math.max(0, (this.talkT || 0) - dt);
-      const sitting = ['sit', 'fish', 'sleep'].includes(this.activity);
-      // there are no seats on the rafts: people who'd sit stand instead (sleepers are indoors, see below)
-      const pose = sitting ? (this.activity === 'fish' ? 'watch' : 'idle') : this.activity;
-      this.rig.play(moving ? (this.fleeing ? 'run' : 'walk') : this.talkT > 0 ? 'talk' : pose);
+      const sitting = ['sit', 'fish', 'mend'].includes(this.activity);
+      // people who sit get a crate under them (Gestures places it); hard workers don't stand idle — they sweep
+      const m = this.manners, now = performance.now() / 1000;
+      const work = this.activity === 'idle' && (m?.tr.industry ?? 0) > 0.6 ? 'sweep' : this.activity;
+      const speaking = this.chatTalk && now >= this.chatTalk[0] && now < this.chatTalk[1];
+      const carrying = moving && !this.fleeing && /dock|runner|scavenger/.test(this.def.role || '');
+      const act = moving ? (this.fleeing ? 'run' : carrying ? 'carry' : 'walk') : this.talkT > 0 || speaking ? (sitting ? 'sitTalk' : 'talk') : work;
+      if (this.rig.doing) this.rig.doing(act, moving, moving ? null : m?.layer ?? null);
+      else this.rig.play(act);
       // distant people animate at a lower rate (cheap crowd)
       const d2 = this.worldPos(_w).distanceToSquared(p);
       const far = d2 > 900;
@@ -178,6 +191,7 @@ export class NPC {
         // realistic people: LOD by distance, rain soaks them, walking speed matches the feet
         const phone = this.ctx.settings.q.npcDetail === 0;
         this.rig.human.setLod(d2 > (phone ? 64 : 400) ? 1 : 0);
+        this.rig.detail = d2 <= (phone ? 64 : 400);   // seats and props only at full detail
         this.rig.human.setWet(Math.min(1, this.ctx.weather.cur.rain * 1.3), this.ctx.time.out.sunI > 2 && /hammer|repair|haul/.test(this.activity) ? 0.5 : 0);
         this.rig.setSpeed(moving ? (this.fleeing ? 1.4 : this.backoff > 0 ? 0.8 : 1.0) : 0);
         // they read your wristband: how far apart you stand in the Order shows on their face
@@ -187,7 +201,7 @@ export class NPC {
           this.faceSet = true;
         } else if (!near && this.faceSet) { this.rig.human.face.setEmotion(this.rig.p.emotion || 'calm'); this.faceSet = false; }
       }
-      this.rig.update(this.animAcc, near && this.activity !== 'sleep' ? _e.copy(this.ctx.camera.position) : null);
+      this.rig.update(this.animAcc, this.manners?.lookOn ? _e.copy(this.manners.look) : near && this.activity !== 'sleep' ? _e.copy(this.ctx.camera.position) : null);
       this.animAcc = 0;
       return;
     }
