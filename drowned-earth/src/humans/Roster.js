@@ -177,7 +177,12 @@ export function generatePerson(seed, hints = {}) {
       freckles: raceKey === 'caucasian' && r() < 0.35 ? r() : 0, blush: r() * 0.5, underEye: 0.2 + r() * 0.6, weathered: Math.min(1, outdoors * (0.3 + r() * 0.5) + age / 120),
       scar: r() < 0.12 ? (() => { const x = (r() - 0.5) * 0.1, y = (r() - 0.6) * 0.08; return [[x, y], [x + (r() - 0.5) * 0.04, y - 0.02 - r() * 0.03]]; })() : null,
       tattoo: r() < 0.18 ? { bone: r() < 0.5 ? 'lowerarm01.L' : 'lowerarm01.R', style: Math.floor(r() * 2) } : null,
-      salt: outdoors * (0.3 + r() * 0.6), wear: 0.3 + r() * 0.6, patches: Math.floor(r() * 2.5),
+      // the job shows on the clothes: engine and rig crews carry oil and tar, dock and water hands more salt,
+      // keepers of chapels and elders keep theirs cleaner; everyone mends
+      salt: Math.min(1, outdoors * (0.3 + r() * 0.6) + (/dock|water|fish|lookout|diver/.test(hints.role || '') ? 0.25 : 0)),
+      wear: Math.max(0.1, 0.3 + r() * 0.6 - (/keeper|elder|chapel|council|trader|shop|leader/.test(hints.role || '') ? 0.25 : 0)),
+      grime: /mechanic|rig|repair|engine|smith|salvage|scaveng|fixer/.test(hints.role || '') ? 0.5 + r() * 0.4 : /dock|water|fish/.test(hints.role || '') ? r() * 0.2 : r() * 0.08,
+      patches: Math.floor(r() * 2.5) + (hints.labour ? 1 : 0),
     },
     clothes, clothTints: clothes.map((c) => (/shoes/.test(c) ? pick(r, [[0.2, 0.15, 0.1], [0.12, 0.11, 0.1], [0.3, 0.24, 0.18], [0.24, 0.24, 0.22]]) : pick(r, pal).map((x) => x * (0.85 + r() * 0.3)))),
     emotion: pick(r, ['calm', 'calm', 'calm', 'tired', 'worried', 'amused', 'suspicious']), tier: hints.tier ?? 6,

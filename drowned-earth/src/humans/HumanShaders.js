@@ -73,6 +73,11 @@ export function skinMaterial(look, exprU, opts = {}) {
           // sun, salt and wind: a little darker, warmer, blotchier with age and exposure
           float blotch = hNoise(vRest * 260.0) * 0.6 + hNoise(vRest * 70.0) * 0.4;
           c *= mix(1.0, 0.86 + 0.2 * blotch, uWeather * 0.8);
+          // living skin is never one colour: warmer/redder patches, faintly yellow over bone, a cool cast where
+          // it's thin — present on everyone, young or old (a flat tone is what reads as wax)
+          float mot = hNoise(vRest * 34.0 + 3.1), mot2 = hNoise(vRest * 140.0 + 7.7);
+          c *= vec3(1.0 + (mot - 0.5) * 0.07, 1.0 - (mot - 0.5) * 0.02, 1.0 - (mot - 0.5) * 0.05) * (0.97 + 0.06 * mot2);
+          c = mix(c, c * vec3(0.95, 0.97, 1.04), (1.0 - vReg2.w) * 0.25);
           c = mix(c, c * vec3(1.06, 0.97, 0.9), uWeather * 0.5);
           // blood under thin skin: cheeks, nose tip, ears
           c = mix(c, c * vec3(1.07, 0.95, 0.93), clamp(cheek * uBlush * 0.7, 0.0, 1.0));
@@ -112,6 +117,7 @@ export function skinMaterial(look, exprU, opts = {}) {
           diffuseColor.rgb = c;
           // oil on the T-zone, glossier lips, rougher with age; rain and sweat make it shine
           deSkinRough += -0.12 * tz - 0.14 * lips + 0.1 * uAge + 0.06 * uWeather;
+          deSkinRough += (hNoise(vRest * 420.0 + 1.3) - 0.5) * 0.14;   // uneven sheen, so highlights break up
           deSkinWet = clamp(uWetSkin + uSweat * (tz * 0.8 + 0.2), 0.0, 1.0);
           diffuseColor.rgb *= 1.0 - 0.12 * deSkinWet;
         }`)
@@ -170,11 +176,11 @@ function poreTexture() {
 // ---------------------------------------------------------------- eyes
 export function eyeMaterial() {
   const m = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.035, ior: 1.376 });
-  const u = m.userData.u = { uPupil: { value: 0.5 }, uIrisR: { value: 0.116 } };
+  const u = m.userData.u = { uPupil: { value: 0.5 }, uIrisR: { value: 0.116 }, uSkyLevel: G.uSunColor };
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, u);
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uPupil; uniform float uIrisR;')
+      .replace('#include <common>', '#include <common>\nuniform float uPupil; uniform float uIrisR; uniform vec3 uSkyLevel;')
       .replace('#include <map_fragment>', `
         #ifdef USE_MAP
           // pupil dilation: remap radii inside the iris; iris sits a little behind the cornea (parallax)
@@ -199,7 +205,21 @@ export function eyeMaterial() {
           vec3 ec = mix(eyeTex.rgb * vec3(0.74, 0.71, 0.68), irisC, inIris); // sclera: warm, never paper-white
           ec *= mix(1.0, 0.55, lid);
           diffuseColor *= vec4(ec, 1.0);
-        #endif`);
+        #endif`)
+      .replace('#include <opaque_fragment>', `
+        {
+          // catch-light: the bright sky above and in front, mirrored in the wet cornea — a tight glint
+          // plus a faint wet sheen; this is what makes an eye look alive rather than painted
+          vec3 Ne = normalize(normal);
+          vec3 Ve = normalize(-vViewPosition);
+          vec3 Re = reflect(-Ve, Ne);
+          // the key sits a little above and to one side of the viewer (view space), as the sky does for a face
+          vec3 key = normalize(vec3(-0.3, 0.45, 1.0));
+          float g = pow(max(dot(Re, key), 0.0), 140.0);
+          float sheen = pow(1.0 - max(dot(Ne, Ve), 0.0), 3.0);
+          outgoingLight += vec3(0.9, 0.93, 1.0) * (g * 0.9 + sheen * 0.04) * (0.4 + 0.6 * dot(uSkyLevel, vec3(0.33)));
+        }
+        #include <opaque_fragment>`);
   };
   m.customProgramCacheKey = () => 'de-eye';
   return m;
@@ -258,7 +278,7 @@ export function clothMaterial(tint, opts = {}) {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, metalness: 0, side: opts.double ? THREE.DoubleSide : THREE.FrontSide });
   const u = m.userData.u = {
     uTint: { value: new THREE.Color(...tint) }, uWetCloth: { value: 0 }, uSalt: { value: opts.salt ?? 0.5 }, uWear: { value: opts.wear ?? 0.5 },
-    uPatch: { value: opts.patch ?? 0 }, uSeed: { value: opts.seed ?? 0 },
+    uPatch: { value: opts.patch ?? 0 }, uSeed: { value: opts.seed ?? 0 }, uGrime: { value: opts.grime ?? 0 },
   };
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, u);
@@ -266,7 +286,7 @@ export function clothMaterial(tint, opts = {}) {
       .replace('#include <common>', '#include <common>\nvarying vec3 vRestC;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRestC = position;');
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', `#include <common>\n${NOISE}\nvarying vec3 vRestC; uniform vec3 uTint; uniform float uWetCloth; uniform float uSalt; uniform float uWear; uniform float uPatch; uniform float uSeed;`)
+      .replace('#include <common>', `#include <common>\n${NOISE}\nvarying vec3 vRestC; float deClothRough = 0.0; uniform vec3 uTint; uniform float uWetCloth; uniform float uSalt; uniform float uWear; uniform float uPatch; uniform float uSeed; uniform float uGrime;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
         {
           vec3 c = diffuseColor.rgb;
@@ -289,10 +309,14 @@ export function clothMaterial(tint, opts = {}) {
             c = mix(c, c * vec3(0.72, 0.7, 0.66), patchM);
             c = mix(c, c * 0.5, (patchM - stitch) * step(0.5, fract((vRestC.x + vRestC.y) * 180.0)));
           }
+          // the job shows: oil and tar smeared where hands wipe (thighs, belly, cuffs), darker and slightly shiny
+          float wipe = smoothstep(0.55, 0.85, hNoise(vRestC * vec3(18.0, 40.0, 18.0) + uSeed * 5.0)) * smoothstep(0.25, 0.5, vRestC.y) * smoothstep(1.25, 0.95, vRestC.y);
+          c = mix(c, c * vec3(0.42, 0.4, 0.38), wipe * uGrime);
+          deClothRough = -0.25 * wipe * uGrime;
           c *= 1.0 - 0.38 * uWetCloth;                              // soaked cloth goes dark
           diffuseColor.rgb = c;
         }`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.55, uWetCloth);');
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor + deClothRough, 0.55, uWetCloth);');
   };
   m.customProgramCacheKey = () => 'de-cloth';
   return m;

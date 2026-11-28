@@ -77,7 +77,7 @@ export class Human {
     for (const c of outfit) if (c.del) for (const v of c.del) deleted[v] = 1;
 
     // ---- body
-    const look = { ...p.look, hairColor: srgb(p.look?.hairColor || [0.1, 0.08, 0.06]), age01: Math.min(1, Math.max(0, (p.age - 15) / 60)) };
+    const look = { ...p.look, buzz: p.look?.buzz || (p.hair ? 0.22 : 0), hairColor: srgb(p.look?.hairColor || [0.1, 0.08, 0.06]), age01: Math.min(1, Math.max(0, (p.age - 15) / 60)) };
     // scars are given relative to the point between the eyes; tattoos by bone name
     const eL = heads[kit.boneIndex['eye.L']], eR = heads[kit.boneIndex['eye.R']];
     const mid = [(eL[0] + eR[0]) / 2, (eL[1] + eR[1]) / 2, (eL[2] + eR[2]) / 2];
@@ -182,7 +182,7 @@ export class Human {
       if (!cp) return;
       // sun-faded: dyes out here never stay bright
       const tint = fade(srgb((p.clothTints || [])[i] || [0.7, 0.66, 0.6]), 0.4);
-      const cm = clothMaterial(tint, { salt: p.look?.salt ?? 0.5, wear: p.look?.wear ?? 0.5, patch: (p.look?.patches || 0) > i ? 1 : 0, seed: (p.seed || 1) * 0.37 + i, double: /fedora/.test(c) });
+      const cm = clothMaterial(tint, { salt: p.look?.salt ?? 0.5, wear: p.look?.wear ?? 0.5, grime: p.look?.grime ?? 0, patch: (p.look?.patches || 0) > i ? 1 : 0, seed: (p.seed || 1) * 0.37 + i, double: /fedora/.test(c) });
       if (cp.tex.map) kit.bind(cm, 'map', cp.tex.map, true);
       if (cp.tex.normalMap) kit.bind(cm, 'normalMap', cp.tex.normalMap, false);
       if (cp.tex.aoMap) kit.bind(cm, 'aoMap', cp.tex.aoMap, false);

@@ -333,7 +333,7 @@ class Actor {
     this.react = 'walking'; this.t = 0; this.dwell = 0; this.downed = false; this.playerWatched = false;
     this.heading = 0;
     if (soc.ctx.humans) {
-      this.person = new Person(this.ctx, this.ctx.humans, personFor(a.id, { name: a.name, presents: a.def?.presents }));
+      this.person = new Person(this.ctx, this.ctx.humans, personFor(a.id, { name: a.name, presents: a.def?.presents, role: a.def?.role }));
       this.ctx.scene.add(this.person.root);
     }
     const I = this.ctx.interact;

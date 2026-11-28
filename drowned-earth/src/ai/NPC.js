@@ -52,7 +52,7 @@ export class NPC {
   buildHuman(ctx, def) {
     const community = { market: 'portage', dock: 'portage', chapel: 'portage', lookout: 'portage', gt_plots: 'greentide', rh_rig: 'rusthold' }[def.raft] || 'default';
     const tier = def.role === 'leader' ? 4 : def.role === 'trader' || def.role === 'fixer' ? 5 : 6;
-    this.rig = new Person(ctx, ctx.humans, personFor(def.id, { palette: community, tier, labour: /mechanic|dock|water/.test(def.role) ? 1 : 0, name: def.name, presents: def.presents }));
+    this.rig = new Person(ctx, ctx.humans, personFor(def.id, { palette: community, tier, labour: /mechanic|dock|water/.test(def.role) ? 1 : 0, name: def.name, presents: def.presents, role: def.role }));
     this.root.add(this.rig.root);
     this.root.scale.setScalar(1);
   }
