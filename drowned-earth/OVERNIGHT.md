@@ -299,3 +299,147 @@ All within 2 % of the start of the pass.
 
 **Deploy.** The final build is deployed (3 changed files) and boot-checked headless on the live site: new
 bundle, game running, no console errors, no failed requests. See NPC_MORNING_REPORT.md.
+
+---
+
+# The Hunters (speed mode; tag `killers-start`)
+
+## Decisions (made unattended)
+
+### Daytime identities
+
+The killers are new ordinary NPCs, not existing ones:
+- **Garrick Sole:** net-mender at the Rusthold rig.
+- **Quillon Ferris:** lamp-trimmer at the Portage chapel. He keeps the funeral lanterns, which fits the Lamplighter.
+
+Both have full `people.json` records (10 traits, job, bunk, friends, rival, habit, fear, want, secret, speech)
+and ordinary `npcs.json` entries with the same keys as everyone else. Nothing in the data marks them; the link
+lives only in `killers.json`.
+
+### Reasons
+
+Each killer's reason appears only in the proof found in the lair:
+- **Netmaker:** a grievance and a belief. His brother was cut from the evacuation line; nobody should drift
+  alone, so he "keeps" people.
+- **Lamplighter:** a loss turned into a compulsion. He was a rescue diver who was always too late.
+
+### Victims and pacing
+
+- **Pool:** victims come from the Living-NPC pool (Portage). Neither killer targets his own friends or the other
+  killer.
+- **Target choice:** both prefer people who are alone or unliked; the Netmaker also prefers people out at night,
+  the Lamplighter people travelling on the water.
+- **Watching:** he watches a person 3 days before planning.
+- **Alibi:** two friends (or bystanders) at a public place.
+
+**Pacing:**
+- At least 4 days between any two killer events, plus 0–9 random days, plus up to 7 more when stressed.
+- He lies low for 7–14 days when the Ward is talked about investigating.
+- He respects the society incident budget (no more than 2 incidents in 4 days).
+- Simulated: 4 events in 120 nights across both killers.
+
+### Witnessing
+
+- Base chance is 4 % of events. It needs the player within 45 m, in the dark, with a clear ray to the spot.
+- **Outcomes**, classified from what the player does:
+  - **intervened:** came within 8 m during the drag; the victim lives, injured.
+  - **ran:** moved away more than 8 m.
+  - **hid:** more than 35 m away.
+  - **silent:** light off and barely moved.
+- **Being noticed:** the odds that he sees you rise with your light, proximity and running.
+- **Mature content off:** the splash cuts away (a brief black fade) and leaves no stain.
+- **Mature content on:** a dark red stain stays on the deck.
+- Nothing is ever shown explicitly in either setting.
+
+### Lairs
+
+- They are kept out of the landmark system, which would chart them and load them from 1100 m away.
+- They stream in at 140 m and are kept clear of city buildings by unlisted map claims (no chart entry, no marker).
+- The safe entrance needs 5 clues.
+- The second entrance is always usable. Coming in that way without the unlock means no journal entries until
+  you leave; then the case opens with what you saw.
+- **He may be home:** between 23:00 and 05:00, or while healing. He comes after 10–25 s, sooner if you're loud.
+- **Signs you leave:** your light on for more than 8 s, shooting, or coming in blind. Any of these and he knows,
+  and starts hunting you.
+
+### Adaptation
+
+| Suspicion | Response |
+|---|---|
+| over 0.3 | befriend: friendly lines and small gifts |
+| over 0.5 | mislead (frames someone) and hide trophies |
+| over 0.7 | scare: a charm on your mooring or a lamp by your boat; moves the lair if you've lingered near it |
+| over 0.85, or he saw you | hunt |
+
+- **Suspicion** comes from clues found, questions asked after a clue, time near the lair, your lantern at night,
+  and items carried.
+- **Learning:** a spot where the target was escorted, or where they escaped, is burned for good. A spot where you
+  kept watch at night for more than 60 s is avoided for 10 days.
+- **The hunt:** at night, away from settlements, about once per 90 s of eligibility.
+  - He closes in fast when you aren't looking and slowly when you are.
+  - You lose him by staying still in the dark for 6 s, putting 60 m between you, or reaching a settlement.
+  - He has 320 HP. Below 40 % he retreats for 3 days and comes back more careful.
+
+### Payoff
+
+Bring the lair's proof to the Ward clerk on Portage market. You get:
+- Tide Wardens reputation +15, raft-folk +20
+- 80 scrap
+- a bolt rifle (an existing weapon type)
+- a rumour about the arrest, a funeral for all the victims, and the Concord/Ward reaction (deny it, take the
+  credit, or bury it)
+
+### Telling
+
+The Investigation tab offers this only after you've seen him:
+- **The Tide Ward:** they won't act on one witness. You lose reputation, more if he's liked, and he hears of it.
+- **A victim's family:** they believe you and give you the routine clue.
+- **His friends:** you get hit and lose reputation, and he starts hunting you.
+
+## Tests
+
+`scripts/killers-test.mjs`: 13/13 pass.
+- routine
+- disguise
+- plan and alibi
+- adapts (hides trophies, moves the lair)
+- never reuses a failed spot
+- clues spawn
+- lair streams in and out
+- low rate (4 events in 120 nights)
+- witness rate (3.95 % of 20,000 rolls)
+- witness states (silent; intervened with the victim surviving)
+- stumbled-on entrance (no journal entries inside, case opens after)
+- mature gate
+- cost (0.03 ms per tick)
+
+## Hotfix shipped during this pass
+
+A user report: the live game froze at "Preparing shaders… 100%". The warm-up was one synchronous full-scene
+compile plus every texture upload, which blocks for minutes on GPUs without parallel shader compile.
+- **Fix:** batches with yields and progress text, capped at 20 s.
+- **Shipped as:** the deployed NPC build plus this fix only, built from a separate worktree. Smoke test passed.
+- **Live boot check:** worst main-thread gap 0.17 s; the warm-up took about 9 s.
+
+## Gate (k1): all pass
+
+- **Tests:** build, validate, boat 7, weapons 8, controller 7, portage 5, raft-collision 7, npc-traits 9,
+  npc-life 9, killers 13, people-test.
+- **Not rerun:** the creature test (its `raid` gap is pre-existing).
+
+Route perf, before (NPC pass, n5) → after (k1):
+
+| Stop | Draw calls | Triangles |
+|---|---|---|
+| standing | 581 → 585 | 625k → 627k |
+| walking | 380 → 368 | 552k → 545k |
+| boat | 662 → 666 | 696k → 693k |
+| raft city | 585 → 559 | 558k → 556k |
+| cask | 566 → 458 | 708k → 540k |
+
+- **Worst frame:** 1.9–2.5 s → 2.0–2.8 s. That is CPU (SwiftShader) rendering and within its usual noise.
+- **Shader compiles:** 0/5/0/0/0, unchanged.
+- **Budget:** nothing rose more than 10 %. Lairs draw nothing until you're within 140 m, and the killer tick
+  costs 0.03 ms once a second.
+- **Not measured:** the lairs' own cost when you're inside them (one lamp each, instanced bars and lanterns,
+  about 30–60 meshes).

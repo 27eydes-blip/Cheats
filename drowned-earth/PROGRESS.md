@@ -128,9 +128,23 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 ## P. Overnight pass (smoother, more real, livelier) — see OVERNIGHT.md and MORNING_REPORT.md
 - Smoothness: per-place background shader warm-up, Standard by default on dedicated GPUs, fewer per-frame allocations, light-pool and safe-mode fixes. Water no longer blows out to white. Facades: boarded windows, rust, cracks, moss; wood decks: joints, patches, stains. NPCs: calm step-aside, run only from real threats, no hovering sitters. Boats: planing, drift, FOV push, weathered hull, wake hiss / hull slap / strain / splash. Portage: vendor callouts and three hidden things. Bug sweep: 20 fixes. Tests: portage-test added; all pass except a pre-existing creature-test raid failure.
 
+## Q. NPC realism + raft collision — see NPC_MORNING_REPORT.md
+- Raft/dock/parked-boat collision with a swept three-point hull; face/body consistency (presentation, facial hair, voice pitch) with a 523-person trait test; skin/eye/hair/clothing shader passes; procedural work and body-language layers with seats and props; Manners (gaze, greetings with memory, pair chats, world reactions).
+
+## R. The Hunters (two fictional serial killers) — see OVERNIGHT.md
+- The Netmaker (Garrick Sole, net-mender at Rusthold; lair: a half-sunk barge) and the Lamplighter (Quillon Ferris, lamp-trimmer at the Portage chapel; lair: a sealed flooded floor of a drowned tower). Data in `src/data/killers.json`; logic in `src/killers/Killers.js` (slow 1 s tick); lairs in `src/killers/Lairs.js` (streamed within 140 m). Investigation journal tab with a theory board. Debug: `?killer=netmaker|lamplighter` (teleport to the stumbled-on entrance), `?killerdebug` or F6 (identity, plan, target, alibi, suspicion), `?killerlog`, `?killers=off`.
+- Tests: `scripts/killers-test.mjs` (13 checks), shots: `scripts/killer-shots.mjs`.
+
 ## Known gaps
+- **Hunters, untested in real play:** every behaviour is tested by driving the system directly (simulated days, forced strikes, forced witness moments). Nobody has played a multi-day investigation end to end; pacing (4+ days between events, ~3–5 events per 120 nights) is checked numerically, not by feel.
+- Hunters: the killers' night figures are silhouettes (a dark capsule body and head; the Lamplighter's brass helmet and lamp), not the full human rig — by day they are full humans. The night-hunt figure walks over water at your height rather than rowing or swimming.
+- Hunters: entering a lair is a cut (interact → you're inside), not a crawl through the grate or a dive through the window. Interiors are simple procedural geometry; the nets are wireframe planes.
+- Hunters: the 'witness' line of sight is a single ray; the witness moment is a 6-second scripted drag. The "stay silent / run / hide / intervene" outcomes are classified from movement, light and distance, not from a crouch or a hiding spot.
+- Hunters: victims come only from Portage's simulated residents (the Living-NPC pool); Rusthold and Greentide have no simulated residents to take. Framed NPCs are talked about (rumours, memory) but there is no mob scene.
+- Hunters: the 'radio' clue is granted after 40 s of listening once something has happened; the news line is also added to the station's rotation but the clue doesn't wait for that exact line to play.
+- Hunters: screenshot 4 (night approach, silhouette) missed its subject — the dock and its lamp are in frame but the figure is too small and the camera sits at the waterline among fish. Shots 1–3 are on subject. None judged on a GPU.
 - creature-test `raid` fails (pre-existing, also at the start of the overnight pass): the flashlight never counts as "in the beam" for the gull-rat swarm, so they aren't driven off by light. Needs a look at Senses.lightOn vs the pack position.
-- People still lack animations for leaning, laughing, sweeping, carrying, standing fishing and sitting on an edge (only 15 clips exist); there are no seats on the rafts. Faces, hair and clothing shading untouched (not judgeable without a GPU).
+- People: leaning, laughing, sweeping, carrying, mending, fishing and rope-hauling are procedural arm layers over the 15 mocap clips (no real mocap; legs don't take part; hands don't grip). Seats are crates placed under sitters. Face/skin/eye shading changes not judged on a GPU.
 - **Boats (next boats pass):** the skiff is a flat green hull with little surface detail (no planking, wear or fittings); the canopy is hidden from the driver's seat rather than modelled for first person.
 - **Performance, GPU-only:** every frame-rate figure in this repo comes from headless Chromium rendering on the CPU (SwiftShader), roughly 0.5–1 fps for the game. Draw calls, triangles, shader compiles and CPU-side logic times are real; frame rates on an actual GPU were never measured here. Use F3/F4 on a real PC to get them.
 - Performance: the Light preset still draws ~590 draw calls / ~560k triangles at the start (large landmark meshes and nearby raft cities, single-mesh hospital and Sounding). Merging and LOD for landmarks and raft cities is the next lever.
@@ -139,8 +153,7 @@ Overnight build log. Newest stage at the bottom of "Stages"; final report at the
 - Controller: stick feel (deadzone, curve, look speed, aim-assist strength) is untuned — values were chosen, not play-tested. Button labels assume a standard-mapping pad (Chrome/Edge/Firefox on PC report the DualSense this way; Safari and some Linux setups may not).
 - Controller: WebHID linking needs a mouse click on “Link DualSense” (browsers require a user gesture; a pad button may not count). Audio unlock on the very first launch may also need one click or key press, because browsers may not treat gamepad input as a user gesture.
 - Controller: the Underworld journal tab opens the crews board, which has no tab row, so L1/R1 stops there (Circle closes it). Text fields (journal notes) need a keyboard; there is no on-screen keyboard.
-- Controller: the requested Investigation board and Standing cards are not separate screens in this build (Standing is shown on the wristband and in the life sim, which is navigable); there is no lean action, so L1 is the flashlight.
-- `scripts/killers-test.mjs` was requested but doesn't exist in the repo on any branch, so it could not be rerun.
+- Controller: Standing cards are not a separate screen in this build (the Investigation board is now a journal tab, shown once a case opens) (Standing is shown on the wristband and in the life sim, which is navigable); there is no lean action, so L1 is the flashlight.
 - NPCs don't walk between rafts (bar visits are schedule-only; bar crowds are separate NPCs).
 - Greentide and Rusthold residents have no personalities yet (data stubs).
 - Phone frame rate not measured on a device or the Phone preset since the creature, nightlife and NPC passes; triangle counts in shots reach 2–3.5 M on Ultra.
