@@ -1,0 +1,54 @@
+[
+ {
+  "name": "w1-wrench",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "18.7",
+   "freeze": "1",
+   "agegate": "off"
+  },
+  "frames": 25,
+  "wait": 500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));const up=c.player.update.bind(c.player);c.player.update=(dt)=>{up(dt);c.player.position.copy(P);c.player.velocity.set(0,0,0);c.player.mode='foot';};c.player.mode='foot';c.player.teleport(P);c.player.yaw=-2.2;c.player.pitch=-0.05;A.give('pipe_wrench');A.state.drawn=-1;A.draw(0);A.cur.cond=0.55;A.cur.salt=0.35;A.rebuildVM();for(let i=0;i<40;i++){g.step(1);await new Promise(q=>setTimeout(q,0));}A.update=(dt)=>{};const m=A.mesh;m.position.set(0.02,-0.02,-0.55);m.rotation.set(0.1,1.45,1.2);c.camera.fov=50;c.camera.updateProjectionMatrix();})()"
+ },
+ {
+  "name": "w2-crossbow",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "18.7",
+   "freeze": "1",
+   "agegate": "off"
+  },
+  "frames": 25,
+  "wait": 500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));const up=c.player.update.bind(c.player);c.player.update=(dt)=>{up(dt);c.player.position.copy(P);c.player.velocity.set(0,0,0);c.player.mode='foot';};c.player.mode='foot';c.player.teleport(P);c.player.yaw=-2.2;c.player.pitch=-0.05;A.give('spring_crossbow');A.state.drawn=-1;A.draw(0);A.cur.cond=0.7;A.cur.salt=0.15;A.rebuildVM();for(let i=0;i<40;i++){g.step(1);await new Promise(q=>setTimeout(q,0));}A.update=(dt)=>{};const m=A.mesh;m.position.set(0.0,-0.03,-0.7);m.rotation.set(0.25,1.25,0.0);c.camera.fov=50;c.camera.updateProjectionMatrix();})()"
+ },
+ {
+  "name": "w3-ads-dusk",
+  "params": {
+   "quality": "high",
+   "weather": "clear",
+   "time": "19.1",
+   "freeze": "1",
+   "agegate": "off"
+  },
+  "frames": 25,
+  "wait": 1200,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));const up=c.player.update.bind(c.player);c.player.update=(dt)=>{up(dt);c.player.position.copy(P);c.player.velocity.set(0,0,0);c.player.mode='foot';};c.player.mode='foot';c.player.teleport(P);c.player.yaw=-2.6;c.player.pitch=0.02;A.give('bolt_rifle');A.state.drawn=-1;A.draw(0);A.cur.cond=0.6;A.cur.salt=0.2;A.rebuildVM();for(let i=0;i<40;i++){g.step(1);await new Promise(q=>setTimeout(q,0));}A.held.rmb=true;for(let i=0;i<30;i++){g.step(1);}})()"
+ },
+ {
+  "name": "w4-inspect",
+  "params": {
+   "quality": "medium",
+   "weather": "clear",
+   "time": "14",
+   "freeze": "1",
+   "agegate": "off"
+  },
+  "frames": 20,
+  "wait": 1500,
+  "eval": "(async()=>{const g=window.__game,c=g.ctx,A=c.arms;const mk=c.state.communities.portage.rafts.get('market');const V=c.player.position.constructor;const P=mk.worldPoint(new V(2,mk.deck+0.05,1.5));const up=c.player.update.bind(c.player);c.player.update=(dt)=>{up(dt);c.player.position.copy(P);c.player.velocity.set(0,0,0);c.player.mode='foot';};c.player.mode='foot';c.player.teleport(P);c.player.yaw=0;c.player.pitch=0;A.give('pipe_shotgun');A.state.drawn=-1;A.draw(0);A.cur.cond=0.4;A.cur.salt=0.5;A.rebuildVM();for(let i=0;i<40;i++){g.step(1);await new Promise(q=>setTimeout(q,0));}A.give('pipe_wrench');A.give('harpoon');A.inspect(0);})()"
+ }
+]
