@@ -126,6 +126,13 @@ export class Game {
     this.clock = new THREE.Clock();
     window.__THREE = THREE;   // window.__game is published once there's something to drive (menu up, or world loaded)
     this.perf = ctx.perf = new PerfOverlay(ctx);
+    // software rendering (no GPU acceleration in the browser): say how to fix it, plainly
+    if (ctx.settings.software) {
+      const m = document.createElement('div'); m.className = 'sw-msg';
+      m.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:250;max-width:560px;padding:8px 14px;background:rgba(40,20,12,.88);border:1px solid #c08a5a;color:#f6e6cc;font:14px Georgia;text-align:center';
+      m.innerHTML = 'Your browser is drawing the game without the graphics card, so it will be very slow.<br><b>Turn on hardware acceleration in Chrome settings</b> (Settings → System → Use graphics acceleration), then restart Chrome. <span style="opacity:.7;cursor:pointer" data-x>✕</span>';
+      m.querySelector('[data-x]').onclick = () => m.remove(); document.body.appendChild(m); setTimeout(() => m.remove(), 30000);
+    }
     // graphics context lost (driver reset, GPU out of memory — the "grey 3D view, HUD still up" freeze on
     // integrated graphics): pause and save straight away, then either carry on when the browser restores the
     // context, or reload one preset lower with a message if it doesn't come back quickly
