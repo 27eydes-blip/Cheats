@@ -69,7 +69,8 @@ export function buildBar(b, st, y, rng, out) {
     table(b, X, y, Z, S, st.style);
     for (const a of [0, Math.PI]) {
       const sx = X + Math.sin(a) * 0.8, sz = Z + Math.cos(a) * 0.8;
-      if (st.style === 'candle') b.box(sx - 0.28, y, sz - 0.28, sx + 0.28, y + 0.14, sz + 0.28, 'fabric', { color: [0.55, 0.2, 0.16], collide: false });
+      // floor cushions: a worn base, a softer top, a button — not a red slab
+      if (st.style === 'candle') { b.box(sx - 0.27, y, sz - 0.27, sx + 0.27, y + 0.08, sz + 0.27, 'fabric', { color: [0.3, 0.13, 0.11], collide: false }); b.boxR(sx, y + 0.12, sz, 0.5, 0.08, 0.5, a * 0.3 + 0.2, 'fabric', { color: [0.46, 0.22, 0.17], collide: false }); b.box(sx - 0.03, y + 0.16, sz - 0.03, sx + 0.03, y + 0.175, sz + 0.03, 'fabric', { color: [0.2, 0.1, 0.08], collide: false }); }
       else stool(b, sx, y, sz, S, st.style, 0.46);
       seats.push({ x: sx, z: sz, face: a + Math.PI, kind: 'table' });
     }
@@ -79,8 +80,13 @@ export function buildBar(b, st, y, rng, out) {
   if (st.style !== 'candle') b.box(x0 + 0.2, y, z1 - 2.4, x0 + 2.6, y + 0.18, z1 - 0.2, 'wood', { color: [0.25, 0.17, 0.12], collide: false });
   // special pieces
   if (st.style === 'forge') {
-    // arm-wrestling block by the door
-    b.box(x1 - 2.0, y, z1 - 1.4, x1 - 1.2, y + 0.95, z1 - 0.8, 'wood', { color: [0.35, 0.22, 0.15] });
+    // arm-wrestling table by the door: an old cask on its end (staves and iron hoops), a scarred top, two grip pegs
+    const ax = x1 - 1.6, az = z1 - 1.1;
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; b.boxR(ax + Math.cos(a) * 0.3, y + 0.42, az + Math.sin(a) * 0.3, 0.24, 0.84, 0.06, -a + Math.PI / 2, 'wood', { color: [0.3 + (k % 3) * 0.03, 0.2, 0.13], collide: false }); }
+    for (const hy of [0.16, 0.7]) for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; b.boxR(ax + Math.cos(a) * 0.335, y + hy, az + Math.sin(a) * 0.335, 0.26, 0.05, 0.02, -a + Math.PI / 2, 'rust', { color: [0.22, 0.2, 0.19], collide: false }); }
+    b.collider(ax - 0.36, y, az - 0.36, ax + 0.36, y + 0.86, az + 0.36);
+    b.boxR(ax, y + 0.88, az, 0.82, 0.05, 0.6, 0.08, 'wood', { color: [0.33, 0.24, 0.17], collide: false });
+    for (const dx of [-0.28, 0.28]) { b.box(ax + dx - 0.02, y + 0.9, az - 0.02, ax + dx + 0.02, y + 1.04, az + 0.02, 'metal', { color: [0.35, 0.33, 0.3], collide: false }); b.box(ax + dx * 0.45 - 0.08, y + 0.905, az - 0.1, ax + dx * 0.45 + 0.08, y + 0.92, az + 0.1, 'fabric', { color: [0.25, 0.2, 0.16], collide: false }); }
   }
   if (st.style === 'smoke') {
     // the bookcase that is very obviously a door

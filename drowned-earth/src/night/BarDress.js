@@ -147,6 +147,12 @@ export function dressBar(ctx, raft, anchors, bars) {
     else out.emitters.push(ctx.audio?.addEmitter({ type: 'band', style: 'hymn', seed: 3, pos: posFn, gainFn: () => (nl.isOpen(bar) ? 0.4 : 0) }));
     out.emitters.push(ctx.audio?.addEmitter({ type: 'barCrowd', pos: (v) => v.set(a.x, a.y + 1.4, a.z + 1).applyMatrix4(raft.root.matrixWorld), gainFn: () => nl.crowd(bar) * (bar.dry ? 0.25 : 1) }));
   }
+  // heavy interior dressing (bottles, glassware, clutter) is inside a closed room: don't draw it from outside
+  for (const g of raft.root.children) if (/^bar:/.test(g.name)) g.traverse((o) => {
+    if (!o.isMesh || !o.geometry || out.bulbs.includes(o) || o.material?.toneMapped === false) return;   // lit bulbs stay
+    const tri = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1);
+    if (tri > 3000) { o.userData.cullDist = 45; ctx.distCull?.add(o); }
+  });
   return out;
 }
 

@@ -13,7 +13,7 @@ const STATE_COL = { idle: 0x50c878, alert: 0xf0d050, warning: 0xf08a30, attack: 
 
 export class Creatures {
   constructor(ctx) {
-    this.opaqueWater = !ctx.settings.q.postPipeline;
+    this.opaqueWater = !ctx.settings.q.postPipeline || ctx.settings.quality === 'laptop';   // Laptop draws the simple, opaque water
     this.ctx = ctx;
     this.data = ctx.data.creatures;
     this.senses = ctx.senses;

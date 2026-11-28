@@ -1,4 +1,4 @@
-// node scripts/route-perf.mjs [url] [--limit=ms]
+// node scripts/route-perf.mjs [url] [--limit=ms] [--quality=laptop|low|medium|high]
 // The scripted route, in the game's real render loop (requestAnimationFrame), from the menu:
 //   standing  — on foot at Linden Court, still
 //   walking   — on foot, moving and turning
@@ -21,7 +21,7 @@ if (!url) { server = await createServer({ server: { port: 5188, hmr: false, watc
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await b.newPage({ viewport: { width: 640, height: 360 } });
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-await p.goto(url + (url.includes('?') ? '&' : '?') + 'agegate=off&quality=low');
+await p.goto(url + (url.includes('?') ? '&' : '?') + 'agegate=off&quality=' + (args.find((a) => a.startsWith('--quality='))?.slice(10) || 'low'));
 await p.waitForFunction(() => document.querySelector('.title .menu button'), null, { timeout: 300000 });
 await p.evaluate(() => setTimeout(() => document.querySelector('[data-c="story"]').click(), 0));
 await p.waitForFunction(() => window.__game?.ctx?.mode === 'play' && window.__game.ctx.player, null, { timeout: 400000 });

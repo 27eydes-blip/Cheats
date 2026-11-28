@@ -91,6 +91,8 @@ export class Fish {
     const t = (this.t = (this.t || 0) + dt);
     if (this.uT) this.uT.value = t;
     const cam = camera.position;
+    // Laptop: the water is opaque from above, so the schools are only drawn when you're under it
+    if (this.ctx.settings.quality === 'laptop') { this.mesh.visible = atmosphere.underwater; if (!this.mesh.visible) return; }
     // schools roam within ~25 m of the camera, below the surface, above the bottom
     for (const sc of this.schools) {
       const a = t * 0.07 + sc.seed;

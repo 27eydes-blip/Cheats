@@ -166,7 +166,8 @@ function needlefish(mgr, c) {
   const base = BASIC.needlefish(mgr, c);
   const geo = needlefishGeometry(mgr.ctx.creatureModels);
   if (!geo) return base;
-  const n = c.spec.count || 40;
+  // Laptop/Light: a smaller school (each fish is ~2k triangles; 40 of them were ~90k)
+  const n = Math.round((c.spec.count || 40) * (mgr.ctx.settings.quality === 'laptop' ? 0.3 : mgr.ctx.settings.quality === 'low' ? 0.6 : 1));
   const mat = needlefishMaterial();
   const fish = new THREE.InstancedMesh(geo, mat, n);
   fish.frustumCulled = false; fish.castShadow = false;

@@ -118,6 +118,9 @@ export class Deep {
     if (time.day !== this.day) { this.day = time.day; this.addGlow(this.def.glow.perDay); }
     if (this.ctx.story.flag('finale_done') && !this.finaleGlow) { this.finaleGlow = true; this.addGlow(this.def.glow.finale); }
     const under = atmosphere.underwater;
+    // the growth is on the seabed (Sounding walls and scattered across the city floor): from above the surface
+    // the light presets' water can't be seen through, so don't draw it there (~100k triangles)
+    if (this.growth) this.growth.visible = under || !this.ctx.settings.isLight;
     const depth = player.depth;
     this.zone = under ? this.zoneAt(depth) : this.def.zones[0];
     if (under && this.zone !== this.lastZone) {

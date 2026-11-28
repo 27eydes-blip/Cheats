@@ -33,5 +33,11 @@ export class Bottles {
         onUse: (c) => { c.state.looted.add(b.id); c.ui.showNote(b.past ? 'A bottle — in a hand you almost recognise' : 'A note in a bottle', b.note); c.audio?.play('page'); this.refresh(); } });
     }
   }
-  refresh() { const m = new THREE.Matrix4(); this.items.forEach((b, i) => { m.makeTranslation(b.x, this.ctx.state.looted.has(b.id) ? -50 : 0, b.z); this.mesh.setMatrixAt(i, m); }); this.mesh.instanceMatrix.needsUpdate = true; }
+  // only the bottles within 160 m are drawn (98 bottles × ~1000 triangles were drawn across the whole map, always)
+  refresh() {
+    const m = new THREE.Matrix4(), cp = this.ctx.camera.position; let n = 0;
+    for (const b of this.items) { if (this.ctx.state.looted.has(b.id) || Math.hypot(b.x - cp.x, b.z - cp.z) > 160) continue; m.makeTranslation(b.x, 0, b.z); this.mesh.setMatrixAt(n++, m); }
+    this.mesh.count = n; this.mesh.visible = n > 0; this.mesh.instanceMatrix.needsUpdate = true; this.mesh.boundingSphere = null;
+  }
+  update(dt) { this.t = (this.t || 0) - dt; if (this.t <= 0) { this.t = 0.5; this.refresh(); } }
 }

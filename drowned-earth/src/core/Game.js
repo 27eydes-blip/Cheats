@@ -88,6 +88,8 @@ import { Heat } from '../society/Heat.js';
 // The game: owns the renderer, scenes and every system, and runs the loop.
 // Systems receive a shared `ctx` so they can find each other without imports
 // in both directions.
+const _cullV = new THREE.Vector3();
+
 export class Game {
   constructor(container) {
     this.container = container;
@@ -200,6 +202,7 @@ export class Game {
     setPropAssets(ctx.assets, ctx.instancer);
     ctx.worldMap = new WorldMap(ctx.data.locations);
     ctx.collision = new Collision();
+    ctx.distCull = new Set();   // objects hidden beyond userData.cullDist from the camera (checked twice a second)
     ctx.interact = new Interactables(ctx);
     ctx.waves = new Waves();
     bindWaveUniforms(ctx.waves);
@@ -277,7 +280,7 @@ export class Game {
     ctx.pad = ctx.pad || new Pad(ctx); ctx.pad.attachArms();
     if (!this.gated) ageGate(ctx.settings, ctx.params);
     ctx.ui.applyAccessibility();
-    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms, ctx.portageLife, ctx.killers];
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms, ctx.portageLife, ctx.killers, ctx.bottles];
     this.ambientSystems = [ctx.fx, ctx.birds, ctx.fish, ctx.highmark, ctx.abyss];
     this.wireEvents();
     await stage(0.993, 'Setting the tide');
@@ -607,6 +610,18 @@ export class Game {
     ctx.landmarks.tick(dt);
     const focus = playing ? ctx.player.position : ctx.camera.position;
     ctx.landmarks.update(focus.x, focus.z);
+    // distance culling for registered heavy objects (bar interiors, far vine growth on light presets)
+    this.cullT = (this.cullT || 0) - dt;
+    if (this.cullT <= 0) {
+      this.cullT = 0.5; const cp = ctx.camera.position;
+      for (const o of ctx.distCull) {
+        if (!o.parent) { ctx.distCull.delete(o); continue; }
+        if (o.userData.cullBase == null) o.userData.cullBase = o.visible;
+        const s = o.geometry?.boundingSphere || (o.geometry?.computeBoundingSphere(), o.geometry?.boundingSphere);
+        const c = s ? _cullV.copy(s.center).applyMatrix4(o.matrixWorld) : o.getWorldPosition(_cullV);
+        o.visible = o.userData.cullBase && c.distanceTo(cp) - Math.min(s?.radius || 0, 30) < o.userData.cullDist;
+      }
+    }
     // per-system timing (cheap), so the watchdog can say which system ate a long frame
     const sysMs = this.perf.sysMs || (this.perf.sysMs = {});
     // one system throwing must not take the whole frame down with it (an exception every frame is a freeze):

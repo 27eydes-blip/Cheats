@@ -45,6 +45,8 @@ export class LandmarkManager {
     if (!fn) return;
     const out = fn(this.ctx, def) || {};
     const rec = { def, ...out, colliderIds: [], interactIds: [], audioIds: [] };
+    // vines and growth on far landmarks: on the light presets, not drawn beyond 220 m (they were ~150k triangles at 500 m)
+    if (out.group && this.ctx.settings.isLight) out.group.traverse((o) => { if (o.isInstancedMesh && /^inst:(growth|foliage|vine)/.test(o.name)) { o.userData.cullDist = 220; this.ctx.distCull?.add(o); } });
     if (out.group) {
       this.ctx.scene.add(out.group);
       // compile its shaders off the main thread before it's drawn (it's far away when it streams in)
