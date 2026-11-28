@@ -226,7 +226,7 @@ export class Game {
     this.newGame();
     applyDebugParams(ctx);
     ctx.story.checkObjectives();
-    ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z);
+    ctx.landmarks.update(ctx.player.position.x, ctx.player.position.z, true);
     await stage(0.996, 'Raising the district');
     ctx.chunks.update(ctx.player.position.x, ctx.player.position.z, true);
     // compile shaders without blocking the page (uses parallel compile where the driver allows);

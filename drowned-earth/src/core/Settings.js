@@ -3,7 +3,7 @@
 const PRESETS = {
   low: {
     pixelRatio: 1, postPipeline: false, shadows: false, shadowMapSize: 0,
-    chunkNearRadius: 200, chunkFarRadius: 900, waterRings: 48, waterSegments: 64,
+    chunkNearRadius: 200, chunkFarRadius: 900, waterRings: 80, waterSegments: 96,
     debrisDensity: 0.45, particleCount: 250, rainCount: 1500, envMapUpdates: false,
     maxLights: 3, npcDetail: 0, birdCount: 10, renderScale: 1, reflections: 0,
     label: 'Phone', targetFps: 30, minScale: 0.6, mipBias: 0, textureTier: '1k', anisotropy: 2,

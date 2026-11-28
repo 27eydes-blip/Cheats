@@ -70,7 +70,7 @@ export class Scenarios {
     c.ui.fade(0.6, () => {
       def.setup();
       c.chunks.update(c.player.position.x, c.player.position.z, true);
-      c.landmarks.update(c.player.position.x, c.player.position.z);
+      c.landmarks.update(c.player.position.x, c.player.position.z, true);
       c.paused = false; c.input.enabled = true; c.game.setMode('play');
       c.ui.whisper(meta.title);
     });

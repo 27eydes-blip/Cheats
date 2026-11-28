@@ -38,7 +38,7 @@ export class Player {
     this.yaw -= dx * s;
     this.pitch = clamp(this.pitch - dy * s * (this.ctx.settings.invertY ? -1 : 1), -1.45, 1.45);
   }
-  teleport(p, yaw) { this.position.copy(p); this.velocity.set(0, 0, 0); if (yaw !== undefined) this.yaw = yaw; this.groundBody = null; }
+  teleport(p, yaw) { this.position.copy(p); this.velocity.set(0, 0, 0); if (yaw !== undefined) this.yaw = yaw; this.groundBody = null; this.ctx.landmarks?.update(p.x, p.z, true); }
 
   climb(from, to, step, down = false) {
     if (this.mode === 'boat') return;
