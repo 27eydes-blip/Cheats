@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { capMips } from '../assets/AssetLibrary.js';
 
 // The human kit: MakeHuman's base mesh (hm08), targets, rig and proxies,
 // packed by scripts/humans/build.mjs. Loaded once; every person is baked from it.
@@ -78,6 +79,7 @@ export class HumanKit {
       kt.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
       kt.anisotropy = this.assets.anisotropy;
       kt.wrapS = kt.wrapT = THREE.RepeatWrapping;
+      capMips(kt, this.assets.settings.q.propTex || 0);   // Laptop: 512 at most
       holder.texture = kt;
       for (const fn of holder.waiting) fn(kt);
       holder.waiting.length = 0;

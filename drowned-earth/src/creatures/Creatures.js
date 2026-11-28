@@ -89,11 +89,14 @@ export class Creatures {
     this.senses.update(dt);
     if (ctx.audio) ctx.audio.listenerNear = 0;
     this.flares = this.flares.filter((f) => (f.t -= dt) > 0);
+    // Laptop: only the nearest few creatures are drawn (they still think and hunt when not drawn)
+    const capN = ctx.settings.quality === 'laptop' ? 6 : 0;
     for (const c of this.list) {
       const near = Math.hypot(c.home.x - pp.x, c.home.z - pp.z) < ACTIVATE;
       if (near !== c.active) { c.active = near; c.body.group.visible = near; if (!near) { c.state = 'idle'; c.threat = 0; c.pos.copy(c.home); } }
       if (!near) continue;
       if (c.gone > 0) { c.gone -= dt; c.body.group.visible = false; continue; } else if (c.gone != null) { c.gone = null; c.health = c.spec.health ?? 60; c.body.group.visible = true; }
+      if (capN) c.body.group.visible = true;   // re-decided below: the nearest few are drawn
       // Light preset: the water is opaque from above (no refraction pass), so submerged creatures can't be seen
       // while you're above the surface: don't draw them (the needlefish school alone was ~90k triangles)
       if (this.opaqueWater) { const v = ctx.atmosphere.underwater || c.pos.y > ctx.waves.height(c.pos.x, c.pos.z) - 1.5; if (c.body.group.visible !== v) c.body.group.visible = v; }
@@ -101,6 +104,10 @@ export class Creatures {
       if (c.place.community) this.resolveHome(c);
       this.applyTools(c, dt);
       c.update(dt);
+    }
+    if (capN) {
+      const drawn = this.list.filter((c) => c.active && c.body.group.visible).sort((a, b) => a.pos.distanceToSquared(pp) - b.pos.distanceToSquared(pp));
+      for (let i = capN; i < drawn.length; i++) drawn[i].body.group.visible = false;
     }
     this.updateStruggle(dt);
     this.updateEncounters(dt);

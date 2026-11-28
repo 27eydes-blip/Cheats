@@ -603,14 +603,16 @@ export class Pipeline {
         this.historyValid = true;
       }
       u.tColor.value = colorTex;
-      // --- bloom chain
+      // --- bloom chain (skipped on Laptop: five extra passes for a glow it can do without)
       const bm = this.blurMat.uniforms;
+      if (q.bloom === false) { if (!this.noBloom) { this.noBloom = true; for (const t of [this.bloomC, this.bloomE]) { this.renderer.setRenderTarget(t); this.renderer.clear(); } this.renderer.setRenderTarget(null); } } else {
       this.brightMat.uniforms.tColor.value = colorTex; this.brightMat.uniforms.uTexel.value.set(1 / W, 1 / H);
       this.pass(this.brightMat, this.bloomA);
       bm.tColor.value = this.bloomA.texture; bm.uDir.value.set(2 / W, 0); this.pass(this.blurMat, this.bloomB);
       bm.tColor.value = this.bloomB.texture; bm.uDir.value.set(0, 4 / H); this.pass(this.blurMat, this.bloomC);
       bm.tColor.value = this.bloomC.texture; bm.uDir.value.set(8 / W, 0); this.pass(this.blurMat, this.bloomD);
       bm.tColor.value = this.bloomD.texture; bm.uDir.value.set(0, 8 / H); this.pass(this.blurMat, this.bloomE);
+      }
       // --- final
       u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uCamWorld.value.copy(camera.matrixWorld); u.uCamPos.value.copy(camera.position);
       u.uFXAA.value = taa ? 0 : 1;

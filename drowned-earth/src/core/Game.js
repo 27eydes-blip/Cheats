@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import '../render/FogChunk.js';
 import { EventBus } from './EventBus.js';
-import { Settings } from './Settings.js';
+import { Settings, ORDER } from './Settings.js';
 import { Input } from './Input.js';
 import { Pipeline } from '../render/Pipeline.js';
 import { loadData } from '../data/index.js';
@@ -123,7 +123,27 @@ export class Game {
     this.frame = 0; this.running = true; this.fps = 60; this.fpsAcc = 0; this.fpsN = 0;
     this.clock = new THREE.Clock();
     window.__THREE = THREE;   // window.__game is published once there's something to drive (menu up, or world loaded)
-    this.perf = new PerfOverlay(ctx);
+    this.perf = ctx.perf = new PerfOverlay(ctx);
+    // graphics context lost (driver reset, GPU out of memory — the "grey 3D view, HUD still up" freeze on
+    // integrated graphics): pause and save straight away, then either carry on when the browser restores the
+    // context, or reload one preset lower with a message if it doesn't come back quickly
+    renderer.domElement.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.contextLost = true; ctx.paused = true; this.perf.note('graphics context lost');
+      const lostAt = performance.now();
+      if (this.worldLoaded) { try { if (ctx.save.save('auto')) sessionStorage.setItem('de.autocontinue', '1'); } catch { /* keep going */ } }
+      this.gpuMsg = this.gpuMsg || Object.assign(document.createElement('div'), { className: 'gpu-msg' });
+      this.gpuMsg.style.cssText = 'position:fixed;inset:auto 0 40% 0;text-align:center;z-index:300;font:16px Georgia;color:#f1e8d6;text-shadow:0 1px 4px #000;pointer-events:none';
+      this.gpuMsg.textContent = 'The graphics driver reset. Your game is saved — recovering…';
+      document.body.appendChild(this.gpuMsg);
+      this.lostTimer = setTimeout(() => this.recoverFromContextLoss(true), 4000);
+      this.lossTimes = [...(this.lossTimes || []), lostAt].filter((t) => lostAt - t < 120000);
+    }, false);
+    renderer.domElement.addEventListener('webglcontextrestored', () => {
+      clearTimeout(this.lostTimer);
+      // a second loss within two minutes means this preset is too much for the machine
+      this.recoverFromContextLoss((this.lossTimes || []).length > 1);
+    }, false);
     addEventListener('resize', () => this.onResize());
     this.onTitleChoice = (choice) => this.chooseFromMenu(choice);
     // a quality step-down in play saves and reloads straight back into the game
@@ -332,6 +352,20 @@ export class Game {
   }
 
   // a ?quality= in the address would put the old preset straight back after a safe-mode reload
+  recoverFromContextLoss(lower) {
+    const ctx = this.ctx, s = ctx.settings;
+    if (!lower) {
+      // three.js rebuilds its programs and re-uploads textures lazily after a restore; just resume
+      this.contextLost = false; ctx.paused = false; this.shaderWarm = false; this.gpuMsg?.remove(); this.perf.note('graphics context restored, resumed');
+      return;
+    }
+    const order = ['high', 'medium', 'low', 'laptop'], i = order.indexOf(s.quality);
+    const to = order[Math.min(order.length - 1, Math.max(0, i) + 1)];
+    s.quality = to; s.auto = false; s.autoCap = to; s.qualityChosen = true; s.save();
+    if (this.gpuMsg) this.gpuMsg.textContent = `The graphics driver reset. Reloading on ${Settings.label(to)} quality — your game is saved.`;
+    this.perf.note(`context loss: reloading on ${to}`);
+    this.reloadWithoutQualityParam();
+  }
   reloadWithoutQualityParam() {
     setTimeout(() => { try { const u = new URL(location.href); u.searchParams.delete('quality'); history.replaceState(null, '', u); } catch { /* keep the url */ } location.reload(); }, 1200);
   }
@@ -357,8 +391,8 @@ export class Game {
     if (this.menuSlowT > 5) {
       this.menuSlowT = 0;
       const s = ctx.settings, B = this.backdrop;
-      if (s.quality !== 'low') {
-        const to = s.quality === 'high' ? 'medium' : 'low'; s.quality = to; s.auto = false; s.autoCap = to; s.qualityChosen = true; s.save();
+      if (s.quality !== 'laptop') {
+        const to = ORDER[Math.max(0, ORDER.indexOf(s.quality) - 1)]; s.quality = to; s.auto = false; s.autoCap = to; s.qualityChosen = true; s.save();
         ctx.ui?.toast(`Safe mode: quality set to ${Settings.label(to)} for this computer.`);
         if (this.worldLoaded) { try { if (ctx.save.save('auto')) sessionStorage.setItem('de.autocontinue', '1'); } catch { /* menu */ } }
         this.reloadWithoutQualityParam(); this.menuSlowT = -999;
@@ -378,7 +412,7 @@ export class Game {
   // test helper: advance the simulation n fixed steps
   step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) { this.ctx.input.poll(); this.update(dt); this.ctx.input.endFrame(); } }
 
-  setMode(m) { this.ctx.mode = m; document.body.classList.toggle('mode-play', m === 'play'); if (m !== 'title') this.leaveMenu(); }
+  setMode(m) { this.ctx.perf?.act?.('mode ' + m); this.ctx.mode = m; document.body.classList.toggle('mode-play', m === 'play'); if (m !== 'title') this.leaveMenu(); }
   toTitle() {
     const ctx = this.ctx;
     this.setMode('title');
@@ -483,6 +517,10 @@ export class Game {
     const ctx = this.ctx;
     if (this.loadingWorld) return;                                     // the loading bar is up; leave the CPU to the build
     if (!this.worldLoaded || ctx.mode === 'title') { this.menuFrame(); return; }   // the menu never simulates the world
+    if (this.contextLost) return;
+    // a frame-rate cap (Laptop: 30): skip display refreshes that come too early, for steady pacing
+    const cap = ctx.settings.q.fpsCap;
+    if (cap && !this.fixedDt) { const now = performance.now(); if (now - (this.lastFrameAt || 0) < 1000 / cap - 4) return; this.lastFrameAt = now; }
     const frameStart = performance.now();
     let dt = Math.min(this.clock.getDelta(), 0.1);
     if (this.fixedDt) dt = this.fixedDt;
@@ -517,7 +555,7 @@ export class Game {
     const ms = dt * 1000;
     this.frameEma = this.frameEma == null ? ms : this.frameEma * 0.95 + ms * 0.05;
     // dynamic resolution first: over 20 ms per frame for a second → lower the resolution a step (never below 60%)
-    const p = ctx.pipeline, MIN = ctx.settings.quality === 'low' ? 0.8 : 0.6;   // Light never drops below 80% (it has no sharpen pass to hide it)
+    const p = ctx.pipeline, MIN = ctx.settings.quality === 'low' ? 0.8 : (ctx.settings.q.minScale ?? 0.6);   // Light never drops below 80% (it has no sharpen pass to hide it)
     // over budget for a second → a resolution step down; the budget is 20 ms or the preset's own target (Light aims at 30 fps)
     const budget = Math.max(20, 1000 / (q.targetFps || 60) * 1.2);
     this.playFrames = (this.playFrames || 0) + 1;
@@ -530,13 +568,16 @@ export class Game {
     this.govT = 0;
     // safe mode: still under 25 fps at the lowest resolution for ~5 s → drop a preset, save, and come straight back
     const s = ctx.settings;
-    if (s.quality !== 'low' && ctx.mode === 'play' && p.scale <= MIN + 0.01 && this.frameEma > 1000 / 25) {
+    // first 10 s of play on an automatic preset averaging under 22 fps: straight to Laptop
+    this.firstT = (this.firstT || 0) + 1.5;
+    if (this.firstT <= 10 && !s.qualityChosen && s.quality !== 'laptop' && ctx.mode === 'play' && this.frameEma > 1000 / 22) this.slowT = 99;
+    if (s.quality !== 'laptop' && ctx.mode === 'play' && (this.slowT >= 99 || p.scale <= MIN + 0.01 && this.frameEma > 1000 / 25)) {
       this.slowT = (this.slowT || 0) + 1.5;
       if (this.slowT >= 4.5) {
         // only when the game can save right now (not mid-climb, in a scene or a blackout): otherwise try again later
         let saved = false; try { saved = !!ctx.save.save('auto'); } catch { saved = false; }
         if (!saved) { this.slowT = 3; return; }
-        const to = s.quality === 'high' ? 'medium' : 'low';
+        const to = this.slowT >= 99 ? 'laptop' : ORDER[Math.max(0, ORDER.indexOf(s.quality) - 1)];
         s.quality = to; s.auto = false; s.autoCap = to; s.qualityChosen = true; s.save();
         ctx.ui.toast(`Safe mode: lowering quality to ${Settings.label(to)}…`);
         try { sessionStorage.setItem('de.autocontinue', '1'); } catch { /* reload to the menu instead */ }
@@ -566,9 +607,19 @@ export class Game {
     ctx.landmarks.tick(dt);
     const focus = playing ? ctx.player.position : ctx.camera.position;
     ctx.landmarks.update(focus.x, focus.z);
-    for (const s of playing ? this.systems : this.ambientSystems) s.update?.(dt);
+    // per-system timing (cheap), so the watchdog can say which system ate a long frame
+    const sysMs = this.perf.sysMs || (this.perf.sysMs = {});
+    // one system throwing must not take the whole frame down with it (an exception every frame is a freeze):
+    // log it to the watchdog once a second and carry on
+    for (const s of playing ? this.systems : this.ambientSystems) {
+      const t0 = performance.now();
+      try { s.update?.(dt); } catch (e) { const n = s.constructor.name; if (!this.sysErrT?.[n] || performance.now() - this.sysErrT[n] > 1000) { (this.sysErrT ||= {})[n] = performance.now(); this.perf.note(`${n} threw: ${e?.message || e}`); console.error(e); } }
+      sysMs[s.constructor.name] = performance.now() - t0;
+    }
     ctx.scenarios.update(dt);
     ctx.rig.update(dt);
+    // a camera with a bad position would poison audio, culling and every shader: put it back at the player
+    if (!Number.isFinite(ctx.camera.position.x + ctx.camera.position.y + ctx.camera.position.z)) { ctx.camera.position.copy(Number.isFinite(ctx.player.position.x) ? ctx.player.position : ctx.boat.pos).y += 1.6; this.perf.note('camera position went bad — reset'); }
     const cam = ctx.camera;
     ctx.atmosphere.underwater = ctx.waves.height(cam.position.x, cam.position.z) > cam.position.y + 0.02;
     ctx.atmosphere.indoor += ((this.isIndoors(cam.position) ? 1 : 0) - ctx.atmosphere.indoor) * Math.min(1, dt * 2);

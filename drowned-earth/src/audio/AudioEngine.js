@@ -42,7 +42,7 @@ export class AudioEngine {
     this.radioIn = ac.createGain(); this.radioIn.connect(this.radio);
     this.synth = new Synth(ac);
     this.listener = ac.listener;
-    this.hrtf = this.g.settings.quality !== 'low';
+    this.hrtf = !this.g.settings.isLight;
     this.beds();
     this.music = new Music(this);
   }
@@ -166,7 +166,7 @@ export class AudioEngine {
     const cam = g.camera;
     cam.getWorldDirection(_f); _u.set(0, 1, 0).applyQuaternion(cam.quaternion);
     const L = this.listener;
-    if (L.positionX) {
+    if (L.positionX && Number.isFinite(cam.position.x + cam.position.y + cam.position.z + _f.x + _f.y + _f.z)) {
       L.positionX.setTargetAtTime(cam.position.x, t, 0.02); L.positionY.setTargetAtTime(cam.position.y, t, 0.02); L.positionZ.setTargetAtTime(cam.position.z, t, 0.02);
       L.forwardX.setTargetAtTime(_f.x, t, 0.02); L.forwardY.setTargetAtTime(_f.y, t, 0.02); L.forwardZ.setTargetAtTime(_f.z, t, 0.02);
       L.upX.setTargetAtTime(_u.x, t, 0.02); L.upY.setTargetAtTime(_u.y, t, 0.02); L.upZ.setTargetAtTime(_u.z, t, 0.02);

@@ -135,6 +135,8 @@ export class Atmosphere {
         bank = Math.max(bank, f.k * Math.max(0, Math.min(1, (140 - d) / 90)));
       }
       this.fog.near = w.fog * (1 + w.rain * 0.4) + bank * 0.03;
+      // Laptop: a shorter world needs thicker haze so its edge never shows (≈90 % at 340 m)
+      const fb = this.ctx.settings.q.fogBoost; if (fb) this.fog.near = Math.max(this.fog.near * fb, 0.0038);
       if (bank > 0) this.fog.color.lerp(tmp.setRGB(0.42, 0.47, 0.5).multiplyScalar(0.25 + daylightK(this) * 0.75), bank * 0.7);
     }
     this.farFog.color.copy(fogCol);

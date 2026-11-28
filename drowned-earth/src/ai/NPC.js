@@ -165,6 +165,11 @@ export class NPC {
       if (d2 < 75 * 75 && NPC.lastBuild !== frame) { NPC.lastBuild = frame; this.buildHuman(this.ctx, this.def); }
       else return;
     }
+    // far away: free the whole human (geometry, skinning, textures stay cached in the kit) instead of keeping a
+    // hidden body in memory; it's rebuilt when you come back within 75 m
+    if (this.rig?.human && this.worldPos(_w).distanceToSquared(this.ctx.player.position) > 170 * 170) {
+      this.root.remove(this.rig.root); this.rig.dispose(); this.rig = null; this.manners = null; return;
+    }
     if (this.rig) {
       const p = this.ctx.player.position;
       const near = this.worldPos(_w).distanceToSquared(p) < 36;
@@ -182,8 +187,12 @@ export class NPC {
       const d2 = this.worldPos(_w).distanceToSquared(p);
       const far = d2 > 900;
       // people beyond the preset's crowd distance aren't drawn at all
-      const vis = this.ctx.settings.q.npcDetail === 0 ? 45 : 90;
-      this.rig.root.visible = d2 < vis * vis;
+      const vis = this.ctx.settings.quality === 'laptop' ? 35 : this.ctx.settings.q.npcDetail === 0 ? 45 : 90;
+      // and never more than the preset's head count drawn at once (Laptop 12), first come first drawn each frame
+      const frame = this.ctx.game.frame, cap = this.ctx.settings.q.maxDrawn || 999;
+      if (NPC.drawnFrame !== frame) { NPC.drawnFrame = frame; NPC.drawn = 0; }
+      this.rig.root.visible = d2 < vis * vis && NPC.drawn < cap;
+      if (this.rig.root.visible) NPC.drawn++;
       if (!this.rig.root.visible) return;
       this.animAcc = (this.animAcc || 0) + dt;
       if (far && this.animAcc < 0.1) return;

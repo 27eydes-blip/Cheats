@@ -1,6 +1,18 @@
 // Quality presets. Every system reads its budget from here so a single toggle
 // scales the whole game from a mid-range phone up to a desktop GPU.
 const PRESETS = {
+  // Laptop: integrated graphics and software rendering. A short, foggy view; 60% resolution with the sharpen
+  // pass; 30 fps cap; no shadows, AO, reflections, volumetrics or bloom; few props; at most ~12 people and
+  // creatures drawn; simplest sky and water.
+  laptop: {
+    pixelRatio: 1, postPipeline: true, shadows: false, shadowMapSize: 0,
+    chunkNearRadius: 110, chunkFarRadius: 360, waterRings: 48, waterSegments: 56,
+    debrisDensity: 0.12, particleCount: 90, rainCount: 450, envMapUpdates: false,
+    maxLights: 2, npcDetail: 0, birdCount: 3, renderScale: 0.6, reflections: 0,
+    label: 'Laptop', targetFps: 30, fpsCap: 30, minScale: 0.5, mipBias: 0, textureTier: '1k', anisotropy: 1,
+    ssao: false, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 2, propDensity: 0.15, characters: true,
+    bloom: false, light: true, maxDrawn: 12, fogBoost: 1.7, landmarkK: 0.42, skyTier: 0, waterTier: 0, propTex: 512,
+  },
   low: {
     pixelRatio: 1, postPipeline: false, shadows: false, shadowMapSize: 0,
     // the Light preset draws far less: a shorter (fogged) view, sparser props and debris, capped particles
@@ -9,6 +21,7 @@ const PRESETS = {
     maxLights: 3, npcDetail: 0, birdCount: 6, renderScale: 1, reflections: 0,
     label: 'Light', targetFps: 30, minScale: 0.6, mipBias: 0, textureTier: '1k', anisotropy: 2,
     ssao: false, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 2, propDensity: 0.35, characters: true,
+    light: true, maxDrawn: 24, skyTier: 1, waterTier: 1, propTex: 1024,
   },
   medium: {
     pixelRatio: 1.5, postPipeline: true, shadows: true, shadowMapSize: 2048, shadowRange: 110,
@@ -17,6 +30,7 @@ const PRESETS = {
     maxLights: 6, npcDetail: 1, birdCount: 18, renderScale: 1, reflections: 0.35,
     label: 'Standard', targetFps: 60, minScale: 0.65, mipBias: -0.25, textureTier: '1k', anisotropy: 8,
     ssao: true, taa: false, ssr: false, motionBlur: false, volumetric: false, csm: false, pointLights: 6, propDensity: 0.8, characters: true,
+    skyTier: 2, waterTier: 2, propTex: 1024,
   },
   high: {
     pixelRatio: 2, postPipeline: true, shadows: true, shadowMapSize: 4096, shadowRange: 180,
@@ -25,11 +39,13 @@ const PRESETS = {
     maxLights: 10, npcDetail: 2, birdCount: 28, renderScale: 1, reflections: 0.5,
     label: 'Ultra', targetFps: 60, minScale: 0.85, mipBias: -0.4, textureTier: '2k', anisotropy: 16,
     ssao: true, taa: true, ssr: true, motionBlur: true, volumetric: true, csm: true, pointLights: 12, propDensity: 1, characters: true,
+    skyTier: 3, waterTier: 3, propTex: 0,
   },
 };
 
 const KEY = 'drowned-earth.settings';
-const ALIAS = { phone: 'low', standard: 'medium', ultra: 'high' };
+const ALIAS = { phone: 'low', light: 'low', standard: 'medium', ultra: 'high' };
+export const ORDER = ['laptop', 'low', 'medium', 'high'];
 
 // Pick a preset from what the GPU says it is. Coarse on purpose: dynamic
 // resolution does the fine tuning at runtime.
@@ -43,10 +59,10 @@ export function detectPreset(isMobile) {
     gl?.getExtension('WEBGL_lose_context')?.loseContext();
   } catch { gpu = 'unknown'; }
   const g = gpu.toLowerCase();
-  if (!g || g === 'none') return { preset: 'low', gpu };
-  if (/swiftshader|llvmpipe|software|basic render/.test(g)) return { preset: 'low', gpu };
-  // integrated / low-power GPUs: the light preset (laptops with Intel or APU graphics, MX parts)
-  if (/intel|uhd|iris|hd graphics|mali|adreno|powervr|radeon\(tm\) graphics|radeon graphics|vega \d|\bmx\s?\d{3}|gt \d{3}\b/.test(g)) return { preset: 'low', gpu };
+  if (!g || g === 'none') return { preset: 'laptop', gpu };
+  if (/swiftshader|llvmpipe|software|basic render/.test(g)) return { preset: 'laptop', gpu, software: true };
+  // integrated / low-power GPUs: the Laptop preset (Intel or APU graphics, MX parts)
+  if (/intel|uhd|iris|hd graphics|mali|adreno|powervr|radeon\(tm\) graphics|radeon graphics|vega \d|\bmx\s?\d{3}|gt \d{3}\b/.test(g)) return { preset: 'laptop', gpu };
   // discrete GPUs start on Standard; Ultra is opt-in from Options
   if (/nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|apple m[1-9]|apple gpu|arc\(/.test(g)) return { preset: 'medium', gpu };
   return { preset: 'low', gpu };
@@ -60,7 +76,7 @@ export class Settings {
     try { stored = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { stored = {}; }
     const params = new URLSearchParams(location.search);
     const det = detectPreset(isMobile);
-    this.gpu = det.gpu;
+    this.gpu = det.gpu; this.software = !!det.software;
     // every new player starts on the Light preset; a preset picked in Options (or set by safe mode) is remembered
     this.qualityChosen = stored.qualityChosen ?? (stored.quality != null && stored.quality !== 'auto');
     // first run: Standard on a dedicated GPU, Light otherwise (integrated, software, unknown); safe mode drops to Light
@@ -68,7 +84,7 @@ export class Settings {
     q = ALIAS[q] || q;
     this.auto = q === 'auto';
     this.autoCap = stored.autoCap ?? null; // set when auto quality had to step down on this machine
-    const order = ['low', 'medium', 'high'];
+    const order = ORDER;
     const autoPick = this.autoCap && order.indexOf(this.autoCap) < order.indexOf(det.preset) ? this.autoCap : det.preset;
     this.quality = this.auto ? autoPick : q;
     if (!PRESETS[this.quality]) this.quality = 'medium';
@@ -92,9 +108,11 @@ export class Settings {
     this.mature = stored.mature ?? false;
     // living-NPC simulation: full (visible incidents, conversations) or light (abstract incidents) — Phone defaults to light
     this.pad = stored.pad ?? null; // controller: deadzone, curve, sensitivity, aim assist, extras, button map
-    this.npcSim = stored.npcSim ?? (this.quality === 'low' ? 'light' : 'full');
+    this.npcSim = stored.npcSim ?? (this.isLight ? 'light' : 'full');
   }
   get q() { return PRESETS[this.quality]; }
+  // the Light and Laptop presets share the light paths (no post pipeline extras, short streaming, light NPC sim)
+  get isLight() { return !!PRESETS[this.quality]?.light; }
   get label() { return PRESETS[this.quality].label + (this.auto ? ' (auto)' : ''); }
   static presets() { return Object.keys(PRESETS); }
   set(key, value) { if (key === 'quality') { this.auto = value === 'auto'; this.qualityChosen = true; } this[key] = value; this.save(); }

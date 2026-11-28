@@ -13,6 +13,13 @@ import { patchMaterial } from '../world/WorldShader.js';
 // Ultra then swaps in the 2k set in the background.
 const BASE = (import.meta.env?.BASE_URL || '/') + 'assets/';
 
+// drop the top mip levels of a compressed texture larger than `cap` pixels (0 = no cap): a quarter of the
+// memory per level dropped, no re-encode
+export function capMips(t, cap) {
+  while (cap && t.mipmaps?.length > 1 && (t.image?.width || 0) > cap) { t.mipmaps.shift(); t.image = { ...t.image, width: t.image.width >> 1, height: t.image.height >> 1 }; }
+  return t;
+}
+
 export class AssetLibrary {
   constructor(renderer, settings) {
     this.renderer = renderer;
@@ -81,6 +88,9 @@ export class AssetLibrary {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
       t.anisotropy = this.anisotropy;
+      // memory cap (Laptop: 512): drop top mip levels of compressed textures larger than the cap —
+      // a quarter of the memory per level, no re-encode needed
+      capMips(t, this.settings?.q?.propTex || 0);
       t.needsUpdate = true;
       this.textureBytes += estimateBytes(t);
       res(t);

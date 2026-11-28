@@ -268,8 +268,9 @@ export class Boat {
   // pushed out of a raft or wall: the nearest point of open water, searching outward
   unstick() {
     const col = this.ctx.collision, r = (this.type?.hull?.beam ?? 1.9) * 0.55;
-    for (let d = 1; d <= 16; d += 1) for (let k = 0; k < 16; k++) {
-      const a = (k / 16) * Math.PI * 2, x = this.pos.x + Math.cos(a) * d, z = this.pos.z + Math.sin(a) * d;
+    // a bounded search (8 rings × 12 directions = 96 probes at most), nearest first
+    for (const d of [1, 2, 3, 4, 6, 8, 11, 16]) for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2, x = this.pos.x + Math.cos(a) * d, z = this.pos.z + Math.sin(a) * d;
       if (!col.hullBlocked(x, z, r)) { this.pos.x = x; this.pos.z = z; this.vel.multiplyScalar(0.2); return true; }
     }
     return false;
@@ -302,7 +303,7 @@ export class Boat {
     if (driving) {
       const fwd = input.move.y, turn = -input.move.x;
       if (Math.abs(fwd) > 0.05 && this.tied) { this.tied = null; this.ctx.events.emit('boat:untie'); }
-      this.paddling = this.fuel <= 0;
+      this.paddling = this.fuel <= 0 || this.swamped;
       const st = this.type?.stats;
       this.boosting = !!(input.held.sprint && !this.paddling && !this.engineOff && this.boostLeft > 0 && fwd > 0.1);
       if (this.boosting) this.boostLeft = Math.max(0, this.boostLeft - dt); else this.boostLeft = Math.min(st?.boostTank ?? 5, this.boostLeft + dt * 0.25);
@@ -348,7 +349,7 @@ export class Boat {
       this.heading += this.yawRate * dt;
       // swept hull: sub-steps of at most 0.25 m, and three circles along the keel (bow, middle, stern), so
       // neither speed nor a low frame rate can carry the boat through a thin raft
-      const step = this.vel.length() * dt, nSub = Math.min(12, Math.max(1, Math.ceil(step / 0.25)));
+      const step = this.vel.length() * dt, nSub = Math.min(8, Math.max(1, Math.ceil(step / 0.25)));   // capped: a long frame can't buy a long loop
       const half = (this.type?.hull?.length ?? 5.6) * 0.32, r = (this.type?.hull?.beam ?? 1.9) * 0.55;
       let impact = 0;
       for (let k = 0; k < nSub; k++) {
@@ -361,10 +362,16 @@ export class Boat {
         }
       }
       this._lastImpact = impact;
+      if (!Number.isFinite(this.vel.x + this.vel.z)) { this.vel.set(0, 0, 0); this.speed = 0; }
       // never left inside a raft or wall: slide out to the nearest open water
-      if (impact > 0 && collision.hullBlocked(this.pos.x, this.pos.z, r * 0.7)) this.unstick();
+      // (at most twice a second: jammed in a corner it used to search every frame, and a failed search repeats)
+      this.unstickT = Math.max(0, (this.unstickT || 0) - dt);
+      if (impact > 0 && this.unstickT <= 0 && collision.hullBlocked(this.pos.x, this.pos.z, r * 0.7)) { this.unstickT = 0.5; this.unstick(); }
       if (impact > 0.25 && impact <= 1.2) { this.scrapeT = (this.scrapeT || 0) - dt; if (this.scrapeT <= 0) { this.scrapeT = 0.5; this.ctx.events.emit('boat:impact', { speed: impact * 0.5, pos: this.pos.clone(), scrape: true }); } }
-      if (impact > 1.2) {
+      // damage at most every 0.4 s: pinned against a raft with the throttle open used to drain the hull every frame
+      this.hitT = Math.max(0, (this.hitT || 0) - dt);
+      if (impact > 1.2 && this.hitT <= 0) {
+        this.hitT = 0.4;
         const dmg = (impact - 1.2) * 2 * this.mods.damage * 100 / (S.hull || 100);   // a bump costs a little hull (~12% for a 7 m/s ram)
         this.hull = Math.max(0, this.hull - dmg);
         this.ctx.events.emit('boat:impact', { speed: impact, pos: this.pos.clone() });
@@ -385,7 +392,11 @@ export class Boat {
     const hs = waves.sample(this.pos.x - fwdDir.x * L, this.pos.z - fwdDir.z * L, _s)[0];
     const hp = waves.sample(this.pos.x + side.x * B, this.pos.z + side.z * B, _s)[0];
     const hq = waves.sample(this.pos.x - side.x * B, this.pos.z - side.z * B, _s)[0];
-    const sink = this.hull < 15 ? 0.25 : 0;
+    // a holed boat sits low; at 0 the engine drowns and she settles slowly, deck awash — never a freeze
+    if (this.hull <= 0 && !this.swamped) { this.swamped = true; this.engineOff = true; this.ctx.ui?.whisper?.('Water over the gunwale. The engine coughs and drowns. She is settling — paddle her to a dock or a raft and patch the hull.'); }
+    if (this.hull > 5) this.swamped = false;
+    this.sinkK = damp(this.sinkK || 0, this.swamped ? 1 : 0, 0.15, dt);
+    const sink = (this.hull < 15 ? 0.25 : 0) + this.sinkK * 0.3;
     const ty = (hb + hs + hp + hq) / 4 - 0.18 - sink;
     // ramps: a collapsed slab under the bow at speed launches the boat
     const ramp = this.ctx.fleet?.rampAt(this.pos, fwdDir);
@@ -397,6 +408,15 @@ export class Boat {
       else this.heave = this.air.y;
     } else this.heave = damp(this.heave, ty + foilLift, 5, dt);
     this.pos.y = this.heave;
+    // last line of defence: a NaN or infinite position (a bad frame, a divide by zero) puts her back where she
+    // last was fine, or in open water — never into a loop over garbage numbers
+    if (!(Number.isFinite(this.pos.x) && Number.isFinite(this.pos.y) && Number.isFinite(this.pos.z) && Number.isFinite(this.vel.x) && Number.isFinite(this.vel.z) && Number.isFinite(this.heading))) {
+      this.vel.set(0, 0, 0); this.yawRate = 0; this.throttle = 0; this.air = null; this.speed = 0; this.pitch = this.roll = 0;
+      if (!Number.isFinite(this.heading)) this.heading = 0;
+      if (this.lastGood) this.pos.copy(this.lastGood); else this.pos.set(318, 0, 300);
+      this.heave = this.pos.y = Number.isFinite(this.lastGood?.y) ? this.lastGood.y : 0;
+      this.unstick(); this.ctx.perf?.note?.('boat position went bad — reset to last good spot');
+    } else (this.lastGood ||= new THREE.Vector3()).copy(this.pos);
     // planing: the bow climbs onto its own wave as speed builds, then levels once the hull is up and planing
     const hump = Math.max(0, Math.min(1, (this.speed - 2) / 3)) * (1 - Math.max(0, Math.min(1, (this.speed - 7) / 5)));
     const tp = (this.air ? Math.max(-0.35, Math.min(0.35, this.air.vy * 0.04)) : Math.atan2(hb - hs, L * 2)) - this.throttle * 0.05 * (this.paddling ? 0 : 1) * (S.top > 12 ? 1.6 : 1) - hump * 0.06;

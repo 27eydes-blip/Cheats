@@ -12,8 +12,8 @@ export class LandmarkManager {
   register(kind, fn) { this.builders.set(kind, fn); }
   update(px, pz, force = false) {
     // one landmark per frame, nearest first: building several big scenes in one frame froze the game while boating
-    const low = this.ctx.settings.quality === 'low';
-    const loadD = low ? this.loadDist * 0.7 : this.loadDist, unloadD = low ? this.unloadDist * 0.75 : this.unloadDist;
+    const s = this.ctx.settings, low = s.isLight, k = s.q.landmarkK ?? (low ? 0.7 : 1);
+    const loadD = this.loadDist * k, unloadD = this.unloadDist * Math.max(k + 0.05, low ? 0.75 : 1);
     let next = null, nd = Infinity;
     for (const def of this.ctx.worldMap.landmarks) {
       const d = Math.hypot(def.pos[0] - px, def.pos[1] - pz);
