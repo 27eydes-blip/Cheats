@@ -272,7 +272,8 @@ export class AudioEngine {
   }
   splash(pos, k) { if (this.started) this.synth.splash(this.panner(pos.clone(), 3, 1.2), k); }
   impact(pos, k) { if (this.started) { this.synth.thud(this.panner(pos.clone(), 4, 1), k); this.synth.creak(this.panner(pos.clone(), 4, 1), true); } }
-  speak(pos, dur, scale = 1) { if (this.started) this.synth.voice(this.panner(pos.clone().setY(pos.y + 1.6), 2, 1.6), dur, 1 / scale); }
+  // pitch: the speaker's own voice pitch (Roster.voicePitch); without one, bigger people sound lower
+  speak(pos, dur, scale = 1, pitch) { if (this.started) this.synth.voice(this.panner(pos.clone().setY(pos.y + 1.6), 2, 1.6), dur, pitch ?? 1 / scale); }
   radioTune(voice) {
     if (!this.started) return;
     this.radioOn = !!voice; this.radioVoice = voice;

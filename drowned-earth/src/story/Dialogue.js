@@ -1,6 +1,7 @@
 // Talking to NPCs. Picks the next line that fits story flags and the player's
 // Standing, shows it as a subtitle with a murmur voice, then offers the NPC's
 // shop or Standing step. Lines marked `once` are never repeated.
+import { voicePitch } from '../humans/Roster.js';
 export class Dialogue {
   constructor(ctx) { this.ctx = ctx; this.seen = ctx.state.seenLines || (ctx.state.seenLines = {}); }
   lineFits(l) {
@@ -31,7 +32,7 @@ export class Dialogue {
     if (line.set) ctx.story.setFlag(line.set);
     const dur = 2.5 + line.text.length * 0.05;
     ctx.ui.subtitle(`${d.name}: ${line.text}`, dur, 'speech');
-    ctx.audio?.speak(npc.worldPos(), dur, d.scale || 1);
+    ctx.audio?.speak(npc.worldPos(), dur, d.scale || 1, npc.rig?.p ? voicePitch(npc.rig.p) / (d.scale || 1) : undefined);
     // the speaker turns, talks with their hands; the camera pulls focus to them
     npc.talkT = dur;
     npc.rig?.say?.(line.text, dur);

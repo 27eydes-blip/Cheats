@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Raft } from './Raft.js';
 import { RopeBridge } from './RopeBridge.js';
 import { NPC } from '../ai/NPC.js';
+import { voicePitch } from '../humans/Roster.js';
 import { signTexture } from '../world/Textures.js';
 import { LAYER_FX } from '../render/Pipeline.js';
 import { G } from '../world/WorldShader.js';
@@ -83,7 +84,7 @@ export function buildRaftCommunity(ctx, def) {
           c.events.emit('dock:refused', { community: def.id, dock: m.name });
           const npc = npcs.find((n) => n.def.role === 'dockmaster');
           c.ui.subtitle(npc ? `${npc.def.name}: Not here, diver. Deep-Born tie up at the red lamp, round the back. It's not my rule. I just get fined for it.` : 'A voice from the deck: "Not this dock. Find your own lamp."', 6, 'speech');
-          if (npc) c.audio?.speak(npc.worldPos(), 5);
+          if (npc) c.audio?.speak(npc.worldPos(), 5, 1, npc.rig?.p ? voicePitch(npc.rig.p) : undefined);
           c.story.setFlag('dock_refused');
           return;
         }

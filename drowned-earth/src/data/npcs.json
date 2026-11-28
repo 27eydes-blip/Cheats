@@ -2,7 +2,7 @@
  "_doc": "NPCs. raft = platform id (rafts.json). schedule: from/to hours (wrap past midnight when to < from), do = activity, at = spot kind or pos = [x,z]. talk lines: if = story flag required, set = flag raised, minTier/maxTier = player Standing range (7 = Deep-Born, lower = higher standing), once = only ever said once. shop = trade.json id. step = a Standing step this NPC can grant (standing.json). role 'respect' marks people who treat every tier the same.",
  "npcs": [
   {
-   "id": "oru",
+   "id": "oru", "presents": "f",
    "name": "Madam Oru Vance",
    "raft": "market",
    "role": "leader",
@@ -75,7 +75,7 @@
    ]
   },
   {
-   "id": "ruel",
+   "id": "ruel", "presents": "m",
    "name": "Dockmaster Ruel",
    "raft": "market",
    "role": "dockmaster",
@@ -117,7 +117,7 @@
    ]
   },
   {
-   "id": "odile",
+   "id": "odile", "presents": "f",
    "name": "Odile",
    "raft": "market",
    "role": "trader",
@@ -184,7 +184,7 @@
    ]
   },
   {
-   "id": "dela",
+   "id": "dela", "presents": "f",
    "name": "Dela",
    "raft": "market",
    "role": "resident",
@@ -257,7 +257,7 @@
    ]
   },
   {
-   "id": "keeper",
+   "id": "keeper", "presents": "f",
    "name": "The Keeper",
    "raft": "chapel",
    "role": "elder",
@@ -318,7 +318,7 @@
    ]
   },
   {
-   "id": "pell",
+   "id": "pell", "presents": "m",
    "name": "Pell",
    "raft": "lookout",
    "role": "lookout",
@@ -361,7 +361,7 @@
    ]
   },
   {
-   "id": "ivo",
+   "id": "ivo", "presents": "m",
    "name": "Ivo",
    "raft": "water",
    "role": "water",
@@ -411,7 +411,7 @@
    ]
   },
   {
-   "id": "moss",
+   "id": "moss", "presents": "m",
    "name": "Moss",
    "raft": "garden",
    "role": "resident",
@@ -484,7 +484,7 @@
    ]
   },
   {
-   "id": "maud",
+   "id": "maud", "presents": "f",
    "name": "Maud",
    "raft": "sleep1",
    "role": "resident",
@@ -552,7 +552,7 @@
    ]
   },
   {
-   "id": "corr",
+   "id": "corr", "presents": "m",
    "name": "Corr",
    "raft": "sleep2",
    "role": "resident",
@@ -610,7 +610,7 @@
    ]
   },
   {
-   "id": "sal",
+   "id": "sal", "presents": "m",
    "name": "Sal",
    "raft": "dock",
    "role": "fixer",
@@ -652,7 +652,7 @@
    ]
   },
   {
-   "id": "koa",
+   "id": "koa", "presents": "f",
    "name": "Elder Tamsin Koa",
    "raft": "gt_plots",
    "role": "leader",
@@ -709,7 +709,7 @@
    ]
   },
   {
-   "id": "bram",
+   "id": "bram", "presents": "m",
    "name": "Bram Hollis",
    "raft": "rh_rig",
    "role": "mechanic",
@@ -776,7 +776,7 @@
    ]
   },
   {
-   "id": "ada",
+   "id": "ada", "presents": "f",
    "name": "Ada",
    "raft": "rh_rig",
    "role": "resident",
@@ -824,7 +824,7 @@
    ]
   },
   {
-   "id": "kit",
+   "id": "kit", "presents": "f",
    "name": "Kit Marrow",
    "raft": "repair",
    "role": "scavenger",
@@ -859,7 +859,7 @@
    ]
   },
   {
-   "id": "hollis",
+   "id": "hollis", "presents": "m",
    "name": "Hollis Pike",
    "raft": "dock",
    "role": "fisher",
@@ -894,7 +894,7 @@
    ]
   },
   {
-   "id": "nell",
+   "id": "nell", "presents": "f",
    "name": "Nell Asante",
    "raft": "garden",
    "role": "cook",
@@ -929,7 +929,7 @@
    ]
   },
   {
-   "id": "brin",
+   "id": "brin", "presents": "m",
    "name": "Brin Okoye",
    "raft": "sleep1",
    "role": "rope-maker",
@@ -964,7 +964,7 @@
    ]
   },
   {
-   "id": "tamsin",
+   "id": "tamsin", "presents": "f",
    "name": "Tamsin Reyes",
    "raft": "market",
    "role": "glass trader",
@@ -999,7 +999,7 @@
    ]
   },
   {
-   "id": "osk",
+   "id": "osk", "presents": "f",
    "name": "Old Osk",
    "raft": "chapel",
    "role": "net-mender",
@@ -1034,7 +1034,7 @@
    ]
   },
   {
-   "id": "juno",
+   "id": "juno", "presents": "f",
    "name": "Juno Vale",
    "raft": "sleep2",
    "role": "runner",
@@ -1069,7 +1069,7 @@
    ]
   },
   {
-   "id": "perrin",
+   "id": "perrin", "presents": "m",
    "name": "Perrin Lusk",
    "raft": "lookout",
    "role": "signaller",
@@ -1104,7 +1104,7 @@
    ]
   },
   {
-   "id": "ama",
+   "id": "ama", "presents": "f",
    "name": "Ama Boateng",
    "raft": "water",
    "role": "water-boiler",

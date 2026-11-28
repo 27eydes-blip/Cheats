@@ -123,7 +123,7 @@ const SYM = [
 ];
 const ASYM = ['asym/asym-nose-1-l', 'asym/asym-nose-1-r', 'asym/asym-mouth-1-l', 'asym/asym-mouth-1-r', 'asym/asym-eye-1-l', 'asym/asym-eye-1-r', 'asym/asym-brown-1-l', 'asym/asym-brown-1-r', 'asym/asym-cheek-1-l', 'asym/asym-cheek-1-r', 'asym/asym-ear-1-l', 'asym/asym-ear-1-r'];
 const MALE_CLOTHES = ['male_casualsuit01', 'male_casualsuit02', 'male_casualsuit03', 'male_casualsuit04', 'male_casualsuit05', 'male_worksuit01'];
-const FEMALE_CLOTHES = ['female_casualsuit01', 'female_casualsuit02', 'male_casualsuit04', 'male_worksuit01', 'male_casualsuit01', 'female_casualsuit01'];
+const FEMALE_CLOTHES = ['female_casualsuit01', 'female_casualsuit02', 'male_casualsuit04', 'male_worksuit01', 'male_casualsuit01', 'female_casualsuit01'];   // work clothes are unisex; women's cuts never go on men
 const SHOES = ['shoes01', 'shoes02', 'shoes03', 'shoes05', 'shoes06'];
 // cloth palettes per community (the rafts dye with what they have)
 const PALETTES = {
@@ -136,7 +136,9 @@ const PALETTES = {
 
 export function generatePerson(seed, hints = {}) {
   const r = rng(seed * 2654435761);
-  const sex = hints.sex ?? (r() < 0.5 ? r() * 0.2 : 0.8 + r() * 0.2);
+  // a named NPC's recorded presentation wins; otherwise a coin flip. The dial stays near its ends so the
+  // body, face and skin texture all agree with each other.
+  const sex = hints.sex ?? (hints.presents === 'f' ? r() * 0.2 : hints.presents === 'm' ? 0.8 + r() * 0.2 : r() < 0.5 ? r() * 0.2 : 0.8 + r() * 0.2);
   const male = sex > 0.5;
   // ages: teens to elders, weighted to working age
   const age = hints.age ?? Math.round(r() < 0.12 ? 13 + r() * 6 : r() < 0.25 ? 60 + r() * 25 : 20 + r() * 40);
@@ -187,3 +189,12 @@ export function personFor(id, hints = {}) {
   return generatePerson(hashStr(id), hints);
 }
 export function hashStr(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+// Speaking pitch multiplier for the voice synth (1 = neutral). Female-presenting voices sit above 1.08,
+// male-presenting below 1.0; age lowers it a little, and each person gets a stable offset of their own
+// so two people of the same kind don't sound identical.
+export function voicePitch(p) {
+  const own = ((hashStr(p.seed ?? p.name ?? '') % 1000) / 1000 - 0.5) * 0.1;
+  const age = Math.max(0, (p.age ?? 35) - 35) / 200;
+  return p.sex > 0.5 ? Math.min(0.99, 0.9 + own - age) : Math.max(1.08, 1.2 + own - age);
+}
