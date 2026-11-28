@@ -274,16 +274,30 @@ export class Game {
     ctx.lightPool.refresh(); ctx.lightPool.update(0);
     this.systems.push(ctx.lightPool); this.ambientSystems.push(ctx.lightPool);
     await stage(0.998, 'Preparing shaders');
-    // warm every material up front, hidden creatures and props included, for the target frames actually render into
+    // warm materials and textures up front — in small batches with the page breathing between them, and with
+    // a time limit. Doing it all in one call froze the page on machines whose browser compiles shaders on the
+    // main thread (no parallel-compile support): "Preparing shaders… 100%" and then nothing for minutes.
+    // Whatever isn't done in time compiles on first use instead.
     try {
-      const hidden = []; ctx.scene.traverse((o) => { if (!o.visible && !o.isLight && o !== ctx.scene) { hidden.push(o); o.visible = true; } });
-      // upload every texture now too, so none uploads mid-play the first time something comes into view
-      const seen = new Set();
-      ctx.scene.traverse((o) => { for (const m of [].concat(o.material || [])) for (const k in m) { const t = m[k]; if (t && t.isTexture && !seen.has(t)) { seen.add(t); try { renderer.initTexture(t); } catch { /* not uploadable yet */ } } } });
-      const prevT = renderer.getRenderTarget(), tgt = ctx.settings.q.postPipeline ? ctx.pipeline?.target : null;
-      let p;
-      try { if (tgt) renderer.setRenderTarget(tgt); p = renderer.compileAsync(ctx.scene, ctx.camera); } finally { renderer.setRenderTarget(prevT); for (const o of hidden) o.visible = false; }
-      await Promise.race([p, new Promise((r) => setTimeout(r, 45000))]);
+      const yieldNow = () => new Promise((r) => setTimeout(r, 0));
+      const t0 = performance.now(), budget = 20000;
+      const texs = [], seen = new Set();
+      ctx.scene.traverse((o) => { for (const m of [].concat(o.material || [])) for (const k in m) { const t = m[k]; if (t && t.isTexture && !seen.has(t)) { seen.add(t); texs.push(t); } } });
+      let slice = performance.now();
+      for (let i = 0; i < texs.length && performance.now() - t0 < budget * 0.3; i++) {
+        try { renderer.initTexture(texs[i]); } catch { /* not uploadable yet */ }
+        if (performance.now() - slice > 30) { loading.set?.(0.998, `Preparing textures ${i + 1}/${texs.length}`); await yieldNow(); slice = performance.now(); }
+      }
+      // one representative object per material, compiled on its own
+      const reps = [], mats = new Set();
+      ctx.scene.traverse((o) => { if (!(o.isMesh || o.isPoints || o.isLine || o.isSprite)) return; for (const m of [].concat(o.material || [])) if (!mats.has(m)) { mats.add(m); reps.push(o); break; } });
+      const tgt = ctx.settings.q.postPipeline ? ctx.pipeline?.target : null;
+      for (let i = 0; i < reps.length && performance.now() - t0 < budget; i++) {
+        const o = reps[i], was = o.visible, prevT = renderer.getRenderTarget(); let p = null;
+        try { if (tgt) renderer.setRenderTarget(tgt); o.visible = true; p = renderer.compileAsync(o, ctx.camera, ctx.scene); } catch { /* compile on first use */ } finally { renderer.setRenderTarget(prevT); o.visible = was; }
+        if (p) await Promise.race([p.catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);
+        if (i % 4 === 3) { loading.set?.(0.998, `Preparing shaders ${i + 1}/${reps.length}`); await yieldNow(); }
+      }
     } catch { /* compile on first use instead */ }
     await stage(1, 'Almost there');
     ctx.paused = ctx.params.has('pause');
