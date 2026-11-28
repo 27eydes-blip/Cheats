@@ -22,7 +22,7 @@ export function initMaterials() {
   lib.set('rust', std({ map: rep('rust', 0.3), roughness: 0.8, metalness: 0.35 }));
   lib.set('metal', std({ map: rep('rust', 0.15), roughness: 0.55, metalness: 0.6 }));
   lib.set('container', std({ map: rep('corrugated', 0.25), normalMap: rep('corrugatedN', 0.25), roughness: 0.7, metalness: 0.3 }));
-  lib.set('wood', std({ map: rep('wood', 0.4), roughness: 0.85 }));
+  lib.set('wood', std({ map: rep('wood', 0.4), roughness: 0.85 }, { planks: true }));
   lib.set('fabric', std({ map: rep('fabric', 0.8), roughness: 1, side: THREE.DoubleSide }, { cloth: true }));
   lib.set('foliage', std({ map: rep('foliage', 0.5), roughness: 0.9, side: THREE.DoubleSide }));
   lib.set('plastic', std({ roughness: 0.45, metalness: 0 }));
@@ -33,7 +33,7 @@ export function initMaterials() {
   lib.set('black', new THREE.MeshBasicMaterial({ color: 0x020303 }));
   lib.set('obsidian', std({ color: 0x1a2224, roughness: 0.35, metalness: 0.6 }, { noUnderwater: true }));
   // floating debris variants: displaced by waves on the GPU
-  lib.set('woodFloat', std({ map: rep('wood', 0.5), roughness: 0.9 }, { bob: true }));
+  lib.set('woodFloat', std({ map: rep('wood', 0.5), roughness: 0.9 }, { bob: true, planks: true }));
   lib.set('plasticFloat', std({ roughness: 0.5 }, { bob: true }));
   lib.set('fabricFloat', std({ map: rep('fabric', 0.8), roughness: 1 }, { bob: true }));
   lib.set('rock', std({ color: 0x6f6a62, roughness: 0.95 }, { antiTile: true }));

@@ -38,7 +38,7 @@ float causticField(vec2 p, float t) {
 
 export function patchMaterial(mat, opts = {}) {
   // aMeta: x = window style (0 none, 1 punched, 2 curtain wall), y = spacing var, z = vines, w = seed
-  const { facade = false, bob = false, noUnderwater = false, antiTile = false, cloth = false } = opts;
+  const { facade = false, bob = false, noUnderwater = false, antiTile = false, cloth = false, planks = false } = opts;
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, G);
     let vs = shader.vertexShader;
@@ -137,6 +137,17 @@ export function patchMaterial(mat, opts = {}) {
         // stain dripping from each sill
         float drip = step(mx, f.x) * step(f.x, 1.0 - mx) * (1.0 - smoothstep(0.0, myb - 0.06, myb - 0.06 - f.y + 0.0)) * step(f.y, myb - 0.06) * texture2D(uNoiseTex, vec2(vUvM.x * 1.7, vUvM.y * 0.05)).r;
         diffuseColor.rgb *= 1.0 - 0.3 * drip * (1.0 - curtain) * wall;
+        // rust bleeding from the window fixings on some buildings
+        float rustB = step(0.55, fract(vMeta.w * 7.0)) * step(0.4, h2);
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.18, 0.72, 0.5), drip * rustB * 0.85 * (1.0 - curtain) * wall);
+        // hairline cracks across the concrete, sparse
+        float cn = texture2D(uNoiseTex, vUvM * 0.045 + vMeta.w * 3.0).r;
+        float crack = (1.0 - smoothstep(0.0, 0.01 + fwidth(cn) * 1.5, abs(cn - 0.5))) * step(0.62, texture2D(uNoiseTex, vUvM * 0.008 + 1.7).b) * wall;
+        diffuseColor.rgb *= 1.0 - 0.5 * crack * (1.0 - deWinMask);
+        // moss on ledges and roofs
+        float upF = smoothstep(0.6, 0.9, dn.y);
+        float mossN = smoothstep(0.45, 0.75, texture2D(uNoiseTex, vWPos.xz * 0.07 + vMeta.w).g);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.13, 0.16, 0.07) * (0.7 + 0.6 * big), upF * mossN * 0.7);
         // ---- window frame, mullion, transom
         float wf = fract((f.x - mx) / (1.0 - 2.0 * mx));
         float hf = (f.y - myb) / (myt - myb);
@@ -197,6 +208,16 @@ export function patchMaterial(mat, opts = {}) {
         diffuseColor.rgb = mix(diffuseColor.rgb, frameCol, frameAll * (1.0 - deBroken));
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.006), deBroken * (1.0 - frameAll) * 0.0);
         deWinMask = pane;
+        // boarded-up windows: planks nailed across, far more often on the lower floors
+        float lowF = 1.0 - smoothstep(4.0, 20.0, vWPos.y);
+        float boarded = step(1.0 - (0.06 + 0.3 * lowF), fract(h * 3.7 + 0.13)) * step(0.001, pane) * (1.0 - curtain) * (1.0 - deBroken);
+        if (boarded > 0.5) {
+          float rowB = hf * 5.0 + h2, bp = fract(rowB);
+          float gap = smoothstep(0.0, 0.1, bp) * smoothstep(1.0, 0.9, bp);
+          vec3 boardCol = vec3(0.3, 0.24, 0.17) * (0.65 + 0.5 * deHash(vec2(floor(rowB), cellId.x + vMeta.w))) * (0.85 + 0.3 * texture2D(uNoiseTex, vec2(wf * 4.0, rowB) * 0.5).r);
+          diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.02), boardCol, gap), pane);
+          deTrans *= 1.0 - pane; deLit = 0.0; deWinMask = 0.0;
+        }
       }` : ''}
       // vines climbing from the waterline
       if (vMeta.z > 0.01) {
@@ -208,6 +229,27 @@ export function patchMaterial(mat, opts = {}) {
         diffuseColor.rgb = mix(diffuseColor.rgb, leaf, vine * (1.0 - deWinMask * 0.5));
         deWinMask *= 1.0 - vine; deTrans *= 1.0 - vine;
       }
+      ${planks ? `
+      // deck planks: gaps between boards, per-board tone, the odd patched board, wet stains and wear
+      {
+        vec3 pn = normalize(vNW);
+        if (pn.y > 0.6) {
+          // the planks are separate boards already (with their own gaps and tone): add board-end joints,
+          // the odd patched board, water stains and worn walkways on top
+          float along = vUvM.x * 0.5 + vUvM.y * 0.5;
+          float seg = floor(along + deHash(floor(vUvM * 3.7)) * 0.7);
+          float jp = fract(along + deHash(floor(vUvM * 3.7)) * 0.7);
+          float pw = fwidth(along) + 0.01;
+          float gapP = smoothstep(0.0, 0.02 + pw, jp);
+          diffuseColor.rgb *= mix(0.3, 1.0, gapP);
+          float patchB = step(0.9, deHash(vec2(seg, floor(vUvM.y * 3.7) + floor(vUvM.x * 3.7))));
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.22, 1.15, 0.98) + 0.025, patchB * 0.7);
+          float stainP = smoothstep(0.55, 0.8, texture2D(uNoiseTex, vUvM * 0.09).r);
+          diffuseColor.rgb *= 1.0 - 0.35 * stainP;
+          float worn = smoothstep(0.5, 0.9, texture2D(uNoiseTex, vUvM * 0.35).g);
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.2 + 0.02, worn * 0.4 * gapP);
+        }
+      }` : ''}
       ${noUnderwater ? '' : `
       // high-water stains, algae band and silt below the surface
       float deN = texture2D(uNoiseTex, vWPos.xz * 0.05 + vWPos.y * 0.1).r;
@@ -254,6 +296,6 @@ export function patchMaterial(mat, opts = {}) {
     }
     shader.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => `de-${facade ? 'f' : ''}${bob ? 'b' : ''}${noUnderwater ? 'n' : ''}${antiTile ? 't' : ''}${cloth ? 'c' : ''}`;
+  mat.customProgramCacheKey = () => `de-${facade ? 'f' : ''}${bob ? 'b' : ''}${noUnderwater ? 'n' : ''}${antiTile ? 't' : ''}${cloth ? 'c' : ''}${planks ? 'p' : ''}`;
   return mat;
 }
