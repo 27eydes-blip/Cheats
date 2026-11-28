@@ -29,7 +29,15 @@ export class Interaction {
     addEventListener('keydown', (e) => {
       if (ctx.mode !== 'play' || ctx.ui.open || this.crime.inGame) return;
       const i = HOTKEYS.indexOf(e.code); if (i >= 0) this.useHotbar(i);
-      if (e.code === 'KeyG' && this.lookItem == null) this.throwHotbar();
+    });
+    // the controller's quick items (D-pad left/right to pick, down to use; G on the keyboard) start with the hotbar
+    const pad = ctx.pad;
+    if (pad?.quickItems) { const q = pad.quickItems.bind(pad); pad.quickItems = () => [...new Set([...this.state.hotbar.filter((id) => id && this.inv.has(id)), ...q()])]; }
+    // crimes make the news: the feed the radio reads from, and the rumour boards
+    ctx.events.on('people:killed', (e) => { if (e.seen) ctx.events.emit('fame', { kind: 'villain', text: `A killing on ${this.crime.where(ctx.player.position)}, in front of witnesses. The Ward has a description.` }); });
+    ctx.events.on('crime', (e) => {
+      if (e.id === 'robbery_shop') ctx.events.emit('fame', { kind: 'villain', text: `A shop on ${this.crime.where(ctx.player.position)} was held up at weapon-point. The till's empty and the owner's shaking.` });
+      if (e.id === 'theft_seen' && this.crime.state.thief === 3) ctx.events.emit('fame', { kind: 'villain', text: 'Market folk are passing a description around: a thief with a Deep-Born wristband. Hold on to your purses.' });
     });
     this.buildHud();
   }
@@ -322,7 +330,7 @@ export class Interaction {
       const loyal = va && (w.agent?.p.friends?.includes(va.id) || va.p.friends?.includes(w.agent?.id) || w.agent?.p.partner === va.id);
       const r = loyal && t.courage > 0.45 ? 'protect' : t.courage > 0.78 && t.temper > 0.55 ? 'fight' : t.courage < 0.35 ? 'run' : t.caution > 0.7 ? 'hide' : t.warmth > 0.5 ? 'call' : 'scream';
       const line = { protect: `Get away from ${victim.def.name}!`, fight: 'Right. You and me.', run: '—!', hide: '', call: 'WARD! Somebody get the Ward!', scream: pick(['No— NO!', 'Oh gods—', 'Somebody help!']) }[r];
-      if (line) c.ui.subtitle(`${w.npc.def.name}: ${line}`, 2.6, 'speech');
+      if (line) { c.ui.subtitle(`${w.npc.def.name}: ${line}`, 2.6, 'speech'); c.audio?.speak?.(w.npc.worldPos(new THREE.Vector3()), 1.2, 0.9); }
       if (r === 'protect' || r === 'fight') this.npcAttacks(w.npc, 1);
       if (r === 'run' || r === 'hide') this.crime.flee(w.npc);
       if (r === 'call') c.heat?.add(8, 'Someone called the Ward');

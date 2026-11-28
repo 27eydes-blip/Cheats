@@ -58,6 +58,7 @@ import { LifeUI } from '../life/LifeUI.js';
 import { Pad } from '../input/Pad.js';
 import { LightPool } from '../render/LightPool.js';
 import { Killers } from '../killers/Killers.js';
+import { Interaction } from '../interact/Interaction.js';
 import { PortageLife } from '../world/PortageLife.js';
 import { EmergencyExit } from '../input/Emergency.js';
 import { MenuBackdrop } from '../ui/MenuBackdrop.js';
@@ -285,9 +286,10 @@ export class Game {
     await stage(0.99, 'Sharpening scrap');
     ctx.arms = new Arms(ctx);
     ctx.pad = ctx.pad || new Pad(ctx); ctx.pad.attachArms();
+    ctx.ix = new Interaction(ctx);   // pick up, carry, steal, fight, loot
     if (!this.gated) ageGate(ctx.settings, ctx.params);
     ctx.ui.applyAccessibility();
-    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms, ctx.portageLife, ctx.killers, ctx.bottles];
+    this.systems = [ctx.survival, ctx.story, ctx.radio, ctx.fx, ctx.birds, ctx.fish, ctx.patrol, ctx.deep, ctx.highmark, ctx.save, ctx.economy, ctx.heat, ctx.abyss, ctx.journal, ctx.onboarding, ctx.injury, ctx.creatures, ctx.nightlife, ctx.ward, ctx.club, ctx.crews, ctx.society, ctx.arms, ctx.portageLife, ctx.killers, ctx.bottles, ctx.ix];
     this.ambientSystems = [ctx.fx, ctx.birds, ctx.fish, ctx.highmark, ctx.abyss];
     this.wireEvents();
     await stage(0.993, 'Setting the tide');
@@ -447,7 +449,7 @@ export class Game {
   }
   resetStory() {
     const ctx = this.ctx, st = ctx.state;
-    ctx.arms?.reset(); ctx.portageLife?.reset(); ctx.killers?.reset(); ctx.player.clearSafe();
+    ctx.arms?.reset(); ctx.portageLife?.reset(); ctx.killers?.reset(); ctx.ix?.reset(); ctx.player.clearSafe();
     for (const k of Object.keys(st.flags)) delete st.flags[k];
     st.looted.clear(); st.logs.clear(); st.playTime = 0; st.glow = ctx.data.deep.glow.start; ctx.abyss.refreshGrowth();
     st.explored.clear(); st.route.length = 0; st.discovered.clear(); st.notes.length = 0; st.met = {}; st.hints = ctx.onboarding.done = {};

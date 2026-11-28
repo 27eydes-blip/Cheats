@@ -66,7 +66,7 @@ export class Society {
     const ctx = this.ctx, h = ctx.time.hour, day = ctx.time.day;
     const storm = ctx.weather.cur.wind > 0.7 || ctx.weather.cur.rain > 0.6;
     for (const a of this.agents.values()) {
-      if (a.dead) { const dn = this.npcOf(a.id); if (dn && dn.override?.do !== 'away') { dn.override = { from: 0, to: 24, do: 'away' }; dn.root.visible = false; } continue; }
+      if (a.dead) { const dn = this.npcOf(a.id); if (dn && dn.override?.do !== 'away' && !dn.isBody) { dn.override = { from: 0, to: 24, do: 'away' }; dn.root.visible = false; } continue; }
       const n = a.needs;
       n.hunger = Math.min(1, n.hunger + 0.012); n.fatigue = Math.min(1, n.fatigue + (h > 21 || h < 5 ? 0.02 : 0.008)); n.social = Math.min(1, n.social + 0.01 * (0.5 + a.traits.talk));
       n.safety = Math.max(0, n.safety - 0.01) + (storm ? 0.02 : 0);

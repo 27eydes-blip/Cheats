@@ -70,7 +70,7 @@ export class Crime {
       reactions.push({ who: w.npc.def.id, r });
       const name = w.npc.def.name;
       const line = { confront: isOwner ? 'That\'s mine. Put it back. Now.' : 'I saw that. Put it back.', attack: 'Thief! You little—', shout: 'Thief! THIEF! Somebody get the Ward!', run: '—' }[r];
-      if (r !== 'run') c.ui.subtitle(`${name}: ${line}`, 3, 'speech');
+      if (r !== 'run') { c.ui.subtitle(`${name}: ${line}`, 3, 'speech'); c.audio?.speak?.(w.npc.worldPos(new THREE.Vector3()), 1.3, 0.9); }
       if (r === 'shout') c.heat?.add(6, 'Someone called the Ward');
       if (r === 'run') this.flee(w.npc);
       if (r === 'attack') this.ix.npcAttacks(w.npc, 1);
@@ -128,7 +128,7 @@ export class Crime {
     const place = () => { w0 = 0.08 + Math.random() * (0.92 - window - 0.08); win.style.left = w0 * 100 + '%'; win.style.width = window * 100 + '%'; cnt.textContent = `${got}/${hits}`; };
     place();
     const finish = (ok) => { if (done) return; done = true; cancelAnimationFrame(raf); removeEventListener('keydown', key, true); el.remove(); c.paused = false; c.input.enabled = true; this.inGame = false; onDone(ok); };
-    const hit = () => { const x = (Math.sin(t * speed * 2) + 1) / 2; if (x >= w0 && x <= w0 + window) { got++; c.audio?.started && c.audio.synth.click?.(c.audio.ui, 1600); if (got >= hits) finish(true); else place(); } else finish(false); };
+    const hit = () => { c.audio?.started && c.audio.synth.click?.(c.audio.ui, 700 + Math.random() * 400); const x = (Math.sin(t * speed * 2) + 1) / 2; if (x >= w0 && x <= w0 + window) { got++; c.audio?.started && c.audio.synth.click?.(c.audio.ui, 1600); if (got >= hits) finish(true); else place(); } else finish(false); };
     const key = (e) => { if (e.code === 'KeyE' || e.code === 'Space') { e.preventDefault(); e.stopPropagation(); hit(); } if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(null); } };
     addEventListener('keydown', key, true); el.addEventListener('pointerdown', hit);
     let last = performance.now(), raf = 0, padHeld = false;

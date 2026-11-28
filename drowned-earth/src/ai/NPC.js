@@ -105,6 +105,8 @@ export class NPC {
   }
   update(dt, playerLocal, playerNear) {
     this.phase += dt;
+    // a body stays where it fell (or where it was dragged)
+    if (this.isBody) { this.root.position.copy(this.local); return; }
     const task = this.currentTask();
     if (task !== this.task) {
       this.task = task;
@@ -181,7 +183,7 @@ export class NPC {
       const speaking = this.chatTalk && now >= this.chatTalk[0] && now < this.chatTalk[1];
       const carrying = moving && !this.fleeing && /dock|runner|scavenger/.test(this.def.role || '');
       const act = moving ? (this.fleeing ? 'run' : carrying ? 'carry' : 'walk') : this.talkT > 0 || speaking ? (sitting ? 'sitTalk' : 'talk') : work;
-      if (this.rig.doing) this.rig.doing(act, moving, moving ? null : m?.layer ?? null);
+      if (this.rig.doing) this.rig.doing(act, moving, moving ? null : this.forcedLayer || m?.layer || null);
       else this.rig.play(act);
       // distant people animate at a lower rate (cheap crowd)
       const d2 = this.worldPos(_w).distanceToSquared(p);

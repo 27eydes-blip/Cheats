@@ -27,7 +27,7 @@ export class Interactables {
       _d.copy(p).sub(eye).normalize();
       const dot = _d.dot(forward);
       if (it.requireLook && dot < 0.55 && dist > 1.0) continue;
-      const score = dist * (1.6 - dot);
+      const score = dist * (1.6 - dot) - (it.priority || 0) * 10;   // e.g. a body or a pocket beats the 'Talk to' behind it
       if (score < bestScore) { bestScore = score; best = it; }
     }
     this.focus = best;

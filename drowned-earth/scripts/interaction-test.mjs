@@ -55,6 +55,7 @@ const results = await page.evaluate(async () => {
   await stand(op.clone().add(new V(0, 0.2, 0)).add(new V(-Math.sin(oru.heading) * 3.5, 0, -Math.cos(oru.heading) * 3.5)));
   c.input.held.crouch = true; c.player.flashlight = false; face(oru, op.clone().add(new V(Math.sin(oru.heading) * 5, 0, Math.cos(oru.heading) * 5)));
   const owned2 = I.drop('salt', 1, c.player.position.clone().add(new V(0.3, 0.2, 0)), { owner: 'oru' }); await tick(3);
+  for (const n of com.npcs) if (n !== oru) face(n, n.worldPos(new V()).add(n.worldPos(new V()).sub(c.player.position)));   // everyone else looking the other way
   const ws2 = C.witnesses(); const r2 = C.theft('oru', 2, 'salt');
   c.input.held.crouch = false; c.time.hour = 12;
   out.witness = { pass: ws.length > 0 && seenHeat > 0 && stolenMarked && ws2.length === 0 && !r2.seen && C.state.notices.length > 0, detail: `daylight in front of Oru: ${ws.length} witness(es), Heat +${seenHeat.toFixed(0)}, flagged stolen ${stolenMarked}; at night crouched behind: ${ws2.length} witnesses, seen ${r2.seen}, owner will notice later ${C.state.notices.length > 0}` };

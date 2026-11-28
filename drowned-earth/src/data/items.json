@@ -683,6 +683,147 @@
    "tags": [
     "gear"
    ]
+  },
+  "lockpick": {
+   "name": "Lockpick",
+   "desc": "Two bent wires and patience. They snap.",
+   "value": 4,
+   "weight": 0.05,
+   "tags": [
+    "tool"
+   ],
+   "cat": "tool",
+   "legal": "contraband"
+  },
+  "raft_key": {
+   "name": "Raft key",
+   "desc": "A brass key on a cork float. Somebody on Portage is missing it.",
+   "value": 2,
+   "weight": 0.05,
+   "tags": [
+    "key"
+   ],
+   "cat": "key",
+   "stackable": false
+  },
+  "silver_ring": {
+   "name": "Silver ring",
+   "desc": "Thin, scratched, engraved on the inside with initials.",
+   "value": 14,
+   "weight": 0.02,
+   "tags": [
+    "valuable"
+   ],
+   "cat": "valuable"
+  },
+  "pocket_watch": {
+   "name": "Pocket watch",
+   "desc": "Stopped at twenty past four. Still worth something.",
+   "value": 22,
+   "weight": 0.1,
+   "tags": [
+    "valuable"
+   ],
+   "cat": "valuable"
+  },
+  "coin_purse": {
+   "name": "Coin purse",
+   "desc": "Old-world coins. Worthless as money, good as metal.",
+   "value": 10,
+   "weight": 0.2,
+   "tags": [
+    "valuable"
+   ],
+   "cat": "valuable"
+  },
+  "fuel_can": {
+   "name": "Fuel can",
+   "desc": "Half full, by the slosh.",
+   "value": 12,
+   "weight": 3,
+   "tags": [
+    "fuel"
+   ],
+   "cat": "fuel",
+   "use": {
+    "boatFuel": 25
+   }
+  },
+  "old_book": {
+   "name": "Swollen book",
+   "desc": "Pages stuck together. Someone underlined the hopeful parts.",
+   "value": 3,
+   "weight": 0.5,
+   "tags": [
+    "book"
+   ],
+   "cat": "book",
+   "use": {
+    "mood": 12
+   }
+  },
+  "rum": {
+   "name": "Raft rum",
+   "desc": "Kelp-sugar spirit. It does what it says.",
+   "value": 6,
+   "weight": 0.6,
+   "tags": [
+    "drink"
+   ],
+   "cat": "drink",
+   "use": {
+    "intox": 0.35,
+    "thirst": 4
+   }
+  },
+  "fish_cake": {
+   "name": "Fish cake",
+   "desc": "Fried, salty, still warm.",
+   "value": 4,
+   "weight": 0.2,
+   "tags": [
+    "food"
+   ],
+   "cat": "food",
+   "use": {
+    "hunger": 28
+   }
+  },
+  "oilskin_coat": {
+   "name": "Oilskin coat",
+   "desc": "Keeps the rain out. Smells of someone else.",
+   "value": 18,
+   "weight": 2,
+   "tags": [
+    "clothing"
+   ],
+   "cat": "clothing",
+   "stackable": false
+  },
+  "wool_cap": {
+   "name": "Wool cap",
+   "desc": "Knitted, darned, warm.",
+   "value": 5,
+   "weight": 0.2,
+   "tags": [
+    "clothing"
+   ],
+   "cat": "clothing",
+   "stackable": false
+  },
+  "repair_kit": {
+   "name": "Repair kit",
+   "desc": "Patches, rivets, a tube of resin.",
+   "value": 9,
+   "weight": 1,
+   "tags": [
+    "repair",
+    "tool"
+   ],
+   "cat": "tool",
+   "use": {
+    "hull": 20
+   }
   }
  }
 }

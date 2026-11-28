@@ -155,6 +155,44 @@
    },
    "station": "workbench",
    "time": 4
+  },
+  {
+   "id": "round",
+   "name": "Hand-load rounds",
+   "in": {
+    "scrap": 2,
+    "copper": 1
+   },
+   "out": {
+    "round": 4
+   },
+   "station": "workbench",
+   "time": 3
+  },
+  {
+   "id": "repair_kit",
+   "name": "Repair kit",
+   "in": {
+    "scrap": 4,
+    "tape": 1
+   },
+   "out": {
+    "repair_kit": 1
+   },
+   "station": "workbench",
+   "time": 3
+  },
+  {
+   "id": "lockpick",
+   "name": "Bend a lockpick",
+   "in": {
+    "scrap": 1
+   },
+   "out": {
+    "lockpick": 2
+   },
+   "station": null,
+   "time": 2
   }
  ]
 }
