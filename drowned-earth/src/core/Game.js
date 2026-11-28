@@ -429,6 +429,7 @@ export class Game {
   haptic(ms) { if (this.ctx.input.usingTouch && navigator.vibrate && !this.ctx.settings.reduceMotion) try { navigator.vibrate(ms); } catch { /* not allowed */ } }
 
   isIndoors(p) {
+    if (this.ctx.state.inLair) return true;   // the hunters' lairs: sealed, no sky, no sun shafts
     for (const l of this.ctx.landmarks.loaded.values()) for (const b of l.interiors || []) if (p.x > b[0] && p.y > b[1] && p.z > b[2] && p.x < b[3] && p.y < b[4] && p.z < b[5]) return true;
     return false;
   }
