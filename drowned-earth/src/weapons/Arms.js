@@ -289,7 +289,7 @@ export class Arms {
     this.drawT = Math.max(0, (this.drawT || 0) - dt);
     // ranged guns carry a stock behind the grip, so they rest further out; ADS lines the sight up under the eye
     const restX = ranged ? 0.17 : 0.24, restY = ranged ? -0.17 : -0.22, restZ = ranged ? -0.46 : -0.36;
-    const adsY = -0.088, adsZ = -0.5, a = ranged ? this.ads : 0;
+    const adsY = -0.082, adsZ = -0.52, a = ranged ? this.ads : 0;
     const x = restX * (1 - a) + Math.sin(t * 1.3) * sw, y = restY + (adsY - restY) * a + Math.sin(t * 2.1) * sw * 0.7 - this.drawT * 0.6;
     this.mesh.position.set(x, y, restZ + (adsZ - restZ) * a + this.recoil * 0.06);
     const sweep = Math.sin(this.swing * Math.PI) * (this.swingHeavy ? 1.3 : 0.9);
