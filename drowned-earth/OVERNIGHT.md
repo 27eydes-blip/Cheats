@@ -64,3 +64,45 @@ Two independent code reviews of everything changed tonight and in the previous p
 - Route, start-of-night code vs final code, run back to back with nothing else on the CPU (Light preset, draw calls / triangles / avg fps): standing 571/622k/0.9 → 574/622k/0.8 · Portage walk 424/719k/1.0 → 396/597k/0.9 · boat 489/652k/0.9 → 386/581k/1.0 · raft city 607/561k/0.9 → 456/541k/0.8 · Cask 339/537k/1.1 → 443/599k/0.8. Totals −7% draw calls, −5% triangles; frame rate unchanged within the noise of CPU rendering. Per-phase numbers swing ±20% run to run because phases are timed and the boat ends in different places.
 - 5-minute stall probe: 0 logic stalls over 200 ms (avg 1.9 ms, max 45 ms); mid-play shader compiles 15 programs in 6 frames (was 17 in 7).
 - Deployed and opened headless: menu → story → play with **0 console errors and 0 failed requests**.
+
+---
+
+# NPC realism + raft collision pass
+
+## Phase 1 — raft collision (tag `npc-start` / `phase-1-start` → kept)
+
+**Root cause.** The boat collided as one 1.3 m circle at its centre, with no sub-steps, so bow and stern overlapped
+rafts by 1.5–2.8 m, and on small rafts the centre could get pushed out the far side. Floating raft boxes whose
+bottom sat above 0.6 m (car deck, rig deck) were skipped by the static-wall height band. Parked fleet boats had
+no collider at all.
+
+**Fix.**
+- The hull is now three circles along the keel (bow, middle, stern), swept in sub-steps of at most 0.25 m.
+- Floating bodies use their own height band.
+- Parked boats get a body.
+- `hullBlocked` plus `unstick()` slide a hull that is left overlapping anything out to the nearest open water
+  (rings of 1–16 m).
+- Contact feedback: a scrape (0.25–1.2 m/s, rate-limited) or a thud plus hull damage (above 1.2 m/s). The damage
+  factor is halved, so a top-speed ram costs 17–20 % hull.
+- A broad-phase radius per body skips far rafts cheaply.
+- The patrol and NPC boats use the same `resolveHull`, so they benefit too.
+
+**Test.** `scripts/raft-collision-test.mjs` drives into 5 rafts (small sleeping pontoon to large dock) at
+3/8/9 m/s from 6 angles each, plus a parked boat.
+- Old code: fails all 5 rafts plus the parked boat.
+- New code: 7/7 pass.
+
+**Gate (n1).** All pass: build, validate, boat 7, weapons 8, controller 7, portage 5, raft-collision 7.
+
+Route perf (SwiftShader, CPU; ±20 % run-to-run noise):
+
+| Stop | Draw calls | Triangles |
+|---|---|---|
+| standing | 585 | 627k |
+| walking | 373 | 550k |
+| boat | 662 | 696k |
+| raft city | 587 | 558k |
+| cask | 567 | 708k |
+
+Shader compiles: 0/5/0/0/0. Worst frames 1.9–2.7 s, which is CPU rendering, not meaningful as fps. These
+numbers are in line with the end-of-overnight runs. Collision adds no draw calls.

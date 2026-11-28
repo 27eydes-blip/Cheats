@@ -58,7 +58,13 @@ export class Collision {
   }
 
   // Dynamic body: {object: Object3D, boxes: [{minX..maxZ}], tag}
-  addBody(object, boxes, tag = 'raft') { const body = { object, boxes, tag }; this.bodies.add(body); return body; }
+  addBody(object, boxes, tag = 'raft') {
+    // reach: how far any of its boxes extends from its origin, so far-away bodies are skipped cheaply
+    let rad = 0; for (const b of boxes) rad = Math.max(rad, Math.hypot(Math.max(Math.abs(b.minX), Math.abs(b.maxX)), Math.max(Math.abs(b.minZ), Math.abs(b.maxZ))));
+    const body = { object, boxes, tag, rad }; this.bodies.add(body); return body;
+  }
+  // is a body's reach within d of (x, z)? (its world origin from the matrix, no inverse needed)
+  static near(body, x, z, d) { const e = body.object.matrixWorld.elements; const dx = e[12] - x, dz = e[14] - z, r = (body.rad ?? 1e9) + d; return dx * dx + dz * dz < r * r; }
   removeBody(body) { this.bodies.delete(body); }
 
   // Resolve a vertical cylinder (feet at pos.y). Returns {grounded, groundBody, groundY, hitWall, ceiling}.
@@ -155,7 +161,7 @@ export class Collision {
       if (vn < 0) { vel.x -= vn * h.nx * 1.3; vel.z -= vn * h.nz * 1.3; impact = Math.max(impact, -vn); }
     }
     for (const body of this.bodies) {
-      if (body.disabled) continue;
+      if (body.disabled || !Collision.near(body, pos.x, pos.z, radius + 0.5)) continue;
       const o = body.object;
       _inv.copy(o.matrixWorld).invert();
       _v.set(pos.x, 0, pos.z).applyMatrix4(_inv);
@@ -179,7 +185,7 @@ export class Collision {
     const over = (b, px, pz, floating) => !(b.tag === 'trigger' || b.maxY < -0.7 || b.minY > (floating ? 2.5 : 0.6)) && (Math.max(b.minX, Math.min(px, b.maxX)) - px) ** 2 + (Math.max(b.minZ, Math.min(pz, b.maxZ)) - pz) ** 2 < radius * radius;
     for (const b of boxes) if (over(b, x, z, false)) return true;
     for (const body of this.bodies) {
-      if (body.disabled) continue;
+      if (body.disabled || !Collision.near(body, x, z, radius + 0.5)) continue;
       _inv.copy(body.object.matrixWorld).invert(); _v.set(x, 0, z).applyMatrix4(_inv);
       for (const b of body.boxes) if (over(b, _v.x, _v.z, true)) return true;
     }
